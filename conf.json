@@ -1,0 +1,20 @@
+{
+    "source": {
+        "include": ["./README.md"]
+    },
+    "templates": {
+        "cleverLinks": false,
+            "monospaceLinks": false,
+            "default": {
+            "outputSourceFiles": true
+        },
+        "systemName"      : "DTM API",
+        "footer"          : "",
+        "copyright"       : "DTM API | Copyright © 2014 Me",
+        "navType"         : "vertical",
+        "theme"           : "cerulean",
+        "linenums"        : true,
+        "collapseSymbols" : false,
+        "inverseNav"      : true
+    }
+}

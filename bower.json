@@ -1,0 +1,21 @@
+{
+  "name": "DataToMusicAPI_001",
+  "version": "0.0.1",
+  "authors": [
+    "Takahiko Tsuchiya <ttsuchiya@loadmess.com>"
+  ],
+  "main": "dtm.js",
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "almond": "~0.3.0",
+    "lodash": "~2.4.1",
+    "requirejs": "~2.1.15"
+  }
+}
