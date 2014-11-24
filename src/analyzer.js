@@ -204,7 +204,8 @@ dtm.analyzer = {
     /**
      * Root-Mean-Square value of given numerical array.
      * @function module:analyzer#rms
-     * @param rms {number}
+     * @param arr {array}
+     * @returns rms {number}
      */
     rms: function (arr) {
         var res = [];
@@ -222,7 +223,7 @@ dtm.analyzer = {
     // * @returns arr {array}
     // */
     autoCorr: null
-}
+};
 
 //dtm.analyzer.pvariance = dtm.analyzer.pvar;
 dtm.anal = dtm.analyzer;

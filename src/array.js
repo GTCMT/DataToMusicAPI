@@ -245,7 +245,7 @@ dtm.array = function (arr, name) {
     /**
      * Fills the contents of the array with
      * @function module:array#fill
-     * @param type {string} Choices: 'line', 'noise'/'random', 'sin'/'sine', 'cos'/'cosine', 'zeroes', 'ones'
+     * @param type {string} Choices: 'line', 'noise'/'random', 'gaussian'/'gauss'/'normal', 'sin'/'sine', 'cos'/'cosine', 'zeroes', 'ones'
      * @param [len=2] {integer}
      * @param [min=0] {number}
      * @param [max=1] {number}
@@ -295,10 +295,17 @@ dtm.array = function (arr, name) {
         return array;
     };
 
+    /**
+     * Same as array.rescale().
+     * @function module:array#range
+     * @type {Function}
+     */
+    array.range = array.rescale;
+
     // TODO: implement this
     array.limit = function (min, max) {
         return array;
-    }
+    };
 
     /**
      * Adds a value to all the array elements.
@@ -334,6 +341,13 @@ dtm.array = function (arr, name) {
     };
 
     /**
+     * Same as array.mirror().
+     * @function module:array#reverse
+     * @type {Function}
+     */
+    array.reverse = array.mirror;
+
+    /**
      * Flips the numerical values vertically at the given center point.
      * @function module:array#invert
      * @param [center=meanVal] {number}
@@ -346,6 +360,13 @@ dtm.array = function (arr, name) {
     };
 
     /**
+     * Same as array.invert().
+     * @function module:array#flip
+     * @type {Function}
+     */
+    array.flip = array.invert;
+
+    /**
      * Randomizes the order of the array.
      * @function module:array#shuffle
      * @returns {dtm.array}
@@ -353,6 +374,18 @@ dtm.array = function (arr, name) {
     array.shuffle = function () {
         array.value = dtm.transform.shuffle(array.value);
         array.set(array.value);
+        return array;
+    };
+
+    array.concat = function () {
+        return array;
+    };
+
+    array.repeat = function () {
+        return array;
+    };
+
+    array.truncate = function () {
         return array;
     };
 

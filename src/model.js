@@ -3,139 +3,71 @@
  * @module model
  */
 
+// TODO: modeling - sharing information...
+
 /**
  * @function module:model.model
  * @param [name] {string} Give it a unique name.
+ * @param [categ] {string}
  * @returns a new model instance
  */
-dtm.model = function (name) {
+dtm.model = function (name, categ) {
     var model = {
         className: 'dtm.model',
 
-        /**
-         * @name module:model#name
-         * @type {string}
-         */
-        name: null,
-
-        /**
-         * Whether if the model is synced to the master.
-         * @name module:model#sync
-         * @type {boolean}
-         */
-        sync: true,
-        clock: null,
+        // assigning array or data/coll???
+        array: null,
         data: null,
-        parent: null,
-        complexity: 0,
-        motif: {
-            pitches: dtm.array(),
-            beats: dtm.array()
-        },
-
-        // CHECK: there might be multiple
-        parentClock: null,
-
-        master: dtm.master,
 
         params: {
-            scale: _.range(12)
+            name: null,
+            categ: 'any',
+            categories: [],
+            voice: null
         }
     };
 
-    // ???
-    if (arguments.length) {
-        model.name = name;
-    }
-
-    /**
-     * @function module:model#setName
-     * @param name {string}
-     * @returns {dtm.model}
-     */
-    model.setName = function (name) {
-        model.name = name;
+    model.categ = function (categ) {
+        // CHECK: how can I re-register?
+        model.params.categ = categ;
         return model;
     };
 
-    /**
-     * @function module:model#play
-     * @param nn
-     * @returns {dtm.model}
-     */
-    model.play = function (nn) {
-        console.log('play() function is not implemented!');
+    model.load = function () {
         return model;
     };
 
-    /**
-     * @function module:model#run
-     * @param clock
-     * @returns {dtm.model}
-     */
-    model.run = function (clock) {
-        console.log('run() funciton is not implemented!');
+    model.mod = function (val) {
         return model;
     };
 
-    /**
-     * @function module:model#stop
-     * @returns {dtm.model}
-     */
-    model.stop = function () {
-        return model;
-    }
-
-    // TODO: should add to a list
-    model.addParentClock = function (pClock) {
-        model.parentClock = pClock;
-        return model;
-    }
-
-    model.getParentClock = function () {
-        return model.parentClock;
-    }
-
-    model.extend = function () {
-        return model;
+    model.get = function (key) {
+        return model.params[key];
     };
 
-    model.inherit = function () {
-        return model;
-    };
+    model.modulate = model.mod;
 
-    model.scale = function () {
-        var scale;
+    if (typeof(name) === 'string') {
+        var load = _.find(dtm.modelColl, {params: {name: name}});
 
-        if (arguments.length === 0) {
-            scale = _.range(12);
-        } else if (typeof(arguments[0]) === 'array') {
-            scale = arguments[0];
-        } else if (typeof(arguments[0]) === 'string') {
-            scale = dtm.scales[arguments[0].toLowerCase()];
+        if (typeof(load) !== 'undefined') {
+            dtm.log('overriding an existing model: ' + name);
+            model = load;
+
         } else {
-            scale = arguments;
+            if (typeof(categ) === 'string') {
+                model.params.categ = categ;
+            }
+
+            dtm.log('registering a new model: ' + name);
+            model.params.name = name;
+            dtm.modelColl.push(model);
         }
-
-        model.params.scale = scale;
-
-        return model;
-    };
-
-    model.load = function (name) {
-        return model;
-    };
+    }
 
     model.clone = function () {
-        // increment the num of active models?
         return model;
     };
 
-    // registers the model to the model collection
-    dtm.modelCol.push(model);
     return model;
 };
-
-dtm.m = dtm.model;
-
-// TODO: modeling - sharing information...

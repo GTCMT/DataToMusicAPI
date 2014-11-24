@@ -1,10 +1,6 @@
 (function () {
-    var m = dtm.model('clave');
+    var m = dtm.model2('clave-instr');
     m.complexity = 1;
-
-    var src = function () {
-
-    };
 
     var darr = dtm.transform;
 
@@ -48,7 +44,7 @@
 
     m.modulate = function (val) {
         m.motif.midx = val;
-    }
+    };
 
     return m;
 })();

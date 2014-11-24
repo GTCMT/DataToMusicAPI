@@ -1,5 +1,5 @@
 (function () {
-    var m = dtm.model('short-noise');
+    var m = dtm.model2('short-noise');
 
     m.complexity = 2;
 

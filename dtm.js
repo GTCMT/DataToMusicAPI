@@ -1,5 +1,10 @@
 (function () {
 
+/**
+ * @fileOverview
+ * @module core
+ */
+
 /* Shared WebAudio Stuff */
 var actx = new (window.AudioContext || window.webkitAudioContext)();
 var now = function () { return actx.currentTime; };
@@ -7,10 +12,25 @@ var out = function () { return actx.destination; };
 var clMult = 0.01;
 var clockBuf = actx.createBuffer(1, Math.round(actx.sampleRate * clMult), actx.sampleRate);
 
-
+/**
+ * Returns the singleton dtm object.
+ * @name module:core#dtm
+ * @type {object}
+ */
 var dtm = {
     version: '0.0.1',
-    modelCol: [],
+
+    logger: true,
+    log: function (arg) {
+        if (dtm.logger) {
+            console.log(arg);
+        }
+    },
+
+    //instrColl: [],
+    //activeInstrs: [],
+
+    modelColl: [],
     clocks: [],
 
     sampleRate: actx.sampleRate,
@@ -450,7 +470,8 @@ dtm.analyzer = {
     /**
      * Root-Mean-Square value of given numerical array.
      * @function module:analyzer#rms
-     * @param rms {number}
+     * @param arr {array}
+     * @returns rms {number}
      */
     rms: function (arr) {
         var res = [];
@@ -468,7 +489,7 @@ dtm.analyzer = {
     // * @returns arr {array}
     // */
     autoCorr: null
-}
+};
 
 //dtm.analyzer.pvariance = dtm.analyzer.pvar;
 dtm.anal = dtm.analyzer;
@@ -490,7 +511,7 @@ dtm.transform = {
     /**
      * Generates values for a new array.
      * @function module:transform#generate
-     * @param type {string} Choices: 'line', 'noise'/'random', 'sin'/'sine', 'cos'/'cosine', 'zeroes', 'ones'
+     * @param type {string} Choices: 'line', 'noise'/'random', 'gaussian'/'gauss'/'normal', 'sin'/'sine', 'cos'/'cosine', 'zeroes', 'ones'
      * @param len {integer}
      * @param [min=0] {number}
      * @param [max=1] {number}
@@ -536,6 +557,15 @@ dtm.transform = {
             case 'random':
                 for (var i = 0; i < len; i++) {
                     res[i] = _.random(min, max, true);
+                }
+                break;
+
+            case 'gaussian':
+            case 'gauss':
+            case 'normal':
+                for (var i = 0; i < len; i++) {
+                    var x = -Math.PI + (Math.PI * 2 / len) * i;
+                    res[i] = Math.pow(Math.E, -0.5 * Math.pow(x, 2)) / Math.sqrt(2 * Math.PI) / 0.4 * (max-min) + min;
                 }
                 break;
 
@@ -1359,7 +1389,7 @@ dtm.array = function (arr, name) {
     /**
      * Fills the contents of the array with
      * @function module:array#fill
-     * @param type {string} Choices: 'line', 'noise'/'random', 'sin'/'sine', 'cos'/'cosine', 'zeroes', 'ones'
+     * @param type {string} Choices: 'line', 'noise'/'random', 'gaussian'/'gauss'/'normal', 'sin'/'sine', 'cos'/'cosine', 'zeroes', 'ones'
      * @param [len=2] {integer}
      * @param [min=0] {number}
      * @param [max=1] {number}
@@ -1409,10 +1439,17 @@ dtm.array = function (arr, name) {
         return array;
     };
 
+    /**
+     * Same as array.rescale().
+     * @function module:array#range
+     * @type {Function}
+     */
+    array.range = array.rescale;
+
     // TODO: implement this
     array.limit = function (min, max) {
         return array;
-    }
+    };
 
     /**
      * Adds a value to all the array elements.
@@ -1448,6 +1485,13 @@ dtm.array = function (arr, name) {
     };
 
     /**
+     * Same as array.mirror().
+     * @function module:array#reverse
+     * @type {Function}
+     */
+    array.reverse = array.mirror;
+
+    /**
      * Flips the numerical values vertically at the given center point.
      * @function module:array#invert
      * @param [center=meanVal] {number}
@@ -1460,6 +1504,13 @@ dtm.array = function (arr, name) {
     };
 
     /**
+     * Same as array.invert().
+     * @function module:array#flip
+     * @type {Function}
+     */
+    array.flip = array.invert;
+
+    /**
      * Randomizes the order of the array.
      * @function module:array#shuffle
      * @returns {dtm.array}
@@ -1467,6 +1518,18 @@ dtm.array = function (arr, name) {
     array.shuffle = function () {
         array.value = dtm.transform.shuffle(array.value);
         array.set(array.value);
+        return array;
+    };
+
+    array.concat = function () {
+        return array;
+    };
+
+    array.repeat = function () {
+        return array;
+    };
+
+    array.truncate = function () {
         return array;
     };
 
@@ -1928,7 +1991,7 @@ dtm.iterator = function (arg) {
      */
     iter.set = function (input) {
         if (typeof(input) !== 'undefined') {
-            iter.len = input.length;
+            iter.len = input.length; // CHECK: may need update this frequently
 
             if (input.className === 'dtm.array') {
                 iter.array = input;
@@ -1940,7 +2003,7 @@ dtm.iterator = function (arg) {
         }
 
         return iter;
-    }
+    };
 
     iter.set(arg);
 
@@ -1955,7 +2018,7 @@ dtm.iterator = function (arg) {
             arrayParam = 'value'
         }
         var out = iter.array[arrayParam][iter.idx];
-        iter.idx = dtm.value.mod(iter.idx + 1, iter.len);
+        iter.idx = dtm.value.mod(iter.idx + 1, iter.array.length);
         return out;
     };
 
@@ -1970,7 +2033,7 @@ dtm.iterator = function (arg) {
             arrayParam = 'value'
         }
         var out = iter.array[arrayParam][iter.idx];
-        iter.idx = dtm.value.mod(iter.idx - 1, iter.len);
+        iter.idx = dtm.value.mod(iter.idx - 1, iter.array.length);
         return out;
     };
 
@@ -1988,7 +2051,7 @@ dtm.iterator = function (arg) {
         }
 
         var out = iter.array[arrayParam][iter.idx];
-        iter.idx = dtm.value.mod(idx, iter.len);
+        iter.idx = dtm.value.mod(idx, iter.array.length);
         return out;
     };
 
@@ -2003,15 +2066,48 @@ dtm.iterator = function (arg) {
             arrayParam = 'value'
         }
 
-        iter.idx = Math.floor(Math.random() * iter.len);
-        var out = iter.array[arrayParam][iter.idx];
-        return out;
+        // CHECK: would it spill out?
+        iter.idx = Math.floor(Math.random() * iter.array.length);
+        return iter.array[arrayParam][iter.idx];
     };
 
     // TODO: ...
     iter.urn = function () {
-        var range = _.range(iter.len-1);
+        var range = _.range(iter.array.length - 1);
         iter.modIdx = dtm.transform.shuffle(range);
+    };
+
+    /**
+     * Does a step-wise random walk.
+     * @function module:iterator#drunk
+     * @param [stepSize=1] {integer}
+     * @param [repeat=false] {boolean} If set true, it can sometimes repeat the same value.
+     * @param [arrayParam='value'] {string}
+     * @returns {value}
+     */
+    iter.drunk = function (stepSize, repeat, arrayParam) {
+        if (typeof(stepSize) === 'undefined') {
+            stepSize = 1;
+        }
+
+        if (typeof(repeat) === 'undefined') {
+            repeat = false;
+        }
+
+        if (typeof(arrayParam) === 'undefined') {
+            arrayParam = 'value'
+        }
+
+        var min = 1;
+        if (repeat) { min = 0; }
+
+        var val = _.random(min, stepSize);
+        if (_.random(0, 1)) {
+            val = -val;
+        }
+
+        iter.idx = dtm.value.mod(idx + val, iter.array.length);
+        return iter.array[arrayParam][iter.idx];
     };
 
     iter.setRange = function () {
@@ -2021,7 +2117,7 @@ dtm.iterator = function (arg) {
     iter.previous = iter.prev;
 
     return iter;
-}
+};
 
 /**
  * Creates a new instance of iterator.
@@ -2667,27 +2763,79 @@ dtm.instr = function (arg) {
     var instr = {
         className: 'dtm.instrument',
         params: {
+            name: null,
             isPlaying: false,
-
-            model: null,
-            pitches: dtm.array([0, 4, 7, 11, 12, 11, 7, 4]).add(72),
+            //poly: false,
 
             modDest: [],
-            clock: dtm.clock()
-        }
+            clock: dtm.clock(),
+            sync: false
+        },
+
+        instrModel: null,
+        models: {},
+        modelList: []
     };
 
-    instr.params.modDest.push(instr.params.pitches);
+    instr.model = function () {
+        var arg = arguments[0];
+        var categ = null; // TODO: WIP
+
+        if (typeof(arguments[1]) === 'string') {
+            categ = arguments[1];
+        }
+
+        // TODO: refactor...
+        if (typeof(arg) === 'object') {
+            //console.log(_.find(arg, {params: categ}));
+            if (arg.params.categ === 'instr') {
+
+            } else if (categ) {
+                dtm.log('assigning model "' + arg.params.name + '" to category "' + categ + '"');
+                instr.models[categ] = arg;
+                instr.params.modDest.push(arg);
+            } else if (arg.params.categ !== 'any') {
+                dtm.log('assigning model "' + arg.params.name + '" to category "' + arg.params.categ + '"');
+                instr.models[arg.params.categ] = arg;
+                instr.params.modDest.push(arg);
+            }
+        } else if (typeof(arg) === 'string') {
+            var model = _.find(dtm.modelColl, {params: {
+                name: arg
+            }});
+
+            if (typeof(model) !== 'undefined') {
+                if (!categ) {
+                    categ = model.params.categ;
+                }
+
+                dtm.log('assigning model "' + model.params.name + '" to category "' + categ + '"');
+                instr.models[categ] = model;
+                instr.params.modDest.push(model);
+            }
+        }
+
+        return instr;
+    };
+
+    instr.load = instr.model;
 
     instr.play = function () {
         // can only play single voice / instance
         if (instr.params.isPlaying !== true) {
             instr.params.isPlaying = true;
+            dtm.log('playing: ' + instr.params.name);
 
-            instr.params.clock.add(function () {
-                dtm.synth().nn(instr.params.pitches.next()).play();
-            }).start();
+            if (instr.instrModel.params.categ === 'instr') {
+                instr.instrModel.stop();
+                instr.instrModel.play();
+            }
 
+            instr.params.clock.start(); // ???
+
+
+            // register to the active instr list?
+            dtm.master.activeInstrs.push(instr);
         }
 
         return instr;
@@ -2697,10 +2845,19 @@ dtm.instr = function (arg) {
         if (instr.params.isPlaying === true) {
             instr.params.isPlaying = false;
 
+            if (instr.instrModel.params.categ === 'instr') {
+                instr.instrModel.stop();
+            }
+
             instr.params.clock.stop();
         }
         return instr;
     };
+
+    //instr.beats = function (model) {
+    //    instr.params.beats = model;
+    //    return instr;
+    //};
 
     instr.clock = function () {
         return instr;
@@ -2708,9 +2865,19 @@ dtm.instr = function (arg) {
 
     instr.mod = function () {
         if (typeof(arguments[0]) === 'number') {
-            _.forEach(arguments, function (val, idx) {
-                console.log(instr.params.modDest[idx]);
-            })
+            if (arguments.length === 1) {
+                var val = arguments[0];
+                _.forEach(instr.params.modDest, function (dest) {
+                    // MEMO: don't use arguments[n] in forEach
+                    dest.mod(val);
+                })
+            } else {
+                _.forEach(arguments, function (val, idx) {
+                    if (instr.params.modDest[idx]) {
+                        instr.params.modDest[idx].mod(val);
+                    }
+                })
+            }
 
         } else if (typeof(arguments[0]) === 'string') {
             if (typeof(arguments[1] === 'number') && typeof(instr.params[arguments[0]]) !== 'undefined') {
@@ -2723,41 +2890,122 @@ dtm.instr = function (arg) {
         }
 
         return instr;
-    }
+    };
+
+    instr.get = function (key) {
+        return instr.params[key];
+    };
 
     instr.clone = function () {
 
     };
 
-    if (typeof(arg) !== 'undefined') {
-        if (typeof(arg) === 'string') {
-            instr.params.model = _.find(dtm.modelCol, {name: arg});
-            instr.play = instr.params.model.play;
-            instr.run = instr.params.model.run; // CHECK
-            instr.mod = instr.params.model.mod;
+    if (typeof(arg) === 'string') {
+        var model = _.find(dtm.modelColl, {params: {
+            name: arg,
+            categ: 'instr'
+        }});
+
+        if (typeof(model) !== 'undefined') {
+            dtm.log('loading instrument model: ' + arg);
+            instr.instrModel = model;
+            instr.params.name = arg;
+            instr.models = model.models;
+            //instr.play = instr.instrModel.play;
+            //instr.run = instr.instrModel.run;
+            //instr.mod = instr.instrModel.mod;
         } else {
-            instr.params.model = arg;
+            dtm.log('registering a new instrument: ' + arg);
+            instr.params.name = arg;
+            instr.params.categ = 'instr';
+            dtm.modelColl.push(instr);
         }
+
+    } else if (typeof(arg) !== 'undefined') {
+        instr.instrModel = arg; // TODO: check the class name
     }
 
     instr.start = instr.play;
-    //instr.run = instr.play;
+    instr.run = instr.play;
 
     return instr;
-}
+};
 /**
  * @fileOverview Used to create a new instrument / musical models. Hopefully.
  * @module model
  */
 
+// TODO: modeling - sharing information...
+
 /**
  * @function module:model.model
  * @param [name] {string} Give it a unique name.
+ * @param [categ] {string}
  * @returns a new model instance
  */
-dtm.model = function (name) {
+dtm.model = function (name, categ) {
     var model = {
         className: 'dtm.model',
+
+        // assigning array or data/coll???
+        array: null,
+        data: null,
+
+        params: {
+            name: null,
+            categ: 'any',
+            categories: [],
+            voice: null
+        }
+    };
+
+    model.categ = function (categ) {
+        // CHECK: how can I re-register?
+        model.params.categ = categ;
+        return model;
+    };
+
+    model.load = function () {
+        return model;
+    };
+
+    model.mod = function (val) {
+        return model;
+    };
+
+    model.get = function (key) {
+        return model.params[key];
+    };
+
+    model.modulate = model.mod;
+
+    if (typeof(name) === 'string') {
+        var load = _.find(dtm.modelColl, {params: {name: name}});
+
+        if (typeof(load) !== 'undefined') {
+            dtm.log('overriding an existing model: ' + name);
+            model = load;
+
+        } else {
+            if (typeof(categ) === 'string') {
+                model.params.categ = categ;
+            }
+
+            dtm.log('registering a new model: ' + name);
+            model.params.name = name;
+            dtm.modelColl.push(model);
+        }
+    }
+
+    model.clone = function () {
+        return model;
+    };
+
+    return model;
+};
+dtm.model2 = function (name) {
+    var model = {
+        className: 'dtm.model2',
 
         /**
          * @name module:model#name
@@ -2831,17 +3079,17 @@ dtm.model = function (name) {
      */
     model.stop = function () {
         return model;
-    }
+    };
 
     // TODO: should add to a list
     model.addParentClock = function (pClock) {
         model.parentClock = pClock;
         return model;
-    }
+    };
 
     model.getParentClock = function () {
         return model.parentClock;
-    }
+    };
 
     model.extend = function () {
         return model;
@@ -2879,19 +3127,7 @@ dtm.model = function (name) {
     };
 
     // registers the model to the model collection
-    dtm.modelCol.push(model);
-    return model;
-};
-
-dtm.m = dtm.model;
-
-// TODO: modeling - sharing information...
-
-dtm.model2 = function () {
-    var model = {
-        categories: []
-    };
-
+    dtm.modelColl.push(model);
     return model;
 };
 /**
@@ -3438,465 +3674,6 @@ dtm.synth2 = {
 
 
 /**
- * @fileOverview Singleton master (conductor) module. Wants to oversee and control everything, but not quite there yet.
- * @module master
- */
-
-dtm.master = {
-    className: 'dtm.master',
-
-    params: {
-        data: null
-    },
-
-    level: 0.5,
-    mute: false,
-
-    /**
-     * Total complexity thing.
-     * @name module:master#totalComplexity
-     * @type {integer}
-     */
-    totalComplexity: 0,
-    complexityLimit: 10,
-    numActiveModels: 0, // or active voices??
-
-    voices: [],
-    numVoices: 0,
-    models: [],
-
-    numSynthVoices: 0,
-
-    /**
-     * Returns the master clock (singleton).
-     * @function module:master#clock
-     * @returns clock {object}
-     */
-    clock: dtm.clock().start(),
-    tempo: 60,
-    time: [4, 4],
-    beat: 0,
-
-    // or just call plain "beat", etc.
-    curBeat: 0,
-    curMeasure: 0,
-    curSection: 0,
-
-    scale: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
-    cummulatedRhythm: null,
-
-    transposition: 0,
-    chord: null,
-    tonalFunc: null,
-
-    start: function () {
-
-    },
-
-    // TODO: not clearing the clocks passed from a voice to model
-    /**
-     * Stops and deletes all the running clock.
-     * @function module:master#stop
-     */
-    stop: function () {
-        _.forEach(dtm.clocks, function (c) {
-            c.stop();
-            c.clear();
-            //_.forEach(c, function (d) {
-            //    d.callbacks = [];
-            //})
-        });
-
-        dtm.clocks = [];
-        dtm.master.voices = [];
-    },
-
-    /**
-     * Transpose all the voices that are synced to the master.
-     * @function module:master#transpose
-     * @param val
-     * @returns {*}
-     */
-    transpose: function (val) {
-        dtm.master.transposition = val;
-        return dtm.master;
-    },
-
-    /**
-     * Pitch quantize all the voices that are synced to the master.
-     * @function module:master#pq
-     * @returns {*}
-     */
-    pq: function () {
-        var scale;
-
-        if (arguments.length === 0) {
-            scale = _.range(12);
-        } else if (typeof(arguments[0]) === 'array') {
-            scale = arguments[0];
-        } else if (typeof(arguments[0]) === 'string') {
-            scale = dtm.scales[arguments[0].toLowerCase()];
-        } else {
-            scale = arguments;
-        }
-
-        dtm.master.scale = scale;
-
-        // TODO: update all the voices as well?
-
-        return dtm.master;
-    },
-
-    data: function (d) {
-        if (typeof(d) !== 'undefined') {
-            dtm.master.params.data = d;
-        }
-    },
-
-    form: function () {
-
-    },
-
-    state: null,
-
-    reset: null
-};
-
-(function () {
-    var m = dtm.model('single-note');
-
-    m.complexity = 1;
-
-    m.play = function (nn) {
-        var osc = actx.createOscillator();
-        var amp = actx.createGain();
-
-        osc.connect(amp);
-        amp.connect(out());
-
-        osc.frequency.value = dtm.val.mtof(nn);
-        osc.start(now());
-        osc.stop(now() + 0.15);
-
-        var del = actx.createDelay();
-        del.delayTime.setValueAtTime(.25, 0);
-
-        var delAmp = actx.createGain();
-        delAmp.gain.setValueAtTime(.22, 0);
-
-        amp.connect(del);
-        del.connect(delAmp);
-        delAmp.connect(del);
-        delAmp.connect(out());
-
-        amp.gain.value = 0.2;
-        amp.gain.setTargetAtTime(0, now(), 0.1);
-
-        return m;
-    }
-})();
-(function () {
-    var m = dtm.model('short-noise');
-
-    m.complexity = 2;
-
-    var buffer = dtm.synth2.noise(4192);
-
-    var seq = [1, 0.2, 0.5, 0.2];
-    var seqIdx = 0;
-
-    var freq = 3000;
-    m.setFreq = function (val) {
-        freq = val;
-    };
-
-    m.play = function () {
-        var src = actx.createBufferSource();
-        var hpf = actx.createBiquadFilter();
-        var amp = actx.createGain();
-
-        src.connect(hpf);
-        hpf.connect(amp);
-        amp.connect(out());
-
-        var startTime = now();
-
-        src.buffer = buffer;
-        src.loop = true;
-        src.start(startTime);
-        src.stop(startTime + 0.5);
-
-        hpf.type = 'highpass';
-        hpf.frequency.value = freq;
-
-        amp.gain.value = 0.1 * seq[seqIdx];
-        amp.gain.setTargetAtTime(0, startTime + 0.001, 0.022);
-
-        seqIdx = (seqIdx + 1) % seq.length;
-
-        return m;
-    };
-    
-    m.modulate = function () {
-        
-    }
-})();
-(function () {
-    var m = dtm.model('nice-chords');
-    m.complexity = 5;
-
-    var numVoices = 2;
-    m.modulate = function (val) {
-        numVoices = Math.round(val * 6) + 2;
-    };
-
-    var scale = [0, 2, 4, 7, 11];
-
-    m.test = function () {
-        return m;
-    };
-
-    // make it inheritable...
-    m.setScale = function (arr) {
-        scale = arr;
-        return m;
-    };
-
-    m.play = function () {
-        var amp = actx.createGain();
-        var nn = Math.round(Math.random() * 30 + 60);
-        var dur = 2;
-
-//        var cd = m.master();
-
-        var arr = [0, 1];
-        for (var i = 0; Math.round(i < Math.random() * 13); i++) {
-            arr.push(Math.random());
-        }
-        var real = new Float32Array(arr);
-        var img = real;
-        var timbre = actx.createPeriodicWave(real, img);
-
-        for (var i = 0; i < numVoices; i++) {
-            var osc = [];
-            osc[i] = actx.createOscillator();
-            osc[i].connect(amp);
-
-            osc[i].frequency.setValueAtTime(mtof(pitchQ(nn + 3 * i, scale)), now());
-            osc[i].setPeriodicWave(timbre);
-
-            osc[i].start(now());
-            osc[i].stop(now() + dur * .9);
-        }
-
-        amp.connect(out());
-
-        var delta = 0.2;
-        amp.gain.value = 0;
-        amp.gain.setValueAtTime(0, now());
-        amp.gain.setTargetAtTime(0.15, now() + .001, dur - delta);
-        amp.gain.setTargetAtTime(0, now() + dur - delta, delta);
-
-
-        var del = actx.createDelay();
-        del.delayTime.setValueAtTime(.3, 0);
-
-        var delAmp = actx.createGain();
-        delAmp.gain.setValueAtTime(.8, 0);
-
-        amp.connect(del);
-        del.connect(delAmp);
-        delAmp.connect(del);
-        delAmp.connect(out());
-
-        return m;
-    };
-
-//    m.setTimbre(m.timbre());
-})();
-(function () {
-    var m = dtm.model('rhythm-seq');
-    m.complexity = 2;
-
-    var buffer = dtm.synth2.noise(4192);
-
-    var motif = {};
-    motif.seq = [1, 0.2, 0.5, 0.2];
-    motif.seqIdx = 0;
-
-    var freq = 3000;
-    m.setFreq = function (val) {
-        freq = val;
-    };
-
-    m.play = function () {
-        var src = actx.createOscillator();
-        var amp = actx.createGain();
-        src.connect(amp);
-        amp.connect(out());
-
-        src.frequency.setValueAtTime(1000, now());
-        src.frequency.linearRampToValueAtTime(50, now() + 0.01);
-        amp.gain.vlaue = 0.5;
-        amp.gain.linearRampToValueAtTime(0, now() + 0.01);
-
-        src.start(now());
-        src.stop(now() + 0.01);
-    }
-
-    m.run = function () {
-        var pCl = m.getParentClock();
-        console.log(pCl.bpm);
-
-        return m;
-    }
-
-})();
-(function () {
-    var m = dtm.model('sampler');
-    m.complexity = 2;
-
-    m.loop = false;
-
-    var buffer = actx.createBuffer(1, 1000, 44100);
-
-    // testing promise right here
-    m.loadBuffer = function (arrBuf) {
-//        buffer = loadBuffer(arrBuf);
-        return new Promise(function (resolve, reject) {
-            actx.decodeAudioData(arrBuf, function (buf) {
-                buffer = buf;
-                resolve(buffer);
-            });
-        });
-
-//        return m;
-    };
-
-    m.play = function () {
-        var src = actx.createBufferSource();
-        var amp = actx.createGain();
-        src.connect(amp);
-        amp.connect(out());
-
-        src.buffer = buffer;
-        src.loop = m.loop;
-
-        amp.gain.value = 0.5;
-
-        src.start(now());
-
-        return m;
-    };
-})();
-(function () {
-    var m = dtm.model('clave');
-    m.complexity = 1;
-
-    var src = function () {
-
-    };
-
-    var darr = dtm.transform;
-
-    m.motif.beats = darr.itob([3, 3, 4, 2, 4]);
-    m.motif.target = darr.itob([2, 1, 2, 1]);
-    m.motif.midx = 0;
-
-    var cl = dtm.clock(80);
-    cl.setSubDiv(16);
-    cl.setTime('2/4');
-
-    var noise = dtm.synth2.noise(4192);
-
-    m.run = function () {
-        var idx = 0;
-
-        cl.add(function () {
-            var src = actx.createBufferSource();
-            var amp = actx.createGain();
-            src.connect(amp);
-            amp.connect(out());
-            src.buffer = noise;
-            src.loop = true;
-
-            m.motif.morphed = darr.morph(m.motif.beats, m.motif.target, m.motif.midx);
-
-            if (idx >= m.motif.morphed.length) {
-                idx = 0;
-            }
-
-            amp.gain.setValueAtTime(0.5 * dtm.value.expCurve(m.motif.morphed[idx], 20), now());
-            amp.gain.linearRampToValueAtTime(0, now() + 0.02);
-
-            src.start(now());
-
-            idx = (idx + 1) % m.motif.morphed.length;
-        });
-
-        cl.start();
-    };
-
-    m.modulate = function (val) {
-        m.motif.midx = val;
-    }
-
-    return m;
-})();
-(function () {
-    var m = dtm.model();
-
-    var noise = dtm.synth2.noise(8192);
-
-    m.play = function () {
-
-    }
-})();
-(function () {
-    var m = dtm.model('tamborim');
-
-    var c = dtm.clock(440, 48);
-
-    m.motif = {
-        original: dtm.array([1, 1, 1, 1]).fit(48, 'zeros'),
-        target: dtm.array([1, 0, 1, 1, 1, 0]).fit(48, 'zeros'),
-        midx: 0
-    };
-
-    //m.morphed = dtm.transform.morph(m.motif.original, m.motif.target, m.motif.midx);
-
-    var idx = 0;
-
-    m.run = function () {
-        c.add(function () {
-            m.morphed = dtm.transform.morph(m.motif.original.value, m.motif.target.value, m.motif.midx);
-
-            if (idx >= m.morphed.length) {
-                idx = idx - m.morphed.length;
-            }
-
-            //c.bpm(120 + m.motif.midx * 60);
-            //var delay = (1 - m.morphed[idx]) * 1 / c.params.bpm / m.morphed.length;
-
-            if (m.morphed[idx] == 1) {
-                dtm.syn().decay(0.05).play();
-            }
-
-            idx++;
-            //console.log(m.morphed);
-        }).start();
-
-        return m;
-    };
-
-    m.modulate = function (val) {
-        m.motif.midx = val;
-        return m;
-    };
-
-    return m;
-})();
-/**
  * @fileOverview A voice is an instance of musical model. It is used to make actual sounds.
  * @module voice
  */
@@ -4033,4 +3810,512 @@ dtm.voice = function (arg) {
 };
 
 dtm.v = dtm.voice;
+/**
+ * @fileOverview Singleton master (conductor) module. Wants to oversee and control everything, but not quite there yet.
+ * @module master
+ */
+
+dtm.master = {
+    className: 'dtm.master',
+
+    params: {
+        data: null
+    },
+
+    level: 0.5,
+    mute: false,
+
+    /**
+     * Total complexity thing.
+     * @name module:master#totalComplexity
+     * @type {integer}
+     */
+    totalComplexity: 0,
+    complexityLimit: 10,
+    numActiveModels: 0, // or active voices??
+
+    activeInstrs: [],
+    voices: [],
+    numVoices: 0,
+    models: [],
+
+    numSynthVoices: 0,
+
+    /**
+     * Returns the master clock (singleton).
+     * @function module:master#clock
+     * @returns clock {object}
+     */
+    clock: dtm.clock(120, 96).start(),
+    tempo: 60,
+    time: [4, 4],
+    beat: 0,
+
+    // or just call plain "beat", etc.
+    curBeat: 0,
+    curMeasure: 0,
+    curSection: 0,
+
+    scale: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+    cummulatedRhythm: null,
+
+    transposition: 0,
+    chord: null,
+    tonalFunc: null,
+
+    start: function () {
+
+    },
+
+    // TODO: not clearing the clocks passed from a voice to model
+    /**
+     * Stops and deletes all the running clock.
+     * @function module:master#stop
+     */
+    stop: function () {
+        _.forEach(dtm.clocks, function (c) {
+            c.stop();
+            c.clear();
+            //_.forEach(c, function (d) {
+            //    d.callbacks = [];
+            //})
+        });
+
+        _.forEach(dtm.master.activeInstrs, function (i) {
+            i.stop();
+        });
+
+        dtm.clocks = [];
+        dtm.master.voices = [];
+
+        dtm.master.activeInstrs = [];
+    },
+
+    /**
+     * Transpose all the voices that are synced to the master.
+     * @function module:master#transpose
+     * @param val
+     * @returns {*}
+     */
+    transpose: function (val) {
+        dtm.master.transposition = val;
+        return dtm.master;
+    },
+
+    /**
+     * Pitch quantize all the voices that are synced to the master.
+     * @function module:master#pq
+     * @returns {*}
+     */
+    pq: function () {
+        var scale;
+
+        if (arguments.length === 0) {
+            scale = _.range(12);
+        } else if (typeof(arguments[0]) === 'array') {
+            scale = arguments[0];
+        } else if (typeof(arguments[0]) === 'string') {
+            scale = dtm.scales[arguments[0].toLowerCase()];
+        } else {
+            scale = arguments;
+        }
+
+        dtm.master.scale = scale;
+
+        // TODO: update all the voices as well?
+
+        return dtm.master;
+    },
+
+    data: function (d) {
+        if (typeof(d) !== 'undefined') {
+            dtm.master.params.data = d;
+        }
+    },
+
+    form: function () {
+
+    },
+
+    state: null,
+
+    reset: null
+};
+
+(function () {
+    var m = dtm.model('clave', 'beats');
+
+    m.source = dtm.tr.itob([3, 3, 4, 2, 4]);
+    m.target = dtm.tr.itob([2, 1, 2, 1]);
+    m.midx = 0.9;
+    m.beats = dtm.array(dtm.tr.morph(m.source, m.target, m.midx));
+
+    m.mod = function (val) {
+        m.midx = val;
+        m.beats.set(dtm.tr.morph(m.source, m.target, m.midx));
+    };
+
+    m.next = function () {
+        return m.beats.round().next();
+    };
+
+})();
+(function () {
+    var m = dtm.model2('single-note');
+
+    m.complexity = 1;
+
+    m.play = function (nn) {
+        var osc = actx.createOscillator();
+        var amp = actx.createGain();
+
+        osc.connect(amp);
+        amp.connect(out());
+
+        osc.frequency.value = dtm.val.mtof(nn);
+        osc.start(now());
+        osc.stop(now() + 0.15);
+
+        var del = actx.createDelay();
+        del.delayTime.setValueAtTime(.25, 0);
+
+        var delAmp = actx.createGain();
+        delAmp.gain.setValueAtTime(.22, 0);
+
+        amp.connect(del);
+        del.connect(delAmp);
+        delAmp.connect(del);
+        delAmp.connect(out());
+
+        amp.gain.value = 0.2;
+        amp.gain.setTargetAtTime(0, now(), 0.1);
+
+        return m;
+    }
+})();
+(function () {
+    var m = dtm.model2('short-noise');
+
+    m.complexity = 2;
+
+    var buffer = dtm.synth2.noise(4192);
+
+    var seq = [1, 0.2, 0.5, 0.2];
+    var seqIdx = 0;
+
+    var freq = 3000;
+    m.setFreq = function (val) {
+        freq = val;
+    };
+
+    m.play = function () {
+        var src = actx.createBufferSource();
+        var hpf = actx.createBiquadFilter();
+        var amp = actx.createGain();
+
+        src.connect(hpf);
+        hpf.connect(amp);
+        amp.connect(out());
+
+        var startTime = now();
+
+        src.buffer = buffer;
+        src.loop = true;
+        src.start(startTime);
+        src.stop(startTime + 0.5);
+
+        hpf.type = 'highpass';
+        hpf.frequency.value = freq;
+
+        amp.gain.value = 0.1 * seq[seqIdx];
+        amp.gain.setTargetAtTime(0, startTime + 0.001, 0.022);
+
+        seqIdx = (seqIdx + 1) % seq.length;
+
+        return m;
+    };
+    
+    m.modulate = function () {
+        
+    }
+})();
+(function () {
+    var m = dtm.model2('nice-chords');
+    m.complexity = 5;
+
+    var numVoices = 2;
+    m.modulate = function (val) {
+        numVoices = Math.round(val * 6) + 2;
+    };
+
+    var scale = [0, 2, 4, 7, 11];
+
+    m.test = function () {
+        return m;
+    };
+
+    // make it inheritable...
+    m.setScale = function (arr) {
+        scale = arr;
+        return m;
+    };
+
+    m.play = function () {
+        var amp = actx.createGain();
+        var nn = Math.round(Math.random() * 30 + 60);
+        var dur = 2;
+
+//        var cd = m.master();
+
+        var arr = [0, 1];
+        for (var i = 0; Math.round(i < Math.random() * 13); i++) {
+            arr.push(Math.random());
+        }
+        var real = new Float32Array(arr);
+        var img = real;
+        var timbre = actx.createPeriodicWave(real, img);
+
+        for (var i = 0; i < numVoices; i++) {
+            var osc = [];
+            osc[i] = actx.createOscillator();
+            osc[i].connect(amp);
+
+            osc[i].frequency.setValueAtTime(mtof(pitchQ(nn + 3 * i, scale)), now());
+            osc[i].setPeriodicWave(timbre);
+
+            osc[i].start(now());
+            osc[i].stop(now() + dur * .9);
+        }
+
+        amp.connect(out());
+
+        var delta = 0.2;
+        amp.gain.value = 0;
+        amp.gain.setValueAtTime(0, now());
+        amp.gain.setTargetAtTime(0.15, now() + .001, dur - delta);
+        amp.gain.setTargetAtTime(0, now() + dur - delta, delta);
+
+
+        var del = actx.createDelay();
+        del.delayTime.setValueAtTime(.3, 0);
+
+        var delAmp = actx.createGain();
+        delAmp.gain.setValueAtTime(.8, 0);
+
+        amp.connect(del);
+        del.connect(delAmp);
+        delAmp.connect(del);
+        delAmp.connect(out());
+
+        return m;
+    };
+
+//    m.setTimbre(m.timbre());
+})();
+(function () {
+    var m = dtm.model2('rhythm-seq');
+    m.complexity = 2;
+
+    var buffer = dtm.synth2.noise(4192);
+
+    var motif = {};
+    motif.seq = [1, 0.2, 0.5, 0.2];
+    motif.seqIdx = 0;
+
+    var freq = 3000;
+    m.setFreq = function (val) {
+        freq = val;
+    };
+
+    m.play = function () {
+        var src = actx.createOscillator();
+        var amp = actx.createGain();
+        src.connect(amp);
+        amp.connect(out());
+
+        src.frequency.setValueAtTime(1000, now());
+        src.frequency.linearRampToValueAtTime(50, now() + 0.01);
+        amp.gain.vlaue = 0.5;
+        amp.gain.linearRampToValueAtTime(0, now() + 0.01);
+
+        src.start(now());
+        src.stop(now() + 0.01);
+    }
+
+    m.run = function () {
+        var pCl = m.getParentClock();
+        console.log(pCl.bpm);
+
+        return m;
+    }
+
+})();
+(function () {
+    var m = dtm.model2('sampler');
+    m.complexity = 2;
+
+    m.loop = false;
+
+    var buffer = actx.createBuffer(1, 1000, 44100);
+
+    // testing promise right here
+    m.loadBuffer = function (arrBuf) {
+//        buffer = loadBuffer(arrBuf);
+        return new Promise(function (resolve, reject) {
+            actx.decodeAudioData(arrBuf, function (buf) {
+                buffer = buf;
+                resolve(buffer);
+            });
+        });
+
+//        return m;
+    };
+
+    m.play = function () {
+        var src = actx.createBufferSource();
+        var amp = actx.createGain();
+        src.connect(amp);
+        amp.connect(out());
+
+        src.buffer = buffer;
+        src.loop = m.loop;
+
+        amp.gain.value = 0.5;
+
+        src.start(now());
+
+        return m;
+    };
+})();
+(function () {
+    var m = dtm.model2('clave-instr');
+    m.complexity = 1;
+
+    var darr = dtm.transform;
+
+    m.motif.beats = darr.itob([3, 3, 4, 2, 4]);
+    m.motif.target = darr.itob([2, 1, 2, 1]);
+    m.motif.midx = 0;
+
+    var cl = dtm.clock(80);
+    cl.setSubDiv(16);
+    cl.setTime('2/4');
+
+    var noise = dtm.synth2.noise(4192);
+
+    m.run = function () {
+        var idx = 0;
+
+        cl.add(function () {
+            var src = actx.createBufferSource();
+            var amp = actx.createGain();
+            src.connect(amp);
+            amp.connect(out());
+            src.buffer = noise;
+            src.loop = true;
+
+            m.motif.morphed = darr.morph(m.motif.beats, m.motif.target, m.motif.midx);
+
+            if (idx >= m.motif.morphed.length) {
+                idx = 0;
+            }
+
+            amp.gain.setValueAtTime(0.5 * dtm.value.expCurve(m.motif.morphed[idx], 20), now());
+            amp.gain.linearRampToValueAtTime(0, now() + 0.02);
+
+            src.start(now());
+
+            idx = (idx + 1) % m.motif.morphed.length;
+        });
+
+        cl.start();
+    };
+
+    m.modulate = function (val) {
+        m.motif.midx = val;
+    };
+
+    return m;
+})();
+(function () {
+    var m = dtm.model2();
+
+    var noise = dtm.synth2.noise(8192);
+
+    m.play = function () {
+
+    }
+})();
+(function () {
+    var m = dtm.model2('tamborim');
+
+    var c = dtm.clock(440, 48);
+
+    m.motif = {
+        original: dtm.array([1, 1, 1, 1]).fit(48, 'zeros'),
+        target: dtm.array([1, 0, 1, 1, 1, 0]).fit(48, 'zeros'),
+        midx: 0
+    };
+
+    //m.morphed = dtm.transform.morph(m.motif.original, m.motif.target, m.motif.midx);
+
+    var idx = 0;
+
+    m.run = function () {
+        c.add(function () {
+            m.morphed = dtm.transform.morph(m.motif.original.value, m.motif.target.value, m.motif.midx);
+
+            if (idx >= m.morphed.length) {
+                idx = idx - m.morphed.length;
+            }
+
+            //c.bpm(120 + m.motif.midx * 60);
+            //var delay = (1 - m.morphed[idx]) * 1 / c.params.bpm / m.morphed.length;
+
+            if (m.morphed[idx] == 1) {
+                dtm.syn().decay(0.05).play();
+            }
+
+            idx++;
+            //console.log(m.morphed);
+        }).start();
+
+        return m;
+    };
+
+    m.modulate = function (val) {
+        m.motif.midx = val;
+        return m;
+    };
+
+    return m;
+})();
+(function () {
+    var i  = dtm.instr('silly-melody'); // ????
+
+    //var m  = dtm.model('silly-melody').categ('instr');
+
+    i.models = {
+        pitches: dtm.array([0, 4, 7, 11, 12, 11, 7, 4]).add(72),
+        beats: dtm.array([1, 0, 1])
+    };
+
+    var c = dtm.clock(120, 16);
+
+    i.play = function () {
+        c.add(function () {
+            //console.log(i.models.beats);
+            var s = dtm.synth().nn(i.models.pitches.next());
+            s.amp(i.models.beats.next() * 0.5).play();
+
+        }).start();
+
+        return i;
+    };
+
+    i.stop = function () {
+        c.stop();
+        return i;
+    }
+})();
 })();

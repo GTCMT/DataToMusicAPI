@@ -1,5 +1,5 @@
 (function () {
-    var m = dtm.model('nice-chords');
+    var m = dtm.model2('nice-chords');
     m.complexity = 5;
 
     var numVoices = 2;

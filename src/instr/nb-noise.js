@@ -1,5 +1,5 @@
 (function () {
-    var m = dtm.model();
+    var m = dtm.model2();
 
     var noise = dtm.synth2.noise(8192);
 

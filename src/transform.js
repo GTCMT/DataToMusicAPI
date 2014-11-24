@@ -10,7 +10,7 @@ dtm.transform = {
     /**
      * Generates values for a new array.
      * @function module:transform#generate
-     * @param type {string} Choices: 'line', 'noise'/'random', 'sin'/'sine', 'cos'/'cosine', 'zeroes', 'ones'
+     * @param type {string} Choices: 'line', 'noise'/'random', 'gaussian'/'gauss'/'normal', 'sin'/'sine', 'cos'/'cosine', 'zeroes', 'ones'
      * @param len {integer}
      * @param [min=0] {number}
      * @param [max=1] {number}
@@ -56,6 +56,15 @@ dtm.transform = {
             case 'random':
                 for (var i = 0; i < len; i++) {
                     res[i] = _.random(min, max, true);
+                }
+                break;
+
+            case 'gaussian':
+            case 'gauss':
+            case 'normal':
+                for (var i = 0; i < len; i++) {
+                    var x = -Math.PI + (Math.PI * 2 / len) * i;
+                    res[i] = Math.pow(Math.E, -0.5 * Math.pow(x, 2)) / Math.sqrt(2 * Math.PI) / 0.4 * (max-min) + min;
                 }
                 break;
 

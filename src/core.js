@@ -1,3 +1,8 @@
+/**
+ * @fileOverview
+ * @module core
+ */
+
 /* Shared WebAudio Stuff */
 var actx = new (window.AudioContext || window.webkitAudioContext)();
 var now = function () { return actx.currentTime; };
@@ -5,10 +10,25 @@ var out = function () { return actx.destination; };
 var clMult = 0.01;
 var clockBuf = actx.createBuffer(1, Math.round(actx.sampleRate * clMult), actx.sampleRate);
 
-
+/**
+ * Returns the singleton dtm object.
+ * @name module:core#dtm
+ * @type {object}
+ */
 var dtm = {
     version: '0.0.1',
-    modelCol: [],
+
+    logger: true,
+    log: function (arg) {
+        if (dtm.logger) {
+            console.log(arg);
+        }
+    },
+
+    //instrColl: [],
+    //activeInstrs: [],
+
+    modelColl: [],
     clocks: [],
 
     sampleRate: actx.sampleRate,

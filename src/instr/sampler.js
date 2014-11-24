@@ -1,5 +1,5 @@
 (function () {
-    var m = dtm.model('sampler');
+    var m = dtm.model2('sampler');
     m.complexity = 2;
 
     m.loop = false;

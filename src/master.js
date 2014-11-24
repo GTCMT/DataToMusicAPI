@@ -22,6 +22,7 @@ dtm.master = {
     complexityLimit: 10,
     numActiveModels: 0, // or active voices??
 
+    activeInstrs: [],
     voices: [],
     numVoices: 0,
     models: [],
@@ -33,7 +34,7 @@ dtm.master = {
      * @function module:master#clock
      * @returns clock {object}
      */
-    clock: dtm.clock().start(),
+    clock: dtm.clock(120, 96).start(),
     tempo: 60,
     time: [4, 4],
     beat: 0,
@@ -68,8 +69,14 @@ dtm.master = {
             //})
         });
 
+        _.forEach(dtm.master.activeInstrs, function (i) {
+            i.stop();
+        });
+
         dtm.clocks = [];
         dtm.master.voices = [];
+
+        dtm.master.activeInstrs = [];
     },
 
     /**

@@ -52,7 +52,7 @@ dtm.iterator = function (arg) {
      */
     iter.set = function (input) {
         if (typeof(input) !== 'undefined') {
-            iter.len = input.length;
+            iter.len = input.length; // CHECK: may need update this frequently
 
             if (input.className === 'dtm.array') {
                 iter.array = input;
@@ -64,7 +64,7 @@ dtm.iterator = function (arg) {
         }
 
         return iter;
-    }
+    };
 
     iter.set(arg);
 
@@ -79,7 +79,7 @@ dtm.iterator = function (arg) {
             arrayParam = 'value'
         }
         var out = iter.array[arrayParam][iter.idx];
-        iter.idx = dtm.value.mod(iter.idx + 1, iter.len);
+        iter.idx = dtm.value.mod(iter.idx + 1, iter.array.length);
         return out;
     };
 
@@ -94,7 +94,7 @@ dtm.iterator = function (arg) {
             arrayParam = 'value'
         }
         var out = iter.array[arrayParam][iter.idx];
-        iter.idx = dtm.value.mod(iter.idx - 1, iter.len);
+        iter.idx = dtm.value.mod(iter.idx - 1, iter.array.length);
         return out;
     };
 
@@ -112,7 +112,7 @@ dtm.iterator = function (arg) {
         }
 
         var out = iter.array[arrayParam][iter.idx];
-        iter.idx = dtm.value.mod(idx, iter.len);
+        iter.idx = dtm.value.mod(idx, iter.array.length);
         return out;
     };
 
@@ -127,15 +127,48 @@ dtm.iterator = function (arg) {
             arrayParam = 'value'
         }
 
-        iter.idx = Math.floor(Math.random() * iter.len);
-        var out = iter.array[arrayParam][iter.idx];
-        return out;
+        // CHECK: would it spill out?
+        iter.idx = Math.floor(Math.random() * iter.array.length);
+        return iter.array[arrayParam][iter.idx];
     };
 
     // TODO: ...
     iter.urn = function () {
-        var range = _.range(iter.len-1);
+        var range = _.range(iter.array.length - 1);
         iter.modIdx = dtm.transform.shuffle(range);
+    };
+
+    /**
+     * Does a step-wise random walk.
+     * @function module:iterator#drunk
+     * @param [stepSize=1] {integer}
+     * @param [repeat=false] {boolean} If set true, it can sometimes repeat the same value.
+     * @param [arrayParam='value'] {string}
+     * @returns {value}
+     */
+    iter.drunk = function (stepSize, repeat, arrayParam) {
+        if (typeof(stepSize) === 'undefined') {
+            stepSize = 1;
+        }
+
+        if (typeof(repeat) === 'undefined') {
+            repeat = false;
+        }
+
+        if (typeof(arrayParam) === 'undefined') {
+            arrayParam = 'value'
+        }
+
+        var min = 1;
+        if (repeat) { min = 0; }
+
+        var val = _.random(min, stepSize);
+        if (_.random(0, 1)) {
+            val = -val;
+        }
+
+        iter.idx = dtm.value.mod(idx + val, iter.array.length);
+        return iter.array[arrayParam][iter.idx];
     };
 
     iter.setRange = function () {
@@ -145,7 +178,7 @@ dtm.iterator = function (arg) {
     iter.previous = iter.prev;
 
     return iter;
-}
+};
 
 /**
  * Creates a new instance of iterator.
