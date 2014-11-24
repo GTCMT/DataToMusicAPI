@@ -188,4 +188,3 @@ dtm.iterator = function (arg) {
  * @returns {{className: string, value: Array, idx: number, len: number}}
  */
 dtm.iter = dtm.iterator;
-dtm.i = dtm.iterator;

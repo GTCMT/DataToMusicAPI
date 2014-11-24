@@ -1,9 +1,10 @@
 (function () {
-    var m = dtm.model2('clave-instr');
+    var m = dtm.model('clave-instr').categ('instr');
     m.complexity = 1;
 
     var darr = dtm.transform;
 
+    m.motif = {};
     m.motif.beats = darr.itob([3, 3, 4, 2, 4]);
     m.motif.target = darr.itob([2, 1, 2, 1]);
     m.motif.midx = 0;
@@ -14,7 +15,7 @@
 
     var noise = dtm.synth2.noise(4192);
 
-    m.run = function () {
+    m.play = function () {
         var idx = 0;
 
         cl.add(function () {
@@ -42,7 +43,7 @@
         cl.start();
     };
 
-    m.modulate = function (val) {
+    m.mod = function (val) {
         m.motif.midx = val;
     };
 

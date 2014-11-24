@@ -1,5 +1,5 @@
 (function () {
-    var m = dtm.model2('tamborim');
+    var m = dtm.model('tamborim').categ('instr');
 
     var c = dtm.clock(440, 48);
 

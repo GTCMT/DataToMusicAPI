@@ -1,5 +1,5 @@
 (function () {
-    var m = dtm.model2('single-note');
+    var m = dtm.model('single-note').categ('instr');
 
     m.complexity = 1;
 

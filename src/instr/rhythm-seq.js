@@ -1,5 +1,5 @@
 (function () {
-    var m = dtm.model2('rhythm-seq');
+    var m = dtm.model('rhythm-seq').categ('instr');
     m.complexity = 2;
 
     var buffer = dtm.synth2.noise(4192);
@@ -26,13 +26,13 @@
 
         src.start(now());
         src.stop(now() + 0.01);
-    }
+    };
 
     m.run = function () {
         var pCl = m.getParentClock();
         console.log(pCl.bpm);
 
         return m;
-    }
+    };
 
 })();

@@ -2127,7 +2127,6 @@ dtm.iterator = function (arg) {
  * @returns {{className: string, value: Array, idx: number, len: number}}
  */
 dtm.iter = dtm.iterator;
-dtm.i = dtm.iterator;
 /**
  * @fileOverview Parses random stuff. Singleton.
  * @module parser
@@ -2854,11 +2853,6 @@ dtm.instr = function (arg) {
         return instr;
     };
 
-    //instr.beats = function (model) {
-    //    instr.params.beats = model;
-    //    return instr;
-    //};
-
     instr.clock = function () {
         return instr;
     };
@@ -2913,7 +2907,9 @@ dtm.instr = function (arg) {
             instr.models = model.models;
             //instr.play = instr.instrModel.play;
             //instr.run = instr.instrModel.run;
-            //instr.mod = instr.instrModel.mod;
+
+            // CHECK: not good
+            instr.params.modDest.push(model);
         } else {
             dtm.log('registering a new instrument: ' + arg);
             instr.params.name = arg;
@@ -2930,6 +2926,8 @@ dtm.instr = function (arg) {
 
     return instr;
 };
+
+dtm.i = dtm.instr;
 /**
  * @fileOverview Used to create a new instrument / musical models. Hopefully.
  * @module model
@@ -2979,6 +2977,15 @@ dtm.model = function (name, categ) {
 
     model.modulate = model.mod;
 
+    // for instr-type models
+    model.start = function () {
+        return model;
+    };
+
+    model.stop = function () {
+        return model;
+    };
+
     if (typeof(name) === 'string') {
         var load = _.find(dtm.modelColl, {params: {name: name}});
 
@@ -3003,6 +3010,8 @@ dtm.model = function (name, categ) {
 
     return model;
 };
+
+dtm.m = dtm.model;
 dtm.model2 = function (name) {
     var model = {
         className: 'dtm.model2',
@@ -3961,7 +3970,7 @@ dtm.master = {
 
 })();
 (function () {
-    var m = dtm.model2('single-note');
+    var m = dtm.model('single-note').categ('instr');
 
     m.complexity = 1;
 
@@ -3994,7 +4003,7 @@ dtm.master = {
     }
 })();
 (function () {
-    var m = dtm.model2('short-noise');
+    var m = dtm.model('short-noise').categ('instr');
 
     m.complexity = 2;
 
@@ -4040,11 +4049,11 @@ dtm.master = {
     }
 })();
 (function () {
-    var m = dtm.model2('nice-chords');
+    var m = dtm.model('nice-chords').categ('instr');
     m.complexity = 5;
 
     var numVoices = 2;
-    m.modulate = function (val) {
+    m.mod = function (val) {
         numVoices = Math.round(val * 6) + 2;
     };
 
@@ -4080,7 +4089,7 @@ dtm.master = {
             osc[i] = actx.createOscillator();
             osc[i].connect(amp);
 
-            osc[i].frequency.setValueAtTime(mtof(pitchQ(nn + 3 * i, scale)), now());
+            osc[i].frequency.setValueAtTime(dtm.val.mtof(dtm.val.pq(nn + 3 * i, scale)), now());
             osc[i].setPeriodicWave(timbre);
 
             osc[i].start(now());
@@ -4113,7 +4122,7 @@ dtm.master = {
 //    m.setTimbre(m.timbre());
 })();
 (function () {
-    var m = dtm.model2('rhythm-seq');
+    var m = dtm.model('rhythm-seq').categ('instr');
     m.complexity = 2;
 
     var buffer = dtm.synth2.noise(4192);
@@ -4140,18 +4149,18 @@ dtm.master = {
 
         src.start(now());
         src.stop(now() + 0.01);
-    }
+    };
 
     m.run = function () {
         var pCl = m.getParentClock();
         console.log(pCl.bpm);
 
         return m;
-    }
+    };
 
 })();
 (function () {
-    var m = dtm.model2('sampler');
+    var m = dtm.model('sampler').categ('instr');
     m.complexity = 2;
 
     m.loop = false;
@@ -4188,11 +4197,12 @@ dtm.master = {
     };
 })();
 (function () {
-    var m = dtm.model2('clave-instr');
+    var m = dtm.model('clave-instr').categ('instr');
     m.complexity = 1;
 
     var darr = dtm.transform;
 
+    m.motif = {};
     m.motif.beats = darr.itob([3, 3, 4, 2, 4]);
     m.motif.target = darr.itob([2, 1, 2, 1]);
     m.motif.midx = 0;
@@ -4203,7 +4213,7 @@ dtm.master = {
 
     var noise = dtm.synth2.noise(4192);
 
-    m.run = function () {
+    m.play = function () {
         var idx = 0;
 
         cl.add(function () {
@@ -4231,7 +4241,7 @@ dtm.master = {
         cl.start();
     };
 
-    m.modulate = function (val) {
+    m.mod = function (val) {
         m.motif.midx = val;
     };
 
@@ -4247,7 +4257,7 @@ dtm.master = {
     }
 })();
 (function () {
-    var m = dtm.model2('tamborim');
+    var m = dtm.model('tamborim').categ('instr');
 
     var c = dtm.clock(440, 48);
 

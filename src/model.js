@@ -47,6 +47,15 @@ dtm.model = function (name, categ) {
 
     model.modulate = model.mod;
 
+    // for instr-type models
+    model.start = function () {
+        return model;
+    };
+
+    model.stop = function () {
+        return model;
+    };
+
     if (typeof(name) === 'string') {
         var load = _.find(dtm.modelColl, {params: {name: name}});
 
@@ -71,3 +80,5 @@ dtm.model = function (name, categ) {
 
     return model;
 };
+
+dtm.m = dtm.model;

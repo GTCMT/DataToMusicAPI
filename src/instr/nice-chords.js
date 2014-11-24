@@ -1,9 +1,9 @@
 (function () {
-    var m = dtm.model2('nice-chords');
+    var m = dtm.model('nice-chords').categ('instr');
     m.complexity = 5;
 
     var numVoices = 2;
-    m.modulate = function (val) {
+    m.mod = function (val) {
         numVoices = Math.round(val * 6) + 2;
     };
 
@@ -39,7 +39,7 @@
             osc[i] = actx.createOscillator();
             osc[i].connect(amp);
 
-            osc[i].frequency.setValueAtTime(mtof(pitchQ(nn + 3 * i, scale)), now());
+            osc[i].frequency.setValueAtTime(dtm.val.mtof(dtm.val.pq(nn + 3 * i, scale)), now());
             osc[i].setPeriodicWave(timbre);
 
             osc[i].start(now());

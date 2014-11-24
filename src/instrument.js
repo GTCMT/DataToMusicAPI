@@ -93,11 +93,6 @@ dtm.instr = function (arg) {
         return instr;
     };
 
-    //instr.beats = function (model) {
-    //    instr.params.beats = model;
-    //    return instr;
-    //};
-
     instr.clock = function () {
         return instr;
     };
@@ -152,7 +147,9 @@ dtm.instr = function (arg) {
             instr.models = model.models;
             //instr.play = instr.instrModel.play;
             //instr.run = instr.instrModel.run;
-            //instr.mod = instr.instrModel.mod;
+
+            // CHECK: not good
+            instr.params.modDest.push(model);
         } else {
             dtm.log('registering a new instrument: ' + arg);
             instr.params.name = arg;
@@ -169,3 +166,5 @@ dtm.instr = function (arg) {
 
     return instr;
 };
+
+dtm.i = dtm.instr;
