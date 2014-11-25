@@ -41,7 +41,7 @@ dtm.iterator = function (arg) {
 
         order: null,
         range: {},
-        modIdx: [],
+        modIdx: []
     };
 
     /**
@@ -167,7 +167,7 @@ dtm.iterator = function (arg) {
             val = -val;
         }
 
-        iter.idx = dtm.value.mod(idx + val, iter.array.length);
+        iter.idx = dtm.value.mod(iter.idx + val, iter.array.length);
         return iter.array[arrayParam][iter.idx];
     };
 

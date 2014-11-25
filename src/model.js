@@ -47,6 +47,11 @@ dtm.model = function (name, categ) {
 
     model.modulate = model.mod;
 
+    model.map = function (arrobj) {
+
+        return model;
+    };
+
     // for instr-type models
     model.start = function () {
         return model;

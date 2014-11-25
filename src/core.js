@@ -173,7 +173,7 @@ dtm.loadData = function (url, cb) {
 
         xhr.send();
     });
-}
+};
 
 
 dtm.loadAudio = function (url, cb) {
@@ -200,13 +200,13 @@ dtm.loadAudio = function (url, cb) {
 
         xhr.send();
     });
-}
+};
 
 function loadBuffer(arrayBuf) {
     var buffer = {};
     actx.decodeAudioData(arrayBuf, function (buf) {
         buffer = buf;
-    })
+    });
 
     return buffer;
 }

@@ -34,8 +34,8 @@ dtm.master = {
      * @function module:master#clock
      * @returns clock {object}
      */
-    clock: dtm.clock(120, 96).start(),
-    tempo: 60,
+    clock: dtm.clock(60, 480).sync(false),
+    tempo: 120,
     time: [4, 4],
     beat: 0,
 
@@ -129,3 +129,7 @@ dtm.master = {
 
     reset: null
 };
+
+//dtm.master.clock.params.sync = false;
+dtm.master.clock.params.isMaster = true;
+dtm.master.clock.start();

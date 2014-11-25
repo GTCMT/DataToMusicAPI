@@ -26,7 +26,6 @@ dtm.instr = function (arg) {
 
         // TODO: refactor...
         if (typeof(arg) === 'object') {
-            //console.log(_.find(arg, {params: categ}));
             if (arg.params.categ === 'instr') {
 
             } else if (categ) {
@@ -57,7 +56,9 @@ dtm.instr = function (arg) {
         return instr;
     };
 
-    instr.load = instr.model;
+    instr.load = function (arg) {
+        return instr;
+    };
 
     instr.play = function () {
         // can only play single voice / instance

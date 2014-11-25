@@ -30,6 +30,7 @@ dtm.clock = function (bpm, subDiv, time) {
 
         params: {
             isOn: false,
+            sync: true,
             bpm: 60,
             random: 0,
             swing: 50
@@ -71,7 +72,16 @@ dtm.clock = function (bpm, subDiv, time) {
         }
 
         return clock;
-    }
+    };
+
+    clock.sync = function (bool) {
+        if (typeof(bool) === 'undefined') {
+            bool = true;
+        }
+
+        clock.params.sync = bool;
+        return clock;
+    };
 
     /**
      * Sets the speed of the clock in BPM,
@@ -151,7 +161,9 @@ dtm.clock = function (bpm, subDiv, time) {
             clock.params.isOn = true;
             clock.tick();
 
-            dtm.clocks.push(clock);
+            if (!clock.params.isMaster) {
+                dtm.clocks.push(clock);
+            }
         }
         return clock;
     };
@@ -168,46 +180,95 @@ dtm.clock = function (bpm, subDiv, time) {
      */
     clock.tick = function (timeErr) {
         timeErr = timeErr || 0;
-
 //            if (isNaN(timeErr)) {
 //                timeErr = 0;
 //            }
         if (clock.params.isOn) {
-            clockSrc = actx.createBufferSource();
-            clockSrc.buffer = clockBuf;
-            clockSrc.connect(out());
 
-            var freq = clock.params.bpm / 60.0 * (clock.subDiv / 4.0);
+            if (!clock.params.sync && !clock.params.isMaster) {
+                clockSrc = actx.createBufferSource();
+                clockSrc.buffer = clockBuf;
+                clockSrc.connect(out());
+
+                var freq = clock.params.bpm / 60.0 * (clock.subDiv / 4.0);
 //            var pbRate = 1/(1/freq - Math.abs(timeErr));
 
-            clockSrc.playbackRate.value = freq * clMult;
-            clockSrc.playbackRate.value += clockSrc.playbackRate.value * (clock.params.random / 100) * _.sample([1, -1]);
+                clockSrc.playbackRate.value = freq * clMult;
+                clockSrc.playbackRate.value += clockSrc.playbackRate.value * (clock.params.random / 100) * _.sample([1, -1]);
 
-            if (clock.beat % 2 == 0) {
-                clockSrc.playbackRate.value *= (100 - clock.params.swing) / 50;
-            } else {
-                clockSrc.playbackRate.value *= clock.params.swing / 50;
+                if (clock.beat % 2 == 0) {
+                    clockSrc.playbackRate.value *= (100 - clock.params.swing) / 50;
+                } else {
+                    clockSrc.playbackRate.value *= clock.params.swing / 50;
+                }
+
+                clockSrc.start(now() + 0.0000001);
+
+                clockSrc.onended = function () {
+                    curTime += 1/freq;
+                    var error = now() - curTime;
+                    clock.tick(error);
+//                curTime = now();
+                };
+
+                _.forEach(clock.callbacks, function (cb) {
+                    if (_.indexOf(cb[1], clock.beat) > -1) {
+                        cb[0](clock);
+                    }
+                });
+
+                clock.beat = (clock.beat + 1) % (clock.subDiv * clock.time[0] / clock.time[1]);
+
+                return clock;
+
+            } else if (clock.params.sync && !clock.params.isMaster) {
+                if (dtm.master.clock.beat % Math.round(480/clock.subDiv) === 0) {
+                    _.forEach(clock.callbacks, function (cb) {
+                        if (_.indexOf(cb[1], clock.beat) > -1) {
+                            cb[0](clock);
+                        }
+                    });
+                }
+
+                return clock;
+            } else if (clock.params.isMaster) {
+                clockSrc = actx.createBufferSource();
+                clockSrc.buffer = clockBuf;
+                clockSrc.connect(out());
+
+                var freq = clock.params.bpm / 60.0 * (clock.subDiv / 4.0);
+
+                clockSrc.playbackRate.value = freq * clMult;
+                clockSrc.playbackRate.value += clockSrc.playbackRate.value * (clock.params.random / 100) * _.sample([1, -1]);
+
+                if (clock.beat % 2 == 0) {
+                    clockSrc.playbackRate.value *= (100 - clock.params.swing) / 50;
+                } else {
+                    clockSrc.playbackRate.value *= clock.params.swing / 50;
+                }
+
+                clockSrc.start(now() + 0.0000001);
+
+                clockSrc.onended = function () {
+                    curTime += 1/freq;
+                    var error = now() - curTime;
+                    clock.tick();
+
+                    //return function (cb) {
+                    //    cb();
+                    //};
+                };
+
+                _.forEach(clock.callbacks, function (cb) {
+                    if (_.indexOf(cb[1], clock.beat) > -1) {
+                        cb[0](clock);
+                    }
+                });
+
+                clock.beat = (clock.beat + 1) % (clock.subDiv * clock.time[0] / clock.time[1]);
             }
 
-            clockSrc.start(now() + 0.0000001);
-
-            clockSrc.onended = function () {
-                curTime += 1/freq;
-                var error = now() - curTime;
-                clock.tick(error);
-//                curTime = now();
-            };
-
-            _.forEach(clock.callbacks, function (cb) {
-                if (_.indexOf(cb[1], clock.beat) > -1) {
-                    cb[0](clock);
-                }
-            });
-
-            clock.beat = (clock.beat + 1) % (clock.subDiv * clock.time[0] / clock.time[1]);
         }
-
-        return clock;
     };
 
     /**
@@ -225,7 +286,7 @@ dtm.clock = function (bpm, subDiv, time) {
     clock.clear = function () {
         clock.callbacks = [];
         return clock;
-    }
+    };
 
     // TODO: use -1to1 ratio than %
     /**
@@ -261,6 +322,10 @@ dtm.clock = function (bpm, subDiv, time) {
         clock.beat = 0;
         return clock;
     };
+
+    if (!clock.params.isMaster && typeof(dtm.master) !== 'undefined') {
+        dtm.master.clock.add(clock.tick);
+    }
 
     return clock;
 };
