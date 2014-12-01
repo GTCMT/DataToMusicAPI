@@ -17,19 +17,19 @@ dtm.collection = function () {
     };
 
     coll.set = function () {
-
+        return coll;
     };
 
     coll.update = function () {
-
+        return coll;
     };
 
     coll.map = function () {
-
+        return coll;
     };
 
     return coll;
-}
+};
 
 dtm.coll = dtm.collection;
 

@@ -389,12 +389,23 @@ dtm.synth = function (type) {
         return synth;
     };
 
+    /**
+     * Applies a reverb to the voice.
+     * @function module:synth#verb
+     * @param amt {number} 0-1
+     * @returns {dtm.synth}
+     */
     synth.verb = function (amt) {
         synth.params.verb.isOn = true;
         synth.params.verb.amount = amt;
         return synth;
     };
 
+    /**
+     * Same as synth.verb().
+     * @function module:synth#reverb
+     * @type {Function}
+     */
     synth.reverb = synth.verb;
 
     // TODO: stereo mode
@@ -430,8 +441,15 @@ dtm.synth = function (type) {
         return synth;
     };
 
+    /**
+     * Sets the wavetable or mode of the dtm.synth.
+     * @function module:synth#set
+     * @param type {string|array} Choices: sine, saw, square, triangle, noise, click, sampler
+     * @returns {dtm.synth}
+     */
     synth.set = function (type) {
         switch (type) {
+            case 'sin':
             case 'sine':
                 synth.params.type = 'sine';
                 break;
@@ -460,10 +478,11 @@ dtm.synth = function (type) {
             default:
                 break;
         }
+
+        return synth;
     };
 
     synth.type = synth.wt = synth.set;
-
     synth.set(type);
 
     return synth;

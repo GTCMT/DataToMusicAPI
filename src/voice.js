@@ -1,23 +1,23 @@
-/**
- * @fileOverview A voice is an instance of musical model. It is used to make actual sounds.
- * @module voice
- */
+///**
+// * @fileOverview A voice is an instance of musical model. It is used to make actual sounds.
+// * @module voice
+// */
 
-/**
- * Creats a new instance of voice, using the existing model name (string) or a model object.
- *
- * @function module:voice.voice
- * @param name {string|object}
- * @returns {object} a new voice
- */
+///**
+// * Creats a new instance of voice, using the existing model name (string) or a model object.
+// *
+// * @function module:voice.voice
+// * @param name {string|object}
+// * @returns {object} a new voice
+// */
 dtm.voice = function (arg) {
     var voice = {
         className: 'dtm.voice',
 
-        /**
-         * @name module:voice#model
-         * @type {object}
-         */
+        ///**
+        // * @name module:voice#model
+        // * @type {object}
+        // */
         model: null,
         modelName: null, // TODO: this is maybe redundant
 
@@ -43,19 +43,19 @@ dtm.voice = function (arg) {
     }
 
 
-    /**
-     * @function module:voice#getModel
-     * @returns {object} model
-     */
+    ///**
+    // * @function module:voice#getModel
+    // * @returns {object} model
+    // */
     voice.getModel = function () {
         return voice.model;
     };
 
     // CHECK: maybe this is redundant
-    /**
-     * @function module:voice#getModelName
-     * @returns {string} model name
-     */
+    ///**
+    // * @function module:voice#getModelName
+    // * @returns {string} model name
+    // */
     voice.getModelName = function () {
         return voice.modelName;
     };
@@ -80,19 +80,19 @@ dtm.voice = function (arg) {
 
     // TODO: maybe fix this redundancy
     if (voice.modelName !== null) {
-        /**
-         * @function module:voice#play
-         * @param [nn]
-         */
+        ///**
+        // * @function module:voice#play
+        // * @param [nn]
+        // */
         voice.play = function (nn) {
             return _.find(dtm.modelCol, {name: voice.modelName}).play(nn);
         };
 
-        /**
-         * @function module:voice#run
-         * @param [clock]
-         * @returns {Object}
-         */
+        ///**
+        // * @function module:voice#run
+        // * @param [clock]
+        // * @returns {Object}
+        // */
         voice.run = function (clock) {
             if (typeof(clock) === 'undefined') {
                 clock = voice.clock;
@@ -101,11 +101,11 @@ dtm.voice = function (arg) {
             return voice.model;
         };
 
-        /**
-         * @function module:voice#modulate
-         * @param val
-         * @returns {*}
-         */
+        ///**
+        // * @function module:voice#modulate
+        // * @param val
+        // * @returns {*}
+        // */
         voice.modulate = function (val) {
             return _.find(dtm.modelCol, {name: voice.modelName}).modulate(val);
         };

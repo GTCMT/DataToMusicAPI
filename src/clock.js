@@ -29,7 +29,7 @@ dtm.clock = function (bpm, subDiv, time) {
 
         params: {
             isOn: false,
-            sync: true,
+            sync: false,
             bpm: 60,
             subDiv: 4,
             random: 0,
@@ -67,6 +67,12 @@ dtm.clock = function (bpm, subDiv, time) {
         return clock;
     };
 
+    /**
+     * Sets the clock to be synced to the master clock. When set true, the tempo/BPM in itself is ignored.
+     * @function module:clock#sync
+     * @param [bool=true] {boolean}
+     * @returns {dtm.clock}
+     */
     clock.sync = function (bool) {
         if (typeof(bool) === 'undefined') {
             bool = true;
@@ -103,6 +109,11 @@ dtm.clock = function (bpm, subDiv, time) {
      */
     clock.tempo = clock.bpm;
 
+    /**
+     * Sets the subdivision of the clock.
+     * @param [val=4] {integer} Note quality value. E.g. 4 = quarter note, 8 = eighth note.
+     * @returns {{className: string, interval: number, time: number[], beat: number, list: Array, params: {isOn: boolean, sync: boolean, bpm: number, subDiv: number, random: number, swing: number}, callbacks: Array}}
+     */
     clock.subDiv = function (val) {
         val = val | 4;
         clock.params.subDiv = val;

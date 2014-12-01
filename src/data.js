@@ -58,7 +58,7 @@ dtm.data = function (arg, cb, type) {
          * @type {object}
          */
         promise: null
-    }
+    };
 
     //if (type !== 'undefined') {
     //    // array, csv, json

@@ -20,7 +20,7 @@ var clockBuf = actx.createBuffer(1, Math.round(actx.sampleRate * clMult), actx.s
 var dtm = {
     version: '0.0.1',
 
-    logger: true,
+    logger: false,
     log: function (arg) {
         if (dtm.logger) {
             console.log(arg);
@@ -1644,6 +1644,11 @@ dtm.array = function (arr, name) {
         return array;
     };
 
+    /**
+     * Same as array.shuffle().
+     * @function module:array#randomize
+     * @type {Function}
+     */
     array.randomize = array.shuffle;
 
     /**
@@ -1687,6 +1692,11 @@ dtm.array = function (arr, name) {
         return array;
     };
 
+    /**
+     * Same as array.repeat().
+     * @function module:array#rep
+     * @type {Function}
+     */
     array.rep = array.repeat;
 
     array.truncate = function () {
@@ -1961,7 +1971,7 @@ dtm.array = function (arr, name) {
     };
 
     return array;
-}
+};
 
 dtm.a = dtm.array;
 /**
@@ -1983,19 +1993,19 @@ dtm.collection = function () {
     };
 
     coll.set = function () {
-
+        return coll;
     };
 
     coll.update = function () {
-
+        return coll;
     };
 
     coll.map = function () {
-
+        return coll;
     };
 
     return coll;
-}
+};
 
 dtm.coll = dtm.collection;
 
@@ -2343,6 +2353,12 @@ dtm.parser = {
 //        return JSON.stringify(result); //JSON
     },
 
+    /**
+     * Parses the value types from a given row of a collection.
+     * @function module:parser#valueTypes
+     * @param row {array}
+     * @returns {array}
+     */
     valueTypes: function (row) {
         var types = [];
 
@@ -2358,18 +2374,24 @@ dtm.parser = {
                     types.push('int');
                 }
             }
-        })
+        });
 
         return types;
     },
 
     // CHECK: this only works w/ json...
+    /**
+     * Returns the column & row size of the collection
+     * @function module:parser#getSize
+     * @param json
+     * @returns {array}
+     */
     getSize: function (json) {
         var col = _.size(json[0]); // header
         var row = _.size(json);
         return [col, row];
     }
-}
+};
 /**
  * @fileOverview Data object.
  * @module data
@@ -2430,7 +2452,7 @@ dtm.data = function (arg, cb, type) {
          * @type {object}
          */
         promise: null
-    }
+    };
 
     //if (type !== 'undefined') {
     //    // array, csv, json
@@ -2683,7 +2705,7 @@ dtm.clock = function (bpm, subDiv, time) {
 
         params: {
             isOn: false,
-            sync: true,
+            sync: false,
             bpm: 60,
             subDiv: 4,
             random: 0,
@@ -2721,6 +2743,12 @@ dtm.clock = function (bpm, subDiv, time) {
         return clock;
     };
 
+    /**
+     * Sets the clock to be synced to the master clock. When set true, the tempo/BPM in itself is ignored.
+     * @function module:clock#sync
+     * @param [bool=true] {boolean}
+     * @returns {dtm.clock}
+     */
     clock.sync = function (bool) {
         if (typeof(bool) === 'undefined') {
             bool = true;
@@ -2757,6 +2785,11 @@ dtm.clock = function (bpm, subDiv, time) {
      */
     clock.tempo = clock.bpm;
 
+    /**
+     * Sets the subdivision of the clock.
+     * @param [val=4] {integer} Note quality value. E.g. 4 = quarter note, 8 = eighth note.
+     * @returns {{className: string, interval: number, time: number[], beat: number, list: Array, params: {isOn: boolean, sync: boolean, bpm: number, subDiv: number, random: number, swing: number}, callbacks: Array}}
+     */
     clock.subDiv = function (val) {
         val = val | 4;
         clock.params.subDiv = val;
@@ -3012,6 +3045,17 @@ dtm.clock = function (bpm, subDiv, time) {
 };
 
 dtm.c = dtm.clock;
+/**
+ * @fileOverview The instrument object that makes some complex musical gestures. It can contain multiple models, and be modulated in various ways.
+ * @module instr
+ */
+
+/**
+ * Creates a new instance of dtm.instr object. If given a name, it either creates a new instrument with the name, or loads from the pre-registered instrument model collection.
+ * @function module:instr.instr
+ * @param [arg] {string|dtm.model}
+ * @returns {dtm.instr}
+ */
 dtm.instr = function (arg) {
     var instr = {
         className: 'dtm.instrument',
@@ -3021,7 +3065,7 @@ dtm.instr = function (arg) {
             poly: false,
 
             modDest: [],
-            clock: dtm.clock(),
+            clock: dtm.clock(120, 8),
             sync: true,
             subDivision: 16
         },
@@ -3033,9 +3077,16 @@ dtm.instr = function (arg) {
         modelList: []
     };
 
+    /**
+     * Sets a model for one of the parameters of the instrument.
+     * @function module:instr#model
+     * @param model {string|dtm.model|dtm.array}
+     * @param [target='any'] {string}
+     * @returns {dtm.instr}
+     */
     instr.model = function () {
         var arg = arguments[0];
-        var categ = null; // TODO: WIP
+        var categ = 'any'; // TODO: WIP
 
         if (typeof(arguments[1]) === 'string') {
             categ = arguments[1];
@@ -3049,16 +3100,24 @@ dtm.instr = function (arg) {
                 instr.models['any'] = dtm.array(arg);
             }
         } else if (typeof(arg) === 'object') {
-            if (arg.params.categ === 'instr') {
+            if (arg.className === 'dtm.model') {
+                if (arg.params.categ === 'instr') {
+                    // CHECK: ...
+                    dtm.log('assigning model "' + arg.params.name + '" to category "' + categ + '"');
+                    instr.models[categ] = arg;
+                    instr.params.modDest.push(arg);
 
-            } else if (categ) {
-                dtm.log('assigning model "' + arg.params.name + '" to category "' + categ + '"');
+                } else if (categ) {
+                    dtm.log('assigning model "' + arg.params.name + '" to category "' + categ + '"');
+                    instr.models[categ] = arg;
+                    instr.params.modDest.push(arg);
+                } else if (arg.params.categ !== 'any') {
+                    dtm.log('assigning model "' + arg.params.name + '" to category "' + arg.params.categ + '"');
+                    instr.models[arg.params.categ] = arg;
+                    instr.params.modDest.push(arg);
+                }
+            } else if (arg.className === 'dtm.array') {
                 instr.models[categ] = arg;
-                instr.params.modDest.push(arg);
-            } else if (arg.params.categ !== 'any') {
-                dtm.log('assigning model "' + arg.params.name + '" to category "' + arg.params.categ + '"');
-                instr.models[arg.params.categ] = arg;
-                instr.params.modDest.push(arg);
             }
         } else if (typeof(arg) === 'string') {
             var model = _.find(dtm.modelColl, {params: {
@@ -3079,6 +3138,11 @@ dtm.instr = function (arg) {
         return instr;
     };
 
+    /**
+     * Sets the main voice / WebAudio synthesizer for the instrument.
+     * @param arg {string|dtm.synth}
+     * @returns {dtm.instr}
+     */
     instr.voice = function (arg) {
         if (typeof(arg) === 'string') {
             instr.models.voice.set(arg);
@@ -3086,30 +3150,46 @@ dtm.instr = function (arg) {
         return instr;
     };
 
-    instr.load = function (arg) {
-        return instr;
-    };
-
+    /**
+     * Starts performing the instrument.
+     * @function module:instr#play
+     * @returns {dtm.instr}
+     */
     instr.play = function () {
         // can only play single voice / instance
         if (instr.params.isPlaying !== true) {
             instr.params.isPlaying = true;
             dtm.log('playing: ' + instr.params.name);
 
-            instr.params.clock.add(function () {
-                var v = instr.models.voice;
+            if (!instr.instrModel) {
+                instr.params.clock.add(function () {
+                    var v = instr.models.voice;
 
-                if (typeof(instr.models.melody) !== 'undefined') {
-                    v.nn(instr.models.melody.next()); // CHECK: only for dtm.arrays
-                }
-                v.play();
-            }).start(); // ???
+                    // CHECK: only for dtm.arrays
+                    if (typeof(instr.models.beats) !== 'undefined') {
+                        if (instr.models.beats.next()) {
+                            if (typeof(instr.models.melody) !== 'undefined') {
+                                v.nn(instr.models.melody.next());
+                            }
 
-            if (instr.instrModel.params.categ === 'instr') {
-                instr.instrModel.stop();
-                instr.instrModel.play();
+                            v.play();
+                        }
+                    } else {
+                        if (typeof(instr.models.melody) !== 'undefined') {
+                            v.nn(instr.models.melody.next());
+                        }
+
+                        v.play();
+                    }
+                }).start(); // ???
             }
 
+            if (instr.instrModel) {
+                if (instr.instrModel.params.categ === 'instr') {
+                    instr.instrModel.stop();
+                    instr.instrModel.play();
+                }
+            }
 
             // register to the active instr list?
             dtm.master.activeInstrs.push(instr);
@@ -3118,13 +3198,17 @@ dtm.instr = function (arg) {
         return instr;
     };
 
+    instr.start = instr.run = instr.play;
+
     instr.stop = function () {
         if (instr.params.isPlaying === true) {
             instr.params.isPlaying = false;
             dtm.log('stopping: ' + instr.params.name);
 
-            if (instr.instrModel.params.categ === 'instr') {
-                instr.instrModel.stop();
+            if (instr.instrModel) {
+                if (instr.instrModel.params.categ === 'instr') {
+                    instr.instrModel.stop();
+                }
             }
 
             instr.params.clock.stop();
@@ -3132,14 +3216,38 @@ dtm.instr = function (arg) {
         return instr;
     };
 
-    instr.clock = function () {
+    instr.clock = function (bpm, subDiv, time) {
+        instr.params.clock.bpm(bpm);
+        instr.params.clock.subDiv(subDiv);
         return instr;
     };
 
-    instr.bpm = function () {
+    instr.bpm = function (val) {
+        instr.params.clock.bpm(val);
         return instr;
     };
 
+    instr.subDiv = function (val) {
+        instr.params.clock.subDiv(val);
+        return instr;
+    };
+
+    instr.sync = function (bool) {
+        if (typeof(bool) === 'undefined') {
+            bool = true;
+        }
+        instr.params.clock.sync(bool);
+        instr.params.sync = bool;
+        return instr;
+    };
+
+
+    /**
+     * Modulates the parameter(s) of the instrument.
+     * @function module:instr#mod
+     * @arg {number}
+     * @returns {dtm.instr}
+     */
     instr.mod = function () {
         if (typeof(arguments[0]) === 'number') {
             if (arguments.length === 1) {
@@ -3180,38 +3288,45 @@ dtm.instr = function (arg) {
     };
 
     instr.clone = function () {
-
+        return instr;
     };
 
-    if (typeof(arg) === 'string') {
-        var model = _.find(dtm.modelColl, {params: {
-            name: arg,
-            categ: 'instr'
-        }});
+    instr.load = function (arg) {
+        if (typeof(arg) === 'string') {
+            var model = _.find(dtm.modelColl, {params: {
+                name: arg,
+                categ: 'instr'
+            }});
 
-        if (typeof(model) !== 'undefined') {
-            dtm.log('loading instrument model: ' + arg);
-            instr.instrModel = model;
-            instr.params.name = arg;
-            instr.models = model.models;
-            //instr.play = instr.instrModel.play;
-            //instr.run = instr.instrModel.run;
+            if (typeof(model) !== 'undefined') {
+                dtm.log('loading instrument model: ' + arg);
+                instr.instrModel = model;
+                instr.params.name = arg;
+                //instr.models = model.models;
+                instr.model(model);
+                //instr.play = instr.instrModel.play;
+                //instr.run = instr.instrModel.run;
 
-            // CHECK: not good
-            instr.params.modDest.push(model);
-        } else {
-            dtm.log('registering a new instrument: ' + arg);
-            instr.params.name = arg;
-            instr.params.categ = 'instr';
-            dtm.modelColl.push(instr);
+                // CHECK: not good
+                instr.params.modDest.push(model);
+            } else {
+                dtm.log('registering a new instrument: ' + arg);
+                instr.params.name = arg;
+                instr.params.categ = 'instr';
+                dtm.modelColl.push(instr);
+            }
+
+        } else if (typeof(arg) !== 'undefined') {
+            if (arg.params.categ === 'instr') {
+                instr.instrModel = arg; // TODO: check the class name
+                instr.model(arg);
+            }
         }
 
-    } else if (typeof(arg) !== 'undefined') {
-        instr.instrModel = arg; // TODO: check the class name
-    }
+        return instr;
+    };
 
-    instr.start = instr.play;
-    instr.run = instr.play;
+    instr.load(arg);
 
     return instr;
 };
@@ -3246,6 +3361,12 @@ dtm.model = function (name, categ) {
         }
     };
 
+    /**
+     * Sets the category of the model.
+     * @function module:model#categ
+     * @param categ {string}
+     * @returns {dtm.model}
+     */
     model.categ = function (categ) {
         model.params.categ = categ;
         return model;
@@ -3315,17 +3436,17 @@ dtm.model2 = function (name) {
     var model = {
         className: 'dtm.model2',
 
-        /**
-         * @name module:model#name
-         * @type {string}
-         */
+        ///**
+        // * @name module:model#name
+        // * @type {string}
+        // */
         name: null,
 
-        /**
-         * Whether if the model is synced to the master.
-         * @name module:model#sync
-         * @type {boolean}
-         */
+        ///**
+        // * Whether if the model is synced to the master.
+        // * @name module:model#sync
+        // * @type {boolean}
+        // */
         sync: true,
         clock: null,
         data: null,
@@ -3351,40 +3472,40 @@ dtm.model2 = function (name) {
         model.name = name;
     }
 
-    /**
-     * @function module:model#setName
-     * @param name {string}
-     * @returns {dtm.model}
-     */
+    ///**
+    // * @function module:model#setName
+    // * @param name {string}
+    // * @returns {dtm.model}
+    // */
     model.setName = function (name) {
         model.name = name;
         return model;
     };
 
-    /**
-     * @function module:model#play
-     * @param nn
-     * @returns {dtm.model}
-     */
+    ///**
+    // * @function module:model#play
+    // * @param nn
+    // * @returns {dtm.model}
+    // */
     model.play = function (nn) {
         console.log('play() function is not implemented!');
         return model;
     };
 
-    /**
-     * @function module:model#run
-     * @param clock
-     * @returns {dtm.model}
-     */
+    ///**
+    // * @function module:model#run
+    // * @param clock
+    // * @returns {dtm.model}
+    // */
     model.run = function (clock) {
         console.log('run() funciton is not implemented!');
         return model;
     };
 
-    /**
-     * @function module:model#stop
-     * @returns {dtm.model}
-     */
+    ///**
+    // * @function module:model#stop
+    // * @returns {dtm.model}
+    // */
     model.stop = function () {
         return model;
     };
@@ -3829,12 +3950,23 @@ dtm.synth = function (type) {
         return synth;
     };
 
+    /**
+     * Applies a reverb to the voice.
+     * @function module:synth#verb
+     * @param amt {number} 0-1
+     * @returns {dtm.synth}
+     */
     synth.verb = function (amt) {
         synth.params.verb.isOn = true;
         synth.params.verb.amount = amt;
         return synth;
     };
 
+    /**
+     * Same as synth.verb().
+     * @function module:synth#reverb
+     * @type {Function}
+     */
     synth.reverb = synth.verb;
 
     // TODO: stereo mode
@@ -3870,8 +4002,15 @@ dtm.synth = function (type) {
         return synth;
     };
 
+    /**
+     * Sets the wavetable or mode of the dtm.synth.
+     * @function module:synth#set
+     * @param type {string|array} Choices: sine, saw, square, triangle, noise, click, sampler
+     * @returns {dtm.synth}
+     */
     synth.set = function (type) {
         switch (type) {
+            case 'sin':
             case 'sine':
                 synth.params.type = 'sine';
                 break;
@@ -3900,10 +4039,11 @@ dtm.synth = function (type) {
             default:
                 break;
         }
+
+        return synth;
     };
 
     synth.type = synth.wt = synth.set;
-
     synth.set(type);
 
     return synth;
@@ -4025,26 +4165,26 @@ dtm.synth2 = {
 };
 
 
-/**
- * @fileOverview A voice is an instance of musical model. It is used to make actual sounds.
- * @module voice
- */
+///**
+// * @fileOverview A voice is an instance of musical model. It is used to make actual sounds.
+// * @module voice
+// */
 
-/**
- * Creats a new instance of voice, using the existing model name (string) or a model object.
- *
- * @function module:voice.voice
- * @param name {string|object}
- * @returns {object} a new voice
- */
+///**
+// * Creats a new instance of voice, using the existing model name (string) or a model object.
+// *
+// * @function module:voice.voice
+// * @param name {string|object}
+// * @returns {object} a new voice
+// */
 dtm.voice = function (arg) {
     var voice = {
         className: 'dtm.voice',
 
-        /**
-         * @name module:voice#model
-         * @type {object}
-         */
+        ///**
+        // * @name module:voice#model
+        // * @type {object}
+        // */
         model: null,
         modelName: null, // TODO: this is maybe redundant
 
@@ -4070,19 +4210,19 @@ dtm.voice = function (arg) {
     }
 
 
-    /**
-     * @function module:voice#getModel
-     * @returns {object} model
-     */
+    ///**
+    // * @function module:voice#getModel
+    // * @returns {object} model
+    // */
     voice.getModel = function () {
         return voice.model;
     };
 
     // CHECK: maybe this is redundant
-    /**
-     * @function module:voice#getModelName
-     * @returns {string} model name
-     */
+    ///**
+    // * @function module:voice#getModelName
+    // * @returns {string} model name
+    // */
     voice.getModelName = function () {
         return voice.modelName;
     };
@@ -4107,19 +4247,19 @@ dtm.voice = function (arg) {
 
     // TODO: maybe fix this redundancy
     if (voice.modelName !== null) {
-        /**
-         * @function module:voice#play
-         * @param [nn]
-         */
+        ///**
+        // * @function module:voice#play
+        // * @param [nn]
+        // */
         voice.play = function (nn) {
             return _.find(dtm.modelCol, {name: voice.modelName}).play(nn);
         };
 
-        /**
-         * @function module:voice#run
-         * @param [clock]
-         * @returns {Object}
-         */
+        ///**
+        // * @function module:voice#run
+        // * @param [clock]
+        // * @returns {Object}
+        // */
         voice.run = function (clock) {
             if (typeof(clock) === 'undefined') {
                 clock = voice.clock;
@@ -4128,11 +4268,11 @@ dtm.voice = function (arg) {
             return voice.model;
         };
 
-        /**
-         * @function module:voice#modulate
-         * @param val
-         * @returns {*}
-         */
+        ///**
+        // * @function module:voice#modulate
+        // * @param val
+        // * @returns {*}
+        // */
         voice.modulate = function (val) {
             return _.find(dtm.modelCol, {name: voice.modelName}).modulate(val);
         };
@@ -4308,17 +4448,17 @@ dtm.master.clock.start();
     m.source = dtm.tr.itob([3, 3, 4, 2, 4]);
     m.target = dtm.tr.itob([2, 1, 2, 1]);
     m.midx = 0;
-    m.beats = dtm.array(dtm.tr.morph(m.source, m.target, m.midx));
+    m.array = dtm.array(dtm.tr.morph(m.source, m.target, m.midx));
 
     m.mod = function (val) {
         m.midx = val;
-        m.beats.set(dtm.tr.morph(m.source, m.target, m.midx));
+        m.array.set(dtm.tr.morph(m.source, m.target, m.midx));
+        return m;
     };
 
     m.next = function () {
-        return m.beats.round().next();
+        return m.array.round().next();
     };
-
 })();
 (function () {
     var m = dtm.model('single-note').categ('instr');
@@ -4635,14 +4775,14 @@ dtm.master.clock.start();
 
             var morphed = dtm.tr.applyOffsetToBeats(m.motif.original.value, m.curOffset);
             //c.bpm(bpm + m.motif.midx * 60);
-            c.bpm(bpm + m.motif.midx * 60);
+            //c.bpm(bpm + m.motif.midx * 60);
             //var delay = (1 - m.morphed[idx]) * 1 / c.params.bpm / m.morphed.length;
 
             if (morphed[idx] === 1) {
                 if (curNote === 2) {
-                    dtm.syn('noise').decay(0.02).lpf(4000).play();
+                    dtm.syn('noise').decay(0.02).lpf(4000).amp(0.8).play();
                 } else {
-                    dtm.syn('noise').decay(0.02).lpf(1000).play();
+                    dtm.syn('noise').decay(0.02).lpf(1000).amp(0.8).play();
                 }
 
                 curNote = dtm.value.mod(curNote + 1, 4);
@@ -4654,39 +4794,16 @@ dtm.master.clock.start();
         return m;
     };
 
+    m.stop = function () {
+        c.stop();
+        return m;
+    };
+
     m.mod = function (val) {
         m.motif.midx = val;
         return m;
     };
 
     return m;
-})();
-(function () {
-    var i  = dtm.instr('silly-melody'); // ????
-
-    //var m  = dtm.model('silly-melody').categ('instr');
-
-    i.models = {
-        pitches: dtm.array([0, 4, 7, 11, 12, 11, 7, 4]).add(72),
-        beats: dtm.array([1, 0, 1])
-    };
-
-    var c = dtm.clock(120, 16);
-
-    i.play = function () {
-        c.add(function () {
-            //console.log(i.models.beats);
-            var s = dtm.synth().nn(i.models.pitches.next());
-            s.amp(i.models.beats.next() * 0.5).play();
-
-        }).start();
-
-        return i;
-    };
-
-    i.stop = function () {
-        c.stop();
-        return i;
-    }
 })();
 })();

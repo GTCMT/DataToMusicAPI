@@ -377,6 +377,11 @@ dtm.array = function (arr, name) {
         return array;
     };
 
+    /**
+     * Same as array.shuffle().
+     * @function module:array#randomize
+     * @type {Function}
+     */
     array.randomize = array.shuffle;
 
     /**
@@ -420,6 +425,11 @@ dtm.array = function (arr, name) {
         return array;
     };
 
+    /**
+     * Same as array.repeat().
+     * @function module:array#rep
+     * @type {Function}
+     */
     array.rep = array.repeat;
 
     array.truncate = function () {
@@ -694,6 +704,6 @@ dtm.array = function (arr, name) {
     };
 
     return array;
-}
+};
 
 dtm.a = dtm.array;

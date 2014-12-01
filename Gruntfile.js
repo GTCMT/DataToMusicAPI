@@ -32,7 +32,7 @@ module.exports = function (grunt) {
                     'src/instr/clave.js',
                     'src/instr/nb-noise.js',
                     'src/instr/tamborim.js',
-                    'src/instr/silly-melody.js',
+                    //'src/instr/silly-melody.js',
                     'misc/end.js'
                 ],
                 dest: 'dtm.js'

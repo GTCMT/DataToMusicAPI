@@ -27,6 +27,12 @@ dtm.model = function (name, categ) {
         }
     };
 
+    /**
+     * Sets the category of the model.
+     * @function module:model#categ
+     * @param categ {string}
+     * @returns {dtm.model}
+     */
     model.categ = function (categ) {
         model.params.categ = categ;
         return model;

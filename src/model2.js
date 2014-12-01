@@ -2,17 +2,17 @@ dtm.model2 = function (name) {
     var model = {
         className: 'dtm.model2',
 
-        /**
-         * @name module:model#name
-         * @type {string}
-         */
+        ///**
+        // * @name module:model#name
+        // * @type {string}
+        // */
         name: null,
 
-        /**
-         * Whether if the model is synced to the master.
-         * @name module:model#sync
-         * @type {boolean}
-         */
+        ///**
+        // * Whether if the model is synced to the master.
+        // * @name module:model#sync
+        // * @type {boolean}
+        // */
         sync: true,
         clock: null,
         data: null,
@@ -38,40 +38,40 @@ dtm.model2 = function (name) {
         model.name = name;
     }
 
-    /**
-     * @function module:model#setName
-     * @param name {string}
-     * @returns {dtm.model}
-     */
+    ///**
+    // * @function module:model#setName
+    // * @param name {string}
+    // * @returns {dtm.model}
+    // */
     model.setName = function (name) {
         model.name = name;
         return model;
     };
 
-    /**
-     * @function module:model#play
-     * @param nn
-     * @returns {dtm.model}
-     */
+    ///**
+    // * @function module:model#play
+    // * @param nn
+    // * @returns {dtm.model}
+    // */
     model.play = function (nn) {
         console.log('play() function is not implemented!');
         return model;
     };
 
-    /**
-     * @function module:model#run
-     * @param clock
-     * @returns {dtm.model}
-     */
+    ///**
+    // * @function module:model#run
+    // * @param clock
+    // * @returns {dtm.model}
+    // */
     model.run = function (clock) {
         console.log('run() funciton is not implemented!');
         return model;
     };
 
-    /**
-     * @function module:model#stop
-     * @returns {dtm.model}
-     */
+    ///**
+    // * @function module:model#stop
+    // * @returns {dtm.model}
+    // */
     model.stop = function () {
         return model;
     };

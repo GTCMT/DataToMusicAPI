@@ -26,14 +26,14 @@
 
             var morphed = dtm.tr.applyOffsetToBeats(m.motif.original.value, m.curOffset);
             //c.bpm(bpm + m.motif.midx * 60);
-            c.bpm(bpm + m.motif.midx * 60);
+            //c.bpm(bpm + m.motif.midx * 60);
             //var delay = (1 - m.morphed[idx]) * 1 / c.params.bpm / m.morphed.length;
 
             if (morphed[idx] === 1) {
                 if (curNote === 2) {
-                    dtm.syn('noise').decay(0.02).lpf(4000).play();
+                    dtm.syn('noise').decay(0.02).lpf(4000).amp(0.8).play();
                 } else {
-                    dtm.syn('noise').decay(0.02).lpf(1000).play();
+                    dtm.syn('noise').decay(0.02).lpf(1000).amp(0.8).play();
                 }
 
                 curNote = dtm.value.mod(curNote + 1, 4);
@@ -42,6 +42,11 @@
             idx = dtm.value.mod(idx + 1, subDiv);
         }).start();
 
+        return m;
+    };
+
+    m.stop = function () {
+        c.stop();
         return m;
     };
 

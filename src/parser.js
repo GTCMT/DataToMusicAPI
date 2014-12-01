@@ -54,6 +54,12 @@ dtm.parser = {
 //        return JSON.stringify(result); //JSON
     },
 
+    /**
+     * Parses the value types from a given row of a collection.
+     * @function module:parser#valueTypes
+     * @param row {array}
+     * @returns {array}
+     */
     valueTypes: function (row) {
         var types = [];
 
@@ -69,15 +75,21 @@ dtm.parser = {
                     types.push('int');
                 }
             }
-        })
+        });
 
         return types;
     },
 
     // CHECK: this only works w/ json...
+    /**
+     * Returns the column & row size of the collection
+     * @function module:parser#getSize
+     * @param json
+     * @returns {array}
+     */
     getSize: function (json) {
         var col = _.size(json[0]); // header
         var row = _.size(json);
         return [col, row];
     }
-}
+};
