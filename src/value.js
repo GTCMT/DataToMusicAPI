@@ -90,8 +90,8 @@ dtm.value = {
 
     incr: function incr() {
 
-    },
-}
+    }
+};
 
 dtm.val = dtm.value;
 //dtm.v = dtm.value;

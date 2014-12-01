@@ -28,7 +28,6 @@ dtm.model = function (name, categ) {
     };
 
     model.categ = function (categ) {
-        // CHECK: how can I re-register?
         model.params.categ = categ;
         return model;
     };
@@ -47,6 +46,7 @@ dtm.model = function (name, categ) {
 
     model.modulate = model.mod;
 
+    // CHECK: mapping an automatic modulation source???
     model.map = function (arrobj) {
 
         return model;
@@ -78,6 +78,11 @@ dtm.model = function (name, categ) {
             dtm.modelColl.push(model);
         }
     }
+
+    model.morphArrays = function (arrObj1, arrObj2, midx) {
+
+        return model;
+    };
 
     model.clone = function () {
         return model;

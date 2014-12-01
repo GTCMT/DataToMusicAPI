@@ -36,6 +36,8 @@ var dtm = {
     sampleRate: actx.sampleRate,
     sr: actx.sampleRate,
 
+    params: {},
+
     ///**
     // * Returns a singleton audio context object.
     // * @function getAudioContext
@@ -62,6 +64,10 @@ var dtm = {
 
     clone: clone
 };
+
+//dtm.buffs = {
+//    verbIr: makeIr(2)
+//};
 
 this.dtm = dtm;
 
@@ -381,12 +387,33 @@ dtm.analyzer = {
         return res;
     },
 
+    /**
+     * Returns the median of numerical array.
+     * @function module:analyzer#median
+     * @param arr
+     * @returns {number}
+     */
     median: function (arr) {
+        var sorted = arr.sort();
+        var len = arr.length;
 
+        if (len % 2 === 0) {
+            return (sorted[len/2 - 1] + sorted[len/2]) / 2
+        } else {
+            return sorted[Math.floor(len/2)];
+        }
     },
 
+    /**
+     * Returns the midrange of numerical array.
+     * @function module:analyzer#midrange
+     * @param arr
+     * @return {number}
+     */
     midrange: function (arr) {
-
+        var max = dtm.analyzer.max(arr);
+        var min = dtm.analyzer.min(arr);
+        return (max + min) / 2;
     },
 
     // TODO: num string parsing
@@ -553,6 +580,27 @@ dtm.transform = {
                 }
                 break;
 
+            case 'seq':
+            case 'sequence':
+                if (!min) {
+                    min = 0;
+                }
+                for (var i = 0; i < len; i++) {
+                    res[i] = i + min;
+                }
+                break;
+
+            case 'range':
+                if (!min) {
+                    min = 0;
+                }
+                min = Math.round(min);
+                max = Math.round(max);
+                for (var i = 0; i < max-min; i++) {
+                    res[i] = i + min;
+                }
+                break;
+
             case 'noise':
             case 'random':
                 for (var i = 0; i < len; i++) {
@@ -589,6 +637,7 @@ dtm.transform = {
                 }
                 break;
 
+            case 'zeros':
             case 'zeroes':
                 for (var i = 0; i < len; i++) {
                     res[i] = 0;
@@ -749,9 +798,32 @@ dtm.transform = {
         return _.shuffle(arr);
     },
 
-
+    /**
+     * Sorts the contents of a numerical array.
+     * @function module:transform#sort
+     * @param arr {array}
+     * @returns {array}
+     */
     sort: function (arr) {
+        return arr.sort();
+    },
 
+    /**
+     * Repeats the contents of an array.
+     * @param arr
+     * @param count
+     * @returns {Array}
+     */
+    repeat: function (arr, count) {
+        var res = [];
+
+        if (!count) {
+            count = 1;
+        }
+        for (var i = 0; i < count; i++) {
+            res = res.concat(arr);
+        }
+        return res;
     },
 
     /**
@@ -765,7 +837,7 @@ dtm.transform = {
 
         _.forEach(arr, function (val, idx) {
             res[idx] = Math.round(val);
-        })
+        });
         return res;
     },
 
@@ -780,7 +852,7 @@ dtm.transform = {
 
         _.forEach(arr, function (val, idx) {
             res[idx] = Math.floor(val);
-        })
+        });
         return res;
     },
 
@@ -795,7 +867,7 @@ dtm.transform = {
 
         _.forEach(arr, function (val, idx) {
             res[idx] = Math.floor(val);
-        })
+        });
         return res;
     },
 
@@ -829,7 +901,7 @@ dtm.transform = {
 
         _.forEach(arr, function (val, idx) {
             res[idx] = dtm.value.expCurve(val, factor);
-        })
+        });
         return res;
     },
 
@@ -846,7 +918,7 @@ dtm.transform = {
 
         _.forEach(arr, function (val, idx) {
             res[idx] = dtm.value.logCurve(val, factor);
-        })
+        });
         return res;
     },
 
@@ -1073,6 +1145,55 @@ dtm.transform = {
         return res;
     },
 
+    calcBeatsOffset: function (src, tgt) {
+        var res = [];
+        var offset = 0;
+        var countFromSrc = false;
+        var countFromTgt = false;
+
+        for (var i  = 0; i < src.length; i++) {
+            if (src[i] === 1 && !countFromTgt) {
+                countFromSrc = true;
+            } else if (tgt[i] === 1 && !countFromSrc) {
+                countFromTgt = true;
+            }
+
+            if (countFromSrc) {
+                if (tgt[i] === 1) {
+                    res.push(offset);
+                    countFromSrc = countFromTgt = false;
+                    offset = 0;
+                } else {
+                    offset++;
+                }
+            } else if (countFromTgt) {
+                if (src[i] === 1) {
+                    res.push(offset);
+                    countFromSrc = countFromTgt = false;
+                    offset = 0;
+                } else {
+                    offset--;
+                }
+            }
+        }
+
+        return res;
+    },
+
+    applyOffsetToBeats: function (src, offset) {
+        var res = dtm.array().fill('zeroes', src.length).value;
+        var curSelection = 0;
+
+        for (var i = 0; i < src.length; i++) {
+            if (src[i] === 1) {
+                res[i + offset[curSelection]] = 1;
+                curSelection++;
+            }
+        }
+
+        return res;
+    },
+
     pq: function (input, scale) {
         var res = [];
         _.forEach(input, function (val, idx) {
@@ -1125,7 +1246,9 @@ dtm.transform.itob = dtm.transform.intervalsToBeats;
  */
 dtm.transform.btoi = dtm.transform.beatsToIntervals;
 
+dtm.transform.fill = dtm.transform.generate;
 dtm.transform.abs = dtm.transform.fwr;
+dtm.transform.randomize = dtm.transform.shuffle;
 
 function morphFixed (srcArr, tgtArr, morphIdx) {
     if (typeof(morphIdx) === 'undefined') {
@@ -1139,7 +1262,7 @@ function morphFixed (srcArr, tgtArr, morphIdx) {
     });
 
     return newArr;
-};
+}
 
 dtm.tr = dtm.transform;
 /**
@@ -1364,7 +1487,7 @@ dtm.array = function (arr, name) {
         array.type = 'string'; // re-set the type to string from number... hacky!
 
         return array;
-    };
+    }
 
     /**
      * Returns a clone of the array object. It can be used when you don't want to reference the same array object from different places.
@@ -1521,13 +1644,50 @@ dtm.array = function (arr, name) {
         return array;
     };
 
-    array.concat = function () {
+    array.randomize = array.shuffle;
+
+    /**
+     * Sorts the contents of numerical array.
+     * @function module:array#sort
+     * @returns {dtm.array}
+     */
+    array.sort = function () {
+        array.value = dtm.transform.sort(array.value);
+        array.set(array.value);
         return array;
     };
 
-    array.repeat = function () {
+    /**
+     * Concatenates new values to the contents.
+     * @function module:array#concat
+     * @param arr {array | dtm.array} A regular array or a dtm.array object.
+     * @returns {dtm.array}
+     */
+    array.concat = function (arr) {
+        arr = arr || [];
+        var temp = array.value;
+        if (arr instanceof Array) {
+            temp = temp.concat(arr);
+        } else if (arr.className === 'dtm.array') {
+            temp = temp.concat(arr.value);
+        }
+        array.set(temp);
         return array;
     };
+
+    /**
+     * Repeats the contents of the current array.
+     * @function module:array#repeat
+     * @param count {integer}
+     * @returns {dtm.array}
+     */
+    array.repeat = function (count) {
+        array.value = dtm.transform.repeat(array.value, count);
+        array.set(array.value);
+        return array;
+    };
+
+    array.rep = array.repeat;
 
     array.truncate = function () {
         return array;
@@ -1932,8 +2092,8 @@ dtm.value = {
 
     incr: function incr() {
 
-    },
-}
+    }
+};
 
 dtm.val = dtm.value;
 //dtm.v = dtm.value;
@@ -2126,7 +2286,7 @@ dtm.iterator = function (arg) {
  * @param [arg] {dtm.array|array}
  * @returns {{className: string, value: Array, idx: number, len: number}}
  */
-dtm.iter = dtm.iterator;
+dtm.it = dtm.iter = dtm.iterator;
 /**
  * @fileOverview Parses random stuff. Singleton.
  * @module parser
@@ -2514,7 +2674,6 @@ dtm.clock = function (bpm, subDiv, time) {
     var clock = {
         className: 'dtm.clock',
 
-        subDiv: 4,
         interval: 1,
 
         time: [4, 4],
@@ -2526,6 +2685,7 @@ dtm.clock = function (bpm, subDiv, time) {
             isOn: false,
             sync: true,
             bpm: 60,
+            subDiv: 4,
             random: 0,
             swing: 50
         },
@@ -2535,14 +2695,6 @@ dtm.clock = function (bpm, subDiv, time) {
     };
 
     clock.params.tempo = clock.params.bpm;
-
-    // assign input arguments...
-    _.forEach(arguments, function (val, idx) {
-        switch (idx) {
-            case 0: clock.params.bpm = val; break;
-            case 1: clock.subDiv = val; break;
-        }
-    });
 
     // private
     var callbacks = [];
@@ -2560,9 +2712,10 @@ dtm.clock = function (bpm, subDiv, time) {
     clock.set = function (bpm, subDiv) {
         if (typeof(bpm) !== 'undefined') {
             clock.params.bpm = bpm;
+            clock.params.sync = false;
         }
-        if (typeof(subDiv) !== 'undefined') {
-            clock.subDiv = subDiv;
+        if (typeof(params.subDiv) !== 'undefined') {
+            clock.params.subDiv = subDiv;
         }
 
         return clock;
@@ -2580,7 +2733,7 @@ dtm.clock = function (bpm, subDiv, time) {
     /**
      * Sets the speed of the clock in BPM,
      * @method module:clock#bpm
-     * @param num {number} BPM value
+     * @param val {number} BPM value
      * @returns {dtm.clock} self
      * @chainable
      * @example
@@ -2604,9 +2757,9 @@ dtm.clock = function (bpm, subDiv, time) {
      */
     clock.tempo = clock.bpm;
 
-    clock.setSubDiv = function (val) {
+    clock.subDiv = function (val) {
         val = val | 4;
-        clock.subDiv = val;
+        clock.params.subDiv = val;
         return clock;
     };
 
@@ -2628,7 +2781,7 @@ dtm.clock = function (bpm, subDiv, time) {
      */
     clock.add = function (cb, beats) {
         if (arguments.length == 1) {
-            beats = _.range((clock.subDiv * clock.time[0] / clock.time[1]));
+            beats = _.range((clock.params.subDiv * clock.time[0] / clock.time[1]));
         }
 //        if (_.findKey(cb, 'modelName')) {
 //            cb.addParentClock(clock); // CHECK: risky
@@ -2662,8 +2815,7 @@ dtm.clock = function (bpm, subDiv, time) {
         return clock;
     };
 
-    clock.run = clock.start;
-    clock.play = clock.start;
+    clock.run = clock.play = clock.start;
 
     var clockSrc;
 
@@ -2684,7 +2836,7 @@ dtm.clock = function (bpm, subDiv, time) {
                 clockSrc.buffer = clockBuf;
                 clockSrc.connect(out());
 
-                var freq = clock.params.bpm / 60.0 * (clock.subDiv / 4.0);
+                var freq = clock.params.bpm / 60.0 * (clock.params.subDiv / 4.0);
 //            var pbRate = 1/(1/freq - Math.abs(timeErr));
 
                 clockSrc.playbackRate.value = freq * clMult;
@@ -2701,7 +2853,8 @@ dtm.clock = function (bpm, subDiv, time) {
                 clockSrc.onended = function () {
                     curTime += 1/freq;
                     var error = now() - curTime;
-                    clock.tick(error);
+                    //clock.tick(error);
+                    clock.tick();
 //                curTime = now();
                 };
 
@@ -2711,18 +2864,18 @@ dtm.clock = function (bpm, subDiv, time) {
                     }
                 });
 
-                clock.beat = (clock.beat + 1) % (clock.subDiv * clock.time[0] / clock.time[1]);
+                clock.beat = (clock.beat + 1) % (clock.params.subDiv * clock.time[0] / clock.time[1]);
 
                 return clock;
 
             } else if (clock.params.sync && !clock.params.isMaster) {
-                if (dtm.master.clock.beat % Math.round(480/clock.subDiv) === 0) {
-                    _.forEach(clock.callbacks, function (cb) {
-                        if (_.indexOf(cb[1], clock.beat) > -1) {
-                            cb[0](clock);
-                        }
-                    });
-                }
+                //if (dtm.master.clock.beat % Math.round(480/clock.params.subDiv) === 0) {
+                //    _.forEach(clock.callbacks, function (cb) {
+                //        if (_.indexOf(cb[1], clock.beat) > -1) {
+                //            cb[0](clock);
+                //        }
+                //    });
+                //}
 
                 return clock;
             } else if (clock.params.isMaster) {
@@ -2730,7 +2883,7 @@ dtm.clock = function (bpm, subDiv, time) {
                 clockSrc.buffer = clockBuf;
                 clockSrc.connect(out());
 
-                var freq = clock.params.bpm / 60.0 * (clock.subDiv / 4.0);
+                var freq = clock.params.bpm / 60.0 * (clock.params.subDiv / 4.0);
 
                 clockSrc.playbackRate.value = freq * clMult;
                 clockSrc.playbackRate.value += clockSrc.playbackRate.value * (clock.params.random / 100) * _.sample([1, -1]);
@@ -2759,10 +2912,23 @@ dtm.clock = function (bpm, subDiv, time) {
                     }
                 });
 
-                clock.beat = (clock.beat + 1) % (clock.subDiv * clock.time[0] / clock.time[1]);
+                clock.beat = (clock.beat + 1) % (clock.params.subDiv * clock.time[0] / clock.time[1]);
             }
 
         }
+    };
+
+    clock.tickSynced = function () {
+        if (clock.params.sync) {
+            if (dtm.master.clock.beat % Math.round(480/clock.params.subDiv) === 0) {
+                _.forEach(clock.callbacks, function (cb) {
+                    if (_.indexOf(cb[1], clock.beat) > -1) {
+                        cb[0](clock);
+                    }
+                });
+            }
+        }
+        return clock;
     };
 
     /**
@@ -2818,26 +2984,52 @@ dtm.clock = function (bpm, subDiv, time) {
     };
 
     if (!clock.params.isMaster && typeof(dtm.master) !== 'undefined') {
-        dtm.master.clock.add(clock.tick);
+        dtm.master.clock.add(clock.tickSynced);
+    }
+
+    // assign input arguments...
+    //_.forEach(arguments, function (val, idx) {
+    //    switch (idx) {
+    //        case 0: clock.params.bpm = val; break;
+    //        case 1: clock.params.subDiv = val; break;
+    //    }
+    //});
+
+    if (typeof(bpm) !== 'undefined') {
+        clock.params.bpm = bpm;
+        clock.params.sync = false;
+    }
+
+    if (typeof(subDiv) !== 'undefined') {
+        clock.params.subDiv = subDiv;
+    }
+
+    if (typeof(time) !== 'undefined') {
+        clock.params.time = time;
     }
 
     return clock;
 };
+
+dtm.c = dtm.clock;
 dtm.instr = function (arg) {
     var instr = {
         className: 'dtm.instrument',
         params: {
             name: null,
             isPlaying: false,
-            //poly: false,
+            poly: false,
 
             modDest: [],
             clock: dtm.clock(),
-            sync: false
+            sync: true,
+            subDivision: 16
         },
 
         instrModel: null,
-        models: {},
+        models: {
+            voice: dtm.synth()
+        },
         modelList: []
     };
 
@@ -2850,7 +3042,13 @@ dtm.instr = function (arg) {
         }
 
         // TODO: refactor...
-        if (typeof(arg) === 'object') {
+        if (arg instanceof Array) {
+            if (categ) {
+                instr.models[categ] = dtm.array(arg);
+            } else {
+                instr.models['any'] = dtm.array(arg);
+            }
+        } else if (typeof(arg) === 'object') {
             if (arg.params.categ === 'instr') {
 
             } else if (categ) {
@@ -2881,6 +3079,13 @@ dtm.instr = function (arg) {
         return instr;
     };
 
+    instr.voice = function (arg) {
+        if (typeof(arg) === 'string') {
+            instr.models.voice.set(arg);
+        }
+        return instr;
+    };
+
     instr.load = function (arg) {
         return instr;
     };
@@ -2891,12 +3096,19 @@ dtm.instr = function (arg) {
             instr.params.isPlaying = true;
             dtm.log('playing: ' + instr.params.name);
 
+            instr.params.clock.add(function () {
+                var v = instr.models.voice;
+
+                if (typeof(instr.models.melody) !== 'undefined') {
+                    v.nn(instr.models.melody.next()); // CHECK: only for dtm.arrays
+                }
+                v.play();
+            }).start(); // ???
+
             if (instr.instrModel.params.categ === 'instr') {
                 instr.instrModel.stop();
                 instr.instrModel.play();
             }
-
-            instr.params.clock.start(); // ???
 
 
             // register to the active instr list?
@@ -2909,6 +3121,7 @@ dtm.instr = function (arg) {
     instr.stop = function () {
         if (instr.params.isPlaying === true) {
             instr.params.isPlaying = false;
+            dtm.log('stopping: ' + instr.params.name);
 
             if (instr.instrModel.params.categ === 'instr') {
                 instr.instrModel.stop();
@@ -2920,6 +3133,10 @@ dtm.instr = function (arg) {
     };
 
     instr.clock = function () {
+        return instr;
+    };
+
+    instr.bpm = function () {
         return instr;
     };
 
@@ -2949,6 +3166,12 @@ dtm.instr = function (arg) {
             console.log(keys);
         }
 
+        return instr;
+    };
+
+    instr.modulate = instr.mod;
+
+    instr.map = function () {
         return instr;
     };
 
@@ -3024,7 +3247,6 @@ dtm.model = function (name, categ) {
     };
 
     model.categ = function (categ) {
-        // CHECK: how can I re-register?
         model.params.categ = categ;
         return model;
     };
@@ -3043,6 +3265,7 @@ dtm.model = function (name, categ) {
 
     model.modulate = model.mod;
 
+    // CHECK: mapping an automatic modulation source???
     model.map = function (arrobj) {
 
         return model;
@@ -3074,6 +3297,11 @@ dtm.model = function (name, categ) {
             dtm.modelColl.push(model);
         }
     }
+
+    model.morphArrays = function (arrObj1, arrObj2, midx) {
+
+        return model;
+    };
 
     model.clone = function () {
         return model;
@@ -3225,33 +3453,26 @@ dtm.synth = function (type) {
     var synth = {
         className: 'dtm.synth',
 
-        type: 'sine',
-        isPlaying: false,
-        gain: 0.5,
-
         buffer: null,
-
-        freq: 440,
-        noteNum: 69,
-
-        //adsr: [0, 0, 1, 0],
-        // temp
-        atk: 0.001,
-        dcy: 0.2,
-        sus: 0,
-        rel: 0.001,
 
         envelope: {
             attack: 0.001,
             decay: 0.001,
             sustain: 1,
-            release: 0.001,
+            release: 0.001
         },
 
         params: {
+            type: 'sine',
+            isPlaying: false,
+            gain: 0.5,
+
             duration: 1,
 
-            adsr: [],
+            freq: 440,
+            noteNum: 69,
+
+            adsr: [0.001, 0.2, 0, 0.001],
 
             detune: {
                 isOn: false,
@@ -3262,21 +3483,28 @@ dtm.synth = function (type) {
             lpf: {
                 isOn: false,
                 cof: 4000,
-                res: 1,
+                res: 1
             },
 
             delay: {
                 isOn: false,
                 amount: 0,
                 time: 0.3,
+                sync: false,
+                note: 6,
                 feedback: 0.3,
                 stereo: false
+            },
+
+            verb: {
+                isOn: false,
+                amount: 0
             },
 
             comb: {
                 isOn: false,
                 amount: 0,
-                nn: 69,
+                nn: 69
             }
         },
 
@@ -3303,10 +3531,10 @@ dtm.synth = function (type) {
         // TODO: take indiv values OR array
 
         if (typeof(arguments) !== 'undefeined') {
-            synth.atk = arguments[0] || 0.001;
-            synth.dcy = arguments[1] || 0.001;
-            synth.sus = arguments[2];
-            synth.rel = arguments[3] || 0.001;
+            synth.params.adsr[0] = arguments[0] || 0.001;
+            synth.params.adsr[1] = arguments[1] || 0.001;
+            synth.params.adsr[2] = arguments[2];
+            synth.params.adsr[3] = arguments[3] || 0.001;
         }
 
         return synth;
@@ -3320,7 +3548,7 @@ dtm.synth = function (type) {
      * @returns {promise | dtm.synth}
      */
     synth.load = function (arg, cb) {
-        synth.type = 'sampler';
+        synth.params.type = 'sampler';
 
         if (arg.constructor.name === 'AudioBuffer') {
             synth.buffer = arg;
@@ -3355,7 +3583,7 @@ dtm.synth = function (type) {
                         }
                     });
                 } else if (arg instanceof Array) {
-                    var buf = actx.createBuffer(1, arg.length, actx.sampleRate);
+                    var buf = actx.createBuffer(1, arg.length, dtm.sr);
                     var content = buf.getChannelData(0);
                     _.forEach(content, function (val, idx) {
                         content[idx] = arg[idx];
@@ -3378,7 +3606,7 @@ dtm.synth = function (type) {
 
             synth.promise = promise;
             return promise;
-        };
+        }
     };
 
     /**
@@ -3397,18 +3625,18 @@ dtm.synth = function (type) {
 
         //var noise = makeNoise();
 
-        if (synth.type === 'noise') {
+        if (synth.params.type === 'noise') {
             src = actx.createBufferSource();
             src.buffer = noise;
             src.loop = true;
-        } else if (synth.type === 'sampler') {
+        } else if (synth.params.type === 'sampler') {
             src = actx.createBufferSource();
             src.buffer = synth.buffer;
             src.playbackRate = 1;
             src.loop = false;
-        } else if (synth.type === 'click') {
+        } else if (synth.params.type === 'click') {
             src = actx.createBufferSource();
-            var buf = actx.createBuffer(1, 2, actx.sampleRate);
+            var buf = actx.createBuffer(1, 2, dtm.sr);
             var contents = buf.getChannelData(0);
             contents[1] = 1;
             src.buffer = buf;
@@ -3416,10 +3644,10 @@ dtm.synth = function (type) {
             src.loop = false;
         } else {
             src = actx.createOscillator();
-            src.frequency.setValueAtTime(synth.freq, startT);
+            src.frequency.setValueAtTime(synth.params.freq, startT);
         }
 
-        switch (synth.type) {
+        switch (synth.params.type) {
             case 'sine':
                 src.type = 'sine';
                 break;
@@ -3483,18 +3711,31 @@ dtm.synth = function (type) {
             delAmp.connect(out());
         }
 
+        // TODO: not chaning the effects...
+        if (synth.params.verb.isOn) {
+            var verb = actx.createConvolver();
+            verb.buffer = dtm.buffs.verbIr;
+
+            var verbAmp = actx.createGain();
+            verbAmp.gain.setValueAtTime(synth.params.verb.amount, startT);
+
+            amp.connect(verb);
+            verb.connect(verbAmp);
+            verbAmp.connect(out());
+        }
+
         amp.connect(out());
 
-        var susLevel = synth.sus * synth.gain;
+        var susLevel = synth.params.adsr[2] * synth.params.gain;
         amp.gain.setValueAtTime(0, now());
-        amp.gain.setTargetAtTime(synth.gain, startT, synth.atk);
-        amp.gain.setTargetAtTime(susLevel, startT+synth.atk, synth.dcy);
+        amp.gain.setTargetAtTime(synth.params.gain, startT, synth.params.adsr[0]);
+        amp.gain.setTargetAtTime(susLevel, startT+synth.params.adsr[0], synth.params.adsr[1]);
 
-        var relStart = startT + synth.atk + synth.dcy + dur;
-        amp.gain.setTargetAtTime(0, relStart, synth.rel);
+        var relStart = startT + synth.params.adsr[0] + synth.params.adsr[1] + dur;
+        amp.gain.setTargetAtTime(0, relStart, synth.params.adsr[3]);
 
         src.start(startT);
-        src.stop(relStart + synth.rel + 0.3);
+        src.stop(relStart + synth.params.adsr[3] + 0.3);
 
         return synth;
     };
@@ -3515,8 +3756,8 @@ dtm.synth = function (type) {
      * @returns {dtm.synth}
      */
     synth.nn = function (nn) {
-        synth.noteNum = nn;
-        synth.freq = dtm.value.mtof(nn);
+        synth.params.noteNum = nn;
+        synth.params.freq = dtm.value.mtof(nn);
 
         return synth;
     };
@@ -3528,7 +3769,7 @@ dtm.synth = function (type) {
      * @returns {dtm.synth}
      */
     synth.amp = function (val) {
-        synth.gain = val;
+        synth.params.gain = val;
         return synth;
     };
 
@@ -3556,22 +3797,22 @@ dtm.synth = function (type) {
     };
 
     synth.attack = function (val) {
-        synth.atk = val;
+        synth.params.adsr[0] = val;
         return synth;
     };
 
     synth.decay = function (val) {
-        synth.dcy = val;
+        synth.params.adsr[1] = val;
         return synth;
     };
 
     synth.sustain = function (val) {
-        synth.sus = val;
+        synth.params.adsr[2] = val;
         return synth;
     };
 
     synth.release = function (val) {
-        synth.rel = val;
+        synth.params.adsr[3] = val;
         return synth;
     };
 
@@ -3588,9 +3829,13 @@ dtm.synth = function (type) {
         return synth;
     };
 
-    synth.reverb = function () {
+    synth.verb = function (amt) {
+        synth.params.verb.isOn = true;
+        synth.params.verb.amount = amt;
         return synth;
     };
+
+    synth.reverb = synth.verb;
 
     // TODO: stereo mode
     /**
@@ -3625,46 +3870,51 @@ dtm.synth = function (type) {
         return synth;
     };
 
-    switch (type) {
-        case 'sine':
-            synth.type = 'sine';
-            break;
-        case 'saw':
-        case 'sawtooth':
-            synth.type = 'saw';
-            break;
-        case 'sq':
-        case 'square':
-            synth.type = 'square';
-            break;
-        case 'tri':
-        case 'triangle':
-            synth.type = 'triangle';
-            break;
-        case 'wn':
-        case 'noise':
-            synth.type = 'noise';
-            break;
-        case 'click':
-            synth.type = 'click';
-            break;
-        case 'sampler':
-            synth.type = 'sampler';
-            break;
-        default:
-            break;
-    }
+    synth.set = function (type) {
+        switch (type) {
+            case 'sine':
+                synth.params.type = 'sine';
+                break;
+            case 'saw':
+            case 'sawtooth':
+                synth.params.type = 'saw';
+                break;
+            case 'sq':
+            case 'square':
+                synth.params.type = 'square';
+                break;
+            case 'tri':
+            case 'triangle':
+                synth.params.type = 'triangle';
+                break;
+            case 'wn':
+            case 'noise':
+                synth.params.type = 'noise';
+                break;
+            case 'click':
+                synth.params.type = 'click';
+                break;
+            case 'sampler':
+                synth.params.type = 'sampler';
+                break;
+            default:
+                break;
+        }
+    };
+
+    synth.type = synth.wt = synth.set;
+
+    synth.set(type);
 
     return synth;
 };
 
-dtm.syn = dtm.synth;
-dtm.s = dtm.synth;
+dtm.s = dtm.syn = dtm.synth;
 
 function makeNoise(bufLen) {
     bufLen = bufLen || 4192;
 
-    var buffer = actx.createBuffer(1, bufLen, actx.sampleRate);
+    var buffer = actx.createBuffer(1, bufLen, dtm.sr);
     var contents = buffer.getChannelData(0);
 
     _.forEach(_.range(bufLen), function (idx) {
@@ -3673,6 +3923,28 @@ function makeNoise(bufLen) {
 
     return buffer;
 }
+
+function makeIr(decay) {
+    var bufLen = Math.round(decay * dtm.sr) || dtm.sr;
+
+    var buffer = actx.createBuffer(2, bufLen, dtm.sr);
+    var left = buffer.getChannelData(0);
+    var right = buffer.getChannelData(1);
+
+    var exp = 10;
+    _.forEach(_.range(bufLen), function (idx) {
+        left[idx] = dtm.val.rescale(dtm.val.expCurve(_.random(0, 1, true) * (bufLen-idx)/bufLen, exp), -1, 1);
+        right[idx] = dtm.val.rescale(dtm.val.expCurve(_.random(0, 1, true) * (bufLen-idx)/bufLen, exp), -1, 1);
+    });
+
+    return buffer;
+}
+
+dtm.makeIr = makeIr;
+dtm.buffs = {
+    verbIr: dtm.makeIr(2)
+};
+
 ///**
 // * @fileOverview WebAudio helper functions...
 // * @module synth
@@ -4011,10 +4283,16 @@ dtm.master = {
         if (typeof(d) !== 'undefined') {
             dtm.master.params.data = d;
         }
+
+        return dtm.master;
     },
 
     form: function () {
 
+    },
+
+    model: function () {
+        return dtm.master;
     },
 
     state: null,
@@ -4022,7 +4300,6 @@ dtm.master = {
     reset: null
 };
 
-//dtm.master.clock.params.sync = false;
 dtm.master.clock.params.isMaster = true;
 dtm.master.clock.start();
 (function () {
@@ -4030,7 +4307,7 @@ dtm.master.clock.start();
 
     m.source = dtm.tr.itob([3, 3, 4, 2, 4]);
     m.target = dtm.tr.itob([2, 1, 2, 1]);
-    m.midx = 0.9;
+    m.midx = 0;
     m.beats = dtm.array(dtm.tr.morph(m.source, m.target, m.midx));
 
     m.mod = function (val) {
@@ -4282,7 +4559,7 @@ dtm.master.clock.start();
     m.motif.midx = 0;
 
     var cl = dtm.clock(80);
-    cl.setSubDiv(16);
+    cl.subDiv(16);
     cl.setTime('2/4');
 
     var noise = dtm.synth2.noise(4192);
@@ -4333,41 +4610,51 @@ dtm.master.clock.start();
 (function () {
     var m = dtm.model('tamborim').categ('instr');
 
-    var c = dtm.clock(440, 48);
+    var subDiv = 12 * 8;
+    var bpm = 400;
+    var c = dtm.clock(bpm, subDiv).sync(false);
 
     m.motif = {
-        original: dtm.array([1, 1, 1, 1]).fit(48, 'zeros'),
-        target: dtm.array([1, 0, 1, 1, 1, 0]).fit(48, 'zeros'),
+        original: dtm.array([1, 1, 1, 1]).fit(subDiv, 'zeros'),
+        target: dtm.array([1, 0, 1, 1, 1, 0]).fit(subDiv, 'zeros'),
         midx: 0
     };
 
     //m.morphed = dtm.transform.morph(m.motif.original, m.motif.target, m.motif.midx);
 
     var idx = 0;
+    var offset = dtm.tr.calcBeatsOffset(m.motif.original.value, m.motif.target.value);
+    var noOffset = dtm.array().fill('zeroes', offset.length).value;
 
-    m.run = function () {
+    var curNote = 0;
+
+    m.play = function () {
         c.add(function () {
-            m.morphed = dtm.transform.morph(m.motif.original.value, m.motif.target.value, m.motif.midx);
+            m.curOffset = dtm.transform.morph(noOffset, offset, m.motif.midx);
+            m.curOffset = dtm.transform.round(m.curOffset);
 
-            if (idx >= m.morphed.length) {
-                idx = idx - m.morphed.length;
-            }
-
-            //c.bpm(120 + m.motif.midx * 60);
+            var morphed = dtm.tr.applyOffsetToBeats(m.motif.original.value, m.curOffset);
+            //c.bpm(bpm + m.motif.midx * 60);
+            c.bpm(bpm + m.motif.midx * 60);
             //var delay = (1 - m.morphed[idx]) * 1 / c.params.bpm / m.morphed.length;
 
-            if (m.morphed[idx] == 1) {
-                dtm.syn().decay(0.05).play();
+            if (morphed[idx] === 1) {
+                if (curNote === 2) {
+                    dtm.syn('noise').decay(0.02).lpf(4000).play();
+                } else {
+                    dtm.syn('noise').decay(0.02).lpf(1000).play();
+                }
+
+                curNote = dtm.value.mod(curNote + 1, 4);
             }
 
-            idx++;
-            //console.log(m.morphed);
+            idx = dtm.value.mod(idx + 1, subDiv);
         }).start();
 
         return m;
     };
 
-    m.modulate = function (val) {
+    m.mod = function (val) {
         m.motif.midx = val;
         return m;
     };

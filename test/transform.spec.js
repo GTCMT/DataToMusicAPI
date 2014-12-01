@@ -105,6 +105,14 @@ describe('array helper functions', function () {
         })
     });
 
+    describe('repeat', function () {
+        var input = [1, 2, 3];
+        var output = dtm.transform.repeat(input, 3);
+        it('should have a length of 9', function () {
+            expect(output.length).toBe(9);
+        })
+    });
+
     describe('size manipulation sutff', function () {
         var input = [];
         for (var i = 0; i < 4; i++) {
@@ -186,5 +194,19 @@ describe('array helper functions', function () {
         var input = [1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0];
         var output = dtm.transform.beatsToIntervals(input);
 //        console.log(output);
-    })
+    });
+
+    describe('calcBeatsOffset', function () {
+        var src = [1, 0, 0, 1, 0, 1, 0, 0];
+        var tgt = [1, 0, 1, 0, 0, 0, 0, 1];
+
+        var res = dtm.transform.calcBeatsOffset(src, tgt);
+        //console.log(res);
+    });
+
+    describe('applyOffsetToBeats', function () {
+        var src = [1, 0, 0, 1, 0, 1, 0, 0];
+        var offset = [0, -1, 2];
+        var res = dtm.transform.applyOffsetToBeats(src, offset);
+    });
 });

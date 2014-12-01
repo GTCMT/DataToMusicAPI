@@ -220,7 +220,7 @@ dtm.array = function (arr, name) {
         array.type = 'string'; // re-set the type to string from number... hacky!
 
         return array;
-    };
+    }
 
     /**
      * Returns a clone of the array object. It can be used when you don't want to reference the same array object from different places.
@@ -377,13 +377,50 @@ dtm.array = function (arr, name) {
         return array;
     };
 
-    array.concat = function () {
+    array.randomize = array.shuffle;
+
+    /**
+     * Sorts the contents of numerical array.
+     * @function module:array#sort
+     * @returns {dtm.array}
+     */
+    array.sort = function () {
+        array.value = dtm.transform.sort(array.value);
+        array.set(array.value);
         return array;
     };
 
-    array.repeat = function () {
+    /**
+     * Concatenates new values to the contents.
+     * @function module:array#concat
+     * @param arr {array | dtm.array} A regular array or a dtm.array object.
+     * @returns {dtm.array}
+     */
+    array.concat = function (arr) {
+        arr = arr || [];
+        var temp = array.value;
+        if (arr instanceof Array) {
+            temp = temp.concat(arr);
+        } else if (arr.className === 'dtm.array') {
+            temp = temp.concat(arr.value);
+        }
+        array.set(temp);
         return array;
     };
+
+    /**
+     * Repeats the contents of the current array.
+     * @function module:array#repeat
+     * @param count {integer}
+     * @returns {dtm.array}
+     */
+    array.repeat = function (count) {
+        array.value = dtm.transform.repeat(array.value, count);
+        array.set(array.value);
+        return array;
+    };
+
+    array.rep = array.repeat;
 
     array.truncate = function () {
         return array;

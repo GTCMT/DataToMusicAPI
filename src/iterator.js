@@ -187,4 +187,4 @@ dtm.iterator = function (arg) {
  * @param [arg] {dtm.array|array}
  * @returns {{className: string, value: Array, idx: number, len: number}}
  */
-dtm.iter = dtm.iterator;
+dtm.it = dtm.iter = dtm.iterator;

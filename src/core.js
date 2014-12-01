@@ -34,6 +34,8 @@ var dtm = {
     sampleRate: actx.sampleRate,
     sr: actx.sampleRate,
 
+    params: {},
+
     ///**
     // * Returns a singleton audio context object.
     // * @function getAudioContext
@@ -60,6 +62,10 @@ var dtm = {
 
     clone: clone
 };
+
+//dtm.buffs = {
+//    verbIr: makeIr(2)
+//};
 
 this.dtm = dtm;
 

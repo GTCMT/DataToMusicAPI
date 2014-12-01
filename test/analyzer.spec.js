@@ -19,6 +19,20 @@ describe('analyzer', function () {
         });
     });
 
+    describe('median', function () {
+        it('should return 3.5', function () {
+            var output = dtm.analyzer.median(input);
+            expect(output).toBe(3.5);
+        });
+    });
+
+    describe('midrange', function () {
+        it('should return 2.5', function () {
+            var output = dtm.analyzer.midrange(input);
+            expect(output).toBe(2.5);
+        });
+    });
+
     describe('variance', function () {
         var output = dtm.analyzer.var(input);
     });

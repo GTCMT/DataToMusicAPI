@@ -119,10 +119,16 @@ dtm.master = {
         if (typeof(d) !== 'undefined') {
             dtm.master.params.data = d;
         }
+
+        return dtm.master;
     },
 
     form: function () {
 
+    },
+
+    model: function () {
+        return dtm.master;
     },
 
     state: null,
@@ -130,6 +136,5 @@ dtm.master = {
     reset: null
 };
 
-//dtm.master.clock.params.sync = false;
 dtm.master.clock.params.isMaster = true;
 dtm.master.clock.start();

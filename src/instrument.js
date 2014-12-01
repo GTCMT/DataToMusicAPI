@@ -4,15 +4,18 @@ dtm.instr = function (arg) {
         params: {
             name: null,
             isPlaying: false,
-            //poly: false,
+            poly: false,
 
             modDest: [],
             clock: dtm.clock(),
-            sync: false
+            sync: true,
+            subDivision: 16
         },
 
         instrModel: null,
-        models: {},
+        models: {
+            voice: dtm.synth()
+        },
         modelList: []
     };
 
@@ -25,7 +28,13 @@ dtm.instr = function (arg) {
         }
 
         // TODO: refactor...
-        if (typeof(arg) === 'object') {
+        if (arg instanceof Array) {
+            if (categ) {
+                instr.models[categ] = dtm.array(arg);
+            } else {
+                instr.models['any'] = dtm.array(arg);
+            }
+        } else if (typeof(arg) === 'object') {
             if (arg.params.categ === 'instr') {
 
             } else if (categ) {
@@ -56,6 +65,13 @@ dtm.instr = function (arg) {
         return instr;
     };
 
+    instr.voice = function (arg) {
+        if (typeof(arg) === 'string') {
+            instr.models.voice.set(arg);
+        }
+        return instr;
+    };
+
     instr.load = function (arg) {
         return instr;
     };
@@ -66,12 +82,19 @@ dtm.instr = function (arg) {
             instr.params.isPlaying = true;
             dtm.log('playing: ' + instr.params.name);
 
+            instr.params.clock.add(function () {
+                var v = instr.models.voice;
+
+                if (typeof(instr.models.melody) !== 'undefined') {
+                    v.nn(instr.models.melody.next()); // CHECK: only for dtm.arrays
+                }
+                v.play();
+            }).start(); // ???
+
             if (instr.instrModel.params.categ === 'instr') {
                 instr.instrModel.stop();
                 instr.instrModel.play();
             }
-
-            instr.params.clock.start(); // ???
 
 
             // register to the active instr list?
@@ -84,6 +107,7 @@ dtm.instr = function (arg) {
     instr.stop = function () {
         if (instr.params.isPlaying === true) {
             instr.params.isPlaying = false;
+            dtm.log('stopping: ' + instr.params.name);
 
             if (instr.instrModel.params.categ === 'instr') {
                 instr.instrModel.stop();
@@ -95,6 +119,10 @@ dtm.instr = function (arg) {
     };
 
     instr.clock = function () {
+        return instr;
+    };
+
+    instr.bpm = function () {
         return instr;
     };
 
@@ -124,6 +152,12 @@ dtm.instr = function (arg) {
             console.log(keys);
         }
 
+        return instr;
+    };
+
+    instr.modulate = instr.mod;
+
+    instr.map = function () {
         return instr;
     };
 

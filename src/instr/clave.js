@@ -10,7 +10,7 @@
     m.motif.midx = 0;
 
     var cl = dtm.clock(80);
-    cl.setSubDiv(16);
+    cl.subDiv(16);
     cl.setTime('2/4');
 
     var noise = dtm.synth2.noise(4192);

@@ -115,12 +115,33 @@ dtm.analyzer = {
         return res;
     },
 
+    /**
+     * Returns the median of numerical array.
+     * @function module:analyzer#median
+     * @param arr
+     * @returns {number}
+     */
     median: function (arr) {
+        var sorted = arr.sort();
+        var len = arr.length;
 
+        if (len % 2 === 0) {
+            return (sorted[len/2 - 1] + sorted[len/2]) / 2
+        } else {
+            return sorted[Math.floor(len/2)];
+        }
     },
 
+    /**
+     * Returns the midrange of numerical array.
+     * @function module:analyzer#midrange
+     * @param arr
+     * @return {number}
+     */
     midrange: function (arr) {
-
+        var max = dtm.analyzer.max(arr);
+        var min = dtm.analyzer.min(arr);
+        return (max + min) / 2;
     },
 
     // TODO: num string parsing

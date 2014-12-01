@@ -52,6 +52,27 @@ dtm.transform = {
                 }
                 break;
 
+            case 'seq':
+            case 'sequence':
+                if (!min) {
+                    min = 0;
+                }
+                for (var i = 0; i < len; i++) {
+                    res[i] = i + min;
+                }
+                break;
+
+            case 'range':
+                if (!min) {
+                    min = 0;
+                }
+                min = Math.round(min);
+                max = Math.round(max);
+                for (var i = 0; i < max-min; i++) {
+                    res[i] = i + min;
+                }
+                break;
+
             case 'noise':
             case 'random':
                 for (var i = 0; i < len; i++) {
@@ -88,6 +109,7 @@ dtm.transform = {
                 }
                 break;
 
+            case 'zeros':
             case 'zeroes':
                 for (var i = 0; i < len; i++) {
                     res[i] = 0;
@@ -248,9 +270,32 @@ dtm.transform = {
         return _.shuffle(arr);
     },
 
-
+    /**
+     * Sorts the contents of a numerical array.
+     * @function module:transform#sort
+     * @param arr {array}
+     * @returns {array}
+     */
     sort: function (arr) {
+        return arr.sort();
+    },
 
+    /**
+     * Repeats the contents of an array.
+     * @param arr
+     * @param count
+     * @returns {Array}
+     */
+    repeat: function (arr, count) {
+        var res = [];
+
+        if (!count) {
+            count = 1;
+        }
+        for (var i = 0; i < count; i++) {
+            res = res.concat(arr);
+        }
+        return res;
     },
 
     /**
@@ -264,7 +309,7 @@ dtm.transform = {
 
         _.forEach(arr, function (val, idx) {
             res[idx] = Math.round(val);
-        })
+        });
         return res;
     },
 
@@ -279,7 +324,7 @@ dtm.transform = {
 
         _.forEach(arr, function (val, idx) {
             res[idx] = Math.floor(val);
-        })
+        });
         return res;
     },
 
@@ -294,7 +339,7 @@ dtm.transform = {
 
         _.forEach(arr, function (val, idx) {
             res[idx] = Math.floor(val);
-        })
+        });
         return res;
     },
 
@@ -328,7 +373,7 @@ dtm.transform = {
 
         _.forEach(arr, function (val, idx) {
             res[idx] = dtm.value.expCurve(val, factor);
-        })
+        });
         return res;
     },
 
@@ -345,7 +390,7 @@ dtm.transform = {
 
         _.forEach(arr, function (val, idx) {
             res[idx] = dtm.value.logCurve(val, factor);
-        })
+        });
         return res;
     },
 
@@ -572,6 +617,55 @@ dtm.transform = {
         return res;
     },
 
+    calcBeatsOffset: function (src, tgt) {
+        var res = [];
+        var offset = 0;
+        var countFromSrc = false;
+        var countFromTgt = false;
+
+        for (var i  = 0; i < src.length; i++) {
+            if (src[i] === 1 && !countFromTgt) {
+                countFromSrc = true;
+            } else if (tgt[i] === 1 && !countFromSrc) {
+                countFromTgt = true;
+            }
+
+            if (countFromSrc) {
+                if (tgt[i] === 1) {
+                    res.push(offset);
+                    countFromSrc = countFromTgt = false;
+                    offset = 0;
+                } else {
+                    offset++;
+                }
+            } else if (countFromTgt) {
+                if (src[i] === 1) {
+                    res.push(offset);
+                    countFromSrc = countFromTgt = false;
+                    offset = 0;
+                } else {
+                    offset--;
+                }
+            }
+        }
+
+        return res;
+    },
+
+    applyOffsetToBeats: function (src, offset) {
+        var res = dtm.array().fill('zeroes', src.length).value;
+        var curSelection = 0;
+
+        for (var i = 0; i < src.length; i++) {
+            if (src[i] === 1) {
+                res[i + offset[curSelection]] = 1;
+                curSelection++;
+            }
+        }
+
+        return res;
+    },
+
     pq: function (input, scale) {
         var res = [];
         _.forEach(input, function (val, idx) {
@@ -624,7 +718,9 @@ dtm.transform.itob = dtm.transform.intervalsToBeats;
  */
 dtm.transform.btoi = dtm.transform.beatsToIntervals;
 
+dtm.transform.fill = dtm.transform.generate;
 dtm.transform.abs = dtm.transform.fwr;
+dtm.transform.randomize = dtm.transform.shuffle;
 
 function morphFixed (srcArr, tgtArr, morphIdx) {
     if (typeof(morphIdx) === 'undefined') {
@@ -638,6 +734,6 @@ function morphFixed (srcArr, tgtArr, morphIdx) {
     });
 
     return newArr;
-};
+}
 
 dtm.tr = dtm.transform;

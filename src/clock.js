@@ -20,7 +20,6 @@ dtm.clock = function (bpm, subDiv, time) {
     var clock = {
         className: 'dtm.clock',
 
-        subDiv: 4,
         interval: 1,
 
         time: [4, 4],
@@ -32,6 +31,7 @@ dtm.clock = function (bpm, subDiv, time) {
             isOn: false,
             sync: true,
             bpm: 60,
+            subDiv: 4,
             random: 0,
             swing: 50
         },
@@ -41,14 +41,6 @@ dtm.clock = function (bpm, subDiv, time) {
     };
 
     clock.params.tempo = clock.params.bpm;
-
-    // assign input arguments...
-    _.forEach(arguments, function (val, idx) {
-        switch (idx) {
-            case 0: clock.params.bpm = val; break;
-            case 1: clock.subDiv = val; break;
-        }
-    });
 
     // private
     var callbacks = [];
@@ -66,9 +58,10 @@ dtm.clock = function (bpm, subDiv, time) {
     clock.set = function (bpm, subDiv) {
         if (typeof(bpm) !== 'undefined') {
             clock.params.bpm = bpm;
+            clock.params.sync = false;
         }
-        if (typeof(subDiv) !== 'undefined') {
-            clock.subDiv = subDiv;
+        if (typeof(params.subDiv) !== 'undefined') {
+            clock.params.subDiv = subDiv;
         }
 
         return clock;
@@ -86,7 +79,7 @@ dtm.clock = function (bpm, subDiv, time) {
     /**
      * Sets the speed of the clock in BPM,
      * @method module:clock#bpm
-     * @param num {number} BPM value
+     * @param val {number} BPM value
      * @returns {dtm.clock} self
      * @chainable
      * @example
@@ -110,9 +103,9 @@ dtm.clock = function (bpm, subDiv, time) {
      */
     clock.tempo = clock.bpm;
 
-    clock.setSubDiv = function (val) {
+    clock.subDiv = function (val) {
         val = val | 4;
-        clock.subDiv = val;
+        clock.params.subDiv = val;
         return clock;
     };
 
@@ -134,7 +127,7 @@ dtm.clock = function (bpm, subDiv, time) {
      */
     clock.add = function (cb, beats) {
         if (arguments.length == 1) {
-            beats = _.range((clock.subDiv * clock.time[0] / clock.time[1]));
+            beats = _.range((clock.params.subDiv * clock.time[0] / clock.time[1]));
         }
 //        if (_.findKey(cb, 'modelName')) {
 //            cb.addParentClock(clock); // CHECK: risky
@@ -168,8 +161,7 @@ dtm.clock = function (bpm, subDiv, time) {
         return clock;
     };
 
-    clock.run = clock.start;
-    clock.play = clock.start;
+    clock.run = clock.play = clock.start;
 
     var clockSrc;
 
@@ -190,7 +182,7 @@ dtm.clock = function (bpm, subDiv, time) {
                 clockSrc.buffer = clockBuf;
                 clockSrc.connect(out());
 
-                var freq = clock.params.bpm / 60.0 * (clock.subDiv / 4.0);
+                var freq = clock.params.bpm / 60.0 * (clock.params.subDiv / 4.0);
 //            var pbRate = 1/(1/freq - Math.abs(timeErr));
 
                 clockSrc.playbackRate.value = freq * clMult;
@@ -207,7 +199,8 @@ dtm.clock = function (bpm, subDiv, time) {
                 clockSrc.onended = function () {
                     curTime += 1/freq;
                     var error = now() - curTime;
-                    clock.tick(error);
+                    //clock.tick(error);
+                    clock.tick();
 //                curTime = now();
                 };
 
@@ -217,18 +210,18 @@ dtm.clock = function (bpm, subDiv, time) {
                     }
                 });
 
-                clock.beat = (clock.beat + 1) % (clock.subDiv * clock.time[0] / clock.time[1]);
+                clock.beat = (clock.beat + 1) % (clock.params.subDiv * clock.time[0] / clock.time[1]);
 
                 return clock;
 
             } else if (clock.params.sync && !clock.params.isMaster) {
-                if (dtm.master.clock.beat % Math.round(480/clock.subDiv) === 0) {
-                    _.forEach(clock.callbacks, function (cb) {
-                        if (_.indexOf(cb[1], clock.beat) > -1) {
-                            cb[0](clock);
-                        }
-                    });
-                }
+                //if (dtm.master.clock.beat % Math.round(480/clock.params.subDiv) === 0) {
+                //    _.forEach(clock.callbacks, function (cb) {
+                //        if (_.indexOf(cb[1], clock.beat) > -1) {
+                //            cb[0](clock);
+                //        }
+                //    });
+                //}
 
                 return clock;
             } else if (clock.params.isMaster) {
@@ -236,7 +229,7 @@ dtm.clock = function (bpm, subDiv, time) {
                 clockSrc.buffer = clockBuf;
                 clockSrc.connect(out());
 
-                var freq = clock.params.bpm / 60.0 * (clock.subDiv / 4.0);
+                var freq = clock.params.bpm / 60.0 * (clock.params.subDiv / 4.0);
 
                 clockSrc.playbackRate.value = freq * clMult;
                 clockSrc.playbackRate.value += clockSrc.playbackRate.value * (clock.params.random / 100) * _.sample([1, -1]);
@@ -265,10 +258,23 @@ dtm.clock = function (bpm, subDiv, time) {
                     }
                 });
 
-                clock.beat = (clock.beat + 1) % (clock.subDiv * clock.time[0] / clock.time[1]);
+                clock.beat = (clock.beat + 1) % (clock.params.subDiv * clock.time[0] / clock.time[1]);
             }
 
         }
+    };
+
+    clock.tickSynced = function () {
+        if (clock.params.sync) {
+            if (dtm.master.clock.beat % Math.round(480/clock.params.subDiv) === 0) {
+                _.forEach(clock.callbacks, function (cb) {
+                    if (_.indexOf(cb[1], clock.beat) > -1) {
+                        cb[0](clock);
+                    }
+                });
+            }
+        }
+        return clock;
     };
 
     /**
@@ -324,8 +330,31 @@ dtm.clock = function (bpm, subDiv, time) {
     };
 
     if (!clock.params.isMaster && typeof(dtm.master) !== 'undefined') {
-        dtm.master.clock.add(clock.tick);
+        dtm.master.clock.add(clock.tickSynced);
+    }
+
+    // assign input arguments...
+    //_.forEach(arguments, function (val, idx) {
+    //    switch (idx) {
+    //        case 0: clock.params.bpm = val; break;
+    //        case 1: clock.params.subDiv = val; break;
+    //    }
+    //});
+
+    if (typeof(bpm) !== 'undefined') {
+        clock.params.bpm = bpm;
+        clock.params.sync = false;
+    }
+
+    if (typeof(subDiv) !== 'undefined') {
+        clock.params.subDiv = subDiv;
+    }
+
+    if (typeof(time) !== 'undefined') {
+        clock.params.time = time;
     }
 
     return clock;
 };
+
+dtm.c = dtm.clock;
