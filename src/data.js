@@ -52,6 +52,9 @@ dtm.data = function (arg, cb, type) {
          */
         size: {},
 
+        // TODO: enclose non-functions here
+        params: {},
+
         /**
          * This can be used for promise callback upon loading data.
          * @name module:data#promise
@@ -188,40 +191,49 @@ dtm.data = function (arg, cb, type) {
             }
         });
 
-        return data.promise;
-    };
-
-    data.jsonp = function (url, cb) {
-        data.promise = new Promise(function (resolve, reject) {
-            var cbName = 'jsonp_callback_' + Math.round(100000 * Math.random());
-            window[cbName] = function (res) {
-                delete window[cbName];
-                document.body.removeChild(script);
-                var keys = _.keys(res);
-                _.forEach(keys, function (val) {
-                    if (val !== 'response') {
-                        data.coll = res[val];
-                        data.keys = _.keys(data.coll[0]);
-                        setArrays();
-                        setTypes();
-                        setSize();
-
-                        resolve(data);
-                        if (typeof(cb) !== 'undefined') {
-                            cb(data);
-                        }
-                    }
-                });
-                //cb(data);
-            };
-
-            var script = document.createElement('script');
-            script.src = url + (url.indexOf('?') >= 0 ? '&' : '?') + 'callback=' + cbName;
-            document.body.appendChild(script);
-        });
+        // CHECK: this doesn't work
+        data.promise.get = function (arg) {
+            data.promise.then(function (d) {
+                data = d;
+                return d.get(arg);
+            });
+            return data.promise;
+        };
 
         return data.promise;
     };
+
+    //data.jsonp = function (url, cb) {
+    //    data.promise = new Promise(function (resolve, reject) {
+    //        var cbName = 'jsonp_callback_' + Math.round(100000 * Math.random());
+    //        window[cbName] = function (res) {
+    //            delete window[cbName];
+    //            document.body.removeChild(script);
+    //            var keys = _.keys(res);
+    //            _.forEach(keys, function (val) {
+    //                if (val !== 'response') {
+    //                    data.coll = res[val];
+    //                    data.keys = _.keys(data.coll[0]);
+    //                    setArrays();
+    //                    setTypes();
+    //                    setSize();
+    //
+    //                    resolve(data);
+    //                    if (typeof(cb) !== 'undefined') {
+    //                        cb(data);
+    //                    }
+    //                }
+    //            });
+    //            //cb(data);
+    //        };
+    //
+    //        var script = document.createElement('script');
+    //        script.src = url + (url.indexOf('?') >= 0 ? '&' : '?') + 'callback=' + cbName;
+    //        document.body.appendChild(script);
+    //    });
+    //
+    //    return data.promise;
+    //};
 
     data.set = function (res) {
         data.coll = res;
@@ -245,9 +257,34 @@ dtm.data = function (arg, cb, type) {
     }
 
     function setSize() {
-        data.size.cols = data.keys.length;
-        data.size.rows = data.coll.length;
+        data.size.col = data.keys.length;
+        data.size.row = data.coll.length;
     }
+
+    /**
+     * Returns a clone of dtm.array object from the data.
+     * @param id {string|integer} Key (string) or index (integer)
+     * @returns {dtm.array}
+     */
+    data.get = function (id) {
+        if (typeof(id) === 'number') {
+            if (id >= 0 && id < data.size['col']) {
+                return data.arrays[data.keys[id]].clone();
+            } else {
+                dtm.log('data.get(): index out of range');
+                return data;
+            }
+        } else if (typeof(id) === 'string') {
+            if (data.keys.indexOf(id) > -1) {
+                return data.arrays[id].clone();
+            } else {
+                dtm.log('data.get(): key does not exist');
+                return data;
+            }
+        } else {
+            return data;
+        }
+    };
 
     //data.capture = function () {
     //    return new Promise(function (resolve, reject) {
@@ -266,6 +303,10 @@ dtm.data = function (arg, cb, type) {
     };
 
     data.map = function () {
+        return data;
+    };
+
+    data.stream = function (uri, rate) {
         return data;
     };
 

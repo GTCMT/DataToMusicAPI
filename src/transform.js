@@ -11,7 +11,7 @@ dtm.transform = {
      * Generates values for a new array.
      * @function module:transform#generate
      * @param type {string} Choices: 'line', 'noise'/'random', 'gaussian'/'gauss'/'normal', 'sin'/'sine', 'cos'/'cosine', 'zeroes', 'ones'
-     * @param len {integer}
+     * @param [len=8] {integer}
      * @param [min=0] {number}
      * @param [max=1] {number}
      * @returns {Array}
@@ -30,7 +30,7 @@ dtm.transform = {
      */
     generate: function (type, len, min, max) {
         if (typeof(len) === 'undefined') {
-            len = 2;
+            len = 8;
         }
 
         if (typeof(min) === 'undefined') {
@@ -294,6 +294,28 @@ dtm.transform = {
         }
         for (var i = 0; i < count; i++) {
             res = res.concat(arr);
+        }
+        return res;
+    },
+
+    /**
+     * Truncates some values either at the end or both at the beginning and the end of the given array.
+     * @function module:transform#truncate
+     * @param arr
+     * @param arg1
+     * @param [arg2]
+     * @returns {Array}
+     */
+    truncate: function (arr, arg1, arg2) {
+        var res = [];
+        if (typeof(arg2) !== 'undefined') {
+            for (var i = 0; i < (arr.length - (arg1 + arg2)); i++) {
+                res[i] = arr[arg1 + i];
+            }
+        } else {
+            for (var j = 0; j < (arr.length - arg1); j++) {
+                res[j] = arr[j];
+            }
         }
         return res;
     },
@@ -617,6 +639,32 @@ dtm.transform = {
         return res;
     },
 
+    /**
+     * Converts beat sequence into an array of indices (or delays or onset-coordinate vectors.) Useful for creating time delay-based events.
+     * @function module:transform#beatsToIndices
+     * @param input
+     * @returns {Array}
+     */
+    beatsToIndices: function (input) {
+        var res = [];
+
+        for (var i = 0; i < input.length; i++) {
+            if (input[i] !== 0) {
+                res.push(i);
+            }
+        }
+
+        return res;
+    },
+
+    indicesToBeats: function (input) {
+        var res = [];
+
+        for (var i = 0; i < input.length; i++) {
+
+        }
+    },
+
     calcBeatsOffset: function (src, tgt) {
         var res = [];
         var offset = 0;
@@ -661,6 +709,50 @@ dtm.transform = {
                 res[i + offset[curSelection]] = 1;
                 curSelection++;
             }
+        }
+
+        return res;
+    },
+
+    /**
+     * Analyzes the linear-regression evenness and modulates.
+     * @function module:transform:lreModulation
+     * @param input
+     * @param degree
+     */
+    lreModulation: function (input, degree, mode) {
+        var res = [];
+        var nonZeros = 0;
+        var curOnset = 0;
+        var evenness = 0;
+
+        for (var i = 0; i < input.length; i++) {
+            res[i] = 0;
+
+            if (input[i] !== 0) {
+                nonZeros++;
+            }
+        }
+
+        var unit = input.length / nonZeros;
+
+        var intervals = [];
+        for (var j = 0; j < input.length; j++) {
+            if (input[j] !== 0) {
+                var offset = j - unit * curOnset;
+                intervals.push(Math.round(unit * curOnset + offset * (degree-0.5) * 2));
+                curOnset++;
+            }
+        }
+
+        for (var k = 0; k < intervals.length; k++) {
+            var idx = intervals[k];
+            if (idx < 0) {
+                idx = 0;
+            } else if (idx >= input.length) {
+                idx = input.length - 1;
+            }
+            res[idx] = 1;
         }
 
         return res;

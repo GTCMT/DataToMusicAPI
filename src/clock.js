@@ -115,10 +115,12 @@ dtm.clock = function (bpm, subDiv, time) {
      * @returns {{className: string, interval: number, time: number[], beat: number, list: Array, params: {isOn: boolean, sync: boolean, bpm: number, subDiv: number, random: number, swing: number}, callbacks: Array}}
      */
     clock.subDiv = function (val) {
-        val = val | 4;
+        val = val || 4;
         clock.params.subDiv = val;
         return clock;
     };
+
+    clock.div = clock.subdiv = clock.subDiv;
 
     clock.setTime = function (input) {
         if (typeof(input) === 'Array') {
@@ -133,27 +135,97 @@ dtm.clock = function (bpm, subDiv, time) {
      * Registers a callback function to selected or all ticks of the clock.
      * @function module:clock#add
      * @param cb {function} Callback function.
-     * @param [beats] {array} Sequence of beat numbers (int) on which the callback function should be called. The default is the every beat.
      * @returns {dtm.clock} self
      */
-    clock.add = function (cb, beats) {
-        if (arguments.length == 1) {
-            beats = _.range((clock.params.subDiv * clock.time[0] / clock.time[1]));
-        }
-//        if (_.findKey(cb, 'modelName')) {
-//            cb.addParentClock(clock); // CHECK: risky
-//        }
-//
-//        console.log(_.findKey(cb, 'modelName'));
+    clock.add = function (cb) {
+        // prevent adding identical functions
+        var dupe = false;
+        _.forEach(clock.callbacks, function (stored) {
+            if (_.isEqual(stored, cb)) {
+                dtm.log('clock.add(): identical function exists in the callback list');
 
-        clock.callbacks.push([cb, beats]);
+                dupe = true;
+            }
+        });
+
+        if (!dupe) {
+            dtm.log('adding a new callback function to clock');
+            clock.callbacks.push(cb);
+        }
         return clock;
     };
 
-//    clock.addToBeats = function (cb, iArr) {
-//        callbacks.push([cb, iArr]);
-//        return clock;
-//    };
+    clock.register = clock.reg = clock.add;
+
+    ///**
+    // * Registers a callback function to selected or all ticks of the clock.
+    // * @function module:clock#add
+    // * @param cb {function} Callback function.
+    // * @param [beats] {array} Sequence of beat numbers (int) on which the callback function should be called. The default is the every beat.
+    // * @returns {dtm.clock} self
+    // */
+    //clock.addToBeats = function (cb, iArr) {
+    //    if (arguments.length == 1) {
+    //        // CHECK: broken - changing the subdiv later should change this too?
+    //        // maybe disable the registration for certain beats
+    //        beats = _.range((clock.params.subDiv * clock.time[0] / clock.time[1]));
+    //    }
+    ////        if (_.findKey(cb, 'modelName')) {
+    ////            cb.addParentClock(clock); // CHECK: risky
+    ////        }
+    ////
+    ////        console.log(_.findKey(cb, 'modelName'));
+    //
+    //    clock.callbacks.push([cb, beats]);
+    //    return clock;
+    //};
+
+    /**
+     * @function module:clock#remove
+     * @param id {function|string}
+     * @returns {dtm.clock}
+     */
+    clock.remove = function (id) {
+        if (typeof(id) === 'function') {
+            _.remove(clock.callbacks, function (cb) {
+                return _.isEqual(cb, id);
+            });
+        } else if (typeof(id) === 'string') {
+            _.remove(clock.callbacks, function (cb) {
+                return cb.name == id;
+            });
+        }
+
+        return clock;
+    };
+
+    /**
+     * @function module:clock#rem
+     * @param id {function|string}
+     * @returns {dtm.clock}
+     */
+    clock.rem = clock.remove;
+
+    /**
+     * Modifies or replaces the content of a callback function while the clock may be running. Note that the target callback needs to be a named function.
+     * @function module:clock#modify
+     * @param id {function|string}
+     * @param fn {function}
+     * @returns {dtm.clock}
+     */
+    clock.modify = function (id, fn) {
+        if (typeof(id) === 'function') {
+            dtm.log('modifying the callback: ' + id.name);
+            clock.remove(id.name);
+            clock.add(id);
+        } else if (typeof(id) === 'string') {
+            clock.remove(id);
+            clock.add(fn);
+        }
+        return clock;
+    };
+
+    clock.replace = clock.mod = clock.modify;
 
     /**
      * Starts the clock.
@@ -194,7 +266,7 @@ dtm.clock = function (bpm, subDiv, time) {
                 clockSrc.connect(out());
 
                 var freq = clock.params.bpm / 60.0 * (clock.params.subDiv / 4.0);
-//            var pbRate = 1/(1/freq - Math.abs(timeErr));
+                //var pbRate = 1/(1/freq - Math.abs(timeErr));
 
                 clockSrc.playbackRate.value = freq * clMult;
                 clockSrc.playbackRate.value += clockSrc.playbackRate.value * (clock.params.random / 100) * _.sample([1, -1]);
@@ -216,9 +288,10 @@ dtm.clock = function (bpm, subDiv, time) {
                 };
 
                 _.forEach(clock.callbacks, function (cb) {
-                    if (_.indexOf(cb[1], clock.beat) > -1) {
-                        cb[0](clock);
-                    }
+                    //if (_.indexOf(cb[1], clock.beat) > -1) {
+                    //    cb[0](clock);
+                    //}
+                    cb(clock);
                 });
 
                 clock.beat = (clock.beat + 1) % (clock.params.subDiv * clock.time[0] / clock.time[1]);
@@ -235,6 +308,7 @@ dtm.clock = function (bpm, subDiv, time) {
                 //}
 
                 return clock;
+
             } else if (clock.params.isMaster) {
                 clockSrc = actx.createBufferSource();
                 clockSrc.buffer = clockBuf;
@@ -340,21 +414,19 @@ dtm.clock = function (bpm, subDiv, time) {
         return clock;
     };
 
+    clock.flush = function () {
+        return clock;
+    };
+
     if (!clock.params.isMaster && typeof(dtm.master) !== 'undefined') {
         dtm.master.clock.add(clock.tickSynced);
     }
 
-    // assign input arguments...
-    //_.forEach(arguments, function (val, idx) {
-    //    switch (idx) {
-    //        case 0: clock.params.bpm = val; break;
-    //        case 1: clock.params.subDiv = val; break;
-    //    }
-    //});
-
-    if (typeof(bpm) !== 'undefined') {
+    if (typeof(bpm) === 'number') {
         clock.params.bpm = bpm;
         clock.params.sync = false;
+    } else if (typeof(bpm) === 'boolean') {
+        clock.params.sync = bpm;
     }
 
     if (typeof(subDiv) !== 'undefined') {

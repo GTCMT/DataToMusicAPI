@@ -7,7 +7,10 @@ dtm.master = {
     className: 'dtm.master',
 
     params: {
-        data: null
+        data: null,
+        beat: 0,
+        measure: 0,
+        section: 0
     },
 
     level: 0.5,
@@ -39,11 +42,6 @@ dtm.master = {
     time: [4, 4],
     beat: 0,
 
-    // or just call plain "beat", etc.
-    curBeat: 0,
-    curMeasure: 0,
-    curSection: 0,
-
     scale: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
     cummulatedRhythm: null,
 
@@ -55,7 +53,6 @@ dtm.master = {
 
     },
 
-    // TODO: not clearing the clocks passed from a voice to model
     /**
      * Stops and deletes all the running clock.
      * @function module:master#stop

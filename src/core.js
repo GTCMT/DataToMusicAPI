@@ -18,7 +18,7 @@ var clockBuf = actx.createBuffer(1, Math.round(actx.sampleRate * clMult), actx.s
 var dtm = {
     version: '0.0.1',
 
-    logger: false,
+    logger: true,
     log: function (arg) {
         if (dtm.logger) {
             console.log(arg);
@@ -35,6 +35,8 @@ var dtm = {
     sr: actx.sampleRate,
 
     params: {},
+
+    // TODO: a function to list currently loaded objects, such as data, arrays, models... - for console livecoding situation
 
     ///**
     // * Returns a singleton audio context object.

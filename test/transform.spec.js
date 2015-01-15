@@ -110,7 +110,20 @@ describe('array helper functions', function () {
         var output = dtm.transform.repeat(input, 3);
         it('should have a length of 9', function () {
             expect(output.length).toBe(9);
-        })
+        });
+    });
+
+    describe('truncate', function () {
+        var input = [1, 2, 3, 4, 5];
+        var out1 = dtm.transform.truncate(input, 2);
+        it('should have length of 3', function () {
+            expect(out1.length).toBe(3);
+        });
+
+        var out2 = dtm.transform.truncate(input, 1, 1);
+        it('should have length of 2', function () {
+            expect(out2.length).toBe(3);
+        });
     });
 
     describe('size manipulation sutff', function () {
@@ -194,6 +207,15 @@ describe('array helper functions', function () {
         var input = [1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0];
         var output = dtm.transform.beatsToIntervals(input);
 //        console.log(output);
+    });
+
+    describe('beats to indices', function () {
+        var input = [1, 0, 1, 1, 0, 0, 1, 1];
+        var output = dtm.transform.beatsToIndices(input);
+
+        it('should have 5 values', function () {
+            expect(output.length).toBe(5);
+        });
     });
 
     describe('calcBeatsOffset', function () {

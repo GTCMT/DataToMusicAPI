@@ -20,7 +20,7 @@ var clockBuf = actx.createBuffer(1, Math.round(actx.sampleRate * clMult), actx.s
 var dtm = {
     version: '0.0.1',
 
-    logger: false,
+    logger: true,
     log: function (arg) {
         if (dtm.logger) {
             console.log(arg);
@@ -37,6 +37,8 @@ var dtm = {
     sr: actx.sampleRate,
 
     params: {},
+
+    // TODO: a function to list currently loaded objects, such as data, arrays, models... - for console livecoding situation
 
     ///**
     // * Returns a singleton audio context object.
@@ -242,34 +244,30 @@ dtm.scales = {
     "7": [0, 4, 7, 10],
     "7sus4": [0, 5, 7, 10]
 };
-/**
- * @fileOverview Data streaming object. This will be interfacing / querying the streamed data at the server.
- * @module stream
- */
+dtm.osc = function () {
+    var myOsc = {};
 
-dtm.stream = function () {
-    var stream = {};
-
-    stream.query = function (url, cb) {
-        //cb();
-
-        ajaxGet(url, function (res) {
-            cb();
-            console.log(res);
+    myOsc.setup = function () {
+        myOsc.oscPort = new osc.WebSocketPort({
+            url: 'ws://localhost:8081'
         });
+
+        myOsc.oscPort.open();
+
+        return myOsc;
     };
 
-    return stream;
+    myOsc.write = function (input) {
+        myOsc.oscPort.send({
+            address: '/guido/score',
+            args: ['set', input]
+        });
+
+        return myOsc;
+    };
+
+    return myOsc;
 };
-
-
-function runningAvg() {
-
-}
-
-function capture(len, cb) {
-
-}
 /**
  * @fileOverview Analyze a thing or two about an array. Singleton.
  * @module analyzer
@@ -286,21 +284,18 @@ dtm.analyzer = {
      */
     checkType: function (arr) {
         var sum = _.reduce(arr, function (num, sum) {
-            num + sum;
+            return num + sum;
         });
 
-        if (typeof(sum) === 'string') {
-            if (!isNaN(sum)) {
-                if (sum.toString().indexOf('.') > -1) {
-                    return 'float';
-                } else {
-                    return 'int';
-                }
-            } else {
-                return 'string';
-            }
+        if (isNaN(sum) || typeof(sum) === 'string') {
+            return 'string';
         } else {
-            return 'number';
+            // TODO: won't work in cases like [0.7, 0.3]
+            if (sum.toString().indexOf('.') > -1) {
+                return 'float';
+            } else {
+                return 'int';
+            }
         }
     },
 
@@ -539,7 +534,7 @@ dtm.transform = {
      * Generates values for a new array.
      * @function module:transform#generate
      * @param type {string} Choices: 'line', 'noise'/'random', 'gaussian'/'gauss'/'normal', 'sin'/'sine', 'cos'/'cosine', 'zeroes', 'ones'
-     * @param len {integer}
+     * @param [len=8] {integer}
      * @param [min=0] {number}
      * @param [max=1] {number}
      * @returns {Array}
@@ -558,7 +553,7 @@ dtm.transform = {
      */
     generate: function (type, len, min, max) {
         if (typeof(len) === 'undefined') {
-            len = 2;
+            len = 8;
         }
 
         if (typeof(min) === 'undefined') {
@@ -822,6 +817,28 @@ dtm.transform = {
         }
         for (var i = 0; i < count; i++) {
             res = res.concat(arr);
+        }
+        return res;
+    },
+
+    /**
+     * Truncates some values either at the end or both at the beginning and the end of the given array.
+     * @function module:transform#truncate
+     * @param arr
+     * @param arg1
+     * @param [arg2]
+     * @returns {Array}
+     */
+    truncate: function (arr, arg1, arg2) {
+        var res = [];
+        if (typeof(arg2) !== 'undefined') {
+            for (var i = 0; i < (arr.length - (arg1 + arg2)); i++) {
+                res[i] = arr[arg1 + i];
+            }
+        } else {
+            for (var j = 0; j < (arr.length - arg1); j++) {
+                res[j] = arr[j];
+            }
         }
         return res;
     },
@@ -1145,6 +1162,32 @@ dtm.transform = {
         return res;
     },
 
+    /**
+     * Converts beat sequence into an array of indices (or delays or onset-coordinate vectors.) Useful for creating time delay-based events.
+     * @function module:transform#beatsToIndices
+     * @param input
+     * @returns {Array}
+     */
+    beatsToIndices: function (input) {
+        var res = [];
+
+        for (var i = 0; i < input.length; i++) {
+            if (input[i] !== 0) {
+                res.push(i);
+            }
+        }
+
+        return res;
+    },
+
+    indicesToBeats: function (input) {
+        var res = [];
+
+        for (var i = 0; i < input.length; i++) {
+
+        }
+    },
+
     calcBeatsOffset: function (src, tgt) {
         var res = [];
         var offset = 0;
@@ -1189,6 +1232,50 @@ dtm.transform = {
                 res[i + offset[curSelection]] = 1;
                 curSelection++;
             }
+        }
+
+        return res;
+    },
+
+    /**
+     * Analyzes the linear-regression evenness and modulates.
+     * @function module:transform:lreModulation
+     * @param input
+     * @param degree
+     */
+    lreModulation: function (input, degree, mode) {
+        var res = [];
+        var nonZeros = 0;
+        var curOnset = 0;
+        var evenness = 0;
+
+        for (var i = 0; i < input.length; i++) {
+            res[i] = 0;
+
+            if (input[i] !== 0) {
+                nonZeros++;
+            }
+        }
+
+        var unit = input.length / nonZeros;
+
+        var intervals = [];
+        for (var j = 0; j < input.length; j++) {
+            if (input[j] !== 0) {
+                var offset = j - unit * curOnset;
+                intervals.push(Math.round(unit * curOnset + offset * (degree-0.5) * 2));
+                curOnset++;
+            }
+        }
+
+        for (var k = 0; k < intervals.length; k++) {
+            var idx = intervals[k];
+            if (idx < 0) {
+                idx = 0;
+            } else if (idx >= input.length) {
+                idx = input.length - 1;
+            }
+            res[idx] = 1;
         }
 
         return res;
@@ -1283,6 +1370,9 @@ dtm.array = function (arr, name) {
     var array = {
         className: 'dtm.array',
 
+        params: {},
+
+
         /**
          * The name of the array object.
          * @name module:array#name
@@ -1369,7 +1459,7 @@ dtm.array = function (arr, name) {
 
         colls: null,
 
-        index: 0,
+        index: 0
     };
 
     //array.avg = array.mean;
@@ -1513,7 +1603,7 @@ dtm.array = function (arr, name) {
      * Fills the contents of the array with
      * @function module:array#fill
      * @param type {string} Choices: 'line', 'noise'/'random', 'gaussian'/'gauss'/'normal', 'sin'/'sine', 'cos'/'cosine', 'zeroes', 'ones'
-     * @param [len=2] {integer}
+     * @param [len=8] {integer}
      * @param [min=0] {number}
      * @param [max=1] {number}
      * @returns {dtm.array}
@@ -1567,7 +1657,7 @@ dtm.array = function (arr, name) {
      * @function module:array#range
      * @type {Function}
      */
-    array.range = array.rescale;
+    array.range = array.scale = array.rescale;
 
     // TODO: implement this
     array.limit = function (min, max) {
@@ -1699,7 +1789,16 @@ dtm.array = function (arr, name) {
      */
     array.rep = array.repeat;
 
-    array.truncate = function () {
+    /**
+     * Truncates some values either at the end or both at the beginning and the end.
+     * @param arg1 {integer} Start bits to truncate. If the arg2 is not present, it will be the End bits to truncate.
+     * @param [arg2] {integer} End bits to truncate.
+     * @function module:array#truncate
+     * @returns {dtm.array}
+     */
+    array.truncate = function (arg1, arg2) {
+        array.value = dtm.transform.truncate(array.value, arg1, arg2);
+        array.set(array.value);
         return array;
     };
 
@@ -1869,7 +1968,14 @@ dtm.array = function (arr, name) {
         return array;
     };
 
+    /**
+     * Converts beat sequence into an array of indices (or delays or onset-coordinate vectors.) Useful for creating time delay-based events.
+     * @function module:array#beatsToIndices
+     * @returns {dtm.array}
+     */
     array.beatsToIndices = function () {
+        array.value = dtm.transform.beatsToIndices(array.value);
+        array.set(array.value);
         return array;
     };
 
@@ -1956,6 +2062,98 @@ dtm.array = function (arr, name) {
      */
     array.abs = array.fwr;
 
+
+    /**
+     * Returns the array contents or an analyzed value
+     * @function module:array#val
+     * @param [param] {string}
+     * @returns {number|array|string}
+     */
+    array.val = function (param) {
+        var out;
+
+        switch (param) {
+            case 'type':
+                out = dtm.analyzer.checkType(array.values);
+                break;
+            case 'len':
+            case 'length':
+                out = array.values.length;
+                break;
+
+            case 'min':
+                out = dtm.analyzer.min(array.values);
+                break;
+            case 'max':
+                out = dtm.analyzer.max(array.values);
+                break;
+            case 'mean':
+                out = dtm.analyzer.mean(array.values);
+                break;
+            case 'mode':
+                out = dtm.analyzer.mode(array.values);
+                break;
+            case 'median':
+                out = dtm.analyzer.median(array.values);
+                break;
+            case 'midrange':
+                out = dtm.analyzer.midrange(array.values);
+                break;
+            case 'std':
+                out = dtm.analyzer.std(array.values);
+                break;
+            case 'pstd':
+                out = dtm.analyzer.pstd(array.values);
+                break;
+            case 'var':
+                out = dtm.analyzer.var(array.values);
+                break;
+            case 'pvar':
+                out = dtm.analyzer.pvar(array.values);
+                break;
+            case 'current':
+            case 'curr':
+            case 'cur':
+            case 'now':
+            case 'moment':
+                out = array.values[array.index];
+                break;
+            case 'next':
+                array.index = dtm.value.mod(++array.index, array.values.length);
+                out = array.values[array.index];
+                break;
+            case 'prev':
+            case 'previous':
+                array.index = dtm.value.mod(--array.index, array.values.length);
+                out = array.values[array.index];
+                break;
+            case 'random':
+                out = array.values[_.random(0, array.values.length - 1)];
+                break;
+            case 'urn':
+                break;
+
+            case 'normalize':
+            case 'normalized':
+                out = dtm.transform.normalize(array.values);
+                break;
+            case 'classes':
+                break;
+            case 'numClasses':
+                break;
+            case 'histo':
+                break;
+
+            default:
+                out = array.values;
+                break;
+        }
+
+        return out;
+    };
+
+    array.get = array.val;
+
     /**
      * A shorthand for iterating through the array values. For more details and other iteration methods, please check the dtm.iterator.
      * @param [param='value'] {string}
@@ -1973,7 +2171,7 @@ dtm.array = function (arr, name) {
     return array;
 };
 
-dtm.a = dtm.array;
+dtm.a = dtm.arr = dtm.array;
 /**
  * @fileOverview Collection object. Right now, empty.
  * @module collection
@@ -2102,6 +2300,14 @@ dtm.value = {
 
     incr: function incr() {
 
+    },
+
+    randi: function (min, max) {
+        return _.random(min, max);
+    },
+
+    random: function (min, max) {
+        return _.random(min, max, true);
     }
 };
 
@@ -2446,6 +2652,9 @@ dtm.data = function (arg, cb, type) {
          */
         size: {},
 
+        // TODO: enclose non-functions here
+        params: {},
+
         /**
          * This can be used for promise callback upon loading data.
          * @name module:data#promise
@@ -2582,40 +2791,49 @@ dtm.data = function (arg, cb, type) {
             }
         });
 
-        return data.promise;
-    };
-
-    data.jsonp = function (url, cb) {
-        data.promise = new Promise(function (resolve, reject) {
-            var cbName = 'jsonp_callback_' + Math.round(100000 * Math.random());
-            window[cbName] = function (res) {
-                delete window[cbName];
-                document.body.removeChild(script);
-                var keys = _.keys(res);
-                _.forEach(keys, function (val) {
-                    if (val !== 'response') {
-                        data.coll = res[val];
-                        data.keys = _.keys(data.coll[0]);
-                        setArrays();
-                        setTypes();
-                        setSize();
-
-                        resolve(data);
-                        if (typeof(cb) !== 'undefined') {
-                            cb(data);
-                        }
-                    }
-                });
-                //cb(data);
-            };
-
-            var script = document.createElement('script');
-            script.src = url + (url.indexOf('?') >= 0 ? '&' : '?') + 'callback=' + cbName;
-            document.body.appendChild(script);
-        });
+        // CHECK: this doesn't work
+        data.promise.get = function (arg) {
+            data.promise.then(function (d) {
+                data = d;
+                return d.get(arg);
+            });
+            return data.promise;
+        };
 
         return data.promise;
     };
+
+    //data.jsonp = function (url, cb) {
+    //    data.promise = new Promise(function (resolve, reject) {
+    //        var cbName = 'jsonp_callback_' + Math.round(100000 * Math.random());
+    //        window[cbName] = function (res) {
+    //            delete window[cbName];
+    //            document.body.removeChild(script);
+    //            var keys = _.keys(res);
+    //            _.forEach(keys, function (val) {
+    //                if (val !== 'response') {
+    //                    data.coll = res[val];
+    //                    data.keys = _.keys(data.coll[0]);
+    //                    setArrays();
+    //                    setTypes();
+    //                    setSize();
+    //
+    //                    resolve(data);
+    //                    if (typeof(cb) !== 'undefined') {
+    //                        cb(data);
+    //                    }
+    //                }
+    //            });
+    //            //cb(data);
+    //        };
+    //
+    //        var script = document.createElement('script');
+    //        script.src = url + (url.indexOf('?') >= 0 ? '&' : '?') + 'callback=' + cbName;
+    //        document.body.appendChild(script);
+    //    });
+    //
+    //    return data.promise;
+    //};
 
     data.set = function (res) {
         data.coll = res;
@@ -2639,9 +2857,34 @@ dtm.data = function (arg, cb, type) {
     }
 
     function setSize() {
-        data.size.cols = data.keys.length;
-        data.size.rows = data.coll.length;
+        data.size.col = data.keys.length;
+        data.size.row = data.coll.length;
     }
+
+    /**
+     * Returns a clone of dtm.array object from the data.
+     * @param id {string|integer} Key (string) or index (integer)
+     * @returns {dtm.array}
+     */
+    data.get = function (id) {
+        if (typeof(id) === 'number') {
+            if (id >= 0 && id < data.size['col']) {
+                return data.arrays[data.keys[id]].clone();
+            } else {
+                dtm.log('data.get(): index out of range');
+                return data;
+            }
+        } else if (typeof(id) === 'string') {
+            if (data.keys.indexOf(id) > -1) {
+                return data.arrays[id].clone();
+            } else {
+                dtm.log('data.get(): key does not exist');
+                return data;
+            }
+        } else {
+            return data;
+        }
+    };
 
     //data.capture = function () {
     //    return new Promise(function (resolve, reject) {
@@ -2660,6 +2903,10 @@ dtm.data = function (arg, cb, type) {
     };
 
     data.map = function () {
+        return data;
+    };
+
+    data.stream = function (uri, rate) {
         return data;
     };
 
@@ -2791,10 +3038,12 @@ dtm.clock = function (bpm, subDiv, time) {
      * @returns {{className: string, interval: number, time: number[], beat: number, list: Array, params: {isOn: boolean, sync: boolean, bpm: number, subDiv: number, random: number, swing: number}, callbacks: Array}}
      */
     clock.subDiv = function (val) {
-        val = val | 4;
+        val = val || 4;
         clock.params.subDiv = val;
         return clock;
     };
+
+    clock.div = clock.subdiv = clock.subDiv;
 
     clock.setTime = function (input) {
         if (typeof(input) === 'Array') {
@@ -2809,27 +3058,97 @@ dtm.clock = function (bpm, subDiv, time) {
      * Registers a callback function to selected or all ticks of the clock.
      * @function module:clock#add
      * @param cb {function} Callback function.
-     * @param [beats] {array} Sequence of beat numbers (int) on which the callback function should be called. The default is the every beat.
      * @returns {dtm.clock} self
      */
-    clock.add = function (cb, beats) {
-        if (arguments.length == 1) {
-            beats = _.range((clock.params.subDiv * clock.time[0] / clock.time[1]));
-        }
-//        if (_.findKey(cb, 'modelName')) {
-//            cb.addParentClock(clock); // CHECK: risky
-//        }
-//
-//        console.log(_.findKey(cb, 'modelName'));
+    clock.add = function (cb) {
+        // prevent adding identical functions
+        var dupe = false;
+        _.forEach(clock.callbacks, function (stored) {
+            if (_.isEqual(stored, cb)) {
+                dtm.log('clock.add(): identical function exists in the callback list');
 
-        clock.callbacks.push([cb, beats]);
+                dupe = true;
+            }
+        });
+
+        if (!dupe) {
+            dtm.log('adding a new callback function to clock');
+            clock.callbacks.push(cb);
+        }
         return clock;
     };
 
-//    clock.addToBeats = function (cb, iArr) {
-//        callbacks.push([cb, iArr]);
-//        return clock;
-//    };
+    clock.register = clock.reg = clock.add;
+
+    ///**
+    // * Registers a callback function to selected or all ticks of the clock.
+    // * @function module:clock#add
+    // * @param cb {function} Callback function.
+    // * @param [beats] {array} Sequence of beat numbers (int) on which the callback function should be called. The default is the every beat.
+    // * @returns {dtm.clock} self
+    // */
+    //clock.addToBeats = function (cb, iArr) {
+    //    if (arguments.length == 1) {
+    //        // CHECK: broken - changing the subdiv later should change this too?
+    //        // maybe disable the registration for certain beats
+    //        beats = _.range((clock.params.subDiv * clock.time[0] / clock.time[1]));
+    //    }
+    ////        if (_.findKey(cb, 'modelName')) {
+    ////            cb.addParentClock(clock); // CHECK: risky
+    ////        }
+    ////
+    ////        console.log(_.findKey(cb, 'modelName'));
+    //
+    //    clock.callbacks.push([cb, beats]);
+    //    return clock;
+    //};
+
+    /**
+     * @function module:clock#remove
+     * @param id {function|string}
+     * @returns {dtm.clock}
+     */
+    clock.remove = function (id) {
+        if (typeof(id) === 'function') {
+            _.remove(clock.callbacks, function (cb) {
+                return _.isEqual(cb, id);
+            });
+        } else if (typeof(id) === 'string') {
+            _.remove(clock.callbacks, function (cb) {
+                return cb.name == id;
+            });
+        }
+
+        return clock;
+    };
+
+    /**
+     * @function module:clock#rem
+     * @param id {function|string}
+     * @returns {dtm.clock}
+     */
+    clock.rem = clock.remove;
+
+    /**
+     * Modifies or replaces the content of a callback function while the clock may be running. Note that the target callback needs to be a named function.
+     * @function module:clock#modify
+     * @param id {function|string}
+     * @param fn {function}
+     * @returns {dtm.clock}
+     */
+    clock.modify = function (id, fn) {
+        if (typeof(id) === 'function') {
+            dtm.log('modifying the callback: ' + id.name);
+            clock.remove(id.name);
+            clock.add(id);
+        } else if (typeof(id) === 'string') {
+            clock.remove(id);
+            clock.add(fn);
+        }
+        return clock;
+    };
+
+    clock.replace = clock.mod = clock.modify;
 
     /**
      * Starts the clock.
@@ -2870,7 +3189,7 @@ dtm.clock = function (bpm, subDiv, time) {
                 clockSrc.connect(out());
 
                 var freq = clock.params.bpm / 60.0 * (clock.params.subDiv / 4.0);
-//            var pbRate = 1/(1/freq - Math.abs(timeErr));
+                //var pbRate = 1/(1/freq - Math.abs(timeErr));
 
                 clockSrc.playbackRate.value = freq * clMult;
                 clockSrc.playbackRate.value += clockSrc.playbackRate.value * (clock.params.random / 100) * _.sample([1, -1]);
@@ -2892,9 +3211,10 @@ dtm.clock = function (bpm, subDiv, time) {
                 };
 
                 _.forEach(clock.callbacks, function (cb) {
-                    if (_.indexOf(cb[1], clock.beat) > -1) {
-                        cb[0](clock);
-                    }
+                    //if (_.indexOf(cb[1], clock.beat) > -1) {
+                    //    cb[0](clock);
+                    //}
+                    cb(clock);
                 });
 
                 clock.beat = (clock.beat + 1) % (clock.params.subDiv * clock.time[0] / clock.time[1]);
@@ -2911,6 +3231,7 @@ dtm.clock = function (bpm, subDiv, time) {
                 //}
 
                 return clock;
+
             } else if (clock.params.isMaster) {
                 clockSrc = actx.createBufferSource();
                 clockSrc.buffer = clockBuf;
@@ -3016,21 +3337,19 @@ dtm.clock = function (bpm, subDiv, time) {
         return clock;
     };
 
+    clock.flush = function () {
+        return clock;
+    };
+
     if (!clock.params.isMaster && typeof(dtm.master) !== 'undefined') {
         dtm.master.clock.add(clock.tickSynced);
     }
 
-    // assign input arguments...
-    //_.forEach(arguments, function (val, idx) {
-    //    switch (idx) {
-    //        case 0: clock.params.bpm = val; break;
-    //        case 1: clock.params.subDiv = val; break;
-    //    }
-    //});
-
-    if (typeof(bpm) !== 'undefined') {
+    if (typeof(bpm) === 'number') {
         clock.params.bpm = bpm;
         clock.params.sync = false;
+    } else if (typeof(bpm) === 'boolean') {
+        clock.params.sync = bpm;
     }
 
     if (typeof(subDiv) !== 'undefined') {
@@ -3067,14 +3386,14 @@ dtm.instr = function (arg) {
             modDest: [],
             clock: dtm.clock(120, 8),
             sync: true,
-            subDivision: 16
-        },
+            subDivision: 16,
 
-        instrModel: null,
-        models: {
-            voice: dtm.synth()
-        },
-        modelList: []
+            models: {
+                voice: dtm.synth()
+            },
+
+            instrModel: null
+        }
     };
 
     /**
@@ -3095,29 +3414,29 @@ dtm.instr = function (arg) {
         // TODO: refactor...
         if (arg instanceof Array) {
             if (categ) {
-                instr.models[categ] = dtm.array(arg);
+                instr.params.models[categ] = dtm.array(arg);
             } else {
-                instr.models['any'] = dtm.array(arg);
+                instr.params.models['any'] = dtm.array(arg);
             }
         } else if (typeof(arg) === 'object') {
             if (arg.className === 'dtm.model') {
                 if (arg.params.categ === 'instr') {
                     // CHECK: ...
                     dtm.log('assigning model "' + arg.params.name + '" to category "' + categ + '"');
-                    instr.models[categ] = arg;
+                    instr.params.models[categ] = arg;
                     instr.params.modDest.push(arg);
-
+                } else if (arg.params.categ) {
+                    dtm.log('assigning model "' + arg.params.name + '" to category "' + arg.params.categ + '"');
+                    instr.params.models[arg.params.categ] = arg;
+                    instr.params.modDest.push(arg);
                 } else if (categ) {
                     dtm.log('assigning model "' + arg.params.name + '" to category "' + categ + '"');
-                    instr.models[categ] = arg;
-                    instr.params.modDest.push(arg);
-                } else if (arg.params.categ !== 'any') {
-                    dtm.log('assigning model "' + arg.params.name + '" to category "' + arg.params.categ + '"');
-                    instr.models[arg.params.categ] = arg;
+                    instr.params.models[categ] = arg;
                     instr.params.modDest.push(arg);
                 }
+
             } else if (arg.className === 'dtm.array') {
-                instr.models[categ] = arg;
+                instr.params.models[categ] = arg;
             }
         } else if (typeof(arg) === 'string') {
             var model = _.find(dtm.modelColl, {params: {
@@ -3130,7 +3449,7 @@ dtm.instr = function (arg) {
                 }
 
                 dtm.log('assigning model "' + model.params.name + '" to category "' + categ + '"');
-                instr.models[categ] = model;
+                instr.params.models[categ] = model;
                 instr.params.modDest.push(model);
             }
         }
@@ -3145,7 +3464,7 @@ dtm.instr = function (arg) {
      */
     instr.voice = function (arg) {
         if (typeof(arg) === 'string') {
-            instr.models.voice.set(arg);
+            instr.params.models.voice.set(arg);
         }
         return instr;
     };
@@ -3161,22 +3480,22 @@ dtm.instr = function (arg) {
             instr.params.isPlaying = true;
             dtm.log('playing: ' + instr.params.name);
 
-            if (!instr.instrModel) {
+            if (!instr.params.instrModel) {
                 instr.params.clock.add(function () {
-                    var v = instr.models.voice;
+                    var v = instr.params.models.voice;
 
                     // CHECK: only for dtm.arrays
-                    if (typeof(instr.models.beats) !== 'undefined') {
-                        if (instr.models.beats.next()) {
-                            if (typeof(instr.models.melody) !== 'undefined') {
-                                v.nn(instr.models.melody.next());
+                    if (typeof(instr.params.models.beats) !== 'undefined') {
+                        if (instr.params.models.beats.next()) {
+                            if (typeof(instr.params.models.melody) !== 'undefined') {
+                                v.nn(instr.params.models.melody.next());
                             }
 
                             v.play();
                         }
                     } else {
-                        if (typeof(instr.models.melody) !== 'undefined') {
-                            v.nn(instr.models.melody.next());
+                        if (typeof(instr.params.models.melody) !== 'undefined') {
+                            v.nn(instr.params.models.melody.next());
                         }
 
                         v.play();
@@ -3184,10 +3503,10 @@ dtm.instr = function (arg) {
                 }).start(); // ???
             }
 
-            if (instr.instrModel) {
-                if (instr.instrModel.params.categ === 'instr') {
-                    instr.instrModel.stop();
-                    instr.instrModel.play();
+            if (instr.params.instrModel) {
+                if (instr.params.instrModel.params.categ === 'instr') {
+                    instr.params.instrModel.stop();
+                    instr.params.instrModel.play();
                 }
             }
 
@@ -3205,9 +3524,9 @@ dtm.instr = function (arg) {
             instr.params.isPlaying = false;
             dtm.log('stopping: ' + instr.params.name);
 
-            if (instr.instrModel) {
-                if (instr.instrModel.params.categ === 'instr') {
-                    instr.instrModel.stop();
+            if (instr.params.instrModel) {
+                if (instr.params.instrModel.params.categ === 'instr') {
+                    instr.params.instrModel.stop();
                 }
             }
 
@@ -3300,12 +3619,12 @@ dtm.instr = function (arg) {
 
             if (typeof(model) !== 'undefined') {
                 dtm.log('loading instrument model: ' + arg);
-                instr.instrModel = model;
+                instr.params.instrModel = model;
                 instr.params.name = arg;
-                //instr.models = model.models;
+                //instr.params.models = model.models;
                 instr.model(model);
-                //instr.play = instr.instrModel.play;
-                //instr.run = instr.instrModel.run;
+                //instr.play = instr.params.instrModel.play;
+                //instr.run = instr.params.instrModel.run;
 
                 // CHECK: not good
                 instr.params.modDest.push(model);
@@ -3318,7 +3637,7 @@ dtm.instr = function (arg) {
 
         } else if (typeof(arg) !== 'undefined') {
             if (arg.params.categ === 'instr') {
-                instr.instrModel = arg; // TODO: check the class name
+                instr.params.instrModel = arg; // TODO: check the class name
                 instr.model(arg);
             }
         }
@@ -3372,7 +3691,25 @@ dtm.model = function (name, categ) {
         return model;
     };
 
-    model.load = function () {
+    model.load = function (name) {
+        if (typeof(name) === 'string') {
+            var load = _.find(dtm.modelColl, {params: {name: name}});
+
+            if (typeof(load) !== 'undefined') {
+                dtm.log('overriding an existing model: ' + name);
+                model = load;
+
+            } else {
+                if (typeof(categ) === 'string') {
+                    model.params.categ = categ;
+                }
+
+                dtm.log('registering a new model: ' + name);
+                model.params.name = name;
+                dtm.modelColl.push(model);
+            }
+        }
+
         return model;
     };
 
@@ -3401,32 +3738,15 @@ dtm.model = function (name, categ) {
         return model;
     };
 
-    if (typeof(name) === 'string') {
-        var load = _.find(dtm.modelColl, {params: {name: name}});
-
-        if (typeof(load) !== 'undefined') {
-            dtm.log('overriding an existing model: ' + name);
-            model = load;
-
-        } else {
-            if (typeof(categ) === 'string') {
-                model.params.categ = categ;
-            }
-
-            dtm.log('registering a new model: ' + name);
-            model.params.name = name;
-            dtm.modelColl.push(model);
-        }
-    }
-
     model.morphArrays = function (arrObj1, arrObj2, midx) {
-
         return model;
     };
 
     model.clone = function () {
         return model;
     };
+
+    model.load(name);
 
     return model;
 };
@@ -3884,6 +4204,17 @@ dtm.synth = function (type) {
     };
 
     /**
+     * Sets the frequency of the note to be played.
+     * @function module:synth#freq
+     * @param freq {number}
+     * @returns {dtm.synth}
+     */
+    synth.freq = function (freq) {
+        synth.params.freq = freq;
+        return synth;
+    };
+
+    /**
      * Sets the amplitude of the note.
      * @function module:synth#amp
      * @param val {number} Amplitude between 0-1.
@@ -3936,6 +4267,11 @@ dtm.synth = function (type) {
         synth.params.adsr[3] = val;
         return synth;
     };
+
+    synth.atk = synth.attack;
+    synth.dcy = synth.decay;
+    synth.sus = synth.sustain;
+    synth.rel = synth.release;
 
     /**
      * Applies a Low Pass Filter.
@@ -4165,6 +4501,43 @@ dtm.synth2 = {
 };
 
 
+/**
+ * @fileOverview Data streaming object. This will be interfacing / querying the streamed data at the server.
+ * @module stream
+ */
+
+dtm.stream = function () {
+    var stream = {};
+
+    stream.query = function (url, cb) {
+        //cb();
+
+        ajaxGet(url, function (res) {
+            cb();
+            console.log(res);
+        });
+    };
+
+    stream.connect = function () {
+        return stream;
+    };
+
+    stream.disconnect = function () {
+        return stream;
+    };
+
+    return stream;
+};
+
+dtm.str = dtm.stream;
+
+function runningAvg() {
+
+}
+
+function capture(len, cb) {
+
+}
 ///**
 // * @fileOverview A voice is an instance of musical model. It is used to make actual sounds.
 // * @module voice
@@ -4311,7 +4684,10 @@ dtm.master = {
     className: 'dtm.master',
 
     params: {
-        data: null
+        data: null,
+        beat: 0,
+        measure: 0,
+        section: 0
     },
 
     level: 0.5,
@@ -4343,11 +4719,6 @@ dtm.master = {
     time: [4, 4],
     beat: 0,
 
-    // or just call plain "beat", etc.
-    curBeat: 0,
-    curMeasure: 0,
-    curSection: 0,
-
     scale: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
     cummulatedRhythm: null,
 
@@ -4359,7 +4730,6 @@ dtm.master = {
 
     },
 
-    // TODO: not clearing the clocks passed from a voice to model
     /**
      * Stops and deletes all the running clock.
      * @function module:master#stop
@@ -4442,6 +4812,151 @@ dtm.master = {
 
 dtm.master.clock.params.isMaster = true;
 dtm.master.clock.start();
+dtm.guido = function () {
+    var guido = {
+        parts: [],
+        numParts: 1
+    };
+
+    guido.pc = {
+        '-1': '_',
+        'r': '_',
+        0: 'c',
+        1: 'd&',
+        2: 'd',
+        3: 'e&',
+        4: 'e',
+        5: 'f',
+        6: 'f#',
+        7: 'g',
+        8: 'a&',
+        9: 'a',
+        10: 'b&',
+        11: 'b'
+    };
+
+    guido.setup = function () {
+        return guido;
+    };
+
+    guido.format = function () {
+        return guido;
+    };
+
+    guido.test = function (arr) {
+        var res = [];
+
+        _.forEach(arr, function (val, idx) {
+            res[idx] = [guido.pc[_.random(-1, 11)], '*', val + '/16'].join('');
+        });
+
+        res = res.join(' ');
+        console.log(res);
+
+        return guido;
+    };
+
+    guido.meow = function (rhythm, pitches) {
+        var res = [];
+
+        for (var i = 0; i < rhythm.length; i++) {
+            if (pitches[i] instanceof Array) {
+                var chord = [];
+                _.forEach(pitches[i], function (val, idx) {
+                    chord[idx] = [guido.pc[val], '*', rhythm[i] + '/16'].join('');
+                });
+                res[i] = '{' + chord.join(', ') + '}';
+            } else {
+                res[i] = [guido.pc[pitches[i]], '*', rhythm[i] + '/16'].join('');
+            }
+        }
+
+        res = res.join(' ');
+        console.log(res);
+        return guido;
+    };
+
+    return guido;
+};
+dtm.inscore = function () {
+    var inscore = {
+        type: 'dtm.inscore',
+        oscPort: {}
+    };
+
+    inscore.setup = function () {
+        inscore.oscPort = new osc.WebSocketPort({
+            url: 'ws://localhost:8081'
+        });
+
+        inscore.oscPort.open();
+
+        return inscore;
+    };
+
+    inscore.test = function (beats) {
+        var seq = [];
+        var pattern = [];
+
+        // 4/4, 8th notes, 1 measure
+        for (var i = 0; i < beats.length; i++) {
+            var foo;
+
+            if (dtm.value.mod(i, 2) === 0) {
+                var down, up;
+                down = beats[i];
+            } else {
+                up = beats[i];
+                pattern = [down, up].join(', ');
+
+                switch (pattern) {
+                    case '1, 0':
+                        seq.push('a/4');
+                        break;
+                    case '1, 1':
+                        seq.push('a/8');
+                        seq.push('a/8');
+                        break;
+                    case '0, 0':
+                        seq.push('_/4');
+                        break;
+                    case '0, 1':
+                        seq.push('_/8');
+                        seq.push('a/8');
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+
+        seq = seq.join(' ');
+
+        //for (var i = 0; i < 5; i++) {
+        //    seq[i] = String.fromCharCode("a".charCodeAt(0) + Math.floor((Math.random() * 8)));
+        //}
+
+        //seq = seq.join(' ');
+
+        inscore.oscPort.send({
+            address: '/ITL/scene/score',
+            args: ['write', seq]
+        });
+
+        return inscore;
+    };
+
+    inscore.write = function (input) {
+        inscore.oscPort.send({
+            address: '/ITL/scene/score',
+            args: ['write', input]
+        });
+
+        return inscore;
+    };
+
+    return inscore;
+};
 (function () {
     var m = dtm.model('clave', 'beats');
 
@@ -4805,5 +5320,70 @@ dtm.master.clock.start();
     };
 
     return m;
+})();
+(function () {
+    var m = dtm.model('bl-motif', 'motif');
+
+    m.params.isPercussion = false;
+    m.params.rhythm = null;
+    m.params.pitches = null;
+    m.params.weights = null;
+
+    var pc = {
+        '-1': '_',
+        'r': '_',
+        0: 'c',
+        1: 'd&',
+        2: 'd',
+        3: 'e&',
+        4: 'e',
+        5: 'f',
+        6: 'f#',
+        7: 'g',
+        8: 'a&',
+        9: 'a',
+        10: 'b&',
+        11: 'b'
+    };
+
+    var generateRhythm = function (arr) {
+        var a = dtm.array(arr);
+        var intv = a.fit(32).rescale(0, 1).round().btoi().get();
+
+        //var res = [];
+        //for (var i = 0; i < 32/4; i++) {
+        //
+        //}
+
+        //seq = seq.join(' ');
+
+
+        return intv;
+    };
+
+    var generatePitch = function (arr, intv) {
+        var a = dtm.array(arr);
+        var p = a.fit(intv.length).rescale(-6, 11).round().get();
+
+        var seq = [];
+
+        for (var i = 0; i < intv.length; i++) {
+            if (p[i] < 0) {
+                p[i] = -1;
+            }
+            seq[i] = pc[p[i]] + '*' + intv[i] + '/16';
+        }
+
+        return seq;
+    };
+
+    m.generate = function (arr) {
+        var intervals = generateRhythm(arr);
+        var seq = generatePitch(arr, intervals);
+
+        seq = seq.join(' ');
+        seq = '[\\meter<"4/4"> ' + seq + ' \\newLine' + ' _*2/1' + ']';
+        return seq;
+    };
 })();
 })();

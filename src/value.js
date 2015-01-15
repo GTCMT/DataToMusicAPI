@@ -90,6 +90,14 @@ dtm.value = {
 
     incr: function incr() {
 
+    },
+
+    randi: function (min, max) {
+        return _.random(min, max);
+    },
+
+    random: function (min, max) {
+        return _.random(min, max, true);
     }
 };
 

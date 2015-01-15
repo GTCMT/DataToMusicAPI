@@ -14,21 +14,18 @@ dtm.analyzer = {
      */
     checkType: function (arr) {
         var sum = _.reduce(arr, function (num, sum) {
-            num + sum;
+            return num + sum;
         });
 
-        if (typeof(sum) === 'string') {
-            if (!isNaN(sum)) {
-                if (sum.toString().indexOf('.') > -1) {
-                    return 'float';
-                } else {
-                    return 'int';
-                }
-            } else {
-                return 'string';
-            }
+        if (isNaN(sum) || typeof(sum) === 'string') {
+            return 'string';
         } else {
-            return 'number';
+            // TODO: won't work in cases like [0.7, 0.3]
+            if (sum.toString().indexOf('.') > -1) {
+                return 'float';
+            } else {
+                return 'int';
+            }
         }
     },
 

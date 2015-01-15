@@ -16,6 +16,9 @@ dtm.array = function (arr, name) {
     var array = {
         className: 'dtm.array',
 
+        params: {},
+
+
         /**
          * The name of the array object.
          * @name module:array#name
@@ -102,7 +105,7 @@ dtm.array = function (arr, name) {
 
         colls: null,
 
-        index: 0,
+        index: 0
     };
 
     //array.avg = array.mean;
@@ -246,7 +249,7 @@ dtm.array = function (arr, name) {
      * Fills the contents of the array with
      * @function module:array#fill
      * @param type {string} Choices: 'line', 'noise'/'random', 'gaussian'/'gauss'/'normal', 'sin'/'sine', 'cos'/'cosine', 'zeroes', 'ones'
-     * @param [len=2] {integer}
+     * @param [len=8] {integer}
      * @param [min=0] {number}
      * @param [max=1] {number}
      * @returns {dtm.array}
@@ -300,7 +303,7 @@ dtm.array = function (arr, name) {
      * @function module:array#range
      * @type {Function}
      */
-    array.range = array.rescale;
+    array.range = array.scale = array.rescale;
 
     // TODO: implement this
     array.limit = function (min, max) {
@@ -432,7 +435,16 @@ dtm.array = function (arr, name) {
      */
     array.rep = array.repeat;
 
-    array.truncate = function () {
+    /**
+     * Truncates some values either at the end or both at the beginning and the end.
+     * @param arg1 {integer} Start bits to truncate. If the arg2 is not present, it will be the End bits to truncate.
+     * @param [arg2] {integer} End bits to truncate.
+     * @function module:array#truncate
+     * @returns {dtm.array}
+     */
+    array.truncate = function (arg1, arg2) {
+        array.value = dtm.transform.truncate(array.value, arg1, arg2);
+        array.set(array.value);
         return array;
     };
 
@@ -602,7 +614,14 @@ dtm.array = function (arr, name) {
         return array;
     };
 
+    /**
+     * Converts beat sequence into an array of indices (or delays or onset-coordinate vectors.) Useful for creating time delay-based events.
+     * @function module:array#beatsToIndices
+     * @returns {dtm.array}
+     */
     array.beatsToIndices = function () {
+        array.value = dtm.transform.beatsToIndices(array.value);
+        array.set(array.value);
         return array;
     };
 
@@ -689,6 +708,98 @@ dtm.array = function (arr, name) {
      */
     array.abs = array.fwr;
 
+
+    /**
+     * Returns the array contents or an analyzed value
+     * @function module:array#val
+     * @param [param] {string}
+     * @returns {number|array|string}
+     */
+    array.val = function (param) {
+        var out;
+
+        switch (param) {
+            case 'type':
+                out = dtm.analyzer.checkType(array.values);
+                break;
+            case 'len':
+            case 'length':
+                out = array.values.length;
+                break;
+
+            case 'min':
+                out = dtm.analyzer.min(array.values);
+                break;
+            case 'max':
+                out = dtm.analyzer.max(array.values);
+                break;
+            case 'mean':
+                out = dtm.analyzer.mean(array.values);
+                break;
+            case 'mode':
+                out = dtm.analyzer.mode(array.values);
+                break;
+            case 'median':
+                out = dtm.analyzer.median(array.values);
+                break;
+            case 'midrange':
+                out = dtm.analyzer.midrange(array.values);
+                break;
+            case 'std':
+                out = dtm.analyzer.std(array.values);
+                break;
+            case 'pstd':
+                out = dtm.analyzer.pstd(array.values);
+                break;
+            case 'var':
+                out = dtm.analyzer.var(array.values);
+                break;
+            case 'pvar':
+                out = dtm.analyzer.pvar(array.values);
+                break;
+            case 'current':
+            case 'curr':
+            case 'cur':
+            case 'now':
+            case 'moment':
+                out = array.values[array.index];
+                break;
+            case 'next':
+                array.index = dtm.value.mod(++array.index, array.values.length);
+                out = array.values[array.index];
+                break;
+            case 'prev':
+            case 'previous':
+                array.index = dtm.value.mod(--array.index, array.values.length);
+                out = array.values[array.index];
+                break;
+            case 'random':
+                out = array.values[_.random(0, array.values.length - 1)];
+                break;
+            case 'urn':
+                break;
+
+            case 'normalize':
+            case 'normalized':
+                out = dtm.transform.normalize(array.values);
+                break;
+            case 'classes':
+                break;
+            case 'numClasses':
+                break;
+            case 'histo':
+                break;
+
+            default:
+                out = array.values;
+                break;
+        }
+
+        return out;
+    };
+
+    array.get = array.val;
+
     /**
      * A shorthand for iterating through the array values. For more details and other iteration methods, please check the dtm.iterator.
      * @param [param='value'] {string}
@@ -706,4 +817,4 @@ dtm.array = function (arr, name) {
     return array;
 };
 
-dtm.a = dtm.array;
+dtm.a = dtm.arr = dtm.array;

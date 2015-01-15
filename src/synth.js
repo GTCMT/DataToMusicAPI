@@ -323,6 +323,17 @@ dtm.synth = function (type) {
     };
 
     /**
+     * Sets the frequency of the note to be played.
+     * @function module:synth#freq
+     * @param freq {number}
+     * @returns {dtm.synth}
+     */
+    synth.freq = function (freq) {
+        synth.params.freq = freq;
+        return synth;
+    };
+
+    /**
      * Sets the amplitude of the note.
      * @function module:synth#amp
      * @param val {number} Amplitude between 0-1.
@@ -375,6 +386,11 @@ dtm.synth = function (type) {
         synth.params.adsr[3] = val;
         return synth;
     };
+
+    synth.atk = synth.attack;
+    synth.dcy = synth.decay;
+    synth.sus = synth.sustain;
+    synth.rel = synth.release;
 
     /**
      * Applies a Low Pass Filter.

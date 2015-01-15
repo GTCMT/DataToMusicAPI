@@ -38,7 +38,25 @@ dtm.model = function (name, categ) {
         return model;
     };
 
-    model.load = function () {
+    model.load = function (name) {
+        if (typeof(name) === 'string') {
+            var load = _.find(dtm.modelColl, {params: {name: name}});
+
+            if (typeof(load) !== 'undefined') {
+                dtm.log('overriding an existing model: ' + name);
+                model = load;
+
+            } else {
+                if (typeof(categ) === 'string') {
+                    model.params.categ = categ;
+                }
+
+                dtm.log('registering a new model: ' + name);
+                model.params.name = name;
+                dtm.modelColl.push(model);
+            }
+        }
+
         return model;
     };
 
@@ -67,32 +85,15 @@ dtm.model = function (name, categ) {
         return model;
     };
 
-    if (typeof(name) === 'string') {
-        var load = _.find(dtm.modelColl, {params: {name: name}});
-
-        if (typeof(load) !== 'undefined') {
-            dtm.log('overriding an existing model: ' + name);
-            model = load;
-
-        } else {
-            if (typeof(categ) === 'string') {
-                model.params.categ = categ;
-            }
-
-            dtm.log('registering a new model: ' + name);
-            model.params.name = name;
-            dtm.modelColl.push(model);
-        }
-    }
-
     model.morphArrays = function (arrObj1, arrObj2, midx) {
-
         return model;
     };
 
     model.clone = function () {
         return model;
     };
+
+    model.load(name);
 
     return model;
 };

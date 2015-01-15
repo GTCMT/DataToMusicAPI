@@ -15,9 +15,18 @@ dtm.stream = function () {
         });
     };
 
+    stream.connect = function () {
+        return stream;
+    };
+
+    stream.disconnect = function () {
+        return stream;
+    };
+
     return stream;
 };
 
+dtm.str = dtm.stream;
 
 function runningAvg() {
 
