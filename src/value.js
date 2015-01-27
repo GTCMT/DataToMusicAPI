@@ -61,7 +61,7 @@ dtm.value = {
     },
 
     /**
-     * Scale or pitch-quantizes the input value to the given scale.
+     * Scale or pitch-quantizes the input value to the given models.scales.
      * @function module:value#pq
      * @param nn {integer} Note number
      * @param scale

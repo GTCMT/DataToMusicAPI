@@ -316,6 +316,8 @@ dtm.synth = function (type) {
      * @returns {dtm.synth}
      */
     synth.nn = function (nn) {
+        nn = nn || 69;
+
         synth.params.noteNum = nn;
         synth.params.freq = dtm.value.mtof(nn);
 

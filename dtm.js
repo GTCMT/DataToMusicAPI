@@ -20,7 +20,7 @@ var clockBuf = actx.createBuffer(1, Math.round(actx.sampleRate * clMult), actx.s
 var dtm = {
     version: '0.0.1',
 
-    logger: true,
+    logger: false,
     log: function (arg) {
         if (dtm.logger) {
             console.log(arg);
@@ -1357,7 +1357,6 @@ dtm.tr = dtm.transform;
  * @module array
  */
 
-// TODO: check if return is a new instance after chaining...
 /**
  * Creates a new single dimensional array object with various transformation functions. The same helper functions from dtm.array can be used - but make sure to skip the first argument (the input array) and start from the second argument.
  *
@@ -1371,7 +1370,6 @@ dtm.array = function (arr, name) {
         className: 'dtm.array',
 
         params: {},
-
 
         /**
          * The name of the array object.
@@ -1477,9 +1475,13 @@ dtm.array = function (arr, name) {
         }
 
         // TODO: error checking
-
         array.value = input;
         array.values = input;
+
+        // CHECK: kind of ugly
+        if (typeof(array.params.original) === 'undefined') {
+            array.params.original = input;
+        }
 
         // CHECK: type checking - may be redundant
         checkType(input);
@@ -1588,7 +1590,7 @@ dtm.array = function (arr, name) {
         // this doesn't work
         //return dtm.clone(array);
 
-        var newArr = dtm.array(array.value, array.name);
+        var newArr = dtm.array(array.values, array.name);
         if (array.type === 'string') {
             newArr.classes = array.classes;
             newArr.histogram = _.clone(array.histogram);
@@ -2021,7 +2023,7 @@ dtm.array = function (arr, name) {
 
         if (arguments.length === 0) {
             scale = _.range(12);
-        } else if (typeof(arguments[0]) === 'array') {
+        } else if (arguments[0] instanceof Array) {
             scale = arguments[0];
         } else if (typeof(arguments[0]) === 'string') {
             scale = dtm.scales[arguments[0].toLowerCase()];
@@ -2065,11 +2067,11 @@ dtm.array = function (arr, name) {
 
     /**
      * Returns the array contents or an analyzed value
-     * @function module:array#val
+     * @function module:array#get
      * @param [param] {string}
      * @returns {number|array|string}
      */
-    array.val = function (param) {
+    array.get = function (param, opt) {
         var out;
 
         switch (param) {
@@ -2111,6 +2113,16 @@ dtm.array = function (arr, name) {
             case 'pvar':
                 out = dtm.analyzer.pvar(array.values);
                 break;
+
+            case 'index':
+            case 'idx':
+                break;
+
+            case 'relative':
+            case 'location':
+            case 'loc':
+                break;
+
             case 'current':
             case 'curr':
             case 'cur':
@@ -2126,6 +2138,8 @@ dtm.array = function (arr, name) {
             case 'previous':
                 array.index = dtm.value.mod(--array.index, array.values.length);
                 out = array.values[array.index];
+                break;
+            case 'palindrome':
                 break;
             case 'random':
                 out = array.values[_.random(0, array.values.length - 1)];
@@ -2152,8 +2166,6 @@ dtm.array = function (arr, name) {
         return out;
     };
 
-    array.get = array.val;
-
     /**
      * A shorthand for iterating through the array values. For more details and other iteration methods, please check the dtm.iterator.
      * @param [param='value'] {string}
@@ -2166,6 +2178,16 @@ dtm.array = function (arr, name) {
         var out = array[param][array.index];
         array.index = dtm.value.mod(array.index + 1, array.length);
         return out;
+    };
+
+    /**
+     * Retrieves the original values from when the array object was first created.
+     * @function module:array#reset
+     * @returns {dtm.array}
+     */
+    array.reset = function () {
+        array.set(array.params.original);
+        return array;
     };
 
     return array;
@@ -2271,7 +2293,7 @@ dtm.value = {
     },
 
     /**
-     * Scale or pitch-quantizes the input value to the given scale.
+     * Scale or pitch-quantizes the input value to the given models.scales.
      * @function module:value#pq
      * @param nn {integer} Note number
      * @param scale
@@ -2926,8 +2948,6 @@ dtm.d = dtm.data;
  * @module clock
  */
 
-// TODO: a subclock system that follows master's tempo / ticks
-
 /**
  * Creates a new instance of clock. Don't put "new".
  * @function module:clock.clock
@@ -2956,7 +2976,7 @@ dtm.clock = function (bpm, subDiv, time) {
             bpm: 60,
             subDiv: 4,
             random: 0,
-            swing: 50
+            swing: 0.5
         },
 
         // CHECK: just for debugging
@@ -3035,7 +3055,7 @@ dtm.clock = function (bpm, subDiv, time) {
     /**
      * Sets the subdivision of the clock.
      * @param [val=4] {integer} Note quality value. E.g. 4 = quarter note, 8 = eighth note.
-     * @returns {{className: string, interval: number, time: number[], beat: number, list: Array, params: {isOn: boolean, sync: boolean, bpm: number, subDiv: number, random: number, swing: number}, callbacks: Array}}
+     * @returns {dtm.clock}
      */
     clock.subDiv = function (val) {
         val = val || 4;
@@ -3058,23 +3078,41 @@ dtm.clock = function (bpm, subDiv, time) {
      * Registers a callback function to selected or all ticks of the clock.
      * @function module:clock#add
      * @param cb {function} Callback function.
+     * @param [name] {string}
      * @returns {dtm.clock} self
      */
-    clock.add = function (cb) {
+    clock.add = function (cb, name) {
         // prevent adding identical functions
         var dupe = false;
-        _.forEach(clock.callbacks, function (stored) {
-            if (_.isEqual(stored, cb)) {
-                dtm.log('clock.add(): identical function exists in the callback list');
 
-                dupe = true;
+        if (typeof(name) === 'string') {
+            _.forEach(clock.callbacks, function (stored) {
+                if (stored.name == name) {
+                    dtm.log('clock.add(): identical function exists in the callback list');
+
+                    dupe = true;
+                }
+            });
+
+            if (!dupe) {
+                dtm.log('adding a new callback function to clock');
+                clock.callbacks.push(cb);
             }
-        });
+        } else {
+            _.forEach(clock.callbacks, function (stored) {
+                if (_.isEqual(stored, cb)) {
+                    dtm.log('clock.add(): identical function exists in the callback list');
 
-        if (!dupe) {
-            dtm.log('adding a new callback function to clock');
-            clock.callbacks.push(cb);
+                    dupe = true;
+                }
+            });
+
+            if (!dupe) {
+                dtm.log('adding a new callback function to clock');
+                clock.callbacks.push(cb);
+            }
         }
+
         return clock;
     };
 
@@ -3110,10 +3148,12 @@ dtm.clock = function (bpm, subDiv, time) {
      */
     clock.remove = function (id) {
         if (typeof(id) === 'function') {
+            dtm.log('removing a calblack function');
             _.remove(clock.callbacks, function (cb) {
                 return _.isEqual(cb, id);
             });
         } else if (typeof(id) === 'string') {
+            dtm.log('removing a calblack function: ' + id);
             _.remove(clock.callbacks, function (cb) {
                 return cb.name == id;
             });
@@ -3133,7 +3173,7 @@ dtm.clock = function (bpm, subDiv, time) {
      * Modifies or replaces the content of a callback function while the clock may be running. Note that the target callback needs to be a named function.
      * @function module:clock#modify
      * @param id {function|string}
-     * @param fn {function}
+     * @param [fn] {function}
      * @returns {dtm.clock}
      */
     clock.modify = function (id, fn) {
@@ -3142,8 +3182,19 @@ dtm.clock = function (bpm, subDiv, time) {
             clock.remove(id.name);
             clock.add(id);
         } else if (typeof(id) === 'string') {
+            dtm.log('modifying the callback: ' + id);
             clock.remove(id);
-            clock.add(fn);
+
+            // CHECK: don't add if the same name doesn't already exist
+            if (fn.name == '') {
+                // fn.name is read-only!
+                var temp = new Function(
+                    'return function ' + id + fn.toString().slice(8)
+                )();
+                clock.add(temp);
+            } else {
+                clock.add(fn);
+            }
         }
         return clock;
     };
@@ -3192,12 +3243,12 @@ dtm.clock = function (bpm, subDiv, time) {
                 //var pbRate = 1/(1/freq - Math.abs(timeErr));
 
                 clockSrc.playbackRate.value = freq * clMult;
-                clockSrc.playbackRate.value += clockSrc.playbackRate.value * (clock.params.random / 100) * _.sample([1, -1]);
+                clockSrc.playbackRate.value += clockSrc.playbackRate.value * clock.params.random * _.sample([1, -1]);
 
                 if (clock.beat % 2 == 0) {
-                    clockSrc.playbackRate.value *= (100 - clock.params.swing) / 50;
+                    clockSrc.playbackRate.value *= (1.0 - clock.params.swing) / 0.5;
                 } else {
-                    clockSrc.playbackRate.value *= clock.params.swing / 50;
+                    clockSrc.playbackRate.value *= clock.params.swing / 0.5;
                 }
 
                 clockSrc.start(now() + 0.0000001);
@@ -3240,12 +3291,12 @@ dtm.clock = function (bpm, subDiv, time) {
                 var freq = clock.params.bpm / 60.0 * (clock.params.subDiv / 4.0);
 
                 clockSrc.playbackRate.value = freq * clMult;
-                clockSrc.playbackRate.value += clockSrc.playbackRate.value * (clock.params.random / 100) * _.sample([1, -1]);
+                clockSrc.playbackRate.value += clockSrc.playbackRate.value * clock.params.random * _.sample([1, -1]);
 
                 if (clock.beat % 2 == 0) {
-                    clockSrc.playbackRate.value *= (100 - clock.params.swing) / 50;
+                    clockSrc.playbackRate.value *= (1.0 - clock.params.swing) / 0.5;
                 } else {
-                    clockSrc.playbackRate.value *= clock.params.swing / 50;
+                    clockSrc.playbackRate.value *= clock.params.swing / 0.5;
                 }
 
                 clockSrc.start(now() + 0.0000001);
@@ -3261,9 +3312,9 @@ dtm.clock = function (bpm, subDiv, time) {
                 };
 
                 _.forEach(clock.callbacks, function (cb) {
-                    if (_.indexOf(cb[1], clock.beat) > -1) {
-                        cb[0](clock);
-                    }
+                    cb(clock);
+                    //if (_.indexOf(cb[1], clock.beat) > -1) {
+                    //}
                 });
 
                 clock.beat = (clock.beat + 1) % (clock.params.subDiv * clock.time[0] / clock.time[1]);
@@ -3276,9 +3327,7 @@ dtm.clock = function (bpm, subDiv, time) {
         if (clock.params.sync) {
             if (dtm.master.clock.beat % Math.round(480/clock.params.subDiv) === 0) {
                 _.forEach(clock.callbacks, function (cb) {
-                    if (_.indexOf(cb[1], clock.beat) > -1) {
-                        cb[0](clock);
-                    }
+                    cb(clock);
                 });
             }
         }
@@ -3302,26 +3351,24 @@ dtm.clock = function (bpm, subDiv, time) {
         return clock;
     };
 
-    // TODO: use -1to1 ratio than %
     /**
      * Applies swing to the every 2nd beat. (E.g. The 2nd 16th note in a 8th note interval).
      * @function module:clock#swing
-     * @param [amt=50] {number} Percentage of swing. (E.g. 50%: straight, 75%: hard swing, 40%: pushed)
+     * @param [amt=0.5] {number} Percentage of swing. (E.g. 0.5(50%): straight, 0.75: hard swing, 0.4: pushed)
      * @returns {dtm.clock}
      */
     clock.swing = function (amt) {
-        clock.params.swing = amt || 50;
+        clock.params.swing = amt || 0.5;
         return clock;
     };
 
     clock.shuffle = clock.swing;
 
 
-    // TODO: use 0to1 ratio than %
     /**
      * Randomize the timings of the ticks.
      * @function module:clock#randomize
-     * @param amt {number} Percentage of randomization per beat.
+     * @param amt {number} Amount of randomization per beat (0-1).
      * @returns {dtm.clock}
      */
     clock.randomize = function (amt) {
@@ -3338,6 +3385,28 @@ dtm.clock = function (bpm, subDiv, time) {
     };
 
     clock.flush = function () {
+        return clock;
+    };
+
+    clock.when = function (arr, cb) {
+        if (typeof(arr) !== 'undefined') {
+            if (arr.indexOf(clock.beat) > -1) {
+                if (typeof(cb) !== 'undefined') {
+                    cb(clock);
+                }
+            }
+        }
+        return clock;
+    };
+
+    clock.notWhen = function (arr, cb) {
+        if (typeof(arr) !== 'undefined') {
+            if (arr.indexOf(clock.beat) == -1) {
+                if (typeof(cb) !== 'undefined') {
+                    cb(clock);
+                }
+            }
+        }
         return clock;
     };
 
@@ -3669,15 +3738,17 @@ dtm.model = function (name, categ) {
         className: 'dtm.model',
 
         // assigning array or data/coll???
-        array: null,
-        data: null,
+        //array: null,
+        //data: null,
 
         params: {
             name: null,
             categ: 'any',
             categories: [],
-            voice: null
-        }
+            //voice: null
+        },
+
+        models: {}
     };
 
     /**
@@ -3717,9 +3788,9 @@ dtm.model = function (name, categ) {
         return model;
     };
 
-    model.get = function (key) {
-        return model.params[key];
-    };
+    //model.get = function (key) {
+    //    return model.params[key];
+    //};
 
     model.modulate = model.mod;
 
@@ -4197,6 +4268,8 @@ dtm.synth = function (type) {
      * @returns {dtm.synth}
      */
     synth.nn = function (nn) {
+        nn = nn || 69;
+
         synth.params.noteNum = nn;
         synth.params.freq = dtm.value.mtof(nn);
 
@@ -4958,6 +5031,127 @@ dtm.inscore = function () {
     return inscore;
 };
 (function () {
+    var m = dtm.model('rhythm', 'rhythm');
+
+    var defIntervals = [4, 4, 4, 4];
+    var div = 16;
+
+    m.set = function (arr) {
+        defIntervals = arr;
+        return m;
+    };
+
+    m.get = function () {
+        return defIntervals;
+    };
+})();
+(function () {
+    var m = dtm.model('chord', 'chord');
+
+    //m.params = {
+    //    key: null
+    //};
+
+    m.get = function () {
+        return [0, 4, 7, 11];
+    };
+})();
+(function () {
+    var m = dtm.model('scale', 'scale');
+
+    var scale = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+
+    m.get = function () {
+        return scale;
+    };
+
+    m.set = function (arr) {
+        scale = arr;
+        return m;
+    };
+
+    m.reset = function () {
+        scale = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+        return m;
+    };
+})();
+(function () {
+    var m = dtm.model('phrase', 'phrase');
+
+    m.rhythm = dtm.model('rhythm');
+    m.scale = dtm.model('scale');
+
+    m.models = {
+        scale: m.scale
+    };
+})();
+(function () {
+    var m = dtm.model('instr', 'instr');
+
+    m.play = function () {
+        console.log('playing!');
+        return m;
+    };
+
+    m.stop = function () {
+        return m;
+    };
+})();
+(function () {
+    var m = dtm.model('form', 'form');
+});
+(function () {
+    var m = dtm.model('song', 'song');
+
+    m.models = {
+        form: dtm.model('form')
+    };
+
+    m.run = function () {
+        return m;
+    };
+
+})();
+// a synthetic scale model for generic models.scales
+(function () {
+    // CHECK: how to inherit from the scale model?
+    var m = dtm.model('synthetic', 'scale');
+
+    // tetra chords
+    var tc = [[1, 2, 2], [2, 1, 2], [2, 2, 1]];
+
+    m.params.upper = 0;
+    m.params.lower = 0;
+    m.params.scale = [0, 2, 4, 5, 7, 9, 11];
+
+    m.mod = function (lower, upper) {
+        // expect the inputs to be in the range of 0-1
+        lower = Math.round(lower * 2);
+        upper = Math.round(upper * 2);
+
+        m.params.scale[0] = 0;
+
+        for (var i = 0; i < 3; i++) {
+            m.params.scale[i+1] = m.params.scale[i] + tc[lower][i];
+        }
+
+        m.params.scale[4] = 7;
+
+        for (var j = 0; j < 2; j++) {
+            m.params.scale[j+5] = m.params.scale[j+4] + tc[upper][j];
+        }
+
+        return m;
+    };
+
+    m.get = function () {
+        return m.params.scale;
+    };
+})();
+
+
+
+(function () {
     var m = dtm.model('clave', 'beats');
 
     m.source = dtm.tr.itob([3, 3, 4, 2, 4]);
@@ -5385,5 +5579,54 @@ dtm.inscore = function () {
         seq = '[\\meter<"4/4"> ' + seq + ' \\newLine' + ' _*2/1' + ']';
         return seq;
     };
+})();
+(function () {
+    var m = dtm.model('bl-piano', 'part');
+
+    m.params.meta = {
+        section: 1
+    };
+
+    var scale = [0, 2, 3, 5, 7, 9, 10];
+
+    m.params.left = {
+        div: 16,
+        rhythm: [1, 1, -1, 3, 2, 2, 2],
+        shape: [0, 7, 12, 5, 10, 7]
+    };
+
+    m.params.right = {
+        div: 16,
+        //rhythm: [-2, 2, -1, 2, -2, 3]
+        rhythm: [-3, 5, 4],
+        shape: [1, 0, -1, 0],
+        voice: [0, 2, 7]
+    };
+
+    m.test = function (rhy, shp, div) {
+        var temp = [];
+        var note = 'c';
+
+        var j = 0;
+
+        for (var i = 0; i < rhy.length; i++) {
+            if (rhy[i] > 0) {
+                var oct = Math.floor(shp[j]/12);
+                note = dtm.guido().pc[shp[j]-oct*12] + (oct+1);
+                j++;
+            } else {
+                note = '_';
+                rhy[i] *= -1;
+            }
+            temp[i] = note + '*' + rhy[i] + '/' + div;
+        }
+
+        temp = temp.join(' ');
+        return temp;
+    };
+
+    m.output = function () {
+        return m.test(m.params.left.rhythm, m.params.left.shape, 16);
+    }
 })();
 })();

@@ -3,7 +3,6 @@
  * @module array
  */
 
-// TODO: check if return is a new instance after chaining...
 /**
  * Creates a new single dimensional array object with various transformation functions. The same helper functions from dtm.array can be used - but make sure to skip the first argument (the input array) and start from the second argument.
  *
@@ -17,7 +16,6 @@ dtm.array = function (arr, name) {
         className: 'dtm.array',
 
         params: {},
-
 
         /**
          * The name of the array object.
@@ -123,9 +121,13 @@ dtm.array = function (arr, name) {
         }
 
         // TODO: error checking
-
         array.value = input;
         array.values = input;
+
+        // CHECK: kind of ugly
+        if (typeof(array.params.original) === 'undefined') {
+            array.params.original = input;
+        }
 
         // CHECK: type checking - may be redundant
         checkType(input);
@@ -234,7 +236,7 @@ dtm.array = function (arr, name) {
         // this doesn't work
         //return dtm.clone(array);
 
-        var newArr = dtm.array(array.value, array.name);
+        var newArr = dtm.array(array.values, array.name);
         if (array.type === 'string') {
             newArr.classes = array.classes;
             newArr.histogram = _.clone(array.histogram);
@@ -667,7 +669,7 @@ dtm.array = function (arr, name) {
 
         if (arguments.length === 0) {
             scale = _.range(12);
-        } else if (typeof(arguments[0]) === 'array') {
+        } else if (arguments[0] instanceof Array) {
             scale = arguments[0];
         } else if (typeof(arguments[0]) === 'string') {
             scale = dtm.scales[arguments[0].toLowerCase()];
@@ -711,11 +713,11 @@ dtm.array = function (arr, name) {
 
     /**
      * Returns the array contents or an analyzed value
-     * @function module:array#val
+     * @function module:array#get
      * @param [param] {string}
      * @returns {number|array|string}
      */
-    array.val = function (param) {
+    array.get = function (param, opt) {
         var out;
 
         switch (param) {
@@ -757,6 +759,16 @@ dtm.array = function (arr, name) {
             case 'pvar':
                 out = dtm.analyzer.pvar(array.values);
                 break;
+
+            case 'index':
+            case 'idx':
+                break;
+
+            case 'relative':
+            case 'location':
+            case 'loc':
+                break;
+
             case 'current':
             case 'curr':
             case 'cur':
@@ -772,6 +784,8 @@ dtm.array = function (arr, name) {
             case 'previous':
                 array.index = dtm.value.mod(--array.index, array.values.length);
                 out = array.values[array.index];
+                break;
+            case 'palindrome':
                 break;
             case 'random':
                 out = array.values[_.random(0, array.values.length - 1)];
@@ -798,8 +812,6 @@ dtm.array = function (arr, name) {
         return out;
     };
 
-    array.get = array.val;
-
     /**
      * A shorthand for iterating through the array values. For more details and other iteration methods, please check the dtm.iterator.
      * @param [param='value'] {string}
@@ -812,6 +824,16 @@ dtm.array = function (arr, name) {
         var out = array[param][array.index];
         array.index = dtm.value.mod(array.index + 1, array.length);
         return out;
+    };
+
+    /**
+     * Retrieves the original values from when the array object was first created.
+     * @function module:array#reset
+     * @returns {dtm.array}
+     */
+    array.reset = function () {
+        array.set(array.params.original);
+        return array;
     };
 
     return array;

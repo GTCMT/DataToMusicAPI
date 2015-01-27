@@ -16,15 +16,17 @@ dtm.model = function (name, categ) {
         className: 'dtm.model',
 
         // assigning array or data/coll???
-        array: null,
-        data: null,
+        //array: null,
+        //data: null,
 
         params: {
             name: null,
             categ: 'any',
             categories: [],
-            voice: null
-        }
+            //voice: null
+        },
+
+        models: {}
     };
 
     /**
@@ -64,9 +66,9 @@ dtm.model = function (name, categ) {
         return model;
     };
 
-    model.get = function (key) {
-        return model.params[key];
-    };
+    //model.get = function (key) {
+    //    return model.params[key];
+    //};
 
     model.modulate = model.mod;
 
