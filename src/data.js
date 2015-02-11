@@ -12,7 +12,7 @@
  */
 dtm.data = function (arg, cb, type) {
     var data = {
-        className: 'dtm.data',
+        type: 'dtm.data',
 
         //value: null,
         //type: null, // ???: csv, json, etc.
@@ -31,29 +31,28 @@ dtm.data = function (arg, cb, type) {
          */
         arrays: {},
 
-        /**
-         * List of available keys.
-         * @name module:data#keys
-         * @type {array}
-         */
-        keys: [],
-
-        /**
-         * List of keys and their data types.
-         * @name module:data#types
-         * @type {object}
-         */
-        types: {},
-
-        /**
-         * The row (data points) and collumn (keys) size.
-         * @name module:data#size
-         * @type {object}
-         */
-        size: {},
-
         // TODO: enclose non-functions here
-        params: {},
+        params: {
+            /**
+             * List of available keys.
+             * @name module:data#keys
+             * @type {array}
+             */
+            keys: [],
+
+            /**
+             * List of keys and their data types.
+             * @name module:data#types
+             * @type {object}
+             */
+            types: {},
+            /**
+             * The row (data points) and collumn (keys) size.
+             * @name module:data#size
+             * @type {object}
+             */
+            size: {}
+        },
 
         /**
          * This can be used for promise callback upon loading data.
@@ -106,7 +105,7 @@ dtm.data = function (arg, cb, type) {
                         // CHECK: this is a little too case specific
                         if (val !== 'response') {
                             data.coll = res[val];
-                            data.keys = _.keys(data.coll[0]);
+                            data.params.keys = _.keys(data.coll[0]);
                             setArrays();
                             setTypes();
                             setSize();
@@ -173,7 +172,7 @@ dtm.data = function (arg, cb, type) {
                                 // TODO: this only works for shodan
                                 data.coll = JSON.parse(xhr.response)['matches'];
                             }
-                            data.keys = _.keys(data.coll[0]);
+                            data.params.keys = _.keys(data.coll[0]);
                             setArrays();
                             setTypes();
                             setSize();
@@ -237,28 +236,28 @@ dtm.data = function (arg, cb, type) {
 
     data.set = function (res) {
         data.coll = res;
-        data.keys = _.keys(data.coll[0]);
+        data.params.keys = _.keys(data.coll[0]);
         setArrays();
         setTypes();
         setSize();
     };
 
     function setArrays() {
-        _.forEach(data.keys, function (key) {
+        _.forEach(data.params.keys, function (key) {
             var a = dtm.array(_.pluck(data.coll, key), key);
             data.arrays[key] = a;
         })
     }
 
     function setTypes() {
-        _.forEach(data.keys, function (key) {
-            data.types[key] = data.arrays[key].type;
+        _.forEach(data.params.keys, function (key) {
+            data.params.types[key] = data.arrays[key].params.type;
         })
     }
 
     function setSize() {
-        data.size.col = data.keys.length;
-        data.size.row = data.coll.length;
+        data.params.size.col = data.params.keys.length;
+        data.params.size.row = data.coll.length;
     }
 
     /**
@@ -268,14 +267,14 @@ dtm.data = function (arg, cb, type) {
      */
     data.get = function (id) {
         if (typeof(id) === 'number') {
-            if (id >= 0 && id < data.size['col']) {
-                return data.arrays[data.keys[id]].clone();
+            if (id >= 0 && id < data.params.size['col']) {
+                return data.arrays[data.params.keys[id]].clone();
             } else {
                 dtm.log('data.get(): index out of range');
                 return data;
             }
         } else if (typeof(id) === 'string') {
-            if (data.keys.indexOf(id) > -1) {
+            if (data.params.keys.indexOf(id) > -1) {
                 return data.arrays[id].clone();
             } else {
                 dtm.log('data.get(): key does not exist');

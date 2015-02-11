@@ -11,7 +11,7 @@
  */
 dtm.synth = function (type) {
     var synth = {
-        className: 'dtm.synth',
+        type: 'dtm.synth',
 
         buffer: null,
 

@@ -4,7 +4,7 @@
  */
 
 dtm.value = {
-    className: 'dtm.value',
+    type: 'dtm.value',
 
     /**
      * Rescales a single normalized (0-1) value.

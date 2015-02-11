@@ -13,7 +13,7 @@
  */
 dtm.model = function (name, categ) {
     var model = {
-        className: 'dtm.model',
+        type: 'dtm.model',
 
         // assigning array or data/coll???
         //array: null,

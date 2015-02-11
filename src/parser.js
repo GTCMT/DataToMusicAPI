@@ -4,7 +4,7 @@
  */
 
 dtm.parser = {
-    className: 'dtm.parser',
+    type: 'dtm.parser',
 
     parseCsv: function (data) {
         return parser;

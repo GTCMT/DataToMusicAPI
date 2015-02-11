@@ -4,7 +4,7 @@
  */
 
 dtm.analyzer = {
-    className: 'dtm.analyzer',
+    type: 'dtm.analyzer',
 
     /**
      * Checks the data type of the input array.

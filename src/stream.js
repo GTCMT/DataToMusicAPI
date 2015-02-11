@@ -4,7 +4,9 @@
  */
 
 dtm.stream = function () {
-    var stream = {};
+    var stream = {
+        type: 'dtm.stream'
+    };
 
     stream.query = function (url, cb) {
         //cb();

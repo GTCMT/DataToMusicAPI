@@ -12,7 +12,7 @@
 // */
 dtm.voice = function (arg) {
     var voice = {
-        className: 'dtm.voice',
+        type: 'dtm.voice',
 
         ///**
         // * @name module:voice#model

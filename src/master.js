@@ -4,17 +4,32 @@
  */
 
 dtm.master = {
-    className: 'dtm.master',
+    type: 'dtm.master',
 
     params: {
         data: null,
+        index: 0,
+
+        level: 0.5,
+        mute: false,
+
+        tempo: 120,
+        time: [4, 4],
+
         beat: 0,
         measure: 0,
-        section: 0
+        section: 0,
+
+        scale: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+        cummulatedRhythm: null,
+
+        transposition: 0,
+        chord: null,
+        tonalFunc: null,
+
+        numSynthVoices: 0
     },
 
-    level: 0.5,
-    mute: false,
 
     /**
      * Total complexity thing.
@@ -30,27 +45,15 @@ dtm.master = {
     numVoices: 0,
     models: [],
 
-    numSynthVoices: 0,
-
     /**
      * Returns the master clock (singleton).
      * @function module:master#clock
      * @returns clock {object}
      */
     clock: dtm.clock(60, 480).sync(false),
-    tempo: 120,
-    time: [4, 4],
-    beat: 0,
-
-    scale: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
-    cummulatedRhythm: null,
-
-    transposition: 0,
-    chord: null,
-    tonalFunc: null,
 
     start: function () {
-
+        return dtm.master;
     },
 
     /**
@@ -126,6 +129,20 @@ dtm.master = {
 
     model: function () {
         return dtm.master;
+    },
+
+    get: function (arg) {
+        var out;
+
+        switch (arg) {
+            case 'index':
+                out = dtm.master.params.index;
+                break;
+            default:
+                out = null;
+                break;
+        }
+        return out;
     },
 
     state: null,

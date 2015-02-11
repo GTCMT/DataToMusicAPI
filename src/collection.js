@@ -10,7 +10,7 @@
  */
 dtm.collection = function () {
     var coll = {
-        className: 'dtm.collection',
+        type: 'dtm.collection',
         keys: [],
         types: [],
         values: []

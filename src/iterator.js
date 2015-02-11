@@ -14,7 +14,7 @@
  */
 dtm.iterator = function (arg) {
     var iter = {
-        className: 'dtm.iterator',
+        type: 'dtm.iterator',
 
         /**
          * The stored array object.
@@ -54,7 +54,7 @@ dtm.iterator = function (arg) {
         if (typeof(input) !== 'undefined') {
             iter.len = input.length; // CHECK: may need update this frequently
 
-            if (input.className === 'dtm.array') {
+            if (input.type === 'dtm.array') {
                 iter.array = input;
                 //iter.value = input.value;
             } else {

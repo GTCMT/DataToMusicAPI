@@ -4,7 +4,7 @@
 // */
 
 dtm.synth2 = {
-    className: 'dtm.synth2',
+    type: 'dtm.synth2',
 
     osc: function osc(amp, freq, wt) {
         amp = amp || 1;

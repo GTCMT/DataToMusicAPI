@@ -5,7 +5,7 @@
 
 // this is singleton helper functions
 dtm.transform = {
-    className: 'dtm.transform',
+    type: 'dtm.transform',
 
     /**
      * Generates values for a new array.

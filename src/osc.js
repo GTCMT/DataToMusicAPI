@@ -20,5 +20,7 @@ dtm.osc = function () {
         return myOsc;
     };
 
+    myOsc.send = myOsc.write;
+
     return myOsc;
 };

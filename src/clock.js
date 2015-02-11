@@ -16,7 +16,7 @@
  */
 dtm.clock = function (bpm, subDiv, time) {
     var clock = {
-        className: 'dtm.clock',
+        type: 'dtm.clock',
 
         interval: 1,
 
@@ -262,6 +262,8 @@ dtm.clock = function (bpm, subDiv, time) {
      * @returns {dtm.clock} self
      */
     clock.start = function (timeErr) {
+        dtm.log('starting a clock');
+
         if (clock.params.isOn !== true) {
             clock.params.isOn = true;
             clock.tick();
@@ -317,9 +319,6 @@ dtm.clock = function (bpm, subDiv, time) {
                 };
 
                 _.forEach(clock.callbacks, function (cb) {
-                    //if (_.indexOf(cb[1], clock.beat) > -1) {
-                    //    cb[0](clock);
-                    //}
                     cb(clock);
                 });
 
@@ -328,16 +327,8 @@ dtm.clock = function (bpm, subDiv, time) {
                 return clock;
 
             } else if (clock.params.sync && !clock.params.isMaster) {
-                //if (dtm.master.clock.beat % Math.round(480/clock.params.subDiv) === 0) {
-                //    _.forEach(clock.callbacks, function (cb) {
-                //        if (_.indexOf(cb[1], clock.beat) > -1) {
-                //            cb[0](clock);
-                //        }
-                //    });
-                //}
 
                 return clock;
-
             } else if (clock.params.isMaster) {
                 clockSrc = actx.createBufferSource();
                 clockSrc.buffer = clockBuf;
@@ -368,8 +359,6 @@ dtm.clock = function (bpm, subDiv, time) {
 
                 _.forEach(clock.callbacks, function (cb) {
                     cb(clock);
-                    //if (_.indexOf(cb[1], clock.beat) > -1) {
-                    //}
                 });
 
                 clock.beat = (clock.beat + 1) % (clock.params.subDiv * clock.time[0] / clock.time[1]);
@@ -380,7 +369,7 @@ dtm.clock = function (bpm, subDiv, time) {
 
     // TODO: stopping system should remove these callbacks?
     clock.tickSynced = function () {
-        if (clock.params.sync) {
+        if (clock.params.sync && clock.params.isOn) {
             if (dtm.master.clock.beat % Math.round(480/clock.params.subDiv) === 0) {
                 _.forEach(clock.callbacks, function (cb) {
                     cb(clock);
@@ -396,6 +385,7 @@ dtm.clock = function (bpm, subDiv, time) {
      * @returns {dtm.clock} self
      */
     clock.stop = function () {
+        dtm.log('stopping a clock');
         if (clock.params.isOn === true) {
             clock.params.isOn = false;
         }

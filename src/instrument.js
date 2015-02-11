@@ -11,15 +11,16 @@
  */
 dtm.instr = function (arg) {
     var instr = {
-        className: 'dtm.instrument',
+        type: 'dtm.instrument',
         params: {
             name: null,
             isPlaying: false,
             poly: false,
 
             modDest: [],
-            clock: dtm.clock(120, 8),
+
             sync: true,
+            clock: dtm.clock(true, 8),
             subDivision: 16,
 
             models: {
@@ -53,7 +54,7 @@ dtm.instr = function (arg) {
                 instr.params.models['any'] = dtm.array(arg);
             }
         } else if (typeof(arg) === 'object') {
-            if (arg.className === 'dtm.model') {
+            if (arg.type === 'dtm.model') {
                 if (arg.params.categ === 'instr') {
                     // CHECK: ...
                     dtm.log('assigning model "' + arg.params.name + '" to category "' + categ + '"');
@@ -69,7 +70,7 @@ dtm.instr = function (arg) {
                     instr.params.modDest.push(arg);
                 }
 
-            } else if (arg.className === 'dtm.array') {
+            } else if (arg.type === 'dtm.array') {
                 instr.params.models[categ] = arg;
             }
         } else if (typeof(arg) === 'string') {
@@ -115,7 +116,7 @@ dtm.instr = function (arg) {
             dtm.log('playing: ' + instr.params.name);
 
             if (!instr.params.instrModel) {
-                instr.params.clock.add(function () {
+                instr.params.clock.add(function defInstr() {
                     var v = instr.params.models.voice;
 
                     // CHECK: only for dtm.arrays
@@ -128,8 +129,14 @@ dtm.instr = function (arg) {
                             v.play();
                         }
                     } else {
-                        if (typeof(instr.params.models.melody) !== 'undefined') {
-                            v.nn(instr.params.models.melody.next());
+                        //if (typeof(instr.params.models.melody) !== 'undefined') {
+                        //    v.nn(instr.params.models.melody.next());
+                        //}
+
+                        if (typeof(instr.params.models.pitch) !== 'undefined') {
+                            var nn = instr.params.models.pitch.next();
+                            nn = dtm.val.rescale(nn, 60, 100, true);
+                            v.nn(nn);
                         }
 
                         v.play();
@@ -165,6 +172,7 @@ dtm.instr = function (arg) {
             }
 
             instr.params.clock.stop();
+            instr.params.clock.clear();
         }
         return instr;
     };
@@ -179,6 +187,8 @@ dtm.instr = function (arg) {
         instr.params.clock.bpm(val);
         return instr;
     };
+
+    instr.tempo = instr.bpm;
 
     instr.subDiv = function (val) {
         instr.params.clock.subDiv(val);
@@ -232,12 +242,29 @@ dtm.instr = function (arg) {
 
     instr.modulate = instr.mod;
 
-    instr.map = function () {
+    instr.map = function (src, dest) {
+        // testing w/ array...
+        if (src.type === 'dtm.array') {
+
+            // assigning an array here is not so smart...
+            instr.params.models[dest] = src.normalize();
+        }
+        // use global index from the master
+
         return instr;
     };
 
     instr.get = function (key) {
         return instr.params[key];
+    };
+
+    instr.getModel = function (key) {
+        return instr.params.models[key];
+    };
+
+    instr.setModel = function (src, dest) {
+        instr.params.models[dest] = src;
+        return instr;
     };
 
     instr.clone = function () {

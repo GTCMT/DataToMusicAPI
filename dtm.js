@@ -5,6 +5,7 @@
  * @module core
  */
 
+// TODO: load WebAudio on demand
 /* Shared WebAudio Stuff */
 var actx = new (window.AudioContext || window.webkitAudioContext)();
 var now = function () { return actx.currentTime; };
@@ -64,7 +65,11 @@ var dtm = {
     ajaxGet: ajaxGet,
     jsonp: jsonp,
 
-    clone: clone
+    clone: clone,
+
+    start: function () {
+
+    }
 };
 
 //dtm.buffs = {
@@ -266,6 +271,8 @@ dtm.osc = function () {
         return myOsc;
     };
 
+    myOsc.send = myOsc.write;
+
     return myOsc;
 };
 /**
@@ -274,7 +281,7 @@ dtm.osc = function () {
  */
 
 dtm.analyzer = {
-    className: 'dtm.analyzer',
+    type: 'dtm.analyzer',
 
     /**
      * Checks the data type of the input array.
@@ -528,7 +535,7 @@ function blockWise(arr, blockSize, hopSize, cb) {
 
 // this is singleton helper functions
 dtm.transform = {
-    className: 'dtm.transform',
+    type: 'dtm.transform',
 
     /**
      * Generates values for a new array.
@@ -1367,16 +1374,67 @@ dtm.tr = dtm.transform;
  */
 dtm.array = function (arr, name) {
     var array = {
-        className: 'dtm.array',
+        type: 'dtm.array',
 
-        params: {},
+        params: {
+            /**
+             * The name of the array object.
+             * @name module:array#name
+             * @type {string}
+             */
+            name: '', // or key?
 
-        /**
-         * The name of the array object.
-         * @name module:array#name
-         * @type {string}
-         */
-        name: '', // or key?
+            /**
+             * Value type of the array object.
+             * @name module:array#type
+             * @type {string}
+             */
+            type: null, // int, float, string, coll, mixed, date
+
+            /**
+             * Length of the array.
+             * @name module:array#length
+             * @type {integer}
+             */
+            length: null,
+
+            /**
+             * Minimum value of the array.
+             * @name module:array#min
+             * @type {number}
+             */
+            min: null,
+
+            /**
+             * Maximum value of the array.
+             * @name module:array#max
+             * @type {number}
+             */
+            max: null,
+
+            /**
+             * Mean value of the array.
+             * @name module:array#mean
+             * @type {number}
+             */
+            mean: null,
+
+            /**
+             * Standard deviation.
+             * @name module:array#std
+             * @type {number}
+             */
+            std: null,
+
+            /**
+             * The most frequent value or class.
+             * @name module:array#mode
+             */
+            mode: null,
+
+            original: null
+        },
+
 
         /**
          * Numerical values of the array.
@@ -1392,54 +1450,6 @@ dtm.array = function (arr, name) {
          * @type {array}
          */
         normalized: [],
-
-        /**
-         * Value type of the array object.
-         * @name module:array#type
-         * @type {string}
-         */
-        type: null, // int, float, string, coll, mixed, date
-
-        /**
-         * Length of the array.
-         * @name module:array#length
-         * @type {integer}
-         */
-        length: null,
-
-        /**
-         * Minimum value of the array.
-         * @name module:array#min
-         * @type {number}
-         */
-        min: null,
-
-        /**
-         * Maximum value of the array.
-         * @name module:array#max
-         * @type {number}
-         */
-        max: null,
-
-        /**
-         * Mean value of the array.
-         * @name module:array#mean
-         * @type {number}
-         */
-        mean: null,
-
-        /**
-         * Standard deviation.
-         * @name module:array#std
-         * @type {number}
-         */
-        std: null,
-
-        /**
-         * The most frequent value or class.
-         * @name module:array#mode
-         */
-        mode: null,
 
         /**
          * When the data type is nominal / string, the string values are stored in this.
@@ -1459,8 +1469,6 @@ dtm.array = function (arr, name) {
 
         index: 0
     };
-
-    //array.avg = array.mean;
 
     /**
      * Sets or overwrites the contents of the array object.
@@ -1486,25 +1494,25 @@ dtm.array = function (arr, name) {
         // CHECK: type checking - may be redundant
         checkType(input);
 
-        if (array.type === 'number' || array.type === 'int' || array.type === 'float') {
+        if (array.params.type === 'number' || array.params.type === 'int' || array.params.type === 'float') {
             _.forEach(array.value, function (val, idx) {
                 array.value[idx] = Number.parseFloat(val);
             });
 
             array.normalized = dtm.transform.normalize(input);
-            array.min = dtm.analyzer.min(input);
-            array.max = dtm.analyzer.max(input);
-            array.mean = dtm.analyzer.mean(input);
-            array.std = dtm.analyzer.std(input);
-            array.mode = dtm.analyzer.mode(input);
+            array.params.min = dtm.analyzer.min(input);
+            array.params.max = dtm.analyzer.max(input);
+            array.params.mean = dtm.analyzer.mean(input);
+            array.params.std = dtm.analyzer.std(input);
+            array.params.mode = dtm.analyzer.mode(input);
         }
 
-        if (array.type === 'string') {
+        if (array.params.type === 'string') {
             histo();
-            array.mode = dtm.analyzer.mode(array.classes);
+            array.params.mode = dtm.analyzer.mode(array.classes);
         }
 
-        array.length = input.length;
+        array.params.length = input.length;
 
         return array;
     };
@@ -1516,7 +1524,7 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.setName = function (name) {
-        array.name = name.toString();
+        array.params.name = name.toString();
         return array;
     };
 
@@ -1546,12 +1554,12 @@ dtm.array = function (arr, name) {
         // TODO: workaround for a missing value
         if (isNaN(arr[0])) {
             if (typeof(arr[0]) === 'object') {
-                array.type = 'collection';
+                array.params.type = 'collection';
             } else {
-                array.type = typeof(arr[0]);
+                array.params.type = typeof(arr[0]);
             }
         } else {
-            array.type = 'number';
+            array.params.type = 'number';
         }
 
         //array.type = res;
@@ -1576,7 +1584,7 @@ dtm.array = function (arr, name) {
         });
 
         array.set(array.value);
-        array.type = 'string'; // re-set the type to string from number... hacky!
+        array.params.type = 'string'; // re-set the type to string from number... hacky!
 
         return array;
     }
@@ -1590,11 +1598,11 @@ dtm.array = function (arr, name) {
         // this doesn't work
         //return dtm.clone(array);
 
-        var newArr = dtm.array(array.values, array.name);
-        if (array.type === 'string') {
+        var newArr = dtm.array(array.values, array.params.name);
+        if (array.params.type === 'string') {
             newArr.classes = array.classes;
             newArr.histogram = _.clone(array.histogram);
-            newArr.type = 'string';
+            newArr.params.type = 'string';
         }
         return newArr;
     };
@@ -1765,7 +1773,7 @@ dtm.array = function (arr, name) {
         var temp = array.value;
         if (arr instanceof Array) {
             temp = temp.concat(arr);
-        } else if (arr.className === 'dtm.array') {
+        } else if (arr.type === 'dtm.array') {
             temp = temp.concat(arr.value);
         }
         array.set(temp);
@@ -1852,8 +1860,8 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.expCurve = function (factor) {
-        var min = array.min;
-        var max = array.max;
+        var min = array.params.min;
+        var max = array.params.max;
         var arr = dtm.transform.expCurve(array.normalized, factor);
         array.set(dtm.transform.rescale(arr, min, max));
         return array;
@@ -1866,8 +1874,8 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.logCurve = function (factor) {
-        var min = array.min;
-        var max = array.max;
+        var min = array.params.min;
+        var max = array.params.max;
         var arr = dtm.transform.logCurve(array.normalized, factor);
         array.set(dtm.transform.rescale(arr, min, max));
         return array;
@@ -1913,7 +1921,7 @@ dtm.array = function (arr, name) {
      */
     array.morph = function (tgtArr, morphIdx) {
         if (typeof(tgtArr) !== 'array') {
-            if (tgtArr.className === 'dtm.array') {
+            if (tgtArr.type === 'dtm.array') {
                 tgtArr = tgtArr.value;
             }
         }
@@ -2064,6 +2072,9 @@ dtm.array = function (arr, name) {
      */
     array.abs = array.fwr;
 
+    array.summarize = function () {
+        return array;
+    };
 
     /**
      * Returns the array contents or an analyzed value
@@ -2073,94 +2084,111 @@ dtm.array = function (arr, name) {
      */
     array.get = function (param, opt) {
         var out;
+        var type = typeof(param);
 
-        switch (param) {
-            case 'type':
-                out = dtm.analyzer.checkType(array.values);
-                break;
-            case 'len':
-            case 'length':
-                out = array.values.length;
-                break;
+        if (type === 'number') {
+            if (param < 0 || param >= array.params.length) {
+                dtm.log('Index out of range');
+                out = array.values[dtm.value.mod(param, array.params.length)];
+            } else {
+                out = array.values[param];
+            }
+        } else {
+            switch (param) {
+                case 'type':
+                    out = dtm.params.type;
+                    break;
+                case 'len':
+                case 'length':
+                    out = array.params.length;
+                    break;
 
-            case 'min':
-                out = dtm.analyzer.min(array.values);
-                break;
-            case 'max':
-                out = dtm.analyzer.max(array.values);
-                break;
-            case 'mean':
-                out = dtm.analyzer.mean(array.values);
-                break;
-            case 'mode':
-                out = dtm.analyzer.mode(array.values);
-                break;
-            case 'median':
-                out = dtm.analyzer.median(array.values);
-                break;
-            case 'midrange':
-                out = dtm.analyzer.midrange(array.values);
-                break;
-            case 'std':
-                out = dtm.analyzer.std(array.values);
-                break;
-            case 'pstd':
-                out = dtm.analyzer.pstd(array.values);
-                break;
-            case 'var':
-                out = dtm.analyzer.var(array.values);
-                break;
-            case 'pvar':
-                out = dtm.analyzer.pvar(array.values);
-                break;
+                case 'min':
+                    out = dtm.analyzer.min(array.values);
+                    break;
+                case 'max':
+                    out = dtm.analyzer.max(array.values);
+                    break;
+                case 'mean':
+                case 'average':
+                case 'avg':
+                    out = dtm.analyzer.mean(array.values);
+                    break;
+                case 'mode':
+                    out = dtm.analyzer.mode(array.values);
+                    break;
+                case 'median':
+                    out = dtm.analyzer.median(array.values);
+                    break;
+                case 'midrange':
+                    out = dtm.analyzer.midrange(array.values);
+                    break;
+                case 'std':
+                    out = dtm.analyzer.std(array.values);
+                    break;
+                case 'pstd':
+                    out = dtm.analyzer.pstd(array.values);
+                    break;
+                case 'var':
+                    out = dtm.analyzer.var(array.values);
+                    break;
+                case 'pvar':
+                    out = dtm.analyzer.pvar(array.values);
+                    break;
 
-            case 'index':
-            case 'idx':
-                break;
+                case 'index':
+                case 'idx':
+                    break;
 
-            case 'relative':
-            case 'location':
-            case 'loc':
-                break;
+                case 'relative':
+                case 'location':
+                case 'loc':
+                    break;
 
-            case 'current':
-            case 'curr':
-            case 'cur':
-            case 'now':
-            case 'moment':
-                out = array.values[array.index];
-                break;
-            case 'next':
-                array.index = dtm.value.mod(++array.index, array.values.length);
-                out = array.values[array.index];
-                break;
-            case 'prev':
-            case 'previous':
-                array.index = dtm.value.mod(--array.index, array.values.length);
-                out = array.values[array.index];
-                break;
-            case 'palindrome':
-                break;
-            case 'random':
-                out = array.values[_.random(0, array.values.length - 1)];
-                break;
-            case 'urn':
-                break;
+                case 'current':
+                case 'curr':
+                case 'cur':
+                case 'now':
+                case 'moment':
+                    out = array.values[array.index];
+                    break;
 
-            case 'normalize':
-            case 'normalized':
-                out = dtm.transform.normalize(array.values);
-                break;
-            case 'classes':
-                break;
-            case 'numClasses':
-                break;
-            case 'histo':
-                break;
+                case 'next':
+                    array.index = dtm.value.mod(++array.index, array.params.length);
+                    out = array.values[array.index];
+                    break;
 
-            default:
-                out = array.values;
-                break;
+                case 'prev':
+                case 'previous':
+                    array.index = dtm.value.mod(--array.index, array.params.length);
+                    out = array.values[array.index];
+                    break;
+
+                case 'palindrome':
+                    break;
+
+                case 'random':
+                    out = array.values[_.random(0, array.params.length - 1)];
+                    break;
+
+                case 'urn':
+                    break;
+
+                case 'normalize':
+                case 'normalized':
+                    out = dtm.transform.normalize(array.values);
+                    break;
+                case 'classes':
+                    break;
+                case 'numClasses':
+                    break;
+                case 'histo':
+                    break;
+
+                default:
+                    out = array.values;
+                    break;
+            }
         }
 
         return out;
@@ -2176,7 +2204,7 @@ dtm.array = function (arr, name) {
             param = 'value'
         }
         var out = array[param][array.index];
-        array.index = dtm.value.mod(array.index + 1, array.length);
+        array.index = dtm.value.mod(array.index + 1, array.params.length);
         return out;
     };
 
@@ -2206,7 +2234,7 @@ dtm.a = dtm.arr = dtm.array;
  */
 dtm.collection = function () {
     var coll = {
-        className: 'dtm.collection',
+        type: 'dtm.collection',
         keys: [],
         types: [],
         values: []
@@ -2236,7 +2264,7 @@ dtm.coll = dtm.collection;
  */
 
 dtm.value = {
-    className: 'dtm.value',
+    type: 'dtm.value',
 
     /**
      * Rescales a single normalized (0-1) value.
@@ -2351,7 +2379,7 @@ dtm.val = dtm.value;
  */
 dtm.iterator = function (arg) {
     var iter = {
-        className: 'dtm.iterator',
+        type: 'dtm.iterator',
 
         /**
          * The stored array object.
@@ -2391,7 +2419,7 @@ dtm.iterator = function (arg) {
         if (typeof(input) !== 'undefined') {
             iter.len = input.length; // CHECK: may need update this frequently
 
-            if (input.className === 'dtm.array') {
+            if (input.type === 'dtm.array') {
                 iter.array = input;
                 //iter.value = input.value;
             } else {
@@ -2531,7 +2559,7 @@ dtm.it = dtm.iter = dtm.iterator;
  */
 
 dtm.parser = {
-    className: 'dtm.parser',
+    type: 'dtm.parser',
 
     parseCsv: function (data) {
         return parser;
@@ -2634,7 +2662,7 @@ dtm.parser = {
  */
 dtm.data = function (arg, cb, type) {
     var data = {
-        className: 'dtm.data',
+        type: 'dtm.data',
 
         //value: null,
         //type: null, // ???: csv, json, etc.
@@ -2653,29 +2681,28 @@ dtm.data = function (arg, cb, type) {
          */
         arrays: {},
 
-        /**
-         * List of available keys.
-         * @name module:data#keys
-         * @type {array}
-         */
-        keys: [],
-
-        /**
-         * List of keys and their data types.
-         * @name module:data#types
-         * @type {object}
-         */
-        types: {},
-
-        /**
-         * The row (data points) and collumn (keys) size.
-         * @name module:data#size
-         * @type {object}
-         */
-        size: {},
-
         // TODO: enclose non-functions here
-        params: {},
+        params: {
+            /**
+             * List of available keys.
+             * @name module:data#keys
+             * @type {array}
+             */
+            keys: [],
+
+            /**
+             * List of keys and their data types.
+             * @name module:data#types
+             * @type {object}
+             */
+            types: {},
+            /**
+             * The row (data points) and collumn (keys) size.
+             * @name module:data#size
+             * @type {object}
+             */
+            size: {}
+        },
 
         /**
          * This can be used for promise callback upon loading data.
@@ -2728,7 +2755,7 @@ dtm.data = function (arg, cb, type) {
                         // CHECK: this is a little too case specific
                         if (val !== 'response') {
                             data.coll = res[val];
-                            data.keys = _.keys(data.coll[0]);
+                            data.params.keys = _.keys(data.coll[0]);
                             setArrays();
                             setTypes();
                             setSize();
@@ -2795,7 +2822,7 @@ dtm.data = function (arg, cb, type) {
                                 // TODO: this only works for shodan
                                 data.coll = JSON.parse(xhr.response)['matches'];
                             }
-                            data.keys = _.keys(data.coll[0]);
+                            data.params.keys = _.keys(data.coll[0]);
                             setArrays();
                             setTypes();
                             setSize();
@@ -2859,28 +2886,28 @@ dtm.data = function (arg, cb, type) {
 
     data.set = function (res) {
         data.coll = res;
-        data.keys = _.keys(data.coll[0]);
+        data.params.keys = _.keys(data.coll[0]);
         setArrays();
         setTypes();
         setSize();
     };
 
     function setArrays() {
-        _.forEach(data.keys, function (key) {
+        _.forEach(data.params.keys, function (key) {
             var a = dtm.array(_.pluck(data.coll, key), key);
             data.arrays[key] = a;
         })
     }
 
     function setTypes() {
-        _.forEach(data.keys, function (key) {
-            data.types[key] = data.arrays[key].type;
+        _.forEach(data.params.keys, function (key) {
+            data.params.types[key] = data.arrays[key].params.type;
         })
     }
 
     function setSize() {
-        data.size.col = data.keys.length;
-        data.size.row = data.coll.length;
+        data.params.size.col = data.params.keys.length;
+        data.params.size.row = data.coll.length;
     }
 
     /**
@@ -2890,14 +2917,14 @@ dtm.data = function (arg, cb, type) {
      */
     data.get = function (id) {
         if (typeof(id) === 'number') {
-            if (id >= 0 && id < data.size['col']) {
-                return data.arrays[data.keys[id]].clone();
+            if (id >= 0 && id < data.params.size['col']) {
+                return data.arrays[data.params.keys[id]].clone();
             } else {
                 dtm.log('data.get(): index out of range');
                 return data;
             }
         } else if (typeof(id) === 'string') {
-            if (data.keys.indexOf(id) > -1) {
+            if (data.params.keys.indexOf(id) > -1) {
                 return data.arrays[id].clone();
             } else {
                 dtm.log('data.get(): key does not exist');
@@ -2961,7 +2988,7 @@ dtm.d = dtm.data;
  */
 dtm.clock = function (bpm, subDiv, time) {
     var clock = {
-        className: 'dtm.clock',
+        type: 'dtm.clock',
 
         interval: 1,
 
@@ -3207,6 +3234,8 @@ dtm.clock = function (bpm, subDiv, time) {
      * @returns {dtm.clock} self
      */
     clock.start = function (timeErr) {
+        dtm.log('starting a clock');
+
         if (clock.params.isOn !== true) {
             clock.params.isOn = true;
             clock.tick();
@@ -3262,9 +3291,6 @@ dtm.clock = function (bpm, subDiv, time) {
                 };
 
                 _.forEach(clock.callbacks, function (cb) {
-                    //if (_.indexOf(cb[1], clock.beat) > -1) {
-                    //    cb[0](clock);
-                    //}
                     cb(clock);
                 });
 
@@ -3273,16 +3299,8 @@ dtm.clock = function (bpm, subDiv, time) {
                 return clock;
 
             } else if (clock.params.sync && !clock.params.isMaster) {
-                //if (dtm.master.clock.beat % Math.round(480/clock.params.subDiv) === 0) {
-                //    _.forEach(clock.callbacks, function (cb) {
-                //        if (_.indexOf(cb[1], clock.beat) > -1) {
-                //            cb[0](clock);
-                //        }
-                //    });
-                //}
 
                 return clock;
-
             } else if (clock.params.isMaster) {
                 clockSrc = actx.createBufferSource();
                 clockSrc.buffer = clockBuf;
@@ -3313,8 +3331,6 @@ dtm.clock = function (bpm, subDiv, time) {
 
                 _.forEach(clock.callbacks, function (cb) {
                     cb(clock);
-                    //if (_.indexOf(cb[1], clock.beat) > -1) {
-                    //}
                 });
 
                 clock.beat = (clock.beat + 1) % (clock.params.subDiv * clock.time[0] / clock.time[1]);
@@ -3323,8 +3339,9 @@ dtm.clock = function (bpm, subDiv, time) {
         }
     };
 
+    // TODO: stopping system should remove these callbacks?
     clock.tickSynced = function () {
-        if (clock.params.sync) {
+        if (clock.params.sync && clock.params.isOn) {
             if (dtm.master.clock.beat % Math.round(480/clock.params.subDiv) === 0) {
                 _.forEach(clock.callbacks, function (cb) {
                     cb(clock);
@@ -3340,6 +3357,7 @@ dtm.clock = function (bpm, subDiv, time) {
      * @returns {dtm.clock} self
      */
     clock.stop = function () {
+        dtm.log('stopping a clock');
         if (clock.params.isOn === true) {
             clock.params.isOn = false;
         }
@@ -3446,15 +3464,16 @@ dtm.c = dtm.clock;
  */
 dtm.instr = function (arg) {
     var instr = {
-        className: 'dtm.instrument',
+        type: 'dtm.instrument',
         params: {
             name: null,
             isPlaying: false,
             poly: false,
 
             modDest: [],
-            clock: dtm.clock(120, 8),
+
             sync: true,
+            clock: dtm.clock(true, 8),
             subDivision: 16,
 
             models: {
@@ -3488,7 +3507,7 @@ dtm.instr = function (arg) {
                 instr.params.models['any'] = dtm.array(arg);
             }
         } else if (typeof(arg) === 'object') {
-            if (arg.className === 'dtm.model') {
+            if (arg.type === 'dtm.model') {
                 if (arg.params.categ === 'instr') {
                     // CHECK: ...
                     dtm.log('assigning model "' + arg.params.name + '" to category "' + categ + '"');
@@ -3504,7 +3523,7 @@ dtm.instr = function (arg) {
                     instr.params.modDest.push(arg);
                 }
 
-            } else if (arg.className === 'dtm.array') {
+            } else if (arg.type === 'dtm.array') {
                 instr.params.models[categ] = arg;
             }
         } else if (typeof(arg) === 'string') {
@@ -3550,7 +3569,7 @@ dtm.instr = function (arg) {
             dtm.log('playing: ' + instr.params.name);
 
             if (!instr.params.instrModel) {
-                instr.params.clock.add(function () {
+                instr.params.clock.add(function defInstr() {
                     var v = instr.params.models.voice;
 
                     // CHECK: only for dtm.arrays
@@ -3563,8 +3582,14 @@ dtm.instr = function (arg) {
                             v.play();
                         }
                     } else {
-                        if (typeof(instr.params.models.melody) !== 'undefined') {
-                            v.nn(instr.params.models.melody.next());
+                        //if (typeof(instr.params.models.melody) !== 'undefined') {
+                        //    v.nn(instr.params.models.melody.next());
+                        //}
+
+                        if (typeof(instr.params.models.pitch) !== 'undefined') {
+                            var nn = instr.params.models.pitch.next();
+                            nn = dtm.val.rescale(nn, 60, 100, true);
+                            v.nn(nn);
                         }
 
                         v.play();
@@ -3600,6 +3625,7 @@ dtm.instr = function (arg) {
             }
 
             instr.params.clock.stop();
+            instr.params.clock.clear();
         }
         return instr;
     };
@@ -3614,6 +3640,8 @@ dtm.instr = function (arg) {
         instr.params.clock.bpm(val);
         return instr;
     };
+
+    instr.tempo = instr.bpm;
 
     instr.subDiv = function (val) {
         instr.params.clock.subDiv(val);
@@ -3667,12 +3695,29 @@ dtm.instr = function (arg) {
 
     instr.modulate = instr.mod;
 
-    instr.map = function () {
+    instr.map = function (src, dest) {
+        // testing w/ array...
+        if (src.type === 'dtm.array') {
+
+            // assigning an array here is not so smart...
+            instr.params.models[dest] = src.normalize();
+        }
+        // use global index from the master
+
         return instr;
     };
 
     instr.get = function (key) {
         return instr.params[key];
+    };
+
+    instr.getModel = function (key) {
+        return instr.params.models[key];
+    };
+
+    instr.setModel = function (src, dest) {
+        instr.params.models[dest] = src;
+        return instr;
     };
 
     instr.clone = function () {
@@ -3735,7 +3780,7 @@ dtm.i = dtm.instr;
  */
 dtm.model = function (name, categ) {
     var model = {
-        className: 'dtm.model',
+        type: 'dtm.model',
 
         // assigning array or data/coll???
         //array: null,
@@ -3823,133 +3868,6 @@ dtm.model = function (name, categ) {
 };
 
 dtm.m = dtm.model;
-dtm.model2 = function (name) {
-    var model = {
-        className: 'dtm.model2',
-
-        ///**
-        // * @name module:model#name
-        // * @type {string}
-        // */
-        name: null,
-
-        ///**
-        // * Whether if the model is synced to the master.
-        // * @name module:model#sync
-        // * @type {boolean}
-        // */
-        sync: true,
-        clock: null,
-        data: null,
-        parent: null,
-        complexity: 0,
-        motif: {
-            pitches: dtm.array(),
-            beats: dtm.array()
-        },
-
-        // CHECK: there might be multiple
-        parentClock: null,
-
-        master: dtm.master,
-
-        params: {
-            scale: _.range(12)
-        }
-    };
-
-    // ???
-    if (arguments.length) {
-        model.name = name;
-    }
-
-    ///**
-    // * @function module:model#setName
-    // * @param name {string}
-    // * @returns {dtm.model}
-    // */
-    model.setName = function (name) {
-        model.name = name;
-        return model;
-    };
-
-    ///**
-    // * @function module:model#play
-    // * @param nn
-    // * @returns {dtm.model}
-    // */
-    model.play = function (nn) {
-        console.log('play() function is not implemented!');
-        return model;
-    };
-
-    ///**
-    // * @function module:model#run
-    // * @param clock
-    // * @returns {dtm.model}
-    // */
-    model.run = function (clock) {
-        console.log('run() funciton is not implemented!');
-        return model;
-    };
-
-    ///**
-    // * @function module:model#stop
-    // * @returns {dtm.model}
-    // */
-    model.stop = function () {
-        return model;
-    };
-
-    // TODO: should add to a list
-    model.addParentClock = function (pClock) {
-        model.parentClock = pClock;
-        return model;
-    };
-
-    model.getParentClock = function () {
-        return model.parentClock;
-    };
-
-    model.extend = function () {
-        return model;
-    };
-
-    model.inherit = function () {
-        return model;
-    };
-
-    model.scale = function () {
-        var scale;
-
-        if (arguments.length === 0) {
-            scale = _.range(12);
-        } else if (typeof(arguments[0]) === 'array') {
-            scale = arguments[0];
-        } else if (typeof(arguments[0]) === 'string') {
-            scale = dtm.scales[arguments[0].toLowerCase()];
-        } else {
-            scale = arguments;
-        }
-
-        model.params.scale = scale;
-
-        return model;
-    };
-
-    model.load = function (name) {
-        return model;
-    };
-
-    model.clone = function () {
-        // increment the num of active models?
-        return model;
-    };
-
-    // registers the model to the model collection
-    dtm.modelColl.push(model);
-    return model;
-};
 /**
  * @fileOverview Some building blocks for model creation. It can be used as one-shot as well.
  * @module synth
@@ -3963,7 +3881,7 @@ dtm.model2 = function (name) {
  */
 dtm.synth = function (type) {
     var synth = {
-        className: 'dtm.synth',
+        type: 'dtm.synth',
 
         buffer: null,
 
@@ -4500,7 +4418,7 @@ dtm.buffs = {
 // */
 
 dtm.synth2 = {
-    className: 'dtm.synth2',
+    type: 'dtm.synth2',
 
     osc: function osc(amp, freq, wt) {
         amp = amp || 1;
@@ -4580,7 +4498,9 @@ dtm.synth2 = {
  */
 
 dtm.stream = function () {
-    var stream = {};
+    var stream = {
+        type: 'dtm.stream'
+    };
 
     stream.query = function (url, cb) {
         //cb();
@@ -4625,7 +4545,7 @@ function capture(len, cb) {
 // */
 dtm.voice = function (arg) {
     var voice = {
-        className: 'dtm.voice',
+        type: 'dtm.voice',
 
         ///**
         // * @name module:voice#model
@@ -4754,17 +4674,32 @@ dtm.v = dtm.voice;
  */
 
 dtm.master = {
-    className: 'dtm.master',
+    type: 'dtm.master',
 
     params: {
         data: null,
+        index: 0,
+
+        level: 0.5,
+        mute: false,
+
+        tempo: 120,
+        time: [4, 4],
+
         beat: 0,
         measure: 0,
-        section: 0
+        section: 0,
+
+        scale: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+        cummulatedRhythm: null,
+
+        transposition: 0,
+        chord: null,
+        tonalFunc: null,
+
+        numSynthVoices: 0
     },
 
-    level: 0.5,
-    mute: false,
 
     /**
      * Total complexity thing.
@@ -4780,27 +4715,15 @@ dtm.master = {
     numVoices: 0,
     models: [],
 
-    numSynthVoices: 0,
-
     /**
      * Returns the master clock (singleton).
      * @function module:master#clock
      * @returns clock {object}
      */
     clock: dtm.clock(60, 480).sync(false),
-    tempo: 120,
-    time: [4, 4],
-    beat: 0,
-
-    scale: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
-    cummulatedRhythm: null,
-
-    transposition: 0,
-    chord: null,
-    tonalFunc: null,
 
     start: function () {
-
+        return dtm.master;
     },
 
     /**
@@ -4878,6 +4801,20 @@ dtm.master = {
         return dtm.master;
     },
 
+    get: function (arg) {
+        var out;
+
+        switch (arg) {
+            case 'index':
+                out = dtm.master.params.index;
+                break;
+            default:
+                out = null;
+                break;
+        }
+        return out;
+    },
+
     state: null,
 
     reset: null
@@ -4887,6 +4824,7 @@ dtm.master.clock.params.isMaster = true;
 dtm.master.clock.start();
 dtm.guido = function () {
     var guido = {
+        tupe: 'dtm.guido',
         parts: [],
         numParts: 1
     };
@@ -5448,15 +5386,6 @@ dtm.inscore = function () {
     return m;
 })();
 (function () {
-    var m = dtm.model2();
-
-    var noise = dtm.synth2.noise(8192);
-
-    m.play = function () {
-
-    }
-})();
-(function () {
     var m = dtm.model('tamborim').categ('instr');
 
     var subDiv = 12 * 8;
@@ -5572,12 +5501,33 @@ dtm.inscore = function () {
     };
 
     m.generate = function (arr) {
+        var temp = [];
+        for (var ch = 0; ch < 3; ch++) {
+            temp[ch] = [];
+
+            for (var i = 0; i < arr.length; i++) {
+                temp[ch][i] = _.random(0, 1, true);
+            }
+
+            temp[ch] = generatePitch(temp[ch], generateRhythm(temp[ch]));
+
+            temp[ch] = temp[ch].join(' ');
+        }
+
         var intervals = generateRhythm(arr);
         var seq = generatePitch(arr, intervals);
 
+
         seq = seq.join(' ');
-        seq = '[\\meter<"4/4"> ' + seq + ' \\newLine' + ' _*2/1' + ']';
-        return seq;
+        //seq = '[\\meter<"4/4"> ' + seq + ' \\newLine' + ' _*2/1' + ']';
+
+        var res = '{' +
+            '[\\instr<"Flute", dx=-1.65cm, dy=-0.5cm>\\meter<"4/4"> \\clef<"g"> ' + seq + '],' +
+            '[\\instr<"Cello", dx=-1.65cm, dy=-0.5cm>\\meter<"4/4"> \\clef<"f"> ' + temp[0] + '],' +
+            '[\\instr<"Piano", dx=-1.65cm, dy=-1.75cm> \\meter<"4/4"> \\clef<"g"> ' + temp[1] + '],' +
+            '[\\meter<"4/4"> \\clef<"f"> ' + temp[2] + ']}';
+
+        return res;
     };
 })();
 (function () {

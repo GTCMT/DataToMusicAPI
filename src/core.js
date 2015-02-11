@@ -3,6 +3,7 @@
  * @module core
  */
 
+// TODO: load WebAudio on demand
 /* Shared WebAudio Stuff */
 var actx = new (window.AudioContext || window.webkitAudioContext)();
 var now = function () { return actx.currentTime; };
@@ -62,7 +63,11 @@ var dtm = {
     ajaxGet: ajaxGet,
     jsonp: jsonp,
 
-    clone: clone
+    clone: clone,
+
+    start: function () {
+
+    }
 };
 
 //dtm.buffs = {
