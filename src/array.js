@@ -221,6 +221,11 @@ dtm.array = function (arr, name) {
         return array;
     };
 
+    array.setType = function (arg) {
+        params.type = arg.toString();
+        return array;
+    };
+
     if (typeof(arr) !== 'undefined') {
         if (typeof(arr) === 'string') {
             arr = arr.split('');
@@ -295,7 +300,7 @@ dtm.array = function (arr, name) {
         if (params.type === 'string') {
             newArr.classes = params.classes;
             newArr.histogram = _.clone(params.histogram);
-            newArr.params.type = 'string';
+            newArr.setType('string');
         }
         return newArr;
     };

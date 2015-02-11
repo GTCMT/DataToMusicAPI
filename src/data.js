@@ -12,48 +12,16 @@
  */
 dtm.data = function (arg, cb, type) {
     var params = {
+        arrays: {},
+        coll: [],
 
+        keys: [],
+        types: {},
+        size: {}
     };
 
     var data = {
         type: 'dtm.data',
-
-        /**
-         * The data stored as a collection / array of objects.
-         * @name module:data#coll
-         * @type {array}
-         */
-        coll: [],
-
-        /**
-         * The data stored as a series of dtm.array object.
-         * @name module:data#arrays
-         * @type {object}
-         */
-        arrays: {},
-
-        // TODO: enclose non-functions here
-        params: {
-            /**
-             * List of available keys.
-             * @name module:data#keys
-             * @type {array}
-             */
-            keys: [],
-
-            /**
-             * List of keys and their data types.
-             * @name module:data#types
-             * @type {object}
-             */
-            types: {},
-            /**
-             * The row (data points) and collumn (keys) size.
-             * @name module:data#size
-             * @type {object}
-             */
-            size: {}
-        },
 
         /**
          * This can be used for promise callback upon loading data.
@@ -68,29 +36,66 @@ dtm.data = function (arg, cb, type) {
      * @param id {string|integer} Key (string) or index (integer)
      * @returns {dtm.array}
      */
-    data.get = function (id) {
-        if (typeof(id) === 'number') {
-            if (id >= 0 && id < data.params.size['col']) {
-                return data.arrays[data.params.keys[id]].clone();
-            } else {
-                dtm.log('data.get(): index out of range');
-                return data;
-            }
-        } else if (typeof(id) === 'string') {
-            if (data.params.keys.indexOf(id) > -1) {
-                return data.arrays[id].clone();
-            } else {
-                dtm.log('data.get(): key does not exist');
-                return data;
-            }
-        } else {
-            return data;
+    data.get = function (arg, id) {
+        var out = null;
+
+        switch (arg) {
+            case 'array':
+            case 'arr':
+            case 'a':
+                if (typeof(id) === 'number') {
+                    if (id >= 0 && id < params.size['col']) {
+                        return params.arrays[params.keys[id]].clone();
+                    } else {
+                        dtm.log('data.get(): index out of range');
+                        out = data;
+                    }
+                } else if (typeof(id) === 'string') {
+                    if (params.keys.indexOf(id) > -1) {
+                        return params.arrays[id].clone();
+                    } else {
+                        dtm.log('data.get(): key does not exist');
+                        out = data;
+                    }
+                } else {
+                    dtm.log('data.get(): please specify array with index or name');
+                    out = data;
+                }
+                break;
+
+            case 'arrays':
+                out = params.arrays;
+                break;
+
+            case 'collection':
+            case 'coll':
+                break;
+
+            case 'size':
+                out = params.size;
+                break;
+
+            case 'key':
+            case 'keys':
+                out = params.keys;
+                break;
+
+            case 'type':
+            case 'types':
+                out = params.types;
+                break;
+
+            default:
+                out = data;
+                break;
         }
+
+        return out;
     };
 
     data.set = function (res) {
-        data.coll = res;
-        data.params.keys = _.keys(data.coll[0]);
+        params.coll = res;
+        params.keys = _.keys(params.coll[0]);
         setArrays();
         setTypes();
         setSize();
@@ -139,8 +144,8 @@ dtm.data = function (arg, cb, type) {
                     _.forEach(keys, function (val) {
                         // CHECK: this is a little too case specific
                         if (val !== 'response') {
-                            data.coll = res[val];
-                            data.params.keys = _.keys(data.coll[0]);
+                            params.coll = res[val];
+                            params.keys = _.keys(params.coll[0]);
                             setArrays();
                             setTypes();
                             setSize();
@@ -187,7 +192,7 @@ dtm.data = function (arg, cb, type) {
                             actx.decodeAudioData(xhr.response, function (buf) {
                                 for (var c = 0; c < buf.numberOfChannels; c++) {
                                     var floatArr = buf.getChannelData(c);
-                                    data.arrays['ch_' + c] = dtm.array(Array.prototype.slice.call(floatArr), 'ch_' + c);
+                                    params.arrays['ch_' + c] = dtm.array(Array.prototype.slice.call(floatArr), 'ch_' + c);
                                 }
 
                                 //setArrays();
@@ -202,12 +207,12 @@ dtm.data = function (arg, cb, type) {
                             });
                         } else {
                             if (ext === 'csv') {
-                                data.coll = dtm.parser.csvToJson(xhr.response);
+                                params.coll = dtm.parser.csvToJson(xhr.response);
                             } else {
                                 // TODO: this only works for shodan
-                                data.coll = JSON.parse(xhr.response)['matches'];
+                                params.coll = JSON.parse(xhr.response)['matches'];
                             }
-                            data.params.keys = _.keys(data.coll[0]);
+                            params.keys = _.keys(params.coll[0]);
                             setArrays();
                             setTypes();
                             setSize();
@@ -246,8 +251,8 @@ dtm.data = function (arg, cb, type) {
     //            var keys = _.keys(res);
     //            _.forEach(keys, function (val) {
     //                if (val !== 'response') {
-    //                    data.coll = res[val];
-    //                    data.keys = _.keys(data.coll[0]);
+    //                    params.coll = res[val];
+    //                    data.keys = _.keys(params.coll[0]);
     //                    setArrays();
     //                    setTypes();
     //                    setSize();
@@ -271,21 +276,21 @@ dtm.data = function (arg, cb, type) {
 
 
     function setArrays() {
-        _.forEach(data.params.keys, function (key) {
-            var a = dtm.array(_.pluck(data.coll, key), key);
-            data.arrays[key] = a;
+        _.forEach(params.keys, function (key) {
+            var a = dtm.array(_.pluck(params.coll, key), key);
+            params.arrays[key] = a;
         })
     }
 
     function setTypes() {
-        _.forEach(data.params.keys, function (key) {
-            data.params.types[key] = data.arrays[key].params.type;
+        _.forEach(params.keys, function (key) {
+            params.types[key] = params.arrays[key].get('type');
         })
     }
 
     function setSize() {
-        data.params.size.col = data.params.keys.length;
-        data.params.size.row = data.coll.length;
+        params.size.col = params.keys.length;
+        params.size.row = params.coll.length;
     }
 
     //data.capture = function () {

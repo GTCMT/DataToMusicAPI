@@ -12,6 +12,13 @@
  * @returns a new model instance
  */
 dtm.model = function (name, categ) {
+    var params = {
+        name: null,
+        categ: 'none',
+        categories: []
+        //voice: null
+    };
+
     var model = {
         type: 'dtm.model',
 
@@ -19,14 +26,28 @@ dtm.model = function (name, categ) {
         //array: null,
         //data: null,
 
-        params: {
-            name: null,
-            categ: 'any',
-            categories: [],
-            //voice: null
-        },
-
+        params: {},
         models: {}
+    };
+
+    model.get = function (arg) {
+        var out = null;
+
+        switch (arg) {
+            case 'name':
+                out = params.name;
+                break;
+
+            case 'category':
+            case 'categ':
+                out = params.categ;
+                break;
+
+            default:
+                out = model;
+                break;
+        }
+        return out;
     };
 
     /**
@@ -36,7 +57,7 @@ dtm.model = function (name, categ) {
      * @returns {dtm.model}
      */
     model.categ = function (categ) {
-        model.params.categ = categ;
+        params.categ = categ;
         return model;
     };
 
@@ -50,11 +71,11 @@ dtm.model = function (name, categ) {
 
             } else {
                 if (typeof(categ) === 'string') {
-                    model.params.categ = categ;
+                    params.categ = categ;
                 }
 
                 dtm.log('registering a new model: ' + name);
-                model.params.name = name;
+                params.name = name;
                 dtm.modelColl.push(model);
             }
         }

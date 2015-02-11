@@ -1,4 +1,5 @@
 dtm.osc = function () {
+    var params = {};
     var myOsc = {};
 
     myOsc.setup = function () {

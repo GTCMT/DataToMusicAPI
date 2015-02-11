@@ -6,7 +6,6 @@ module.exports = function (grunt) {
                     'misc/start.js',
                     'src/core.js',
                     'src/osc.js',
-                    //'src/utils.js',
                     'src/analyzer.js',
                     'src/transform.js',
                     'src/array.js',
