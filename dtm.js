@@ -1413,10 +1413,8 @@ dtm.array = function (arr, name) {
 
         // TODO: error checking
         params.value = input;
-        params.value = input;
 
-        // CHECK: kind of ugly
-        if (typeof(params.original) === 'undefined') {
+        if (params.original === null) {
             params.original = input;
         }
 
@@ -2024,8 +2022,12 @@ dtm.array = function (arr, name) {
             }
         } else {
             switch (param) {
+                case 'name':
+                case 'key':
+                    out = params.name;
+                    break;
                 case 'type':
-                    out = dtm.params.type;
+                    out = params.type;
                     break;
                 case 'len':
                 case 'length':
@@ -2101,6 +2103,10 @@ dtm.array = function (arr, name) {
                     break;
 
                 case 'urn':
+                    break;
+
+                case 'original':
+                    out = params.original;
                     break;
 
                 case 'normal':
