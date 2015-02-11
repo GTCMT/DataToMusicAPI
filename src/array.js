@@ -44,7 +44,7 @@ dtm.array = function (arr, name) {
      * @param [param] {string}
      * @returns {number|array|string}
      */
-    array.get = function (param, opt) {
+    array.get = function (param) {
         var out;
         var type = typeof(param);
 
@@ -166,6 +166,12 @@ dtm.array = function (arr, name) {
                 case 'sorted':
                 case 'sort':
                     out = dtm.transform.sort(params.value);
+                    break;
+
+                case 'uniques':
+                case 'unique':
+                case 'uniq':
+                    out = dtm.transform.unique(params.value);
                     break;
 
                 case 'classes':
@@ -309,6 +315,17 @@ dtm.array = function (arr, name) {
 
     array.histogram = array.histo;
 
+    /**
+     * Overwrites the contents with unsorted unique values of the array.
+     * @function module:array#unique
+     * @returns {dtm.array}
+     */
+    array.unique = function () {
+        array.set(dtm.transform.unique(params.value));
+        return array;
+    };
+
+    array.uniq = array.unique;
     /**
      * Returns a clone of the array object. It can be used when you don't want to reference the same array object from different places.
      * @function module:array#clone

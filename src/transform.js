@@ -785,6 +785,10 @@ dtm.transform = {
         return res;
     },
 
+    unique: function (input) {
+        return _.uniq(input);
+    }
+
     //getClasses: function (input) {
     //    return _.clone()
     //

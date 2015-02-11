@@ -96,12 +96,26 @@ describe('array object', function () {
                 expect(a.get('numClasses')).toBe(9);
             });
         });
+
+        describe('unique', function () {
+            var a = dtm.array([1, 2, 3, 2, 1]);
+            it('should return [1, 2, 3]', function () {
+                expect(a.get('unique').toString()).toBe([1, 2, 3].toString());
+            });
+        });
     });
 
     describe('histogram', function () {
         var a = dtm.array('hello world!').histo();
         it('should return 3 ls', function () {
             expect(a.get()[2]).toBe(3);
+        });
+    });
+
+    describe('unique', function () {
+        var a = dtm.array([1, 2, 3, 2, 1]).unique();
+        it('should return [1, 2, 3]', function () {
+            expect(a.get().toString()).toBe([1, 2, 3].toString());
         });
     });
 });
