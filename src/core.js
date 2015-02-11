@@ -11,6 +11,10 @@ var out = function () { return actx.destination; };
 var clMult = 0.01;
 var clockBuf = actx.createBuffer(1, Math.round(actx.sampleRate * clMult), actx.sampleRate);
 
+var params = {
+    isLogging: true
+};
+
 /**
  * Returns the singleton dtm object.
  * @name module:core#dtm
@@ -19,9 +23,8 @@ var clockBuf = actx.createBuffer(1, Math.round(actx.sampleRate * clMult), actx.s
 var dtm = {
     version: '0.0.1',
 
-    logger: true,
     log: function (arg) {
-        if (dtm.logger) {
+        if (params.isLogging) {
             console.log(arg);
         }
     },
@@ -57,16 +60,30 @@ var dtm = {
     // * @returns {Array}
     // */
     getModelNames: function () {
-        return _.pluck(dtm.modelCol, 'name');
+        return _.pluck(dtm.modelColl, 'name');
     },
 
-    ajaxGet: ajaxGet,
-    jsonp: jsonp,
-
-    clone: clone,
+    //ajaxGet: ajaxGet,
+    //jsonp: jsonp,
+    //clone: clone,
 
     start: function () {
 
+    },
+
+    get: function (param) {
+        switch (param) {
+            case 'models':
+                return dtm.modelColl;
+            case 'modelNames':
+                var res = [];
+                _.forEach(dtm.modelColl, function (m) {
+                    res.push(m.get('name'));
+                });
+                return res;
+            default:
+                return null;
+        }
     }
 };
 

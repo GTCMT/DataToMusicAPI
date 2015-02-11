@@ -50,7 +50,7 @@ dtm.master = {
      * @function module:master#clock
      * @returns clock {object}
      */
-    clock: dtm.clock(60, 480).sync(false),
+    clock: dtm.clock(120, 480).sync(false),
 
     start: function () {
         return dtm.master;
@@ -131,10 +131,10 @@ dtm.master = {
         return dtm.master;
     },
 
-    get: function (arg) {
+    get: function (param) {
         var out;
 
-        switch (arg) {
+        switch (param) {
             case 'index':
                 out = dtm.master.params.index;
                 break;

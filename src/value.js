@@ -98,8 +98,9 @@ dtm.value = {
 
     random: function (min, max) {
         return _.random(min, max, true);
-    }
+    },
 };
 
-dtm.val = dtm.value;
-//dtm.v = dtm.value;
+dtm.value.rand = dtm.value.random;
+
+dtm.v = dtm.val = dtm.value;

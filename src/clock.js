@@ -16,11 +16,12 @@
  */
 dtm.clock = function (bpm, subDiv, time) {
     var params = {
+        name: null,
         isOn: false,
-        sync: false,
+        sync: true,
         isMaster: false,
 
-        bpm: 60,
+        bpm: 120,
         subDiv: 4,
         random: 0,
         swing: 0.5
@@ -46,8 +47,8 @@ dtm.clock = function (bpm, subDiv, time) {
     // member?
     var curTime = 0.0;
 
-    clock.get = function (arg) {
-        switch (arg) {
+    clock.get = function (param) {
+        switch (param) {
             case 'bpm':
             case 'tempo':
                 return params.bpm;
@@ -73,17 +74,25 @@ dtm.clock = function (bpm, subDiv, time) {
     /**
      * Set the main parameters of the clock.
      * @function module:clock#set
-     * @param bpm {number}
+     * @param [bpm] {number}
      * @param [subDiv] {number}
+     * @param [time] {number}
      * @returns {dtm.clock}
      */
-    clock.set = function (bpm, subDiv) {
-        if (typeof(bpm) !== 'undefined') {
+    clock.set = function (bpm, subDiv, time) {
+        if (typeof(bpm) === 'number') {
             params.bpm = bpm;
             params.sync = false;
+        } else if (typeof(bpm) === 'boolean') {
+            params.sync = bpm;
         }
-        if (typeof(params.subDiv) !== 'undefined') {
+
+        if (typeof(subDiv) !== 'undefined') {
             params.subDiv = subDiv;
+        }
+
+        if (typeof(time) !== 'undefined') {
+            params.time = time;
         }
 
         return clock;
@@ -121,15 +130,8 @@ dtm.clock = function (bpm, subDiv, time) {
             return clock;
         }
         params.bpm = val;
-        clock.tempo = val;
         return clock;
     };
-
-    /**
-     * Same as bpm().
-     * @function module:clock#tempo
-     */
-    clock.tempo = clock.bpm;
 
     /**
      * Sets the subdivision of the clock.
@@ -399,6 +401,7 @@ dtm.clock = function (bpm, subDiv, time) {
     };
 
     // TODO: stopping system should remove these callbacks?
+    // TODO: implement shuffle and randomizez
     clock.tickSynced = function () {
         if (params.sync && params.isOn) {
             if (dtm.master.clock.beat % Math.round(480/params.subDiv) === 0) {
@@ -496,20 +499,7 @@ dtm.clock = function (bpm, subDiv, time) {
         dtm.master.clock.add(clock.tickSynced);
     }
 
-    if (typeof(bpm) === 'number') {
-        params.bpm = bpm;
-        params.sync = false;
-    } else if (typeof(bpm) === 'boolean') {
-        params.sync = bpm;
-    }
-
-    if (typeof(subDiv) !== 'undefined') {
-        params.subDiv = subDiv;
-    }
-
-    if (typeof(time) !== 'undefined') {
-        clock.params.time = time;
-    }
+    clock.set(bpm, subDiv, time);
 
     return clock;
 };

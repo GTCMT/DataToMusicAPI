@@ -9,7 +9,7 @@
         return m;
     };
 
-    m.get = function () {
-        return defIntervals;
-    };
+    //m.get = function () {
+    //    return defIntervals;
+    //};
 })();

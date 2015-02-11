@@ -20,7 +20,7 @@ module.exports = function (grunt) {
                     'src/synth.js',
                     'src/synth2.js',
                     'src/stream.js',
-                    'src/voice.js',
+                    //'src/voice.js',
                     'src/master.js',
                     'src/guido.js',
                     'src/inscore.js',

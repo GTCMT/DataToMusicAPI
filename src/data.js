@@ -36,10 +36,10 @@ dtm.data = function (arg, cb, type) {
      * @param id {string|integer} Key (string) or index (integer)
      * @returns {dtm.array}
      */
-    data.get = function (arg, id) {
+    data.get = function (param, id) {
         var out = null;
 
-        switch (arg) {
+        switch (param) {
             case 'arrays':
             case 'array':
             case 'arr':
@@ -49,45 +49,38 @@ dtm.data = function (arg, cb, type) {
                         return params.arrays[params.keys[id]].clone();
                     } else {
                         dtm.log('data.get(): index out of range');
-                        out = data;
+                        return data;
                     }
                 } else if (typeof(id) === 'string') {
                     if (params.keys.indexOf(id) > -1) {
                         return params.arrays[id].clone();
                     } else {
                         dtm.log('data.get(): key does not exist');
-                        out = data;
+                        return data;
                     }
                 } else {
                     dtm.log('data.get(): please specify array with index or name');
-                    out = params.arrays;
+                    return params.arrays;
                 }
-                break;
 
             case 'collection':
             case 'coll':
-                break;
+                return params.coll;
 
             case 'size':
-                out = params.size;
-                break;
+                return params.size;
 
             case 'key':
             case 'keys':
-                out = params.keys;
-                break;
+                return params.keys;
 
             case 'type':
             case 'types':
-                out = params.types;
-                break;
+                return params.types;
 
             default:
-                out = data;
-                break;
+                return data;
         }
-
-        return out;
     };
 
     data.set = function (res) {

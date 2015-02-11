@@ -13,6 +13,10 @@ var out = function () { return actx.destination; };
 var clMult = 0.01;
 var clockBuf = actx.createBuffer(1, Math.round(actx.sampleRate * clMult), actx.sampleRate);
 
+var params = {
+    isLogging: true
+};
+
 /**
  * Returns the singleton dtm object.
  * @name module:core#dtm
@@ -21,9 +25,8 @@ var clockBuf = actx.createBuffer(1, Math.round(actx.sampleRate * clMult), actx.s
 var dtm = {
     version: '0.0.1',
 
-    logger: true,
     log: function (arg) {
-        if (dtm.logger) {
+        if (params.isLogging) {
             console.log(arg);
         }
     },
@@ -59,16 +62,30 @@ var dtm = {
     // * @returns {Array}
     // */
     getModelNames: function () {
-        return _.pluck(dtm.modelCol, 'name');
+        return _.pluck(dtm.modelColl, 'name');
     },
 
-    ajaxGet: ajaxGet,
-    jsonp: jsonp,
-
-    clone: clone,
+    //ajaxGet: ajaxGet,
+    //jsonp: jsonp,
+    //clone: clone,
 
     start: function () {
 
+    },
+
+    get: function (param) {
+        switch (param) {
+            case 'models':
+                return dtm.modelColl;
+            case 'modelNames':
+                var res = [];
+                _.forEach(dtm.modelColl, function (m) {
+                    res.push(m.get('name'));
+                });
+                return res;
+            default:
+                return null;
+        }
     }
 };
 
@@ -632,8 +649,15 @@ dtm.transform = {
 
             case 'noise':
             case 'random':
+            case 'rand':
                 for (var i = 0; i < len; i++) {
                     res[i] = _.random(min, max, true);
+                }
+                break;
+
+            case 'randi':
+                for (var i = 0; i < len; i++) {
+                    res[i] = _.random(min, max);
                 }
                 break;
 
@@ -2213,7 +2237,7 @@ dtm.collection = function () {
         type: 'dtm.collection'
     };
 
-    coll.get = function (arg) {
+    coll.get = function (param) {
         var out = null;
         return out;
     };
@@ -2336,11 +2360,12 @@ dtm.value = {
 
     random: function (min, max) {
         return _.random(min, max, true);
-    }
+    },
 };
 
-dtm.val = dtm.value;
-//dtm.v = dtm.value;
+dtm.value.rand = dtm.value.random;
+
+dtm.v = dtm.val = dtm.value;
 /**
  * @fileOverview Array iterator.
  * @module iterator
@@ -2664,10 +2689,10 @@ dtm.data = function (arg, cb, type) {
      * @param id {string|integer} Key (string) or index (integer)
      * @returns {dtm.array}
      */
-    data.get = function (arg, id) {
+    data.get = function (param, id) {
         var out = null;
 
-        switch (arg) {
+        switch (param) {
             case 'arrays':
             case 'array':
             case 'arr':
@@ -2677,45 +2702,38 @@ dtm.data = function (arg, cb, type) {
                         return params.arrays[params.keys[id]].clone();
                     } else {
                         dtm.log('data.get(): index out of range');
-                        out = data;
+                        return data;
                     }
                 } else if (typeof(id) === 'string') {
                     if (params.keys.indexOf(id) > -1) {
                         return params.arrays[id].clone();
                     } else {
                         dtm.log('data.get(): key does not exist');
-                        out = data;
+                        return data;
                     }
                 } else {
                     dtm.log('data.get(): please specify array with index or name');
-                    out = params.arrays;
+                    return params.arrays;
                 }
-                break;
 
             case 'collection':
             case 'coll':
-                break;
+                return params.coll;
 
             case 'size':
-                out = params.size;
-                break;
+                return params.size;
 
             case 'key':
             case 'keys':
-                out = params.keys;
-                break;
+                return params.keys;
 
             case 'type':
             case 'types':
-                out = params.types;
-                break;
+                return params.types;
 
             default:
-                out = data;
-                break;
+                return data;
         }
-
-        return out;
     };
 
     data.set = function (res) {
@@ -2971,11 +2989,12 @@ dtm.d = dtm.data;
  */
 dtm.clock = function (bpm, subDiv, time) {
     var params = {
+        name: null,
         isOn: false,
-        sync: false,
+        sync: true,
         isMaster: false,
 
-        bpm: 60,
+        bpm: 120,
         subDiv: 4,
         random: 0,
         swing: 0.5
@@ -3001,8 +3020,8 @@ dtm.clock = function (bpm, subDiv, time) {
     // member?
     var curTime = 0.0;
 
-    clock.get = function (arg) {
-        switch (arg) {
+    clock.get = function (param) {
+        switch (param) {
             case 'bpm':
             case 'tempo':
                 return params.bpm;
@@ -3028,17 +3047,25 @@ dtm.clock = function (bpm, subDiv, time) {
     /**
      * Set the main parameters of the clock.
      * @function module:clock#set
-     * @param bpm {number}
+     * @param [bpm] {number}
      * @param [subDiv] {number}
+     * @param [time] {number}
      * @returns {dtm.clock}
      */
-    clock.set = function (bpm, subDiv) {
-        if (typeof(bpm) !== 'undefined') {
+    clock.set = function (bpm, subDiv, time) {
+        if (typeof(bpm) === 'number') {
             params.bpm = bpm;
             params.sync = false;
+        } else if (typeof(bpm) === 'boolean') {
+            params.sync = bpm;
         }
-        if (typeof(params.subDiv) !== 'undefined') {
+
+        if (typeof(subDiv) !== 'undefined') {
             params.subDiv = subDiv;
+        }
+
+        if (typeof(time) !== 'undefined') {
+            params.time = time;
         }
 
         return clock;
@@ -3076,15 +3103,8 @@ dtm.clock = function (bpm, subDiv, time) {
             return clock;
         }
         params.bpm = val;
-        clock.tempo = val;
         return clock;
     };
-
-    /**
-     * Same as bpm().
-     * @function module:clock#tempo
-     */
-    clock.tempo = clock.bpm;
 
     /**
      * Sets the subdivision of the clock.
@@ -3354,6 +3374,7 @@ dtm.clock = function (bpm, subDiv, time) {
     };
 
     // TODO: stopping system should remove these callbacks?
+    // TODO: implement shuffle and randomizez
     clock.tickSynced = function () {
         if (params.sync && params.isOn) {
             if (dtm.master.clock.beat % Math.round(480/params.subDiv) === 0) {
@@ -3451,20 +3472,7 @@ dtm.clock = function (bpm, subDiv, time) {
         dtm.master.clock.add(clock.tickSynced);
     }
 
-    if (typeof(bpm) === 'number') {
-        params.bpm = bpm;
-        params.sync = false;
-    } else if (typeof(bpm) === 'boolean') {
-        params.sync = bpm;
-    }
-
-    if (typeof(subDiv) !== 'undefined') {
-        params.subDiv = subDiv;
-    }
-
-    if (typeof(time) !== 'undefined') {
-        clock.params.time = time;
-    }
+    clock.set(bpm, subDiv, time);
 
     return clock;
 };
@@ -3490,7 +3498,7 @@ dtm.instr = function (arg) {
         modDest: [],
 
         sync: true,
-        clock: dtm.clock(true, 8),
+        clock: dtm.clock(true, 16),
         subDivision: 16,
 
         models: {
@@ -3518,12 +3526,12 @@ dtm.instr = function (arg) {
      * Sets a model for one of the parameters of the instrument.
      * @function module:instr#model
      * @param model {string|dtm.model|dtm.array}
-     * @param [target='any'] {string}
+     * @param [target='none'] {string}
      * @returns {dtm.instr}
      */
     instr.model = function () {
         var arg = arguments[0];
-        var categ = 'any'; // TODO: WIP
+        var categ = 'none'; // TODO: WIP
 
         if (typeof(arguments[1]) === 'string') {
             categ = arguments[1];
@@ -3534,7 +3542,7 @@ dtm.instr = function (arg) {
             if (categ) {
                 params.models[categ] = dtm.array(arg);
             } else {
-                params.models['any'] = dtm.array(arg);
+                params.models['none'] = dtm.array(arg);
             }
         } else if (typeof(arg) === 'object') {
             if (arg.type === 'dtm.model') {
@@ -3587,6 +3595,33 @@ dtm.instr = function (arg) {
         return instr;
     };
 
+    function defaultInstr(c) {
+        var v = params.models.voice;
+
+        // CHECK: only for dtm.arrays
+        if (typeof(params.models.beats) !== 'undefined') {
+            if (params.models.beats.get('next')) {
+                if (typeof(params.models.melody) !== 'undefined') {
+                    v.nn(params.models.melody.next());
+                }
+
+                v.play();
+            }
+        } else {
+            //if (typeof(params.models.melody) !== 'undefined') {
+            //    v.nn(params.models.melody.next());
+            //}
+
+            if (typeof(params.models.pitch) !== 'undefined') {
+                var nn = params.models.pitch.get('next');
+                nn = dtm.val.rescale(nn, 60, 100, true);
+                v.nn(nn);
+            }
+
+            v.play();
+        }
+    }
+
     /**
      * Starts performing the instrument.
      * @function module:instr#play
@@ -3599,32 +3634,7 @@ dtm.instr = function (arg) {
             dtm.log('playing: ' + params.name);
 
             if (!params.instrModel) {
-                params.clock.add(function defInstr() {
-                    var v = params.models.voice;
-
-                    // CHECK: only for dtm.arrays
-                    if (typeof(params.models.beats) !== 'undefined') {
-                        if (params.models.beats.next()) {
-                            if (typeof(params.models.melody) !== 'undefined') {
-                                v.nn(params.models.melody.next());
-                            }
-
-                            v.play();
-                        }
-                    } else {
-                        //if (typeof(params.models.melody) !== 'undefined') {
-                        //    v.nn(params.models.melody.next());
-                        //}
-
-                        if (typeof(params.models.pitch) !== 'undefined') {
-                            var nn = params.models.pitch.next();
-                            nn = dtm.val.rescale(nn, 60, 100, true);
-                            v.nn(nn);
-                        }
-
-                        v.play();
-                    }
-                }).start(); // ???
+                params.clock.add(defaultInstr).start(); // ???
             }
 
             if (params.instrModel) {
@@ -3678,6 +3688,8 @@ dtm.instr = function (arg) {
         return instr;
     };
 
+    instr.div = instr.subdiv = instr.subDiv;
+
     instr.sync = function (bool) {
         if (typeof(bool) === 'undefined') {
             bool = true;
@@ -3726,11 +3738,13 @@ dtm.instr = function (arg) {
     instr.modulate = instr.mod;
 
     instr.map = function (src, dest) {
-        // testing w/ array...
-        if (src.type === 'dtm.array') {
-
-            // assigning an array here is not so smart...
+        if (src instanceof Array) {
+            params.models[dest] = dtm.array(src).normalize();
+        } else if (src.type === 'dtm.array') {
+            // CHECK: assigning an array here is maybe not so smart...
             params.models[dest] = src.normalize();
+        } else if (src.type === 'dtm.model') {
+
         }
         // use global index from the master
 
@@ -3794,7 +3808,8 @@ dtm.instr = function (arg) {
     return instr;
 };
 
-dtm.i = dtm.instr;
+dtm.i = dtm.instrument = dtm.instr;
+dtm.voice = dtm.instr;
 /**
  * @fileOverview Used to create a new instrument / musical models. Hopefully.
  * @module model
@@ -3813,7 +3828,6 @@ dtm.model = function (name, categ) {
         name: null,
         categ: 'none',
         categories: []
-        //voice: null
     };
 
     var model = {
@@ -3822,15 +3836,16 @@ dtm.model = function (name, categ) {
         // assigning array or data/coll???
         //array: null,
         //data: null,
+        parents: {},
 
         params: {},
         models: {}
     };
 
-    model.get = function (arg) {
+    model.get = function (param) {
         var out = null;
 
-        switch (arg) {
+        switch (param) {
             case 'name':
                 out = params.name;
                 break;
@@ -3845,6 +3860,10 @@ dtm.model = function (name, categ) {
                 break;
         }
         return out;
+    };
+
+    model.set = function (arg) {
+        return model;
     };
 
     /**
@@ -3883,10 +3902,6 @@ dtm.model = function (name, categ) {
     model.mod = function (val) {
         return model;
     };
-
-    //model.get = function (key) {
-    //    return model.params[key];
-    //};
 
     model.modulate = model.mod;
 
@@ -3988,10 +4003,10 @@ dtm.synth = function (type) {
         promise: null
     };
 
-    synth.get = function (arg) {
+    synth.get = function (param) {
         var out = null;
 
-        switch (arg) {
+        switch (param) {
             case 'amp':
             case 'volume':
             case 'gain':
@@ -4607,143 +4622,6 @@ function runningAvg() {
 function capture(len, cb) {
 
 }
-///**
-// * @fileOverview A voice is an instance of musical model. It is used to make actual sounds.
-// * @module voice
-// */
-
-///**
-// * Creats a new instance of voice, using the existing model name (string) or a model object.
-// *
-// * @function module:voice.voice
-// * @param name {string|object}
-// * @returns {object} a new voice
-// */
-dtm.voice = function (arg) {
-    var voice = {
-        type: 'dtm.voice',
-
-        ///**
-        // * @name module:voice#model
-        // * @type {object}
-        // */
-        model: null,
-        modelName: null, // TODO: this is maybe redundant
-
-        transposition: 0,
-        scale: [],
-        clock: dtm.clock(),
-
-        master: dtm.master
-    };
-
-    if (typeof(arg) !== 'undefined') {
-        if (typeof(arg) === 'string') {
-            // TODO: maybe should assign model to the field instead
-            voice.modelName = arg;
-
-            // TODO: hmm
-            voice.model = _.find(dtm.modelCol, {name: voice.modelName});
-
-        } else {
-            voice.model = arg;
-            voice.modelName = arg.name;
-        }
-    }
-
-
-    ///**
-    // * @function module:voice#getModel
-    // * @returns {object} model
-    // */
-    voice.getModel = function () {
-        return voice.model;
-    };
-
-    // CHECK: maybe this is redundant
-    ///**
-    // * @function module:voice#getModelName
-    // * @returns {string} model name
-    // */
-    voice.getModelName = function () {
-        return voice.modelName;
-    };
-
-
-
-    var verbLen = 44100 * 0.3;
-    var ir = actx.createBuffer(1, verbLen, 44100);
-    _.forEach(ir, function (val, idx) {
-        ir.getChannelData(0)[idx] = _.random(-1, 1, true) * (verbLen-idx) / verbLen;
-    });
-    var verb = actx.createConvolver();
-    verb.buffer = ir;
-
-    voice.sendVerb = function (fVal) {
-        return voice;
-    };
-
-    voice.setDelay = function (fVal) {
-        return voice;
-    };
-
-    // TODO: maybe fix this redundancy
-    if (voice.modelName !== null) {
-        ///**
-        // * @function module:voice#play
-        // * @param [nn]
-        // */
-        voice.play = function (nn) {
-            return _.find(dtm.modelCol, {name: voice.modelName}).play(nn);
-        };
-
-        ///**
-        // * @function module:voice#run
-        // * @param [clock]
-        // * @returns {Object}
-        // */
-        voice.run = function (clock) {
-            if (typeof(clock) === 'undefined') {
-                clock = voice.clock;
-            }
-            _.find(dtm.modelCol, {name: voice.modelName}).run(clock);
-            return voice.model;
-        };
-
-        ///**
-        // * @function module:voice#modulate
-        // * @param val
-        // * @returns {*}
-        // */
-        voice.modulate = function (val) {
-            return _.find(dtm.modelCol, {name: voice.modelName}).modulate(val);
-        };
-
-        voice.getParentClock = function () {
-            return _.find(dtm.modelCol, {name: voice.modelName}).getParentClock();
-        };
-
-        voice.addParentClock = function (pCl) {
-            console.log('test');
-            _.find(dtm.modelCol, {name: voice.modelName}).addParentClock(pCl);
-        };
-
-        //voice.motif = voice.model.motif;
-    }
-
-    voice.clone = function () {
-        // CHECK: this may not work, use constructor instead
-        return dtm.clone(voice);
-    };
-
-    dtm.master.numActiveModels += 1;
-    dtm.master.totalComplexity += _.find(dtm.modelCol, {name: voice.modelName}).complexity;
-    dtm.master.voices.push(voice);
-
-    return voice;
-};
-
-dtm.v = dtm.voice;
 /**
  * @fileOverview Singleton master (conductor) module. Wants to oversee and control everything, but not quite there yet.
  * @module master
@@ -4796,7 +4674,7 @@ dtm.master = {
      * @function module:master#clock
      * @returns clock {object}
      */
-    clock: dtm.clock(60, 480).sync(false),
+    clock: dtm.clock(120, 480).sync(false),
 
     start: function () {
         return dtm.master;
@@ -4877,10 +4755,10 @@ dtm.master = {
         return dtm.master;
     },
 
-    get: function (arg) {
+    get: function (param) {
         var out;
 
-        switch (arg) {
+        switch (param) {
             case 'index':
                 out = dtm.master.params.index;
                 break;
@@ -5055,9 +4933,9 @@ dtm.inscore = function () {
         return m;
     };
 
-    m.get = function () {
-        return defIntervals;
-    };
+    //m.get = function () {
+    //    return defIntervals;
+    //};
 })();
 (function () {
     var m = dtm.model('chord', 'chord');
@@ -5066,18 +4944,18 @@ dtm.inscore = function () {
     //    key: null
     //};
 
-    m.get = function () {
-        return [0, 4, 7, 11];
-    };
+    //m.get = function () {
+    //    return [0, 4, 7, 11];
+    //};
 })();
 (function () {
     var m = dtm.model('scale', 'scale');
 
     var scale = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
 
-    m.get = function () {
-        return scale;
-    };
+    //m.get = function () {
+    //    return scale;
+    //};
 
     m.set = function (arr) {
         scale = arr;
@@ -5158,9 +5036,9 @@ dtm.inscore = function () {
         return m;
     };
 
-    m.get = function () {
-        return m.params.scale;
-    };
+    //m.get = function () {
+    //    return m.params.scale;
+    //};
 })();
 
 

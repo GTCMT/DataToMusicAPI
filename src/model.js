@@ -16,7 +16,6 @@ dtm.model = function (name, categ) {
         name: null,
         categ: 'none',
         categories: []
-        //voice: null
     };
 
     var model = {
@@ -25,15 +24,16 @@ dtm.model = function (name, categ) {
         // assigning array or data/coll???
         //array: null,
         //data: null,
+        parents: {},
 
         params: {},
         models: {}
     };
 
-    model.get = function (arg) {
+    model.get = function (param) {
         var out = null;
 
-        switch (arg) {
+        switch (param) {
             case 'name':
                 out = params.name;
                 break;
@@ -48,6 +48,10 @@ dtm.model = function (name, categ) {
                 break;
         }
         return out;
+    };
+
+    model.set = function (arg) {
+        return model;
     };
 
     /**
@@ -86,10 +90,6 @@ dtm.model = function (name, categ) {
     model.mod = function (val) {
         return model;
     };
-
-    //model.get = function (key) {
-    //    return model.params[key];
-    //};
 
     model.modulate = model.mod;
 

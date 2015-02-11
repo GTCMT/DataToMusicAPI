@@ -75,8 +75,15 @@ dtm.transform = {
 
             case 'noise':
             case 'random':
+            case 'rand':
                 for (var i = 0; i < len; i++) {
                     res[i] = _.random(min, max, true);
+                }
+                break;
+
+            case 'randi':
+                for (var i = 0; i < len; i++) {
+                    res[i] = _.random(min, max);
                 }
                 break;
 

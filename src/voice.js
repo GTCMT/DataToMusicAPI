@@ -133,5 +133,3 @@ dtm.voice = function (arg) {
 
     return voice;
 };
-
-dtm.v = dtm.voice;

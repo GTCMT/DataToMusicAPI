@@ -67,10 +67,10 @@ dtm.synth = function (type) {
         promise: null
     };
 
-    synth.get = function (arg) {
+    synth.get = function (param) {
         var out = null;
 
-        switch (arg) {
+        switch (param) {
             case 'amp':
             case 'volume':
             case 'gain':

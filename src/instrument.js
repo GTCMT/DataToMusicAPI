@@ -18,7 +18,7 @@ dtm.instr = function (arg) {
         modDest: [],
 
         sync: true,
-        clock: dtm.clock(true, 8),
+        clock: dtm.clock(true, 16),
         subDivision: 16,
 
         models: {
@@ -46,12 +46,12 @@ dtm.instr = function (arg) {
      * Sets a model for one of the parameters of the instrument.
      * @function module:instr#model
      * @param model {string|dtm.model|dtm.array}
-     * @param [target='any'] {string}
+     * @param [target='none'] {string}
      * @returns {dtm.instr}
      */
     instr.model = function () {
         var arg = arguments[0];
-        var categ = 'any'; // TODO: WIP
+        var categ = 'none'; // TODO: WIP
 
         if (typeof(arguments[1]) === 'string') {
             categ = arguments[1];
@@ -62,7 +62,7 @@ dtm.instr = function (arg) {
             if (categ) {
                 params.models[categ] = dtm.array(arg);
             } else {
-                params.models['any'] = dtm.array(arg);
+                params.models['none'] = dtm.array(arg);
             }
         } else if (typeof(arg) === 'object') {
             if (arg.type === 'dtm.model') {
@@ -115,6 +115,33 @@ dtm.instr = function (arg) {
         return instr;
     };
 
+    function defaultInstr(c) {
+        var v = params.models.voice;
+
+        // CHECK: only for dtm.arrays
+        if (typeof(params.models.beats) !== 'undefined') {
+            if (params.models.beats.get('next')) {
+                if (typeof(params.models.melody) !== 'undefined') {
+                    v.nn(params.models.melody.next());
+                }
+
+                v.play();
+            }
+        } else {
+            //if (typeof(params.models.melody) !== 'undefined') {
+            //    v.nn(params.models.melody.next());
+            //}
+
+            if (typeof(params.models.pitch) !== 'undefined') {
+                var nn = params.models.pitch.get('next');
+                nn = dtm.val.rescale(nn, 60, 100, true);
+                v.nn(nn);
+            }
+
+            v.play();
+        }
+    }
+
     /**
      * Starts performing the instrument.
      * @function module:instr#play
@@ -127,32 +154,7 @@ dtm.instr = function (arg) {
             dtm.log('playing: ' + params.name);
 
             if (!params.instrModel) {
-                params.clock.add(function defInstr() {
-                    var v = params.models.voice;
-
-                    // CHECK: only for dtm.arrays
-                    if (typeof(params.models.beats) !== 'undefined') {
-                        if (params.models.beats.next()) {
-                            if (typeof(params.models.melody) !== 'undefined') {
-                                v.nn(params.models.melody.next());
-                            }
-
-                            v.play();
-                        }
-                    } else {
-                        //if (typeof(params.models.melody) !== 'undefined') {
-                        //    v.nn(params.models.melody.next());
-                        //}
-
-                        if (typeof(params.models.pitch) !== 'undefined') {
-                            var nn = params.models.pitch.next();
-                            nn = dtm.val.rescale(nn, 60, 100, true);
-                            v.nn(nn);
-                        }
-
-                        v.play();
-                    }
-                }).start(); // ???
+                params.clock.add(defaultInstr).start(); // ???
             }
 
             if (params.instrModel) {
@@ -206,6 +208,8 @@ dtm.instr = function (arg) {
         return instr;
     };
 
+    instr.div = instr.subdiv = instr.subDiv;
+
     instr.sync = function (bool) {
         if (typeof(bool) === 'undefined') {
             bool = true;
@@ -254,11 +258,13 @@ dtm.instr = function (arg) {
     instr.modulate = instr.mod;
 
     instr.map = function (src, dest) {
-        // testing w/ array...
-        if (src.type === 'dtm.array') {
-
-            // assigning an array here is not so smart...
+        if (src instanceof Array) {
+            params.models[dest] = dtm.array(src).normalize();
+        } else if (src.type === 'dtm.array') {
+            // CHECK: assigning an array here is maybe not so smart...
             params.models[dest] = src.normalize();
+        } else if (src.type === 'dtm.model') {
+
         }
         // use global index from the master
 
@@ -322,4 +328,5 @@ dtm.instr = function (arg) {
     return instr;
 };
 
-dtm.i = dtm.instr;
+dtm.i = dtm.instrument = dtm.instr;
+dtm.voice = dtm.instr;

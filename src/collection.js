@@ -19,7 +19,7 @@ dtm.collection = function () {
         type: 'dtm.collection'
     };
 
-    coll.get = function (arg) {
+    coll.get = function (param) {
         var out = null;
         return out;
     };

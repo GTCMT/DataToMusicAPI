@@ -30,9 +30,9 @@
         return m;
     };
 
-    m.get = function () {
-        return m.params.scale;
-    };
+    //m.get = function () {
+    //    return m.params.scale;
+    //};
 })();
 
 
