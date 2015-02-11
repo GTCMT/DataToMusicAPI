@@ -61,25 +61,32 @@ dtm.array = function (arr, name) {
                 case 'key':
                     out = params.name;
                     break;
+
                 case 'type':
                     out = params.type;
                     break;
+                
                 case 'len':
                 case 'length':
                     out = params.length;
                     break;
 
+                case 'minimum':
                 case 'min':
                     out = dtm.analyzer.min(params.value);
                     break;
+
+                case 'maximum':
                 case 'max':
                     out = dtm.analyzer.max(params.value);
                     break;
+
                 case 'mean':
                 case 'average':
                 case 'avg':
                     out = dtm.analyzer.mean(params.value);
                     break;
+
                 case 'mode':
                     out = dtm.analyzer.mode(params.value);
                     break;
@@ -89,15 +96,20 @@ dtm.array = function (arr, name) {
                 case 'midrange':
                     out = dtm.analyzer.midrange(params.value);
                     break;
+
+                case 'standardDeviation':
                 case 'std':
                     out = dtm.analyzer.std(params.value);
                     break;
                 case 'pstd':
                     out = dtm.analyzer.pstd(params.value);
                     break;
+
+                case 'variance':
                 case 'var':
                     out = dtm.analyzer.var(params.value);
                     break;
+                case 'populationVariance':
                 case 'pvar':
                     out = dtm.analyzer.pvar(params.value);
                     break;
@@ -150,11 +162,23 @@ dtm.array = function (arr, name) {
                 case 'normalized':
                     out = dtm.transform.normalize(params.value);
                     break;
+
+                case 'sorted':
+                case 'sort':
+                    out = dtm.transform.sort(params.value);
+                    break;
+
                 case 'classes':
+                    out = dtm.analyzer.classes(params.value);
                     break;
+
                 case 'numClasses':
+                    out = dtm.analyzer.classes(params.value).length;
                     break;
+
+                case 'histogram':
                 case 'histo':
+                    out = dtm.analyzer.histo(params.value);
                     break;
 
                 default:
@@ -197,12 +221,6 @@ dtm.array = function (arr, name) {
             params.max = dtm.analyzer.max(input);
             params.mean = dtm.analyzer.mean(input);
             params.std = dtm.analyzer.std(input);
-            params.mode = dtm.analyzer.mode(input);
-        }
-
-        if (params.type === 'string') {
-            histo();
-            params.mode = dtm.analyzer.mode(params.classes);
         }
 
         params.length = input.length;
@@ -265,27 +283,31 @@ dtm.array = function (arr, name) {
 
 
     // TODO: need this in transformer???
-    ///**
-    // * Generates a histogram from a nominal array, such as the string type.
-    // * @function module:array#histo
-    // * @returns {dtm.array}
-    // */
-    array.histo = histo;
+    /**
+    * Generates a histogram from a nominal array, such as the string type.
+    * @function module:array#histo
+    * @returns {dtm.array}
+    */
+    array.histo = function () {
+        //params.classes = _.clone(params.value);
+        //params.histogram = _.countBy(params.value);
+        ////array.numClasses =
+        //
+        //_.forEach(params.classes, function (val, idx) {
+        //    params.value[idx] = params.histogram[val];
+        //});
 
-    function histo() {
-        params.classes = _.clone(params.value);
-        params.histogram = _.countBy(params.value);
-        //array.numClasses =
+        //params.mode = dtm.analyzer.mode(params.classes);
 
-        _.forEach(params.classes, function (val, idx) {
-            params.value[idx] = params.histogram[val];
-        });
+        array.set(dtm.analyzer.histo(params.value));
 
-        array.set(params.value);
-        params.type = 'string'; // re-set the type to string from number... hacky!
+        // CHECK: this is hacky
+        params.type = 'string'; // re-set the type to string from number
 
         return array;
-    }
+    };
+
+    array.histogram = array.histo;
 
     /**
      * Returns a clone of the array object. It can be used when you don't want to reference the same array object from different places.

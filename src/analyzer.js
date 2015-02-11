@@ -36,7 +36,12 @@ dtm.analyzer = {
      * @returns {T}
      */
     min: function (arr) {
-        return _.min(arr);
+        if (dtm.analyzer.checkType(arr) === 'string') {
+            dtm.log('cannot get the min value of a string array');
+            return null;
+        } else {
+            return _.min(arr);
+        }
     },
 
     /**
@@ -46,7 +51,12 @@ dtm.analyzer = {
      * @returns {T}
      */
     max: function (arr) {
-        return _.max(arr);
+        if (dtm.analyzer.checkType(arr) === 'string') {
+            dtm.log('cannot get the max value of a string array');
+            return null;
+        } else {
+            return _.max(arr);
+        }
     },
 
     // CHECK: ugly!
@@ -232,6 +242,22 @@ dtm.analyzer = {
         });
 
         return Math.sqrt(dtm.analyzer.mean(res));
+    },
+
+    histo: function (input) {
+        var res = [];
+        var classes = _.clone(input);
+        var histogram = _.countBy(input);
+
+        _.forEach(classes, function (val, idx) {
+            res[idx] = histogram[val];
+        });
+
+        return res;
+    },
+
+    classes: function (input) {
+        return _.uniq(input).sort();
     },
 
     ///**

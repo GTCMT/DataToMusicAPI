@@ -40,6 +40,7 @@ dtm.data = function (arg, cb, type) {
         var out = null;
 
         switch (arg) {
+            case 'arrays':
             case 'array':
             case 'arr':
             case 'a':
@@ -59,12 +60,8 @@ dtm.data = function (arg, cb, type) {
                     }
                 } else {
                     dtm.log('data.get(): please specify array with index or name');
-                    out = data;
+                    out = params.arrays;
                 }
-                break;
-
-            case 'arrays':
-                out = params.arrays;
                 break;
 
             case 'collection':
