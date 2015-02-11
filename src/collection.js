@@ -9,11 +9,19 @@
  * @returns dtm.collection {object}
  */
 dtm.collection = function () {
-    var coll = {
-        type: 'dtm.collection',
+    var params = {
         keys: [],
         types: [],
         values: []
+    };
+
+    var coll = {
+        type: 'dtm.collection'
+    };
+
+    coll.get = function (arg) {
+        var out = null;
+        return out;
     };
 
     coll.set = function () {

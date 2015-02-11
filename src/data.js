@@ -11,11 +11,12 @@
  * @returns {dtm.data | promise}
  */
 dtm.data = function (arg, cb, type) {
+    var params = {
+
+    };
+
     var data = {
         type: 'dtm.data',
-
-        //value: null,
-        //type: null, // ???: csv, json, etc.
 
         /**
          * The data stored as a collection / array of objects.
@@ -62,6 +63,39 @@ dtm.data = function (arg, cb, type) {
         promise: null
     };
 
+    /**
+     * Returns a clone of dtm.array object from the data.
+     * @param id {string|integer} Key (string) or index (integer)
+     * @returns {dtm.array}
+     */
+    data.get = function (id) {
+        if (typeof(id) === 'number') {
+            if (id >= 0 && id < data.params.size['col']) {
+                return data.arrays[data.params.keys[id]].clone();
+            } else {
+                dtm.log('data.get(): index out of range');
+                return data;
+            }
+        } else if (typeof(id) === 'string') {
+            if (data.params.keys.indexOf(id) > -1) {
+                return data.arrays[id].clone();
+            } else {
+                dtm.log('data.get(): key does not exist');
+                return data;
+            }
+        } else {
+            return data;
+        }
+    };
+
+    data.set = function (res) {
+        data.coll = res;
+        data.params.keys = _.keys(data.coll[0]);
+        setArrays();
+        setTypes();
+        setSize();
+    };
+
     //if (type !== 'undefined') {
     //    // array, csv, json
     //    switch (type) {
@@ -80,6 +114,7 @@ dtm.data = function (arg, cb, type) {
     //            break;
     //    }
     //}
+
 
     // TODO: make a dict for well-known APIs to load data nicely
     /**
@@ -234,13 +269,6 @@ dtm.data = function (arg, cb, type) {
     //    return data.promise;
     //};
 
-    data.set = function (res) {
-        data.coll = res;
-        data.params.keys = _.keys(data.coll[0]);
-        setArrays();
-        setTypes();
-        setSize();
-    };
 
     function setArrays() {
         _.forEach(data.params.keys, function (key) {
@@ -259,31 +287,6 @@ dtm.data = function (arg, cb, type) {
         data.params.size.col = data.params.keys.length;
         data.params.size.row = data.coll.length;
     }
-
-    /**
-     * Returns a clone of dtm.array object from the data.
-     * @param id {string|integer} Key (string) or index (integer)
-     * @returns {dtm.array}
-     */
-    data.get = function (id) {
-        if (typeof(id) === 'number') {
-            if (id >= 0 && id < data.params.size['col']) {
-                return data.arrays[data.params.keys[id]].clone();
-            } else {
-                dtm.log('data.get(): index out of range');
-                return data;
-            }
-        } else if (typeof(id) === 'string') {
-            if (data.params.keys.indexOf(id) > -1) {
-                return data.arrays[id].clone();
-            } else {
-                dtm.log('data.get(): key does not exist');
-                return data;
-            }
-        } else {
-            return data;
-        }
-    };
 
     //data.capture = function () {
     //    return new Promise(function (resolve, reject) {
