@@ -45,79 +45,62 @@ dtm.array = function (arr, name) {
      * @returns {number|array|string}
      */
     array.get = function (param) {
-        var out;
-        var type = typeof(param);
-
-        if (type === 'number') {
+        if (typeof(param) === 'number') {
             if (param < 0 || param >= params.length) {
                 dtm.log('Index out of range');
-                out = params.value[dtm.value.mod(param, params.length)];
+                return params.value[dtm.value.mod(param, params.length)];
             } else {
-                out = params.value[param];
+                return params.value[param];
             }
         } else {
             switch (param) {
                 case 'name':
                 case 'key':
-                    out = params.name;
-                    break;
+                    return params.name;
 
                 case 'type':
-                    out = params.type;
-                    break;
+                    return params.type;
                 
                 case 'len':
                 case 'length':
-                    out = params.length;
-                    break;
+                    return params.length;
 
                 case 'minimum':
                 case 'min':
-                    out = dtm.analyzer.min(params.value);
-                    break;
+                    return dtm.analyzer.min(params.value);
 
                 case 'maximum':
                 case 'max':
-                    out = dtm.analyzer.max(params.value);
-                    break;
+                    return dtm.analyzer.max(params.value);
 
                 case 'mean':
                 case 'average':
                 case 'avg':
-                    out = dtm.analyzer.mean(params.value);
-                    break;
+                    return dtm.analyzer.mean(params.value);
 
                 case 'mode':
-                    out = dtm.analyzer.mode(params.value);
-                    break;
+                    return dtm.analyzer.mode(params.value);
                 case 'median':
-                    out = dtm.analyzer.median(params.value);
-                    break;
+                    return dtm.analyzer.median(params.value);
                 case 'midrange':
-                    out = dtm.analyzer.midrange(params.value);
-                    break;
+                    return dtm.analyzer.midrange(params.value);
 
                 case 'standardDeviation':
                 case 'std':
-                    out = dtm.analyzer.std(params.value);
-                    break;
+                    return dtm.analyzer.std(params.value);
                 case 'pstd':
-                    out = dtm.analyzer.pstd(params.value);
-                    break;
+                    return dtm.analyzer.pstd(params.value);
 
                 case 'variance':
                 case 'var':
-                    out = dtm.analyzer.var(params.value);
-                    break;
+                    return dtm.analyzer.var(params.value);
                 case 'populationVariance':
                 case 'pvar':
-                    out = dtm.analyzer.pvar(params.value);
-                    break;
+                    return dtm.analyzer.pvar(params.value);
 
                 case 'index':
                 case 'idx':
-                    out = params.index;
-                    break;
+                    return params.index;
 
                 case 'relative':
                 case 'location':
@@ -129,71 +112,58 @@ dtm.array = function (arr, name) {
                 case 'cur':
                 case 'now':
                 case 'moment':
-                    out = params.value[params.index];
-                    break;
+                    return params.value[params.index];
 
                 case 'next':
                     params.index = dtm.value.mod(++params.index, params.length);
-                    out = params.value[params.index];
-                    break;
+                    return params.value[params.index];
 
                 case 'prev':
                 case 'previous':
                     params.index = dtm.value.mod(--params.index, params.length);
-                    out = params.value[params.index];
-                    break;
+                    return params.value[params.index];
 
                 case 'palindrome':
                     break;
 
                 case 'random':
-                    out = params.value[_.random(0, params.length - 1)];
-                    break;
+                    return params.value[_.random(0, params.length - 1)];
 
                 case 'urn':
                     break;
 
                 case 'original':
-                    out = params.original;
+                    return params.original;
                     break;
 
                 case 'normal':
                 case 'normalize':
                 case 'normalized':
-                    out = dtm.transform.normalize(params.value);
-                    break;
+                    return dtm.transform.normalize(params.value);
 
                 case 'sorted':
                 case 'sort':
-                    out = dtm.transform.sort(params.value);
-                    break;
+                    return dtm.transform.sort(params.value);
 
                 case 'uniques':
                 case 'unique':
                 case 'uniq':
-                    out = dtm.transform.unique(params.value);
-                    break;
+                    return dtm.transform.unique(params.value);
 
                 case 'classes':
-                    out = dtm.analyzer.classes(params.value);
-                    break;
+                    return dtm.analyzer.classes(params.value);
 
                 case 'numClasses':
-                    out = dtm.analyzer.classes(params.value).length;
-                    break;
+                    return dtm.analyzer.classes(params.value).length;
 
                 case 'histogram':
                 case 'histo':
-                    out = dtm.analyzer.histo(params.value);
-                    break;
+                    return dtm.analyzer.histo(params.value);
 
                 default:
-                    out = params.value;
-                    break;
+                    return params.value;
             }
         }
-
-        return out;
     };
     /**
      * Sets or overwrites the contents of the array object.

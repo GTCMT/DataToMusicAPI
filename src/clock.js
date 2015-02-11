@@ -47,29 +47,27 @@ dtm.clock = function (bpm, subDiv, time) {
     var curTime = 0.0;
 
     clock.get = function (arg) {
-        var out = null;
         switch (arg) {
             case 'bpm':
             case 'tempo':
-                out = params.bpm;
-                break;
+                return params.bpm;
 
             case 'subdiv':
             case 'subDiv':
             case 'div':
-                out = params.subDiv;
-                break;
+                return params.subDiv;
 
             case 'sync':
             case 'synced':
-                out = params.sync;
-                break;
+                return params.sync;
+
+            case 'isOn':
+            case 'isPlaying':
+                return params.isOn;
 
             default:
-                break;
+                return clock;
         }
-
-        return out;
     };
 
     /**
@@ -156,7 +154,7 @@ dtm.clock = function (bpm, subDiv, time) {
     };
 
     clock.setMaster = function (bool) {
-        params.master = bool;
+        params.isMaster = bool;
         return clock;
     };
     /**
@@ -292,7 +290,11 @@ dtm.clock = function (bpm, subDiv, time) {
      * @returns {dtm.clock} self
      */
     clock.start = function (timeErr) {
-        dtm.log('starting a clock');
+        if (params.isMaster) {
+            dtm.log('starting the master clock');
+        } else {
+            dtm.log('starting a clock');
+        }
 
         if (params.isOn !== true) {
             params.isOn = true;
@@ -357,7 +359,6 @@ dtm.clock = function (bpm, subDiv, time) {
                 return clock;
 
             } else if (params.sync && !params.isMaster) {
-
                 return clock;
             } else if (params.isMaster) {
                 clockSrc = actx.createBufferSource();
@@ -415,7 +416,12 @@ dtm.clock = function (bpm, subDiv, time) {
      * @returns {dtm.clock} self
      */
     clock.stop = function () {
-        dtm.log('stopping a clock');
+        if (params.isMaster) {
+            dtm.log('stopping the master clock');
+        } else {
+            dtm.log('stopping a clock');
+        }
+
         if (params.isOn === true) {
             params.isOn = false;
         }

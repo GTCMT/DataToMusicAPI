@@ -19,7 +19,7 @@ var clockBuf = actx.createBuffer(1, Math.round(actx.sampleRate * clMult), actx.s
 var dtm = {
     version: '0.0.1',
 
-    logger: false,
+    logger: true,
     log: function (arg) {
         if (dtm.logger) {
             console.log(arg);

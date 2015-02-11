@@ -10,24 +10,35 @@
  * @returns {dtm.instr}
  */
 dtm.instr = function (arg) {
+    var params = {
+        name: null,
+        isPlaying: false,
+        poly: false,
+
+        modDest: [],
+
+        sync: true,
+        clock: dtm.clock(true, 8),
+        subDivision: 16,
+
+        models: {
+            voice: dtm.synth()
+        },
+
+        instrModel: null
+    };
+
     var instr = {
         type: 'dtm.instrument',
-        params: {
-            name: null,
-            isPlaying: false,
-            poly: false,
+        params: {}
+    };
 
-            modDest: [],
-
-            sync: true,
-            clock: dtm.clock(true, 8),
-            subDivision: 16,
-
-            models: {
-                voice: dtm.synth()
-            },
-
-            instrModel: null
+    instr.get = function (param) {
+        switch (param) {
+            case 'clock':
+                return params.clock;
+            default:
+                break;
         }
     };
 
@@ -49,29 +60,29 @@ dtm.instr = function (arg) {
         // TODO: refactor...
         if (arg instanceof Array) {
             if (categ) {
-                instr.params.models[categ] = dtm.array(arg);
+                params.models[categ] = dtm.array(arg);
             } else {
-                instr.params.models['any'] = dtm.array(arg);
+                params.models['any'] = dtm.array(arg);
             }
         } else if (typeof(arg) === 'object') {
             if (arg.type === 'dtm.model') {
-                if (arg.params.categ === 'instr') {
+                if (arg.get('categ') === 'instr') {
                     // CHECK: ...
                     dtm.log('assigning model "' + arg.params.name + '" to category "' + categ + '"');
-                    instr.params.models[categ] = arg;
-                    instr.params.modDest.push(arg);
-                } else if (arg.params.categ) {
+                    params.models[categ] = arg;
+                    params.modDest.push(arg);
+                } else if (arg.get('categ')) {
                     dtm.log('assigning model "' + arg.params.name + '" to category "' + arg.params.categ + '"');
-                    instr.params.models[arg.params.categ] = arg;
-                    instr.params.modDest.push(arg);
+                    params.models[arg.params.categ] = arg;
+                    params.modDest.push(arg);
                 } else if (categ) {
                     dtm.log('assigning model "' + arg.params.name + '" to category "' + categ + '"');
-                    instr.params.models[categ] = arg;
-                    instr.params.modDest.push(arg);
+                    params.models[categ] = arg;
+                    params.modDest.push(arg);
                 }
 
             } else if (arg.type === 'dtm.array') {
-                instr.params.models[categ] = arg;
+                params.models[categ] = arg;
             }
         } else if (typeof(arg) === 'string') {
             var model = _.find(dtm.modelColl, {params: {
@@ -84,8 +95,8 @@ dtm.instr = function (arg) {
                 }
 
                 dtm.log('assigning model "' + model.params.name + '" to category "' + categ + '"');
-                instr.params.models[categ] = model;
-                instr.params.modDest.push(model);
+                params.models[categ] = model;
+                params.modDest.push(model);
             }
         }
 
@@ -99,7 +110,7 @@ dtm.instr = function (arg) {
      */
     instr.voice = function (arg) {
         if (typeof(arg) === 'string') {
-            instr.params.models.voice.set(arg);
+            params.models.voice.set(arg);
         }
         return instr;
     };
@@ -111,30 +122,30 @@ dtm.instr = function (arg) {
      */
     instr.play = function () {
         // can only play single voice / instance
-        if (instr.params.isPlaying !== true) {
-            instr.params.isPlaying = true;
-            dtm.log('playing: ' + instr.params.name);
+        if (params.isPlaying !== true) {
+            params.isPlaying = true;
+            dtm.log('playing: ' + params.name);
 
-            if (!instr.params.instrModel) {
-                instr.params.clock.add(function defInstr() {
-                    var v = instr.params.models.voice;
+            if (!params.instrModel) {
+                params.clock.add(function defInstr() {
+                    var v = params.models.voice;
 
                     // CHECK: only for dtm.arrays
-                    if (typeof(instr.params.models.beats) !== 'undefined') {
-                        if (instr.params.models.beats.next()) {
-                            if (typeof(instr.params.models.melody) !== 'undefined') {
-                                v.nn(instr.params.models.melody.next());
+                    if (typeof(params.models.beats) !== 'undefined') {
+                        if (params.models.beats.next()) {
+                            if (typeof(params.models.melody) !== 'undefined') {
+                                v.nn(params.models.melody.next());
                             }
 
                             v.play();
                         }
                     } else {
-                        //if (typeof(instr.params.models.melody) !== 'undefined') {
-                        //    v.nn(instr.params.models.melody.next());
+                        //if (typeof(params.models.melody) !== 'undefined') {
+                        //    v.nn(params.models.melody.next());
                         //}
 
-                        if (typeof(instr.params.models.pitch) !== 'undefined') {
-                            var nn = instr.params.models.pitch.next();
+                        if (typeof(params.models.pitch) !== 'undefined') {
+                            var nn = params.models.pitch.next();
                             nn = dtm.val.rescale(nn, 60, 100, true);
                             v.nn(nn);
                         }
@@ -144,10 +155,10 @@ dtm.instr = function (arg) {
                 }).start(); // ???
             }
 
-            if (instr.params.instrModel) {
-                if (instr.params.instrModel.params.categ === 'instr') {
-                    instr.params.instrModel.stop();
-                    instr.params.instrModel.play();
+            if (params.instrModel) {
+                if (params.instrModel.get('categ') === 'instr') {
+                    params.instrModel.stop();
+                    params.instrModel.play();
                 }
             }
 
@@ -161,37 +172,37 @@ dtm.instr = function (arg) {
     instr.start = instr.run = instr.play;
 
     instr.stop = function () {
-        if (instr.params.isPlaying === true) {
-            instr.params.isPlaying = false;
-            dtm.log('stopping: ' + instr.params.name);
+        if (params.isPlaying === true) {
+            params.isPlaying = false;
+            dtm.log('stopping: ' + params.name);
 
-            if (instr.params.instrModel) {
-                if (instr.params.instrModel.params.categ === 'instr') {
-                    instr.params.instrModel.stop();
+            if (params.instrModel) {
+                if (params.instrModel.params.categ === 'instr') {
+                    params.instrModel.stop();
                 }
             }
 
-            instr.params.clock.stop();
-            instr.params.clock.clear();
+            params.clock.stop();
+            params.clock.clear();
         }
         return instr;
     };
 
     instr.clock = function (bpm, subDiv, time) {
-        instr.params.clock.bpm(bpm);
-        instr.params.clock.subDiv(subDiv);
+        params.clock.bpm(bpm);
+        params.clock.subDiv(subDiv);
         return instr;
     };
 
     instr.bpm = function (val) {
-        instr.params.clock.bpm(val);
+        params.clock.bpm(val);
         return instr;
     };
 
     instr.tempo = instr.bpm;
 
     instr.subDiv = function (val) {
-        instr.params.clock.subDiv(val);
+        params.clock.subDiv(val);
         return instr;
     };
 
@@ -199,8 +210,8 @@ dtm.instr = function (arg) {
         if (typeof(bool) === 'undefined') {
             bool = true;
         }
-        instr.params.clock.sync(bool);
-        instr.params.sync = bool;
+        params.clock.sync(bool);
+        params.sync = bool;
         return instr;
     };
 
@@ -215,21 +226,21 @@ dtm.instr = function (arg) {
         if (typeof(arguments[0]) === 'number') {
             if (arguments.length === 1) {
                 var val = arguments[0];
-                _.forEach(instr.params.modDest, function (dest) {
+                _.forEach(params.modDest, function (dest) {
                     // MEMO: don't use arguments[n] in forEach
                     dest.mod(val);
                 })
             } else {
                 _.forEach(arguments, function (val, idx) {
-                    if (instr.params.modDest[idx]) {
-                        instr.params.modDest[idx].mod(val);
+                    if (params.modDest[idx]) {
+                        params.modDest[idx].mod(val);
                     }
                 })
             }
 
         } else if (typeof(arguments[0]) === 'string') {
             if (typeof(arguments[1] === 'number') && typeof(instr.params[arguments[0]]) !== 'undefined') {
-                instr.params[arguments[0]] = arguments[1]; // CHECK: ???????
+                params[arguments[0]] = arguments[1]; // CHECK: ???????
             }
 
         } else if (typeof(arguments[0]) === 'object') {
@@ -247,7 +258,7 @@ dtm.instr = function (arg) {
         if (src.type === 'dtm.array') {
 
             // assigning an array here is not so smart...
-            instr.params.models[dest] = src.normalize();
+            params.models[dest] = src.normalize();
         }
         // use global index from the master
 
@@ -255,15 +266,15 @@ dtm.instr = function (arg) {
     };
 
     instr.get = function (key) {
-        return instr.params[key];
+        return params[key];
     };
 
     instr.getModel = function (key) {
-        return instr.params.models[key];
+        return params.models[key];
     };
 
     instr.setModel = function (src, dest) {
-        instr.params.models[dest] = src;
+        params.models[dest] = src;
         return instr;
     };
 
@@ -280,25 +291,25 @@ dtm.instr = function (arg) {
 
             if (typeof(model) !== 'undefined') {
                 dtm.log('loading instrument model: ' + arg);
-                instr.params.instrModel = model;
-                instr.params.name = arg;
-                //instr.params.models = model.models;
+                params.instrModel = model;
+                params.name = arg;
+                //params.models = model.models;
                 instr.model(model);
-                //instr.play = instr.params.instrModel.play;
-                //instr.run = instr.params.instrModel.run;
+                //instr.play = params.instrModel.play;
+                //instr.run = params.instrModel.run;
 
                 // CHECK: not good
-                instr.params.modDest.push(model);
+                params.modDest.push(model);
             } else {
                 dtm.log('registering a new instrument: ' + arg);
-                instr.params.name = arg;
-                instr.params.categ = 'instr';
+                params.name = arg;
+                params.categ = 'instr';
                 dtm.modelColl.push(instr);
             }
 
         } else if (typeof(arg) !== 'undefined') {
             if (arg.params.categ === 'instr') {
-                instr.params.instrModel = arg; // TODO: check the class name
+                params.instrModel = arg; // TODO: check the class name
                 instr.model(arg);
             }
         }
