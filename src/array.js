@@ -14,7 +14,7 @@
 dtm.array = function (arr, name) {
     // private
     var params = {
-        name: '', // or key?
+        name: '',
         type: null, // int, float, string, coll, mixed, date
         length: null,
         min: null,
@@ -38,6 +38,133 @@ dtm.array = function (arr, name) {
         type: 'dtm.array'
     };
 
+    /**
+     * Returns the array contents or an analyzed value
+     * @function module:array#get
+     * @param [param] {string}
+     * @returns {number|array|string}
+     */
+    array.get = function (param, opt) {
+        var out;
+        var type = typeof(param);
+
+        if (type === 'number') {
+            if (param < 0 || param >= params.length) {
+                dtm.log('Index out of range');
+                out = params.value[dtm.value.mod(param, params.length)];
+            } else {
+                out = params.value[param];
+            }
+        } else {
+            switch (param) {
+                case 'name':
+                case 'key':
+                    out = params.name;
+                    break;
+                case 'type':
+                    out = params.type;
+                    break;
+                case 'len':
+                case 'length':
+                    out = params.length;
+                    break;
+
+                case 'min':
+                    out = dtm.analyzer.min(params.value);
+                    break;
+                case 'max':
+                    out = dtm.analyzer.max(params.value);
+                    break;
+                case 'mean':
+                case 'average':
+                case 'avg':
+                    out = dtm.analyzer.mean(params.value);
+                    break;
+                case 'mode':
+                    out = dtm.analyzer.mode(params.value);
+                    break;
+                case 'median':
+                    out = dtm.analyzer.median(params.value);
+                    break;
+                case 'midrange':
+                    out = dtm.analyzer.midrange(params.value);
+                    break;
+                case 'std':
+                    out = dtm.analyzer.std(params.value);
+                    break;
+                case 'pstd':
+                    out = dtm.analyzer.pstd(params.value);
+                    break;
+                case 'var':
+                    out = dtm.analyzer.var(params.value);
+                    break;
+                case 'pvar':
+                    out = dtm.analyzer.pvar(params.value);
+                    break;
+
+                case 'index':
+                case 'idx':
+                    out = params.index;
+                    break;
+
+                case 'relative':
+                case 'location':
+                case 'loc':
+                    break;
+
+                case 'current':
+                case 'curr':
+                case 'cur':
+                case 'now':
+                case 'moment':
+                    out = params.value[params.index];
+                    break;
+
+                case 'next':
+                    params.index = dtm.value.mod(++params.index, params.length);
+                    out = params.value[params.index];
+                    break;
+
+                case 'prev':
+                case 'previous':
+                    params.index = dtm.value.mod(--params.index, params.length);
+                    out = params.value[params.index];
+                    break;
+
+                case 'palindrome':
+                    break;
+
+                case 'random':
+                    out = params.value[_.random(0, params.length - 1)];
+                    break;
+
+                case 'urn':
+                    break;
+
+                case 'original':
+                    out = params.original;
+                    break;
+
+                case 'normal':
+                case 'normalize':
+                case 'normalized':
+                    out = dtm.transform.normalize(params.value);
+                    break;
+                case 'classes':
+                    break;
+                case 'numClasses':
+                    break;
+                case 'histo':
+                    break;
+
+                default:
+                    out = params.value;
+                    break;
+            }
+        }
+
+        return out;
+    };
     /**
      * Sets or overwrites the contents of the array object.
      * @function module:array#set
@@ -173,7 +300,6 @@ dtm.array = function (arr, name) {
         return newArr;
     };
 
-
     // CHECK: is this only for the array ojbect?
     /**
      * Fills the contents of the array with
@@ -200,7 +326,6 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.generate = array.fill;
-
 
     /**
      * Rescales the range of the numerical values to 0-1.
@@ -456,10 +581,6 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.fit = function (len, interp) {
-        //var newVal = dtm.transform.fit(params.value, len, interp);
-        //delete array;
-        //return dtm.array(newVal);
-
         params.value = dtm.transform.fit(params.value, len, interp);
         array.set(params.value);
         return array;
@@ -607,6 +728,8 @@ dtm.array = function (arr, name) {
         return array.set(dtm.transform.pq(params.value, scale));
     };
 
+    array.pitchQuantize = array.pq;
+
     array.transpose = function (val) {
         return array;
     };
@@ -643,147 +766,6 @@ dtm.array = function (arr, name) {
     };
 
     /**
-     * Returns the array contents or an analyzed value
-     * @function module:array#get
-     * @param [param] {string}
-     * @returns {number|array|string}
-     */
-    array.get = function (param, opt) {
-        var out;
-        var type = typeof(param);
-
-        if (type === 'number') {
-            if (param < 0 || param >= params.length) {
-                dtm.log('Index out of range');
-                out = params.value[dtm.value.mod(param, params.length)];
-            } else {
-                out = params.value[param];
-            }
-        } else {
-            switch (param) {
-                case 'name':
-                case 'key':
-                    out = params.name;
-                    break;
-                case 'type':
-                    out = params.type;
-                    break;
-                case 'len':
-                case 'length':
-                    out = params.length;
-                    break;
-
-                case 'min':
-                    out = dtm.analyzer.min(params.value);
-                    break;
-                case 'max':
-                    out = dtm.analyzer.max(params.value);
-                    break;
-                case 'mean':
-                case 'average':
-                case 'avg':
-                    out = dtm.analyzer.mean(params.value);
-                    break;
-                case 'mode':
-                    out = dtm.analyzer.mode(params.value);
-                    break;
-                case 'median':
-                    out = dtm.analyzer.median(params.value);
-                    break;
-                case 'midrange':
-                    out = dtm.analyzer.midrange(params.value);
-                    break;
-                case 'std':
-                    out = dtm.analyzer.std(params.value);
-                    break;
-                case 'pstd':
-                    out = dtm.analyzer.pstd(params.value);
-                    break;
-                case 'var':
-                    out = dtm.analyzer.var(params.value);
-                    break;
-                case 'pvar':
-                    out = dtm.analyzer.pvar(params.value);
-                    break;
-
-                case 'index':
-                case 'idx':
-                    break;
-
-                case 'relative':
-                case 'location':
-                case 'loc':
-                    break;
-
-                case 'current':
-                case 'curr':
-                case 'cur':
-                case 'now':
-                case 'moment':
-                    out = params.value[params.index];
-                    break;
-
-                case 'next':
-                    params.index = dtm.value.mod(++params.index, params.length);
-                    out = params.value[params.index];
-                    break;
-
-                case 'prev':
-                case 'previous':
-                    params.index = dtm.value.mod(--params.index, params.length);
-                    out = params.value[params.index];
-                    break;
-
-                case 'palindrome':
-                    break;
-
-                case 'random':
-                    out = params.value[_.random(0, params.length - 1)];
-                    break;
-
-                case 'urn':
-                    break;
-
-                case 'original':
-                    out = params.original;
-                    break;
-
-                case 'normal':
-                case 'normalize':
-                case 'normalized':
-                    out = dtm.transform.normalize(params.value);
-                    break;
-                case 'classes':
-                    break;
-                case 'numClasses':
-                    break;
-                case 'histo':
-                    break;
-
-                default:
-                    out = params.value;
-                    break;
-            }
-        }
-
-        return out;
-    };
-
-    /**
-     * A shorthand for iterating through the array values. For more details and other iteration methods, please check the dtm.iterator.
-     * @param [param='value'] {string}
-     * @returns {value}
-     */
-    array.next = function (param) {
-        if (typeof(param) === 'undefined') {
-            param = 'value'
-        }
-        var out = array[param][params.index];
-        params.index = dtm.value.mod(params.index + 1, params.length);
-        return out;
-    };
-
-    /**
      * Retrieves the original values from when the array object was first created.
      * @function module:array#reset
      * @returns {dtm.array}
@@ -792,6 +774,8 @@ dtm.array = function (arr, name) {
         array.set(params.original);
         return array;
     };
+
+    array.original = array.reset;
 
     return array;
 };

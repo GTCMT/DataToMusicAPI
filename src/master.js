@@ -150,5 +150,5 @@ dtm.master = {
     reset: null
 };
 
-dtm.master.clock.params.isMaster = true;
+dtm.master.clock.setMaster(true);
 dtm.master.clock.start();

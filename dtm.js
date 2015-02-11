@@ -1375,7 +1375,7 @@ dtm.tr = dtm.transform;
 dtm.array = function (arr, name) {
     // private
     var params = {
-        name: '', // or key?
+        name: '',
         type: null, // int, float, string, coll, mixed, date
         length: null,
         min: null,
@@ -1399,6 +1399,133 @@ dtm.array = function (arr, name) {
         type: 'dtm.array'
     };
 
+    /**
+     * Returns the array contents or an analyzed value
+     * @function module:array#get
+     * @param [param] {string}
+     * @returns {number|array|string}
+     */
+    array.get = function (param, opt) {
+        var out;
+        var type = typeof(param);
+
+        if (type === 'number') {
+            if (param < 0 || param >= params.length) {
+                dtm.log('Index out of range');
+                out = params.value[dtm.value.mod(param, params.length)];
+            } else {
+                out = params.value[param];
+            }
+        } else {
+            switch (param) {
+                case 'name':
+                case 'key':
+                    out = params.name;
+                    break;
+                case 'type':
+                    out = params.type;
+                    break;
+                case 'len':
+                case 'length':
+                    out = params.length;
+                    break;
+
+                case 'min':
+                    out = dtm.analyzer.min(params.value);
+                    break;
+                case 'max':
+                    out = dtm.analyzer.max(params.value);
+                    break;
+                case 'mean':
+                case 'average':
+                case 'avg':
+                    out = dtm.analyzer.mean(params.value);
+                    break;
+                case 'mode':
+                    out = dtm.analyzer.mode(params.value);
+                    break;
+                case 'median':
+                    out = dtm.analyzer.median(params.value);
+                    break;
+                case 'midrange':
+                    out = dtm.analyzer.midrange(params.value);
+                    break;
+                case 'std':
+                    out = dtm.analyzer.std(params.value);
+                    break;
+                case 'pstd':
+                    out = dtm.analyzer.pstd(params.value);
+                    break;
+                case 'var':
+                    out = dtm.analyzer.var(params.value);
+                    break;
+                case 'pvar':
+                    out = dtm.analyzer.pvar(params.value);
+                    break;
+
+                case 'index':
+                case 'idx':
+                    out = params.index;
+                    break;
+
+                case 'relative':
+                case 'location':
+                case 'loc':
+                    break;
+
+                case 'current':
+                case 'curr':
+                case 'cur':
+                case 'now':
+                case 'moment':
+                    out = params.value[params.index];
+                    break;
+
+                case 'next':
+                    params.index = dtm.value.mod(++params.index, params.length);
+                    out = params.value[params.index];
+                    break;
+
+                case 'prev':
+                case 'previous':
+                    params.index = dtm.value.mod(--params.index, params.length);
+                    out = params.value[params.index];
+                    break;
+
+                case 'palindrome':
+                    break;
+
+                case 'random':
+                    out = params.value[_.random(0, params.length - 1)];
+                    break;
+
+                case 'urn':
+                    break;
+
+                case 'original':
+                    out = params.original;
+                    break;
+
+                case 'normal':
+                case 'normalize':
+                case 'normalized':
+                    out = dtm.transform.normalize(params.value);
+                    break;
+                case 'classes':
+                    break;
+                case 'numClasses':
+                    break;
+                case 'histo':
+                    break;
+
+                default:
+                    out = params.value;
+                    break;
+            }
+        }
+
+        return out;
+    };
     /**
      * Sets or overwrites the contents of the array object.
      * @function module:array#set
@@ -1534,7 +1661,6 @@ dtm.array = function (arr, name) {
         return newArr;
     };
 
-
     // CHECK: is this only for the array ojbect?
     /**
      * Fills the contents of the array with
@@ -1561,7 +1687,6 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.generate = array.fill;
-
 
     /**
      * Rescales the range of the numerical values to 0-1.
@@ -1817,10 +1942,6 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.fit = function (len, interp) {
-        //var newVal = dtm.transform.fit(params.value, len, interp);
-        //delete array;
-        //return dtm.array(newVal);
-
         params.value = dtm.transform.fit(params.value, len, interp);
         array.set(params.value);
         return array;
@@ -1968,6 +2089,8 @@ dtm.array = function (arr, name) {
         return array.set(dtm.transform.pq(params.value, scale));
     };
 
+    array.pitchQuantize = array.pq;
+
     array.transpose = function (val) {
         return array;
     };
@@ -2004,147 +2127,6 @@ dtm.array = function (arr, name) {
     };
 
     /**
-     * Returns the array contents or an analyzed value
-     * @function module:array#get
-     * @param [param] {string}
-     * @returns {number|array|string}
-     */
-    array.get = function (param, opt) {
-        var out;
-        var type = typeof(param);
-
-        if (type === 'number') {
-            if (param < 0 || param >= params.length) {
-                dtm.log('Index out of range');
-                out = params.value[dtm.value.mod(param, params.length)];
-            } else {
-                out = params.value[param];
-            }
-        } else {
-            switch (param) {
-                case 'name':
-                case 'key':
-                    out = params.name;
-                    break;
-                case 'type':
-                    out = params.type;
-                    break;
-                case 'len':
-                case 'length':
-                    out = params.length;
-                    break;
-
-                case 'min':
-                    out = dtm.analyzer.min(params.value);
-                    break;
-                case 'max':
-                    out = dtm.analyzer.max(params.value);
-                    break;
-                case 'mean':
-                case 'average':
-                case 'avg':
-                    out = dtm.analyzer.mean(params.value);
-                    break;
-                case 'mode':
-                    out = dtm.analyzer.mode(params.value);
-                    break;
-                case 'median':
-                    out = dtm.analyzer.median(params.value);
-                    break;
-                case 'midrange':
-                    out = dtm.analyzer.midrange(params.value);
-                    break;
-                case 'std':
-                    out = dtm.analyzer.std(params.value);
-                    break;
-                case 'pstd':
-                    out = dtm.analyzer.pstd(params.value);
-                    break;
-                case 'var':
-                    out = dtm.analyzer.var(params.value);
-                    break;
-                case 'pvar':
-                    out = dtm.analyzer.pvar(params.value);
-                    break;
-
-                case 'index':
-                case 'idx':
-                    break;
-
-                case 'relative':
-                case 'location':
-                case 'loc':
-                    break;
-
-                case 'current':
-                case 'curr':
-                case 'cur':
-                case 'now':
-                case 'moment':
-                    out = params.value[params.index];
-                    break;
-
-                case 'next':
-                    params.index = dtm.value.mod(++params.index, params.length);
-                    out = params.value[params.index];
-                    break;
-
-                case 'prev':
-                case 'previous':
-                    params.index = dtm.value.mod(--params.index, params.length);
-                    out = params.value[params.index];
-                    break;
-
-                case 'palindrome':
-                    break;
-
-                case 'random':
-                    out = params.value[_.random(0, params.length - 1)];
-                    break;
-
-                case 'urn':
-                    break;
-
-                case 'original':
-                    out = params.original;
-                    break;
-
-                case 'normal':
-                case 'normalize':
-                case 'normalized':
-                    out = dtm.transform.normalize(params.value);
-                    break;
-                case 'classes':
-                    break;
-                case 'numClasses':
-                    break;
-                case 'histo':
-                    break;
-
-                default:
-                    out = params.value;
-                    break;
-            }
-        }
-
-        return out;
-    };
-
-    /**
-     * A shorthand for iterating through the array values. For more details and other iteration methods, please check the dtm.iterator.
-     * @param [param='value'] {string}
-     * @returns {value}
-     */
-    array.next = function (param) {
-        if (typeof(param) === 'undefined') {
-            param = 'value'
-        }
-        var out = array[param][params.index];
-        params.index = dtm.value.mod(params.index + 1, params.length);
-        return out;
-    };
-
-    /**
      * Retrieves the original values from when the array object was first created.
      * @function module:array#reset
      * @returns {dtm.array}
@@ -2153,6 +2135,8 @@ dtm.array = function (arr, name) {
         array.set(params.original);
         return array;
     };
+
+    array.original = array.reset;
 
     return array;
 };
@@ -2923,6 +2907,17 @@ dtm.d = dtm.data;
  * cl.start();
  */
 dtm.clock = function (bpm, subDiv, time) {
+    var params = {
+        isOn: false,
+        sync: false,
+        isMaster: false,
+
+        bpm: 60,
+        subDiv: 4,
+        random: 0,
+        swing: 0.5
+    };
+
     var clock = {
         type: 'dtm.clock',
 
@@ -2933,26 +2928,41 @@ dtm.clock = function (bpm, subDiv, time) {
 
         list: [],
 
-        params: {
-            isOn: false,
-            sync: false,
-            bpm: 60,
-            subDiv: 4,
-            random: 0,
-            swing: 0.5
-        },
-
         // CHECK: just for debugging
         callbacks: []
     };
-
-    clock.params.tempo = clock.params.bpm;
 
     // private
     var callbacks = [];
 
     // member?
     var curTime = 0.0;
+
+    clock.get = function (arg) {
+        var out = null;
+        switch (arg) {
+            case 'bpm':
+            case 'tempo':
+                out = params.bpm;
+                break;
+
+            case 'subdiv':
+            case 'subDiv':
+            case 'div':
+                out = params.subDiv;
+                break;
+
+            case 'sync':
+            case 'synced':
+                out = params.sync;
+                break;
+
+            default:
+                break;
+        }
+
+        return out;
+    };
 
     /**
      * Set the main parameters of the clock.
@@ -2963,11 +2973,11 @@ dtm.clock = function (bpm, subDiv, time) {
      */
     clock.set = function (bpm, subDiv) {
         if (typeof(bpm) !== 'undefined') {
-            clock.params.bpm = bpm;
-            clock.params.sync = false;
+            params.bpm = bpm;
+            params.sync = false;
         }
         if (typeof(params.subDiv) !== 'undefined') {
-            clock.params.subDiv = subDiv;
+            params.subDiv = subDiv;
         }
 
         return clock;
@@ -2984,7 +2994,7 @@ dtm.clock = function (bpm, subDiv, time) {
             bool = true;
         }
 
-        clock.params.sync = bool;
+        params.sync = bool;
         return clock;
     };
 
@@ -3001,10 +3011,10 @@ dtm.clock = function (bpm, subDiv, time) {
      */
     clock.bpm = function (val) {
         if (!arguments || !val) {
-            clock.params.bpm = 60;
+            params.bpm = 60;
             return clock;
         }
-        clock.params.bpm = val;
+        params.bpm = val;
         clock.tempo = val;
         return clock;
     };
@@ -3022,7 +3032,7 @@ dtm.clock = function (bpm, subDiv, time) {
      */
     clock.subDiv = function (val) {
         val = val || 4;
-        clock.params.subDiv = val;
+        params.subDiv = val;
         return clock;
     };
 
@@ -3037,6 +3047,10 @@ dtm.clock = function (bpm, subDiv, time) {
         return clock;
     };
 
+    clock.setMaster = function (bool) {
+        params.master = bool;
+        return clock;
+    };
     /**
      * Registers a callback function to selected or all ticks of the clock.
      * @function module:clock#add
@@ -3092,7 +3106,7 @@ dtm.clock = function (bpm, subDiv, time) {
     //    if (arguments.length == 1) {
     //        // CHECK: broken - changing the subdiv later should change this too?
     //        // maybe disable the registration for certain beats
-    //        beats = _.range((clock.params.subDiv * clock.time[0] / clock.time[1]));
+    //        beats = _.range((params.subDiv * clock.time[0] / clock.time[1]));
     //    }
     ////        if (_.findKey(cb, 'modelName')) {
     ////            cb.addParentClock(clock); // CHECK: risky
@@ -3172,11 +3186,11 @@ dtm.clock = function (bpm, subDiv, time) {
     clock.start = function (timeErr) {
         dtm.log('starting a clock');
 
-        if (clock.params.isOn !== true) {
-            clock.params.isOn = true;
+        if (params.isOn !== true) {
+            params.isOn = true;
             clock.tick();
 
-            if (!clock.params.isMaster) {
+            if (!params.isMaster) {
                 dtm.clocks.push(clock);
             }
         }
@@ -3197,23 +3211,23 @@ dtm.clock = function (bpm, subDiv, time) {
 //            if (isNaN(timeErr)) {
 //                timeErr = 0;
 //            }
-        if (clock.params.isOn) {
+        if (params.isOn) {
 
-            if (!clock.params.sync && !clock.params.isMaster) {
+            if (!params.sync && !params.isMaster) {
                 clockSrc = actx.createBufferSource();
                 clockSrc.buffer = clockBuf;
                 clockSrc.connect(out());
 
-                var freq = clock.params.bpm / 60.0 * (clock.params.subDiv / 4.0);
+                var freq = params.bpm / 60.0 * (params.subDiv / 4.0);
                 //var pbRate = 1/(1/freq - Math.abs(timeErr));
 
                 clockSrc.playbackRate.value = freq * clMult;
-                clockSrc.playbackRate.value += clockSrc.playbackRate.value * clock.params.random * _.sample([1, -1]);
+                clockSrc.playbackRate.value += clockSrc.playbackRate.value * params.random * _.sample([1, -1]);
 
                 if (clock.beat % 2 == 0) {
-                    clockSrc.playbackRate.value *= (1.0 - clock.params.swing) / 0.5;
+                    clockSrc.playbackRate.value *= (1.0 - params.swing) / 0.5;
                 } else {
-                    clockSrc.playbackRate.value *= clock.params.swing / 0.5;
+                    clockSrc.playbackRate.value *= params.swing / 0.5;
                 }
 
                 clockSrc.start(now() + 0.0000001);
@@ -3230,27 +3244,27 @@ dtm.clock = function (bpm, subDiv, time) {
                     cb(clock);
                 });
 
-                clock.beat = (clock.beat + 1) % (clock.params.subDiv * clock.time[0] / clock.time[1]);
+                clock.beat = (clock.beat + 1) % (params.subDiv * clock.time[0] / clock.time[1]);
 
                 return clock;
 
-            } else if (clock.params.sync && !clock.params.isMaster) {
+            } else if (params.sync && !params.isMaster) {
 
                 return clock;
-            } else if (clock.params.isMaster) {
+            } else if (params.isMaster) {
                 clockSrc = actx.createBufferSource();
                 clockSrc.buffer = clockBuf;
                 clockSrc.connect(out());
 
-                var freq = clock.params.bpm / 60.0 * (clock.params.subDiv / 4.0);
+                var freq = params.bpm / 60.0 * (params.subDiv / 4.0);
 
                 clockSrc.playbackRate.value = freq * clMult;
-                clockSrc.playbackRate.value += clockSrc.playbackRate.value * clock.params.random * _.sample([1, -1]);
+                clockSrc.playbackRate.value += clockSrc.playbackRate.value * params.random * _.sample([1, -1]);
 
                 if (clock.beat % 2 == 0) {
-                    clockSrc.playbackRate.value *= (1.0 - clock.params.swing) / 0.5;
+                    clockSrc.playbackRate.value *= (1.0 - params.swing) / 0.5;
                 } else {
-                    clockSrc.playbackRate.value *= clock.params.swing / 0.5;
+                    clockSrc.playbackRate.value *= params.swing / 0.5;
                 }
 
                 clockSrc.start(now() + 0.0000001);
@@ -3269,7 +3283,7 @@ dtm.clock = function (bpm, subDiv, time) {
                     cb(clock);
                 });
 
-                clock.beat = (clock.beat + 1) % (clock.params.subDiv * clock.time[0] / clock.time[1]);
+                clock.beat = (clock.beat + 1) % (params.subDiv * clock.time[0] / clock.time[1]);
             }
 
         }
@@ -3277,8 +3291,8 @@ dtm.clock = function (bpm, subDiv, time) {
 
     // TODO: stopping system should remove these callbacks?
     clock.tickSynced = function () {
-        if (clock.params.sync && clock.params.isOn) {
-            if (dtm.master.clock.beat % Math.round(480/clock.params.subDiv) === 0) {
+        if (params.sync && params.isOn) {
+            if (dtm.master.clock.beat % Math.round(480/params.subDiv) === 0) {
                 _.forEach(clock.callbacks, function (cb) {
                     cb(clock);
                 });
@@ -3294,8 +3308,8 @@ dtm.clock = function (bpm, subDiv, time) {
      */
     clock.stop = function () {
         dtm.log('stopping a clock');
-        if (clock.params.isOn === true) {
-            clock.params.isOn = false;
+        if (params.isOn === true) {
+            params.isOn = false;
         }
         return clock;
     };
@@ -3312,7 +3326,7 @@ dtm.clock = function (bpm, subDiv, time) {
      * @returns {dtm.clock}
      */
     clock.swing = function (amt) {
-        clock.params.swing = amt || 0.5;
+        params.swing = amt || 0.5;
         return clock;
     };
 
@@ -3326,7 +3340,7 @@ dtm.clock = function (bpm, subDiv, time) {
      * @returns {dtm.clock}
      */
     clock.randomize = function (amt) {
-        clock.params.random = amt || 0;
+        params.random = amt || 0;
         return clock;
     };
 
@@ -3364,19 +3378,19 @@ dtm.clock = function (bpm, subDiv, time) {
         return clock;
     };
 
-    if (!clock.params.isMaster && typeof(dtm.master) !== 'undefined') {
+    if (!params.isMaster && typeof(dtm.master) !== 'undefined') {
         dtm.master.clock.add(clock.tickSynced);
     }
 
     if (typeof(bpm) === 'number') {
-        clock.params.bpm = bpm;
-        clock.params.sync = false;
+        params.bpm = bpm;
+        params.sync = false;
     } else if (typeof(bpm) === 'boolean') {
-        clock.params.sync = bpm;
+        params.sync = bpm;
     }
 
     if (typeof(subDiv) !== 'undefined') {
-        clock.params.subDiv = subDiv;
+        params.subDiv = subDiv;
     }
 
     if (typeof(time) !== 'undefined') {
@@ -4756,7 +4770,7 @@ dtm.master = {
     reset: null
 };
 
-dtm.master.clock.params.isMaster = true;
+dtm.master.clock.setMaster(true);
 dtm.master.clock.start();
 dtm.guido = function () {
     var guido = {
