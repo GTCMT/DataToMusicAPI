@@ -12,101 +12,30 @@
  * @returns array object {{value: null, normalized: null, length: null, min: null, max: null, mean: null}}
  */
 dtm.array = function (arr, name) {
-    var array = {
-        type: 'dtm.array',
+    // private
+    var params = {
+        name: '', // or key?
+        type: null, // int, float, string, coll, mixed, date
+        length: null,
+        min: null,
+        max: null,
+        mean: null,
+        std: null,
+        mode: null,
 
-        params: {
-            /**
-             * The name of the array object.
-             * @name module:array#name
-             * @type {string}
-             */
-            name: '', // or key?
-
-            /**
-             * Value type of the array object.
-             * @name module:array#type
-             * @type {string}
-             */
-            type: null, // int, float, string, coll, mixed, date
-
-            /**
-             * Length of the array.
-             * @name module:array#length
-             * @type {integer}
-             */
-            length: null,
-
-            /**
-             * Minimum value of the array.
-             * @name module:array#min
-             * @type {number}
-             */
-            min: null,
-
-            /**
-             * Maximum value of the array.
-             * @name module:array#max
-             * @type {number}
-             */
-            max: null,
-
-            /**
-             * Mean value of the array.
-             * @name module:array#mean
-             * @type {number}
-             */
-            mean: null,
-
-            /**
-             * Standard deviation.
-             * @name module:array#std
-             * @type {number}
-             */
-            std: null,
-
-            /**
-             * The most frequent value or class.
-             * @name module:array#mode
-             */
-            mode: null,
-
-            original: null
-        },
-
-
-        /**
-         * Numerical values of the array.
-         * @name module:array#value
-         * @type {array}
-         */
         value: [],
-        values: [],
-
-        /**
-         * Numerical values of the array rescaled to 0-1.
-         * @name module:array#normalized
-         * @type {array}
-         */
+        original: null,
         normalized: [],
-
-        /**
-         * When the data type is nominal / string, the string values are stored in this.
-         * @name module:array#classes
-         * @type array
-         */
         classes: null,
-
-        /**
-         * Number of occurances per class.
-         * @name module:array#histogram
-         */
         histogram: null,
         numClasses: null,
 
-        colls: null,
-
         index: 0
+    };
+
+    // public
+    var array = {
+        type: 'dtm.array'
     };
 
     /**
@@ -122,36 +51,36 @@ dtm.array = function (arr, name) {
         }
 
         // TODO: error checking
-        array.value = input;
-        array.values = input;
+        params.value = input;
+        params.value = input;
 
         // CHECK: kind of ugly
-        if (typeof(array.params.original) === 'undefined') {
-            array.params.original = input;
+        if (typeof(params.original) === 'undefined') {
+            params.original = input;
         }
 
         // CHECK: type checking - may be redundant
         checkType(input);
 
-        if (array.params.type === 'number' || array.params.type === 'int' || array.params.type === 'float') {
-            _.forEach(array.value, function (val, idx) {
-                array.value[idx] = Number.parseFloat(val);
+        if (params.type === 'number' || params.type === 'int' || params.type === 'float') {
+            _.forEach(params.value, function (val, idx) {
+                params.value[idx] = Number.parseFloat(val);
             });
 
-            array.normalized = dtm.transform.normalize(input);
-            array.params.min = dtm.analyzer.min(input);
-            array.params.max = dtm.analyzer.max(input);
-            array.params.mean = dtm.analyzer.mean(input);
-            array.params.std = dtm.analyzer.std(input);
-            array.params.mode = dtm.analyzer.mode(input);
+            params.normalized = dtm.transform.normalize(input);
+            params.min = dtm.analyzer.min(input);
+            params.max = dtm.analyzer.max(input);
+            params.mean = dtm.analyzer.mean(input);
+            params.std = dtm.analyzer.std(input);
+            params.mode = dtm.analyzer.mode(input);
         }
 
-        if (array.params.type === 'string') {
+        if (params.type === 'string') {
             histo();
-            array.params.mode = dtm.analyzer.mode(array.classes);
+            params.mode = dtm.analyzer.mode(params.classes);
         }
 
-        array.params.length = input.length;
+        params.length = input.length;
 
         return array;
     };
@@ -163,7 +92,7 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.setName = function (name) {
-        array.params.name = name.toString();
+        params.name = name.toString();
         return array;
     };
 
@@ -193,12 +122,12 @@ dtm.array = function (arr, name) {
         // TODO: workaround for a missing value
         if (isNaN(arr[0])) {
             if (typeof(arr[0]) === 'object') {
-                array.params.type = 'collection';
+                params.type = 'collection';
             } else {
-                array.params.type = typeof(arr[0]);
+                params.type = typeof(arr[0]);
             }
         } else {
-            array.params.type = 'number';
+            params.type = 'number';
         }
 
         //array.type = res;
@@ -214,16 +143,16 @@ dtm.array = function (arr, name) {
     array.histo = histo;
 
     function histo() {
-        array.classes = _.clone(array.value);
-        array.histogram = _.countBy(array.value);
+        params.classes = _.clone(params.value);
+        params.histogram = _.countBy(params.value);
         //array.numClasses =
 
-        _.forEach(array.classes, function (val, idx) {
-            array.value[idx] = array.histogram[val];
+        _.forEach(params.classes, function (val, idx) {
+            params.value[idx] = params.histogram[val];
         });
 
-        array.set(array.value);
-        array.params.type = 'string'; // re-set the type to string from number... hacky!
+        array.set(params.value);
+        params.type = 'string'; // re-set the type to string from number... hacky!
 
         return array;
     }
@@ -237,10 +166,10 @@ dtm.array = function (arr, name) {
         // this doesn't work
         //return dtm.clone(array);
 
-        var newArr = dtm.array(array.values, array.params.name);
-        if (array.params.type === 'string') {
-            newArr.classes = array.classes;
-            newArr.histogram = _.clone(array.histogram);
+        var newArr = dtm.array(params.value, params.name);
+        if (params.type === 'string') {
+            newArr.classes = params.classes;
+            newArr.histogram = _.clone(params.histogram);
             newArr.params.type = 'string';
         }
         return newArr;
@@ -258,8 +187,8 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.fill = function (type, len, min, max) {
-        array.value = dtm.transform.generate(type, len, min, max);
-        array.set(array.value);
+        params.value = dtm.transform.generate(type, len, min, max);
+        array.set(params.value);
         return array;
     };
 
@@ -283,8 +212,8 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.normalize = function (min, max) {
-        array.value = dtm.transform.normalize(array.value, min, max);
-        array.set(array.value);
+        params.value = dtm.transform.normalize(params.value, min, max);
+        array.set(params.value);
         return array;
     };
 
@@ -296,8 +225,8 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.rescale = function (min, max) {
-        array.value = dtm.transform.rescale(array.value, min, max);
-        array.set(array.value);
+        params.value = dtm.transform.rescale(params.value, min, max);
+        array.set(params.value);
         return array;
     };
 
@@ -320,7 +249,7 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.add = function (val) {
-        array.set(dtm.transform.add(array.value, val));
+        array.set(dtm.transform.add(params.value, val));
         return array;
     };
 
@@ -331,7 +260,7 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.mult = function (val) {
-        array.set(dtm.transform.mult(array.value, val));
+        array.set(dtm.transform.mult(params.value, val));
         return array;
     };
 
@@ -341,8 +270,8 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.mirror = function () {
-        array.value = dtm.transform.mirror(array.value);
-        array.set(array.value);
+        params.value = dtm.transform.mirror(params.value);
+        array.set(params.value);
         return array;
     };
 
@@ -360,8 +289,8 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.invert = function (center) {
-        array.value = dtm.transform.invert(array.value, center);
-        array.set(array.value);
+        params.value = dtm.transform.invert(params.value, center);
+        array.set(params.value);
         return array;
     };
 
@@ -378,8 +307,8 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.shuffle = function () {
-        array.value = dtm.transform.shuffle(array.value);
-        array.set(array.value);
+        params.value = dtm.transform.shuffle(params.value);
+        array.set(params.value);
         return array;
     };
 
@@ -396,8 +325,8 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.sort = function () {
-        array.value = dtm.transform.sort(array.value);
-        array.set(array.value);
+        params.value = dtm.transform.sort(params.value);
+        array.set(params.value);
         return array;
     };
 
@@ -409,7 +338,7 @@ dtm.array = function (arr, name) {
      */
     array.concat = function (arr) {
         arr = arr || [];
-        var temp = array.value;
+        var temp = params.value;
         if (arr instanceof Array) {
             temp = temp.concat(arr);
         } else if (arr.type === 'dtm.array') {
@@ -426,8 +355,8 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.repeat = function (count) {
-        array.value = dtm.transform.repeat(array.value, count);
-        array.set(array.value);
+        params.value = dtm.transform.repeat(params.value, count);
+        array.set(params.value);
         return array;
     };
 
@@ -446,8 +375,8 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.truncate = function (arg1, arg2) {
-        array.value = dtm.transform.truncate(array.value, arg1, arg2);
-        array.set(array.value);
+        params.value = dtm.transform.truncate(params.value, arg1, arg2);
+        array.set(params.value);
         return array;
     };
 
@@ -457,8 +386,8 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.round = function () {
-        array.value = dtm.transform.round(array.value);
-        array.set(array.value);
+        params.value = dtm.transform.round(params.value);
+        array.set(params.value);
         return array;
     };
 
@@ -468,7 +397,7 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.floor = function () {
-        return array.set(dtm.transform.floor(array.value));
+        return array.set(dtm.transform.floor(params.value));
     };
 
     /**
@@ -477,7 +406,7 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.ceil = function () {
-        return array.set(dtm.transform.ceil(array.value));
+        return array.set(dtm.transform.ceil(params.value));
     };
 
     /**
@@ -487,8 +416,8 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.shift = function (amount) {
-        array.value = dtm.transform.shift(array.value, amount);
-        array.set(array.value);
+        params.value = dtm.transform.shift(params.value, amount);
+        array.set(params.value);
         return array;
     };
 
@@ -499,9 +428,9 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.expCurve = function (factor) {
-        var min = array.params.min;
-        var max = array.params.max;
-        var arr = dtm.transform.expCurve(array.normalized, factor);
+        var min = params.min;
+        var max = params.max;
+        var arr = dtm.transform.expCurve(params.normalized, factor);
         array.set(dtm.transform.rescale(arr, min, max));
         return array;
     };
@@ -513,9 +442,9 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.logCurve = function (factor) {
-        var min = array.params.min;
-        var max = array.params.max;
-        var arr = dtm.transform.logCurve(array.normalized, factor);
+        var min = params.min;
+        var max = params.max;
+        var arr = dtm.transform.logCurve(params.normalized, factor);
         array.set(dtm.transform.rescale(arr, min, max));
         return array;
     };
@@ -529,12 +458,12 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.fit = function (len, interp) {
-        //var newVal = dtm.transform.fit(array.value, len, interp);
+        //var newVal = dtm.transform.fit(params.value, len, interp);
         //delete array;
         //return dtm.array(newVal);
 
-        array.value = dtm.transform.fit(array.value, len, interp);
-        array.set(array.value);
+        params.value = dtm.transform.fit(params.value, len, interp);
+        array.set(params.value);
         return array;
     };
 
@@ -546,8 +475,8 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.stretch = function (factor, interp) {
-        array.value = dtm.transform.stretch(array.value, factor, interp);
-        array.set(array.value);
+        params.value = dtm.transform.stretch(params.value, factor, interp);
+        array.set(params.value);
         return array;
     };
 
@@ -564,8 +493,8 @@ dtm.array = function (arr, name) {
                 tgtArr = tgtArr.value;
             }
         }
-        array.value = dtm.transform.morph(array.value, tgtArr, morphIdx);
-        array.set(array.value);
+        params.value = dtm.transform.morph(params.value, tgtArr, morphIdx);
+        array.set(params.value);
         return array;
     };
 
@@ -577,8 +506,8 @@ dtm.array = function (arr, name) {
      */
     array.notesToBeats = function (resolution) {
         resolution = resolution || 4;
-        array.value = dtm.transform.notesToBeats(array.value, resolution);
-        array.set(array.value);
+        params.value = dtm.transform.notesToBeats(params.value, resolution);
+        array.set(params.value);
         return array;
     };
 
@@ -590,8 +519,8 @@ dtm.array = function (arr, name) {
      */
     array.beatsToNotes = function (resolution) {
         resolution = resolution || 4;
-        array.value = dtm.transform.beatsToNotes(array.value, resolution);
-        array.set(array.value);
+        params.value = dtm.transform.beatsToNotes(params.value, resolution);
+        array.set(params.value);
         return array;
     };
 
@@ -601,8 +530,8 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.intervalsToBeats = function () {
-        array.value = dtm.transform.intervalsToBeats(array.value);
-        array.set(array.value);
+        params.value = dtm.transform.intervalsToBeats(params.value);
+        array.set(params.value);
         return array;
     };
 
@@ -612,8 +541,8 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.beatsToIntervals = function () {
-        array.value = dtm.transform.beatsToIntervals(array.value);
-        array.set(array.value);
+        params.value = dtm.transform.beatsToIntervals(params.value);
+        array.set(params.value);
         return array;
     };
 
@@ -623,8 +552,8 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.beatsToIndices = function () {
-        array.value = dtm.transform.beatsToIndices(array.value);
-        array.set(array.value);
+        params.value = dtm.transform.beatsToIndices(params.value);
+        array.set(params.value);
         return array;
     };
 
@@ -677,7 +606,7 @@ dtm.array = function (arr, name) {
         } else {
             scale = arguments;
         }
-        return array.set(dtm.transform.pq(array.value, scale));
+        return array.set(dtm.transform.pq(params.value, scale));
     };
 
     array.transpose = function (val) {
@@ -690,7 +619,7 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.hwr = function () {
-        array.set(dtm.transform.hwr(array.value));
+        array.set(dtm.transform.hwr(params.value));
         return array;
     };
 
@@ -700,7 +629,7 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.fwr = function () {
-        array.set(dtm.transform.fwr(array.value));
+        array.set(dtm.transform.fwr(params.value));
         return array;
     };
 
@@ -726,11 +655,11 @@ dtm.array = function (arr, name) {
         var type = typeof(param);
 
         if (type === 'number') {
-            if (param < 0 || param >= array.params.length) {
+            if (param < 0 || param >= params.length) {
                 dtm.log('Index out of range');
-                out = array.values[dtm.value.mod(param, array.params.length)];
+                out = params.value[dtm.value.mod(param, params.length)];
             } else {
-                out = array.values[param];
+                out = params.value[param];
             }
         } else {
             switch (param) {
@@ -739,40 +668,40 @@ dtm.array = function (arr, name) {
                     break;
                 case 'len':
                 case 'length':
-                    out = array.params.length;
+                    out = params.length;
                     break;
 
                 case 'min':
-                    out = dtm.analyzer.min(array.values);
+                    out = dtm.analyzer.min(params.value);
                     break;
                 case 'max':
-                    out = dtm.analyzer.max(array.values);
+                    out = dtm.analyzer.max(params.value);
                     break;
                 case 'mean':
                 case 'average':
                 case 'avg':
-                    out = dtm.analyzer.mean(array.values);
+                    out = dtm.analyzer.mean(params.value);
                     break;
                 case 'mode':
-                    out = dtm.analyzer.mode(array.values);
+                    out = dtm.analyzer.mode(params.value);
                     break;
                 case 'median':
-                    out = dtm.analyzer.median(array.values);
+                    out = dtm.analyzer.median(params.value);
                     break;
                 case 'midrange':
-                    out = dtm.analyzer.midrange(array.values);
+                    out = dtm.analyzer.midrange(params.value);
                     break;
                 case 'std':
-                    out = dtm.analyzer.std(array.values);
+                    out = dtm.analyzer.std(params.value);
                     break;
                 case 'pstd':
-                    out = dtm.analyzer.pstd(array.values);
+                    out = dtm.analyzer.pstd(params.value);
                     break;
                 case 'var':
-                    out = dtm.analyzer.var(array.values);
+                    out = dtm.analyzer.var(params.value);
                     break;
                 case 'pvar':
-                    out = dtm.analyzer.pvar(array.values);
+                    out = dtm.analyzer.pvar(params.value);
                     break;
 
                 case 'index':
@@ -789,33 +718,34 @@ dtm.array = function (arr, name) {
                 case 'cur':
                 case 'now':
                 case 'moment':
-                    out = array.values[array.index];
+                    out = params.value[params.index];
                     break;
 
                 case 'next':
-                    array.index = dtm.value.mod(++array.index, array.params.length);
-                    out = array.values[array.index];
+                    params.index = dtm.value.mod(++params.index, params.length);
+                    out = params.value[params.index];
                     break;
 
                 case 'prev':
                 case 'previous':
-                    array.index = dtm.value.mod(--array.index, array.params.length);
-                    out = array.values[array.index];
+                    params.index = dtm.value.mod(--params.index, params.length);
+                    out = params.value[params.index];
                     break;
 
                 case 'palindrome':
                     break;
 
                 case 'random':
-                    out = array.values[_.random(0, array.params.length - 1)];
+                    out = params.value[_.random(0, params.length - 1)];
                     break;
 
                 case 'urn':
                     break;
 
+                case 'normal':
                 case 'normalize':
                 case 'normalized':
-                    out = dtm.transform.normalize(array.values);
+                    out = dtm.transform.normalize(params.value);
                     break;
                 case 'classes':
                     break;
@@ -825,7 +755,7 @@ dtm.array = function (arr, name) {
                     break;
 
                 default:
-                    out = array.values;
+                    out = params.value;
                     break;
             }
         }
@@ -842,8 +772,8 @@ dtm.array = function (arr, name) {
         if (typeof(param) === 'undefined') {
             param = 'value'
         }
-        var out = array[param][array.index];
-        array.index = dtm.value.mod(array.index + 1, array.params.length);
+        var out = array[param][params.index];
+        params.index = dtm.value.mod(params.index + 1, params.length);
         return out;
     };
 
@@ -853,7 +783,7 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.reset = function () {
-        array.set(array.params.original);
+        array.set(params.original);
         return array;
     };
 

@@ -701,7 +701,7 @@ dtm.transform = {
     },
 
     applyOffsetToBeats: function (src, offset) {
-        var res = dtm.array().fill('zeroes', src.length).value;
+        var res = dtm.array().fill('zeroes', src.length).get();
         var curSelection = 0;
 
         for (var i = 0; i < src.length; i++) {

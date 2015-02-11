@@ -1231,7 +1231,7 @@ dtm.transform = {
     },
 
     applyOffsetToBeats: function (src, offset) {
-        var res = dtm.array().fill('zeroes', src.length).value;
+        var res = dtm.array().fill('zeroes', src.length).get();
         var curSelection = 0;
 
         for (var i = 0; i < src.length; i++) {
@@ -1373,101 +1373,30 @@ dtm.tr = dtm.transform;
  * @returns array object {{value: null, normalized: null, length: null, min: null, max: null, mean: null}}
  */
 dtm.array = function (arr, name) {
-    var array = {
-        type: 'dtm.array',
+    // private
+    var params = {
+        name: '', // or key?
+        type: null, // int, float, string, coll, mixed, date
+        length: null,
+        min: null,
+        max: null,
+        mean: null,
+        std: null,
+        mode: null,
 
-        params: {
-            /**
-             * The name of the array object.
-             * @name module:array#name
-             * @type {string}
-             */
-            name: '', // or key?
-
-            /**
-             * Value type of the array object.
-             * @name module:array#type
-             * @type {string}
-             */
-            type: null, // int, float, string, coll, mixed, date
-
-            /**
-             * Length of the array.
-             * @name module:array#length
-             * @type {integer}
-             */
-            length: null,
-
-            /**
-             * Minimum value of the array.
-             * @name module:array#min
-             * @type {number}
-             */
-            min: null,
-
-            /**
-             * Maximum value of the array.
-             * @name module:array#max
-             * @type {number}
-             */
-            max: null,
-
-            /**
-             * Mean value of the array.
-             * @name module:array#mean
-             * @type {number}
-             */
-            mean: null,
-
-            /**
-             * Standard deviation.
-             * @name module:array#std
-             * @type {number}
-             */
-            std: null,
-
-            /**
-             * The most frequent value or class.
-             * @name module:array#mode
-             */
-            mode: null,
-
-            original: null
-        },
-
-
-        /**
-         * Numerical values of the array.
-         * @name module:array#value
-         * @type {array}
-         */
         value: [],
-        values: [],
-
-        /**
-         * Numerical values of the array rescaled to 0-1.
-         * @name module:array#normalized
-         * @type {array}
-         */
+        original: null,
         normalized: [],
-
-        /**
-         * When the data type is nominal / string, the string values are stored in this.
-         * @name module:array#classes
-         * @type array
-         */
         classes: null,
-
-        /**
-         * Number of occurances per class.
-         * @name module:array#histogram
-         */
         histogram: null,
         numClasses: null,
 
-        colls: null,
-
         index: 0
+    };
+
+    // public
+    var array = {
+        type: 'dtm.array'
     };
 
     /**
@@ -1483,36 +1412,36 @@ dtm.array = function (arr, name) {
         }
 
         // TODO: error checking
-        array.value = input;
-        array.values = input;
+        params.value = input;
+        params.value = input;
 
         // CHECK: kind of ugly
-        if (typeof(array.params.original) === 'undefined') {
-            array.params.original = input;
+        if (typeof(params.original) === 'undefined') {
+            params.original = input;
         }
 
         // CHECK: type checking - may be redundant
         checkType(input);
 
-        if (array.params.type === 'number' || array.params.type === 'int' || array.params.type === 'float') {
-            _.forEach(array.value, function (val, idx) {
-                array.value[idx] = Number.parseFloat(val);
+        if (params.type === 'number' || params.type === 'int' || params.type === 'float') {
+            _.forEach(params.value, function (val, idx) {
+                params.value[idx] = Number.parseFloat(val);
             });
 
-            array.normalized = dtm.transform.normalize(input);
-            array.params.min = dtm.analyzer.min(input);
-            array.params.max = dtm.analyzer.max(input);
-            array.params.mean = dtm.analyzer.mean(input);
-            array.params.std = dtm.analyzer.std(input);
-            array.params.mode = dtm.analyzer.mode(input);
+            params.normalized = dtm.transform.normalize(input);
+            params.min = dtm.analyzer.min(input);
+            params.max = dtm.analyzer.max(input);
+            params.mean = dtm.analyzer.mean(input);
+            params.std = dtm.analyzer.std(input);
+            params.mode = dtm.analyzer.mode(input);
         }
 
-        if (array.params.type === 'string') {
+        if (params.type === 'string') {
             histo();
-            array.params.mode = dtm.analyzer.mode(array.classes);
+            params.mode = dtm.analyzer.mode(params.classes);
         }
 
-        array.params.length = input.length;
+        params.length = input.length;
 
         return array;
     };
@@ -1524,7 +1453,7 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.setName = function (name) {
-        array.params.name = name.toString();
+        params.name = name.toString();
         return array;
     };
 
@@ -1554,12 +1483,12 @@ dtm.array = function (arr, name) {
         // TODO: workaround for a missing value
         if (isNaN(arr[0])) {
             if (typeof(arr[0]) === 'object') {
-                array.params.type = 'collection';
+                params.type = 'collection';
             } else {
-                array.params.type = typeof(arr[0]);
+                params.type = typeof(arr[0]);
             }
         } else {
-            array.params.type = 'number';
+            params.type = 'number';
         }
 
         //array.type = res;
@@ -1575,16 +1504,16 @@ dtm.array = function (arr, name) {
     array.histo = histo;
 
     function histo() {
-        array.classes = _.clone(array.value);
-        array.histogram = _.countBy(array.value);
+        params.classes = _.clone(params.value);
+        params.histogram = _.countBy(params.value);
         //array.numClasses =
 
-        _.forEach(array.classes, function (val, idx) {
-            array.value[idx] = array.histogram[val];
+        _.forEach(params.classes, function (val, idx) {
+            params.value[idx] = params.histogram[val];
         });
 
-        array.set(array.value);
-        array.params.type = 'string'; // re-set the type to string from number... hacky!
+        array.set(params.value);
+        params.type = 'string'; // re-set the type to string from number... hacky!
 
         return array;
     }
@@ -1598,10 +1527,10 @@ dtm.array = function (arr, name) {
         // this doesn't work
         //return dtm.clone(array);
 
-        var newArr = dtm.array(array.values, array.params.name);
-        if (array.params.type === 'string') {
-            newArr.classes = array.classes;
-            newArr.histogram = _.clone(array.histogram);
+        var newArr = dtm.array(params.value, params.name);
+        if (params.type === 'string') {
+            newArr.classes = params.classes;
+            newArr.histogram = _.clone(params.histogram);
             newArr.params.type = 'string';
         }
         return newArr;
@@ -1619,8 +1548,8 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.fill = function (type, len, min, max) {
-        array.value = dtm.transform.generate(type, len, min, max);
-        array.set(array.value);
+        params.value = dtm.transform.generate(type, len, min, max);
+        array.set(params.value);
         return array;
     };
 
@@ -1644,8 +1573,8 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.normalize = function (min, max) {
-        array.value = dtm.transform.normalize(array.value, min, max);
-        array.set(array.value);
+        params.value = dtm.transform.normalize(params.value, min, max);
+        array.set(params.value);
         return array;
     };
 
@@ -1657,8 +1586,8 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.rescale = function (min, max) {
-        array.value = dtm.transform.rescale(array.value, min, max);
-        array.set(array.value);
+        params.value = dtm.transform.rescale(params.value, min, max);
+        array.set(params.value);
         return array;
     };
 
@@ -1681,7 +1610,7 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.add = function (val) {
-        array.set(dtm.transform.add(array.value, val));
+        array.set(dtm.transform.add(params.value, val));
         return array;
     };
 
@@ -1692,7 +1621,7 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.mult = function (val) {
-        array.set(dtm.transform.mult(array.value, val));
+        array.set(dtm.transform.mult(params.value, val));
         return array;
     };
 
@@ -1702,8 +1631,8 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.mirror = function () {
-        array.value = dtm.transform.mirror(array.value);
-        array.set(array.value);
+        params.value = dtm.transform.mirror(params.value);
+        array.set(params.value);
         return array;
     };
 
@@ -1721,8 +1650,8 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.invert = function (center) {
-        array.value = dtm.transform.invert(array.value, center);
-        array.set(array.value);
+        params.value = dtm.transform.invert(params.value, center);
+        array.set(params.value);
         return array;
     };
 
@@ -1739,8 +1668,8 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.shuffle = function () {
-        array.value = dtm.transform.shuffle(array.value);
-        array.set(array.value);
+        params.value = dtm.transform.shuffle(params.value);
+        array.set(params.value);
         return array;
     };
 
@@ -1757,8 +1686,8 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.sort = function () {
-        array.value = dtm.transform.sort(array.value);
-        array.set(array.value);
+        params.value = dtm.transform.sort(params.value);
+        array.set(params.value);
         return array;
     };
 
@@ -1770,7 +1699,7 @@ dtm.array = function (arr, name) {
      */
     array.concat = function (arr) {
         arr = arr || [];
-        var temp = array.value;
+        var temp = params.value;
         if (arr instanceof Array) {
             temp = temp.concat(arr);
         } else if (arr.type === 'dtm.array') {
@@ -1787,8 +1716,8 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.repeat = function (count) {
-        array.value = dtm.transform.repeat(array.value, count);
-        array.set(array.value);
+        params.value = dtm.transform.repeat(params.value, count);
+        array.set(params.value);
         return array;
     };
 
@@ -1807,8 +1736,8 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.truncate = function (arg1, arg2) {
-        array.value = dtm.transform.truncate(array.value, arg1, arg2);
-        array.set(array.value);
+        params.value = dtm.transform.truncate(params.value, arg1, arg2);
+        array.set(params.value);
         return array;
     };
 
@@ -1818,8 +1747,8 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.round = function () {
-        array.value = dtm.transform.round(array.value);
-        array.set(array.value);
+        params.value = dtm.transform.round(params.value);
+        array.set(params.value);
         return array;
     };
 
@@ -1829,7 +1758,7 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.floor = function () {
-        return array.set(dtm.transform.floor(array.value));
+        return array.set(dtm.transform.floor(params.value));
     };
 
     /**
@@ -1838,7 +1767,7 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.ceil = function () {
-        return array.set(dtm.transform.ceil(array.value));
+        return array.set(dtm.transform.ceil(params.value));
     };
 
     /**
@@ -1848,8 +1777,8 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.shift = function (amount) {
-        array.value = dtm.transform.shift(array.value, amount);
-        array.set(array.value);
+        params.value = dtm.transform.shift(params.value, amount);
+        array.set(params.value);
         return array;
     };
 
@@ -1860,9 +1789,9 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.expCurve = function (factor) {
-        var min = array.params.min;
-        var max = array.params.max;
-        var arr = dtm.transform.expCurve(array.normalized, factor);
+        var min = params.min;
+        var max = params.max;
+        var arr = dtm.transform.expCurve(params.normalized, factor);
         array.set(dtm.transform.rescale(arr, min, max));
         return array;
     };
@@ -1874,9 +1803,9 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.logCurve = function (factor) {
-        var min = array.params.min;
-        var max = array.params.max;
-        var arr = dtm.transform.logCurve(array.normalized, factor);
+        var min = params.min;
+        var max = params.max;
+        var arr = dtm.transform.logCurve(params.normalized, factor);
         array.set(dtm.transform.rescale(arr, min, max));
         return array;
     };
@@ -1890,12 +1819,12 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.fit = function (len, interp) {
-        //var newVal = dtm.transform.fit(array.value, len, interp);
+        //var newVal = dtm.transform.fit(params.value, len, interp);
         //delete array;
         //return dtm.array(newVal);
 
-        array.value = dtm.transform.fit(array.value, len, interp);
-        array.set(array.value);
+        params.value = dtm.transform.fit(params.value, len, interp);
+        array.set(params.value);
         return array;
     };
 
@@ -1907,8 +1836,8 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.stretch = function (factor, interp) {
-        array.value = dtm.transform.stretch(array.value, factor, interp);
-        array.set(array.value);
+        params.value = dtm.transform.stretch(params.value, factor, interp);
+        array.set(params.value);
         return array;
     };
 
@@ -1925,8 +1854,8 @@ dtm.array = function (arr, name) {
                 tgtArr = tgtArr.value;
             }
         }
-        array.value = dtm.transform.morph(array.value, tgtArr, morphIdx);
-        array.set(array.value);
+        params.value = dtm.transform.morph(params.value, tgtArr, morphIdx);
+        array.set(params.value);
         return array;
     };
 
@@ -1938,8 +1867,8 @@ dtm.array = function (arr, name) {
      */
     array.notesToBeats = function (resolution) {
         resolution = resolution || 4;
-        array.value = dtm.transform.notesToBeats(array.value, resolution);
-        array.set(array.value);
+        params.value = dtm.transform.notesToBeats(params.value, resolution);
+        array.set(params.value);
         return array;
     };
 
@@ -1951,8 +1880,8 @@ dtm.array = function (arr, name) {
      */
     array.beatsToNotes = function (resolution) {
         resolution = resolution || 4;
-        array.value = dtm.transform.beatsToNotes(array.value, resolution);
-        array.set(array.value);
+        params.value = dtm.transform.beatsToNotes(params.value, resolution);
+        array.set(params.value);
         return array;
     };
 
@@ -1962,8 +1891,8 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.intervalsToBeats = function () {
-        array.value = dtm.transform.intervalsToBeats(array.value);
-        array.set(array.value);
+        params.value = dtm.transform.intervalsToBeats(params.value);
+        array.set(params.value);
         return array;
     };
 
@@ -1973,8 +1902,8 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.beatsToIntervals = function () {
-        array.value = dtm.transform.beatsToIntervals(array.value);
-        array.set(array.value);
+        params.value = dtm.transform.beatsToIntervals(params.value);
+        array.set(params.value);
         return array;
     };
 
@@ -1984,8 +1913,8 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.beatsToIndices = function () {
-        array.value = dtm.transform.beatsToIndices(array.value);
-        array.set(array.value);
+        params.value = dtm.transform.beatsToIndices(params.value);
+        array.set(params.value);
         return array;
     };
 
@@ -2038,7 +1967,7 @@ dtm.array = function (arr, name) {
         } else {
             scale = arguments;
         }
-        return array.set(dtm.transform.pq(array.value, scale));
+        return array.set(dtm.transform.pq(params.value, scale));
     };
 
     array.transpose = function (val) {
@@ -2051,7 +1980,7 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.hwr = function () {
-        array.set(dtm.transform.hwr(array.value));
+        array.set(dtm.transform.hwr(params.value));
         return array;
     };
 
@@ -2061,7 +1990,7 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.fwr = function () {
-        array.set(dtm.transform.fwr(array.value));
+        array.set(dtm.transform.fwr(params.value));
         return array;
     };
 
@@ -2087,11 +2016,11 @@ dtm.array = function (arr, name) {
         var type = typeof(param);
 
         if (type === 'number') {
-            if (param < 0 || param >= array.params.length) {
+            if (param < 0 || param >= params.length) {
                 dtm.log('Index out of range');
-                out = array.values[dtm.value.mod(param, array.params.length)];
+                out = params.value[dtm.value.mod(param, params.length)];
             } else {
-                out = array.values[param];
+                out = params.value[param];
             }
         } else {
             switch (param) {
@@ -2100,40 +2029,40 @@ dtm.array = function (arr, name) {
                     break;
                 case 'len':
                 case 'length':
-                    out = array.params.length;
+                    out = params.length;
                     break;
 
                 case 'min':
-                    out = dtm.analyzer.min(array.values);
+                    out = dtm.analyzer.min(params.value);
                     break;
                 case 'max':
-                    out = dtm.analyzer.max(array.values);
+                    out = dtm.analyzer.max(params.value);
                     break;
                 case 'mean':
                 case 'average':
                 case 'avg':
-                    out = dtm.analyzer.mean(array.values);
+                    out = dtm.analyzer.mean(params.value);
                     break;
                 case 'mode':
-                    out = dtm.analyzer.mode(array.values);
+                    out = dtm.analyzer.mode(params.value);
                     break;
                 case 'median':
-                    out = dtm.analyzer.median(array.values);
+                    out = dtm.analyzer.median(params.value);
                     break;
                 case 'midrange':
-                    out = dtm.analyzer.midrange(array.values);
+                    out = dtm.analyzer.midrange(params.value);
                     break;
                 case 'std':
-                    out = dtm.analyzer.std(array.values);
+                    out = dtm.analyzer.std(params.value);
                     break;
                 case 'pstd':
-                    out = dtm.analyzer.pstd(array.values);
+                    out = dtm.analyzer.pstd(params.value);
                     break;
                 case 'var':
-                    out = dtm.analyzer.var(array.values);
+                    out = dtm.analyzer.var(params.value);
                     break;
                 case 'pvar':
-                    out = dtm.analyzer.pvar(array.values);
+                    out = dtm.analyzer.pvar(params.value);
                     break;
 
                 case 'index':
@@ -2150,33 +2079,34 @@ dtm.array = function (arr, name) {
                 case 'cur':
                 case 'now':
                 case 'moment':
-                    out = array.values[array.index];
+                    out = params.value[params.index];
                     break;
 
                 case 'next':
-                    array.index = dtm.value.mod(++array.index, array.params.length);
-                    out = array.values[array.index];
+                    params.index = dtm.value.mod(++params.index, params.length);
+                    out = params.value[params.index];
                     break;
 
                 case 'prev':
                 case 'previous':
-                    array.index = dtm.value.mod(--array.index, array.params.length);
-                    out = array.values[array.index];
+                    params.index = dtm.value.mod(--params.index, params.length);
+                    out = params.value[params.index];
                     break;
 
                 case 'palindrome':
                     break;
 
                 case 'random':
-                    out = array.values[_.random(0, array.params.length - 1)];
+                    out = params.value[_.random(0, params.length - 1)];
                     break;
 
                 case 'urn':
                     break;
 
+                case 'normal':
                 case 'normalize':
                 case 'normalized':
-                    out = dtm.transform.normalize(array.values);
+                    out = dtm.transform.normalize(params.value);
                     break;
                 case 'classes':
                     break;
@@ -2186,7 +2116,7 @@ dtm.array = function (arr, name) {
                     break;
 
                 default:
-                    out = array.values;
+                    out = params.value;
                     break;
             }
         }
@@ -2203,8 +2133,8 @@ dtm.array = function (arr, name) {
         if (typeof(param) === 'undefined') {
             param = 'value'
         }
-        var out = array[param][array.index];
-        array.index = dtm.value.mod(array.index + 1, array.params.length);
+        var out = array[param][params.index];
+        params.index = dtm.value.mod(params.index + 1, params.length);
         return out;
     };
 
@@ -2214,7 +2144,7 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.reset = function () {
-        array.set(array.params.original);
+        array.set(params.original);
         return array;
     };
 
@@ -5089,494 +5019,4 @@ dtm.inscore = function () {
 
 
 
-(function () {
-    var m = dtm.model('clave', 'beats');
-
-    m.source = dtm.tr.itob([3, 3, 4, 2, 4]);
-    m.target = dtm.tr.itob([2, 1, 2, 1]);
-    m.midx = 0;
-    m.array = dtm.array(dtm.tr.morph(m.source, m.target, m.midx));
-
-    m.mod = function (val) {
-        m.midx = val;
-        m.array.set(dtm.tr.morph(m.source, m.target, m.midx));
-        return m;
-    };
-
-    m.next = function () {
-        return m.array.round().next();
-    };
-})();
-(function () {
-    var m = dtm.model('single-note').categ('instr');
-
-    m.complexity = 1;
-
-    m.play = function (nn) {
-        var osc = actx.createOscillator();
-        var amp = actx.createGain();
-
-        osc.connect(amp);
-        amp.connect(out());
-
-        osc.frequency.value = dtm.val.mtof(nn);
-        osc.start(now());
-        osc.stop(now() + 0.15);
-
-        var del = actx.createDelay();
-        del.delayTime.setValueAtTime(.25, 0);
-
-        var delAmp = actx.createGain();
-        delAmp.gain.setValueAtTime(.22, 0);
-
-        amp.connect(del);
-        del.connect(delAmp);
-        delAmp.connect(del);
-        delAmp.connect(out());
-
-        amp.gain.value = 0.2;
-        amp.gain.setTargetAtTime(0, now(), 0.1);
-
-        return m;
-    }
-})();
-(function () {
-    var m = dtm.model('short-noise').categ('instr');
-
-    m.complexity = 2;
-
-    var buffer = dtm.synth2.noise(4192);
-
-    var seq = [1, 0.2, 0.5, 0.2];
-    var seqIdx = 0;
-
-    var freq = 3000;
-    m.setFreq = function (val) {
-        freq = val;
-    };
-
-    m.play = function () {
-        var src = actx.createBufferSource();
-        var hpf = actx.createBiquadFilter();
-        var amp = actx.createGain();
-
-        src.connect(hpf);
-        hpf.connect(amp);
-        amp.connect(out());
-
-        var startTime = now();
-
-        src.buffer = buffer;
-        src.loop = true;
-        src.start(startTime);
-        src.stop(startTime + 0.5);
-
-        hpf.type = 'highpass';
-        hpf.frequency.value = freq;
-
-        amp.gain.value = 0.1 * seq[seqIdx];
-        amp.gain.setTargetAtTime(0, startTime + 0.001, 0.022);
-
-        seqIdx = (seqIdx + 1) % seq.length;
-
-        return m;
-    };
-    
-    m.modulate = function () {
-        
-    }
-})();
-(function () {
-    var m = dtm.model('nice-chords').categ('instr');
-    m.complexity = 5;
-
-    var numVoices = 2;
-    m.mod = function (val) {
-        numVoices = Math.round(val * 6) + 2;
-    };
-
-    var scale = [0, 2, 4, 7, 11];
-
-    m.test = function () {
-        return m;
-    };
-
-    // make it inheritable...
-    m.setScale = function (arr) {
-        scale = arr;
-        return m;
-    };
-
-    m.play = function () {
-        var amp = actx.createGain();
-        var nn = Math.round(Math.random() * 30 + 60);
-        var dur = 2;
-
-//        var cd = m.master();
-
-        var arr = [0, 1];
-        for (var i = 0; Math.round(i < Math.random() * 13); i++) {
-            arr.push(Math.random());
-        }
-        var real = new Float32Array(arr);
-        var img = real;
-        var timbre = actx.createPeriodicWave(real, img);
-
-        for (var i = 0; i < numVoices; i++) {
-            var osc = [];
-            osc[i] = actx.createOscillator();
-            osc[i].connect(amp);
-
-            osc[i].frequency.setValueAtTime(dtm.val.mtof(dtm.val.pq(nn + 3 * i, scale)), now());
-            osc[i].setPeriodicWave(timbre);
-
-            osc[i].start(now());
-            osc[i].stop(now() + dur * .9);
-        }
-
-        amp.connect(out());
-
-        var delta = 0.2;
-        amp.gain.value = 0;
-        amp.gain.setValueAtTime(0, now());
-        amp.gain.setTargetAtTime(0.15, now() + .001, dur - delta);
-        amp.gain.setTargetAtTime(0, now() + dur - delta, delta);
-
-
-        var del = actx.createDelay();
-        del.delayTime.setValueAtTime(.3, 0);
-
-        var delAmp = actx.createGain();
-        delAmp.gain.setValueAtTime(.8, 0);
-
-        amp.connect(del);
-        del.connect(delAmp);
-        delAmp.connect(del);
-        delAmp.connect(out());
-
-        return m;
-    };
-
-//    m.setTimbre(m.timbre());
-})();
-(function () {
-    var m = dtm.model('rhythm-seq').categ('instr');
-    m.complexity = 2;
-
-    var buffer = dtm.synth2.noise(4192);
-
-    var motif = {};
-    motif.seq = [1, 0.2, 0.5, 0.2];
-    motif.seqIdx = 0;
-
-    var freq = 3000;
-    m.setFreq = function (val) {
-        freq = val;
-    };
-
-    m.play = function () {
-        var src = actx.createOscillator();
-        var amp = actx.createGain();
-        src.connect(amp);
-        amp.connect(out());
-
-        src.frequency.setValueAtTime(1000, now());
-        src.frequency.linearRampToValueAtTime(50, now() + 0.01);
-        amp.gain.vlaue = 0.5;
-        amp.gain.linearRampToValueAtTime(0, now() + 0.01);
-
-        src.start(now());
-        src.stop(now() + 0.01);
-    };
-
-    m.run = function () {
-        var pCl = m.getParentClock();
-        console.log(pCl.bpm);
-
-        return m;
-    };
-
-})();
-(function () {
-    var m = dtm.model('sampler').categ('instr');
-    m.complexity = 2;
-
-    m.loop = false;
-
-    var buffer = actx.createBuffer(1, 1000, 44100);
-
-    // testing promise right here
-    m.loadBuffer = function (arrBuf) {
-//        buffer = loadBuffer(arrBuf);
-        return new Promise(function (resolve, reject) {
-            actx.decodeAudioData(arrBuf, function (buf) {
-                buffer = buf;
-                resolve(buffer);
-            });
-        });
-
-//        return m;
-    };
-
-    m.play = function () {
-        var src = actx.createBufferSource();
-        var amp = actx.createGain();
-        src.connect(amp);
-        amp.connect(out());
-
-        src.buffer = buffer;
-        src.loop = m.loop;
-
-        amp.gain.value = 0.5;
-
-        src.start(now());
-
-        return m;
-    };
-})();
-(function () {
-    var m = dtm.model('clave-instr').categ('instr');
-    m.complexity = 1;
-
-    var darr = dtm.transform;
-
-    m.motif = {};
-    m.motif.beats = darr.itob([3, 3, 4, 2, 4]);
-    m.motif.target = darr.itob([2, 1, 2, 1]);
-    m.motif.midx = 0;
-
-    var cl = dtm.clock(80);
-    cl.subDiv(16);
-    cl.setTime('2/4');
-
-    var noise = dtm.synth2.noise(4192);
-
-    m.play = function () {
-        var idx = 0;
-
-        cl.add(function () {
-            var src = actx.createBufferSource();
-            var amp = actx.createGain();
-            src.connect(amp);
-            amp.connect(out());
-            src.buffer = noise;
-            src.loop = true;
-
-            m.motif.morphed = darr.morph(m.motif.beats, m.motif.target, m.motif.midx);
-
-            if (idx >= m.motif.morphed.length) {
-                idx = 0;
-            }
-
-            amp.gain.setValueAtTime(0.5 * dtm.value.expCurve(m.motif.morphed[idx], 20), now());
-            amp.gain.linearRampToValueAtTime(0, now() + 0.02);
-
-            src.start(now());
-
-            idx = (idx + 1) % m.motif.morphed.length;
-        });
-
-        cl.start();
-    };
-
-    m.mod = function (val) {
-        m.motif.midx = val;
-    };
-
-    return m;
-})();
-(function () {
-    var m = dtm.model('tamborim').categ('instr');
-
-    var subDiv = 12 * 8;
-    var bpm = 400;
-    var c = dtm.clock(bpm, subDiv).sync(false);
-
-    m.motif = {
-        original: dtm.array([1, 1, 1, 1]).fit(subDiv, 'zeros'),
-        target: dtm.array([1, 0, 1, 1, 1, 0]).fit(subDiv, 'zeros'),
-        midx: 0
-    };
-
-    //m.morphed = dtm.transform.morph(m.motif.original, m.motif.target, m.motif.midx);
-
-    var idx = 0;
-    var offset = dtm.tr.calcBeatsOffset(m.motif.original.value, m.motif.target.value);
-    var noOffset = dtm.array().fill('zeroes', offset.length).value;
-
-    var curNote = 0;
-
-    m.play = function () {
-        c.add(function () {
-            m.curOffset = dtm.transform.morph(noOffset, offset, m.motif.midx);
-            m.curOffset = dtm.transform.round(m.curOffset);
-
-            var morphed = dtm.tr.applyOffsetToBeats(m.motif.original.value, m.curOffset);
-            //c.bpm(bpm + m.motif.midx * 60);
-            //c.bpm(bpm + m.motif.midx * 60);
-            //var delay = (1 - m.morphed[idx]) * 1 / c.params.bpm / m.morphed.length;
-
-            if (morphed[idx] === 1) {
-                if (curNote === 2) {
-                    dtm.syn('noise').decay(0.02).lpf(4000).amp(0.8).play();
-                } else {
-                    dtm.syn('noise').decay(0.02).lpf(1000).amp(0.8).play();
-                }
-
-                curNote = dtm.value.mod(curNote + 1, 4);
-            }
-
-            idx = dtm.value.mod(idx + 1, subDiv);
-        }).start();
-
-        return m;
-    };
-
-    m.stop = function () {
-        c.stop();
-        return m;
-    };
-
-    m.mod = function (val) {
-        m.motif.midx = val;
-        return m;
-    };
-
-    return m;
-})();
-(function () {
-    var m = dtm.model('bl-motif', 'motif');
-
-    m.params.isPercussion = false;
-    m.params.rhythm = null;
-    m.params.pitches = null;
-    m.params.weights = null;
-
-    var pc = {
-        '-1': '_',
-        'r': '_',
-        0: 'c',
-        1: 'd&',
-        2: 'd',
-        3: 'e&',
-        4: 'e',
-        5: 'f',
-        6: 'f#',
-        7: 'g',
-        8: 'a&',
-        9: 'a',
-        10: 'b&',
-        11: 'b'
-    };
-
-    var generateRhythm = function (arr) {
-        var a = dtm.array(arr);
-        var intv = a.fit(32).rescale(0, 1).round().btoi().get();
-
-        //var res = [];
-        //for (var i = 0; i < 32/4; i++) {
-        //
-        //}
-
-        //seq = seq.join(' ');
-
-
-        return intv;
-    };
-
-    var generatePitch = function (arr, intv) {
-        var a = dtm.array(arr);
-        var p = a.fit(intv.length).rescale(-6, 11).round().get();
-
-        var seq = [];
-
-        for (var i = 0; i < intv.length; i++) {
-            if (p[i] < 0) {
-                p[i] = -1;
-            }
-            seq[i] = pc[p[i]] + '*' + intv[i] + '/16';
-        }
-
-        return seq;
-    };
-
-    m.generate = function (arr) {
-        var temp = [];
-        for (var ch = 0; ch < 3; ch++) {
-            temp[ch] = [];
-
-            for (var i = 0; i < arr.length; i++) {
-                temp[ch][i] = _.random(0, 1, true);
-            }
-
-            temp[ch] = generatePitch(temp[ch], generateRhythm(temp[ch]));
-
-            temp[ch] = temp[ch].join(' ');
-        }
-
-        var intervals = generateRhythm(arr);
-        var seq = generatePitch(arr, intervals);
-
-
-        seq = seq.join(' ');
-        //seq = '[\\meter<"4/4"> ' + seq + ' \\newLine' + ' _*2/1' + ']';
-
-        var res = '{' +
-            '[\\instr<"Flute", dx=-1.65cm, dy=-0.5cm>\\meter<"4/4"> \\clef<"g"> ' + seq + '],' +
-            '[\\instr<"Cello", dx=-1.65cm, dy=-0.5cm>\\meter<"4/4"> \\clef<"f"> ' + temp[0] + '],' +
-            '[\\instr<"Piano", dx=-1.65cm, dy=-1.75cm> \\meter<"4/4"> \\clef<"g"> ' + temp[1] + '],' +
-            '[\\meter<"4/4"> \\clef<"f"> ' + temp[2] + ']}';
-
-        return res;
-    };
-})();
-(function () {
-    var m = dtm.model('bl-piano', 'part');
-
-    m.params.meta = {
-        section: 1
-    };
-
-    var scale = [0, 2, 3, 5, 7, 9, 10];
-
-    m.params.left = {
-        div: 16,
-        rhythm: [1, 1, -1, 3, 2, 2, 2],
-        shape: [0, 7, 12, 5, 10, 7]
-    };
-
-    m.params.right = {
-        div: 16,
-        //rhythm: [-2, 2, -1, 2, -2, 3]
-        rhythm: [-3, 5, 4],
-        shape: [1, 0, -1, 0],
-        voice: [0, 2, 7]
-    };
-
-    m.test = function (rhy, shp, div) {
-        var temp = [];
-        var note = 'c';
-
-        var j = 0;
-
-        for (var i = 0; i < rhy.length; i++) {
-            if (rhy[i] > 0) {
-                var oct = Math.floor(shp[j]/12);
-                note = dtm.guido().pc[shp[j]-oct*12] + (oct+1);
-                j++;
-            } else {
-                note = '_';
-                rhy[i] *= -1;
-            }
-            temp[i] = note + '*' + rhy[i] + '/' + div;
-        }
-
-        temp = temp.join(' ');
-        return temp;
-    };
-
-    m.output = function () {
-        return m.test(m.params.left.rhythm, m.params.left.shape, 16);
-    }
-})();
 })();
