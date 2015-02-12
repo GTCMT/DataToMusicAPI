@@ -3489,7 +3489,7 @@ dtm.clock = function (bpm, subDiv, time) {
                     if (params.reported !== params.current) {
                         if ((params.current % params.resolution) > (params.reported % params.resolution)) {
                             params.beat = Math.round(params.current / params.resolution);
-                            console.log(params.beat);
+                            //console.log(params.beat);
 
                             _.forEach(clock.callbacks, function (cb) {
                                 cb(clock);
@@ -3578,6 +3578,8 @@ dtm.clock = function (bpm, subDiv, time) {
 
             else if (dtm.master.clock.get('source') === 'animationFrame') {
                 if ((dtm.master.clock.get('cur') % (params.resolution/params.subDiv*4)) < params.prev) {
+
+                    params.beat = Math.round(dtm.master.clock.get('cur') / params.resolution * 4);
 
                     _.forEach(clock.callbacks, function (cb) {
                         cb(clock);
