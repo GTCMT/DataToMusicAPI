@@ -23,18 +23,17 @@ dtm.instr = function (arg) {
 
         models: {
             voice: dtm.synth(),
+            volume: dtm.array(1),
             scale: dtm.array().fill('seq', 12),
-            rhythm: dtm.array().fill('ones', 8),
-            pitch: dtm.array().fill('zeros', 8).add(0.5),
-            chord: [1]
+            rhythm: dtm.array(1),
+            pitch: dtm.array(0.5),
+            transpose: dtm.array([0, 1]),
+            chord: dtm.array(0)
         },
 
         instrModel: null,
 
-        callbacks: [],
-
-        // temp
-        transpose: 0
+        callbacks: []
     };
 
     var instr = {
@@ -71,7 +70,25 @@ dtm.instr = function (arg) {
         }
     };
 
-    instr.set = function () {
+    // CHECK: when giving an array, should I clone it? ...probably yes
+    instr.set = function (dest, src) {
+        if (typeof(src) === 'number') {
+            params.models[dest] = dtm.array(src);
+        } else {
+            if (src instanceof Array) {
+                params.models[dest] = dtm.array(src);
+            } else if (src.type === 'dtm.array') {
+                //if (src.get('type') === 'string') {
+                //    params.models[dest] = src.clone().classId();
+                //} else {
+                //}
+                params.models[dest] = src.clone();
+            } else if (src.type === 'dtm.model') {
+
+            } else if (src.type === 'dtm.synth') {
+                params.models[dest] = src;
+            }
+        }
         return instr;
     };
 
@@ -190,21 +207,32 @@ dtm.instr = function (arg) {
         return instr;
     };
 
+    // CHECK: this is pretty memory-inefficient
     function defaultInstr(c) {
         var v = params.models.voice;
+        var vol = params.models.volume.rescale(0.1, 1).get('next');
         var r = params.models.rhythm.normalize().round();
-        var p = params.models.pitch.normalize().scale(60, 96);
-        var sc = params.models.scale.normalize().scale(0,11).round().unique().sort();
+        var p = params.models.pitch.normalize().get('next');
+        var sc = params.models.scale.normalize().scale(0,11).round().unique().sort().get();
+        var tr = params.models.transpose.scale(-12, 12).get('mean');
+        var ct = params.models.chord.normalize().scale(0, 12).round().unique().sort();
 
-        console.log(p.get());
-        var nn = p.pq(sc.get()).get('next');
+        if (ct.get('len') > 4) {
+            ct.fit(4).round().unique().sort();
+        }
+
+        ct = ct.get();
+
+        var nn = dtm.val.pq(dtm.val.rescale(p, 60, 96), sc) + Math.round(tr);
 
         _.forEach(params.callbacks, function (cb) {
             cb();
         });
 
         if (r.get('next')) {
-            v.nn(nn).play();
+            _.forEach(ct, function (val) {
+                v.nn(nn + val).amp(vol).play();
+            });
         }
     }
 

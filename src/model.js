@@ -46,8 +46,8 @@ dtm.model = function (name, categ) {
         }
     };
 
-    model.set = function (arg) {
-        params.value = arg; // temp
+    model.set = function (key, val) {
+        params.value = val; // temp
         return model;
     };
 

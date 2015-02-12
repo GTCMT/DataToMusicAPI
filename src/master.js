@@ -145,6 +145,10 @@ dtm.master = {
         return out;
     },
 
+    set: function (key, val) {
+        return dtm.master;
+    },
+
     state: null,
 
     reset: null

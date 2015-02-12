@@ -168,4 +168,11 @@ describe('array object', function () {
             expect(a.get('sum')).toBe(4);
         });
     });
+
+    describe('rescale', function () {
+        it('should...', function () {
+            var a = dtm.a(0.5).rescale(0, 100);
+            //console.log(a.get());
+        })
+    })
 });

@@ -525,7 +525,7 @@ dtm.synth = function (type) {
         return synth;
     };
 
-    synth.type = synth.wt = synth.set;
+    synth.wt = synth.set;
     synth.set(type);
 
     return synth;

@@ -11,7 +11,7 @@
  * @param [name] {string}
  * @returns array object {{value: null, normalized: null, length: null, min: null, max: null, mean: null}}
  */
-dtm.array = function (arr, name) {
+dtm.array = function (val, name) {
     // private
     var params = {
         name: '',
@@ -30,7 +30,8 @@ dtm.array = function (arr, name) {
         histogram: null,
         numClasses: null,
 
-        index: 0
+        index: 0,
+        step: 1
     };
 
     // public
@@ -114,19 +115,20 @@ dtm.array = function (arr, name) {
                     return params.value[params.index];
 
                 case 'next':
-                    params.index = dtm.value.mod(++params.index, params.length);
+                    params.index = dtm.value.mod(params.index + params.step, params.length);
                     return params.value[params.index];
 
                 case 'prev':
                 case 'previous':
-                    params.index = dtm.value.mod(--params.index, params.length);
+                    params.index = dtm.value.mod(params.index - params.step, params.length);
                     return params.value[params.index];
 
                 case 'palindrome':
                     break;
 
                 case 'random':
-                    return params.value[_.random(0, params.length - 1)];
+                    params.index = _.random(0, params.length - 1);
+                    return params.value[params.index];
 
                 case 'urn':
                     break;
@@ -134,6 +136,10 @@ dtm.array = function (arr, name) {
                 case 'index':
                 case 'idx':
                     return params.index;
+
+                case 'step':
+                case 'stepSize':
+                    return params.step;
 
                 case 'relative':
                 case 'location':
@@ -154,6 +160,11 @@ dtm.array = function (arr, name) {
                     } else {
                         return params.value;
                     }
+
+                // TODO: incomplete
+                case 'blockNext':
+                    params.index = dtm.value.mod(params.index + params.step, params.length);
+                    return dtm.transform.getBlock(params.value, params.index, arguments[1]);
 
                 /* TRANSFORMED LIST */
                 case 'original':
@@ -258,13 +269,16 @@ dtm.array = function (arr, name) {
         return array;
     };
 
-    if (typeof(arr) !== 'undefined') {
-        if (typeof(arr) === 'string') {
-            arr = arr.split('');
+    // TODO: do this in array.set()
+    if (typeof(val) !== 'undefined') {
+        if (typeof(val) === 'string') {
+            val = val.split('');
+        } else if (typeof(val) === 'number') {
+            val = [val];
         }
 
-        checkType(arr);
-        array.set(arr, name);
+        checkType(val);
+        array.set(val, name);
     }
 
     function checkType(arr) {
@@ -294,6 +308,20 @@ dtm.array = function (arr, name) {
 
         //array.type = res;
     }
+
+    array.step = function (val) {
+        params.step = Math.round(val);
+        return array;
+    };
+
+    array.stepSize = array.step;
+
+    array.index = function (val) {
+        params.index = dtm.value.mod(Math.round(val), params.length);
+        return array;
+    };
+
+    array.setIndex = array.index;
 
 
 
@@ -336,6 +364,11 @@ dtm.array = function (arr, name) {
         //return dtm.clone(array);
 
         var newArr = dtm.array(params.value, params.name);
+
+        // CHECK: this may cause troubles!
+        newArr.index(params.index);
+        newArr.step(params.step);
+
         if (params.type === 'string') {
             newArr.classes = params.classes;
             newArr.histogram = _.clone(params.histogram);

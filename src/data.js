@@ -63,17 +63,28 @@ dtm.data = function (arg, cb, type) {
                     return params.arrays;
                 }
 
+            case 'c':
             case 'collection':
             case 'coll':
                 return params.coll;
 
             case 'size':
+            case 'dim':
+            case 'dimension':
                 return params.size;
 
+            case 'len':
+            case 'length':
+                return params.size.row;
+
+            case 'k':
             case 'key':
             case 'keys':
+            case 'list':
+            case 'names':
                 return params.keys;
 
+            case 't':
             case 'type':
             case 'types':
                 return params.types;

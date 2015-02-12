@@ -1515,7 +1515,7 @@ dtm.tr = dtm.transform;
  * @param [name] {string}
  * @returns array object {{value: null, normalized: null, length: null, min: null, max: null, mean: null}}
  */
-dtm.array = function (arr, name) {
+dtm.array = function (val, name) {
     // private
     var params = {
         name: '',
@@ -1534,7 +1534,8 @@ dtm.array = function (arr, name) {
         histogram: null,
         numClasses: null,
 
-        index: 0
+        index: 0,
+        step: 1
     };
 
     // public
@@ -1618,19 +1619,20 @@ dtm.array = function (arr, name) {
                     return params.value[params.index];
 
                 case 'next':
-                    params.index = dtm.value.mod(++params.index, params.length);
+                    params.index = dtm.value.mod(params.index + params.step, params.length);
                     return params.value[params.index];
 
                 case 'prev':
                 case 'previous':
-                    params.index = dtm.value.mod(--params.index, params.length);
+                    params.index = dtm.value.mod(params.index - params.step, params.length);
                     return params.value[params.index];
 
                 case 'palindrome':
                     break;
 
                 case 'random':
-                    return params.value[_.random(0, params.length - 1)];
+                    params.index = _.random(0, params.length - 1);
+                    return params.value[params.index];
 
                 case 'urn':
                     break;
@@ -1638,6 +1640,10 @@ dtm.array = function (arr, name) {
                 case 'index':
                 case 'idx':
                     return params.index;
+
+                case 'step':
+                case 'stepSize':
+                    return params.step;
 
                 case 'relative':
                 case 'location':
@@ -1658,6 +1664,11 @@ dtm.array = function (arr, name) {
                     } else {
                         return params.value;
                     }
+
+                // TODO: incomplete
+                case 'blockNext':
+                    params.index = dtm.value.mod(params.index + params.step, params.length);
+                    return dtm.transform.getBlock(params.value, params.index, arguments[1]);
 
                 /* TRANSFORMED LIST */
                 case 'original':
@@ -1762,13 +1773,16 @@ dtm.array = function (arr, name) {
         return array;
     };
 
-    if (typeof(arr) !== 'undefined') {
-        if (typeof(arr) === 'string') {
-            arr = arr.split('');
+    // TODO: do this in array.set()
+    if (typeof(val) !== 'undefined') {
+        if (typeof(val) === 'string') {
+            val = val.split('');
+        } else if (typeof(val) === 'number') {
+            val = [val];
         }
 
-        checkType(arr);
-        array.set(arr, name);
+        checkType(val);
+        array.set(val, name);
     }
 
     function checkType(arr) {
@@ -1798,6 +1812,20 @@ dtm.array = function (arr, name) {
 
         //array.type = res;
     }
+
+    array.step = function (val) {
+        params.step = Math.round(val);
+        return array;
+    };
+
+    array.stepSize = array.step;
+
+    array.index = function (val) {
+        params.index = dtm.value.mod(Math.round(val), params.length);
+        return array;
+    };
+
+    array.setIndex = array.index;
 
 
 
@@ -1840,6 +1868,11 @@ dtm.array = function (arr, name) {
         //return dtm.clone(array);
 
         var newArr = dtm.array(params.value, params.name);
+
+        // CHECK: this may cause troubles!
+        newArr.index(params.index);
+        newArr.step(params.step);
+
         if (params.type === 'string') {
             newArr.classes = params.classes;
             newArr.histogram = _.clone(params.histogram);
@@ -2895,17 +2928,28 @@ dtm.data = function (arg, cb, type) {
                     return params.arrays;
                 }
 
+            case 'c':
             case 'collection':
             case 'coll':
                 return params.coll;
 
             case 'size':
+            case 'dim':
+            case 'dimension':
                 return params.size;
 
+            case 'len':
+            case 'length':
+                return params.size.row;
+
+            case 'k':
             case 'key':
             case 'keys':
+            case 'list':
+            case 'names':
                 return params.keys;
 
+            case 't':
             case 'type':
             case 'types':
                 return params.types;
@@ -3772,18 +3816,17 @@ dtm.instr = function (arg) {
 
         models: {
             voice: dtm.synth(),
+            volume: dtm.array(1),
             scale: dtm.array().fill('seq', 12),
-            rhythm: dtm.array().fill('ones', 8),
-            pitch: dtm.array().fill('zeros', 8).add(0.5),
-            chord: [1]
+            rhythm: dtm.array(1),
+            pitch: dtm.array(0.5),
+            transpose: dtm.array([0, 1]),
+            chord: dtm.array(0)
         },
 
         instrModel: null,
 
-        callbacks: [],
-
-        // temp
-        transpose: 0
+        callbacks: []
     };
 
     var instr = {
@@ -3820,7 +3863,25 @@ dtm.instr = function (arg) {
         }
     };
 
-    instr.set = function () {
+    // CHECK: when giving an array, should I clone it? ...probably yes
+    instr.set = function (dest, src) {
+        if (typeof(src) === 'number') {
+            params.models[dest] = dtm.array(src);
+        } else {
+            if (src instanceof Array) {
+                params.models[dest] = dtm.array(src);
+            } else if (src.type === 'dtm.array') {
+                //if (src.get('type') === 'string') {
+                //    params.models[dest] = src.clone().classId();
+                //} else {
+                //}
+                params.models[dest] = src.clone();
+            } else if (src.type === 'dtm.model') {
+
+            } else if (src.type === 'dtm.synth') {
+                params.models[dest] = src;
+            }
+        }
         return instr;
     };
 
@@ -3939,21 +4000,32 @@ dtm.instr = function (arg) {
         return instr;
     };
 
+    // CHECK: this is pretty memory-inefficient
     function defaultInstr(c) {
         var v = params.models.voice;
+        var vol = params.models.volume.rescale(0.1, 1).get('next');
         var r = params.models.rhythm.normalize().round();
-        var p = params.models.pitch.normalize().scale(60, 96);
-        var sc = params.models.scale.normalize().scale(0,11).round().unique().sort();
+        var p = params.models.pitch.normalize().get('next');
+        var sc = params.models.scale.normalize().scale(0,11).round().unique().sort().get();
+        var tr = params.models.transpose.scale(-12, 12).get('mean');
+        var ct = params.models.chord.normalize().scale(0, 12).round().unique().sort();
 
-        console.log(p.get());
-        var nn = p.pq(sc.get()).get('next');
+        if (ct.get('len') > 4) {
+            ct.fit(4).round().unique().sort();
+        }
+
+        ct = ct.get();
+
+        var nn = dtm.val.pq(dtm.val.rescale(p, 60, 96), sc) + Math.round(tr);
 
         _.forEach(params.callbacks, function (cb) {
             cb();
         });
 
         if (r.get('next')) {
-            v.nn(nn).play();
+            _.forEach(ct, function (val) {
+                v.nn(nn + val).amp(vol).play();
+            });
         }
     }
 
@@ -4183,8 +4255,8 @@ dtm.model = function (name, categ) {
         }
     };
 
-    model.set = function (arg) {
-        params.value = arg; // temp
+    model.set = function (key, val) {
+        params.value = val; // temp
         return model;
     };
 
@@ -4783,7 +4855,7 @@ dtm.synth = function (type) {
         return synth;
     };
 
-    synth.type = synth.wt = synth.set;
+    synth.wt = synth.set;
     synth.set(type);
 
     return synth;
@@ -5089,6 +5161,10 @@ dtm.master = {
                 break;
         }
         return out;
+    },
+
+    set: function (key, val) {
+        return dtm.master;
     },
 
     state: null,
