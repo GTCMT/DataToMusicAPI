@@ -738,8 +738,20 @@ dtm.transform = {
             max = _.max(arr);
         }
 
+        var denom = 1;
+
+        if (max == min) {
+            if (min > 0 && min <= 1) {
+                min = 0;
+            } else if (min > 1) {
+                min -= 1;
+            }
+        } else {
+            denom = max - min;
+        }
+
         var newArr = _.map(arr, function (val) {
-            return (val - min) / (max - min);
+            return (val - min) / denom;
         });
 
         return newArr;
@@ -1075,7 +1087,10 @@ dtm.transform = {
      * @returns {array}
      */
     sort: function (arr) {
-        return arr.sort();
+        //return arr.sort();
+        return _.sortBy(arr, function (val) {
+            return val;
+        });
     },
 
     /**
@@ -1589,6 +1604,10 @@ dtm.array = function (arr, name) {
                 case 'pvar':
                     return dtm.analyzer.pvar(params.value);
 
+                case 'sumAll':
+                case 'sum':
+                    return dtm.analyzer.sum(params.value);
+
 
                 /* ITERATORS */
                 case 'current':
@@ -1666,6 +1685,7 @@ dtm.array = function (arr, name) {
                 case 'classId':
                     return dtm.transform.classId(params.value);
 
+                case 'string':
                 case 'stringify':
                     return dtm.transform.stringify(params.value);
 
@@ -1874,6 +1894,8 @@ dtm.array = function (arr, name) {
         array.set(params.value);
         return array;
     };
+
+    array.nml = array.normalize;
 
     /**
      * Modifies the range of the array.
@@ -2238,6 +2260,8 @@ dtm.array = function (arr, name) {
     array.classId = function () {
         return array.set(dtm.transform.classId(params.value));
     };
+
+    array.class = array.classify = array.classId;
 
     array.stringify = function () {
         return array.set(dtm.transform.stringify(params.value));
@@ -3747,11 +3771,16 @@ dtm.instr = function (arg) {
         subDivision: 16,
 
         models: {
-            voice: dtm.synth()
+            voice: dtm.synth(),
+            scale: dtm.array().fill('seq', 12),
+            rhythm: dtm.array().fill('ones', 8),
+            pitch: dtm.array().fill('zeros', 8).add(0.5),
+            chord: [1]
         },
 
         instrModel: null,
 
+        callbacks: [],
 
         // temp
         transpose: 0
@@ -3778,11 +3807,13 @@ dtm.instr = function (arg) {
             case 'isPlaying':
                 return params.isPlaying;
 
+            case 'c':
             case 'clock':
                 return params.clock;
 
+            case 'm':
             case 'model':
-                break;
+                return params.models[arguments[1]];
 
             default:
                 break;
@@ -3910,29 +3941,19 @@ dtm.instr = function (arg) {
 
     function defaultInstr(c) {
         var v = params.models.voice;
+        var r = params.models.rhythm.normalize().round();
+        var p = params.models.pitch.normalize().scale(60, 96);
+        var sc = params.models.scale.normalize().scale(0,11).round().unique().sort();
 
-        // this is not flexible at all...
-        // CHECK: only for dtm.arrays
-        if (typeof(params.models.beats) !== 'undefined') {
-            if (params.models.beats.get('next')) {
-                if (typeof(params.models.melody) !== 'undefined') {
-                    v.nn(params.models.melody.next());
-                }
+        console.log(p.get());
+        var nn = p.pq(sc.get()).get('next');
 
-                v.play();
-            }
-        } else {
-            //if (typeof(params.models.melody) !== 'undefined') {
-            //    v.nn(params.models.melody.next());
-            //}
+        _.forEach(params.callbacks, function (cb) {
+            cb();
+        });
 
-            if (typeof(params.models.pitch) !== 'undefined') {
-                var nn = params.models.pitch.get('next');
-                nn = dtm.val.rescale(nn, 60, 100, true);
-                v.nn(nn);
-            }
-
-            v.nn(69 + params.transpose).play();
+        if (r.get('next')) {
+            v.nn(nn).play();
         }
     }
 
@@ -3983,6 +4004,8 @@ dtm.instr = function (arg) {
 
             params.clock.stop();
             params.clock.clear();
+
+            params.callbacks = [];
         }
         return instr;
     };
@@ -4092,6 +4115,18 @@ dtm.instr = function (arg) {
         return instr;
     };
 
+    instr.on = function (arg, cb) {
+        switch (arg) {
+            case 'note':
+                params.callbacks.push(cb);
+                break;
+            default:
+                break;
+        }
+        return instr;
+    };
+
+    instr.when = instr.on;
 
     instr.load(arg);
 
@@ -4117,7 +4152,9 @@ dtm.model = function (name, categ) {
     var params = {
         name: null,
         categ: 'none',
-        categories: []
+        categories: [],
+
+        output: null // dtm.array
     };
 
     var model = {
@@ -4133,26 +4170,21 @@ dtm.model = function (name, categ) {
     };
 
     model.get = function (param) {
-        var out = null;
-
         switch (param) {
             case 'name':
-                out = params.name;
-                break;
+                return params.name;
 
             case 'category':
             case 'categ':
-                out = params.categ;
-                break;
+                return params.categ;
 
             default:
-                out = model;
-                break;
+                return params.output;
         }
-        return out;
     };
 
     model.set = function (arg) {
+        params.value = arg; // temp
         return model;
     };
 
@@ -5260,11 +5292,23 @@ dtm.inscore = function () {
 (function () {
     var m = dtm.model('phrase', 'phrase');
 
-    m.rhythm = dtm.model('rhythm');
-    m.scale = dtm.model('scale');
+    m.rhythm = function (input) {
+        m.models.rhythm = input;
+        return m;
+    };
 
-    m.models = {
-        scale: m.scale
+    m.toneRow = function (input) {
+        m.models.toneRow = input;
+        return m;
+    };
+
+    m.synthesize = function () {
+        var len = 0;
+        m.models.rhythm.beatsToIndices();
+        m.models.toneRow.fit(m.models.rhythm.get('len'));
+
+        m.set();
+        return m;
     };
 })();
 (function () {

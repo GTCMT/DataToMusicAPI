@@ -134,6 +134,38 @@ describe('array object', function () {
         it('should have min=2 and max=6', function () {
             expect(a.get('min')).toBe(min);
             expect(a.get('max')).toBe(max);
-        })
-    })
+        });
+    });
+
+    describe('normalize', function () {
+        it('should return 1s for ones', function () {
+            var a = dtm.array().fill('ones');
+            a.normalize();
+            expect(a.get('sum')).toBe(8);
+        });
+
+        it('should return 0s for zeros', function () {
+            var a = dtm.array().fill('zeros');
+            a.normalize();
+            expect(a.get('sum')).toBe(0);
+        });
+
+        it('should return 0s for minuses', function () {
+            var a = dtm.array().fill('zeros').add(-.5);
+            a.normalize();
+            expect(a.get('sum')).toBe(0);
+        });
+
+        it('should return 1s for repeated big values', function () {
+            var a = dtm.array().fill('zeros').add(3);
+            a.normalize();
+            expect(a.get('sum')).toBe(8);
+        });
+
+        it('should return raw values for repeated values between 0-1', function () {
+            var a = dtm.array().fill('zeros').add(0.5);
+            a.normalize();
+            expect(a.get('sum')).toBe(4);
+        });
+    });
 });

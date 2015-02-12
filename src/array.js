@@ -100,6 +100,10 @@ dtm.array = function (arr, name) {
                 case 'pvar':
                     return dtm.analyzer.pvar(params.value);
 
+                case 'sumAll':
+                case 'sum':
+                    return dtm.analyzer.sum(params.value);
+
 
                 /* ITERATORS */
                 case 'current':
@@ -386,6 +390,8 @@ dtm.array = function (arr, name) {
         array.set(params.value);
         return array;
     };
+
+    array.nml = array.normalize;
 
     /**
      * Modifies the range of the array.
@@ -750,6 +756,8 @@ dtm.array = function (arr, name) {
     array.classId = function () {
         return array.set(dtm.transform.classId(params.value));
     };
+
+    array.class = array.classify = array.classId;
 
     array.stringify = function () {
         return array.set(dtm.transform.stringify(params.value));

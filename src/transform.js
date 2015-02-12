@@ -164,8 +164,20 @@ dtm.transform = {
             max = _.max(arr);
         }
 
+        var denom = 1;
+
+        if (max == min) {
+            if (min > 0 && min <= 1) {
+                min = 0;
+            } else if (min > 1) {
+                min -= 1;
+            }
+        } else {
+            denom = max - min;
+        }
+
         var newArr = _.map(arr, function (val) {
-            return (val - min) / (max - min);
+            return (val - min) / denom;
         });
 
         return newArr;
@@ -501,7 +513,10 @@ dtm.transform = {
      * @returns {array}
      */
     sort: function (arr) {
-        return arr.sort();
+        //return arr.sort();
+        return _.sortBy(arr, function (val) {
+            return val;
+        });
     },
 
     /**

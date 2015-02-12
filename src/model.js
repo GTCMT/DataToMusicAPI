@@ -15,7 +15,9 @@ dtm.model = function (name, categ) {
     var params = {
         name: null,
         categ: 'none',
-        categories: []
+        categories: [],
+
+        output: null // dtm.array
     };
 
     var model = {
@@ -31,26 +33,21 @@ dtm.model = function (name, categ) {
     };
 
     model.get = function (param) {
-        var out = null;
-
         switch (param) {
             case 'name':
-                out = params.name;
-                break;
+                return params.name;
 
             case 'category':
             case 'categ':
-                out = params.categ;
-                break;
+                return params.categ;
 
             default:
-                out = model;
-                break;
+                return params.output;
         }
-        return out;
     };
 
     model.set = function (arg) {
+        params.value = arg; // temp
         return model;
     };
 

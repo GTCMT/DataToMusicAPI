@@ -22,11 +22,16 @@ dtm.instr = function (arg) {
         subDivision: 16,
 
         models: {
-            voice: dtm.synth()
+            voice: dtm.synth(),
+            scale: dtm.array().fill('seq', 12),
+            rhythm: dtm.array().fill('ones', 8),
+            pitch: dtm.array().fill('zeros', 8).add(0.5),
+            chord: [1]
         },
 
         instrModel: null,
 
+        callbacks: [],
 
         // temp
         transpose: 0
@@ -53,11 +58,13 @@ dtm.instr = function (arg) {
             case 'isPlaying':
                 return params.isPlaying;
 
+            case 'c':
             case 'clock':
                 return params.clock;
 
+            case 'm':
             case 'model':
-                break;
+                return params.models[arguments[1]];
 
             default:
                 break;
@@ -185,29 +192,19 @@ dtm.instr = function (arg) {
 
     function defaultInstr(c) {
         var v = params.models.voice;
+        var r = params.models.rhythm.normalize().round();
+        var p = params.models.pitch.normalize().scale(60, 96);
+        var sc = params.models.scale.normalize().scale(0,11).round().unique().sort();
 
-        // this is not flexible at all...
-        // CHECK: only for dtm.arrays
-        if (typeof(params.models.beats) !== 'undefined') {
-            if (params.models.beats.get('next')) {
-                if (typeof(params.models.melody) !== 'undefined') {
-                    v.nn(params.models.melody.next());
-                }
+        console.log(p.get());
+        var nn = p.pq(sc.get()).get('next');
 
-                v.play();
-            }
-        } else {
-            //if (typeof(params.models.melody) !== 'undefined') {
-            //    v.nn(params.models.melody.next());
-            //}
+        _.forEach(params.callbacks, function (cb) {
+            cb();
+        });
 
-            if (typeof(params.models.pitch) !== 'undefined') {
-                var nn = params.models.pitch.get('next');
-                nn = dtm.val.rescale(nn, 60, 100, true);
-                v.nn(nn);
-            }
-
-            v.nn(69 + params.transpose).play();
+        if (r.get('next')) {
+            v.nn(nn).play();
         }
     }
 
@@ -258,6 +255,8 @@ dtm.instr = function (arg) {
 
             params.clock.stop();
             params.clock.clear();
+
+            params.callbacks = [];
         }
         return instr;
     };
@@ -367,6 +366,18 @@ dtm.instr = function (arg) {
         return instr;
     };
 
+    instr.on = function (arg, cb) {
+        switch (arg) {
+            case 'note':
+                params.callbacks.push(cb);
+                break;
+            default:
+                break;
+        }
+        return instr;
+    };
+
+    instr.when = instr.on;
 
     instr.load(arg);
 
