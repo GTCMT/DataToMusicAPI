@@ -41,8 +41,8 @@ module.exports = function (grunt) {
                     //'src/instr/sampler.js',
                     //'src/instr/clave.js',
                     //'src/instr/tamborim.js',
-                    //'src/beltline/bl-motif.js',
-                    //'src/beltline/bl-piano.js',
+                    'src/beltline/bl-motif.js',
+                    'src/beltline/bl-piano.js',
                     'misc/end.js'
                 ],
                 dest: 'dtm.js'

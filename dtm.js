@@ -1411,6 +1411,31 @@ dtm.transform = {
 
     unique: function (input) {
         return _.uniq(input);
+    },
+
+    classId: function (input) {
+        var res = [];
+        var sortedClasses = dtm.analyzer.classes(input).sort();
+        var classIds = {};
+
+        _.forEach(sortedClasses, function (val, id) {
+            classIds[val] = id;
+        });
+
+        _.forEach(input, function (val, idx) {
+            res[idx] = classIds[val];
+        });
+
+        return res;
+    },
+
+    stringify: function (input) {
+        var res = [];
+        _.forEach(input, function (val, idx) {
+            res[idx] = val.toString();
+        });
+
+        return res;
     }
 
     //getClasses: function (input) {
@@ -1636,6 +1661,13 @@ dtm.array = function (arr, name) {
 
                 case 'classes':
                     return dtm.analyzer.classes(params.value);
+
+                case 'classID':
+                case 'classId':
+                    return dtm.transform.classId(params.value);
+
+                case 'stringify':
+                    return dtm.transform.stringify(params.value);
 
                 case 'numClasses':
                     return dtm.analyzer.classes(params.value).length;
@@ -2203,7 +2235,13 @@ dtm.array = function (arr, name) {
 
     array.uniq = array.unique;
 
+    array.classId = function () {
+        return array.set(dtm.transform.classId(params.value));
+    };
 
+    array.stringify = function () {
+        return array.set(dtm.transform.stringify(params.value));
+    };
 
 
     /* MUSICAL */
@@ -3442,6 +3480,7 @@ dtm.clock = function (bpm, subDiv, time) {
     var clockSrc;
 
     // TODO: refactor big time!!!!
+    // TODO: also implement swing / random to the af-based clock
     /**
      * Makes the clock tick once.
      * @param [timeErr=0] {float}
@@ -5302,5 +5341,140 @@ dtm.inscore = function () {
     m.play = function () {
         console.log('playing!');
     };
+})();
+(function () {
+    var m = dtm.model('bl-motif', 'motif');
+
+    m.params.isPercussion = false;
+    m.params.rhythm = null;
+    m.params.pitches = null;
+    m.params.weights = null;
+
+    var pc = {
+        '-1': '_',
+        'r': '_',
+        0: 'c',
+        1: 'd&',
+        2: 'd',
+        3: 'e&',
+        4: 'e',
+        5: 'f',
+        6: 'f#',
+        7: 'g',
+        8: 'a&',
+        9: 'a',
+        10: 'b&',
+        11: 'b'
+    };
+
+    var generateRhythm = function (arr) {
+        var a = dtm.array(arr);
+        var intv = a.fit(32).rescale(0, 1).round().btoi().get();
+
+        //var res = [];
+        //for (var i = 0; i < 32/4; i++) {
+        //
+        //}
+
+        //seq = seq.join(' ');
+
+
+        return intv;
+    };
+
+    var generatePitch = function (arr, intv) {
+        var a = dtm.array(arr);
+        var p = a.fit(intv.length).rescale(-6, 11).round().get();
+
+        var seq = [];
+
+        for (var i = 0; i < intv.length; i++) {
+            if (p[i] < 0) {
+                p[i] = -1;
+            }
+            seq[i] = pc[p[i]] + '*' + intv[i] + '/16';
+        }
+
+        return seq;
+    };
+
+    m.generate = function (arr) {
+        var temp = [];
+        for (var ch = 0; ch < 3; ch++) {
+            temp[ch] = [];
+
+            for (var i = 0; i < arr.length; i++) {
+                temp[ch][i] = _.random(0, 1, true);
+            }
+
+            temp[ch] = generatePitch(temp[ch], generateRhythm(temp[ch]));
+
+            temp[ch] = temp[ch].join(' ');
+        }
+
+        var intervals = generateRhythm(arr);
+        var seq = generatePitch(arr, intervals);
+
+
+        seq = seq.join(' ');
+        //seq = '[\\meter<"4/4"> ' + seq + ' \\newLine' + ' _*2/1' + ']';
+
+        var res = '{' +
+            '[\\instr<"Flute", dx=-1.65cm, dy=-0.5cm>\\meter<"4/4"> \\clef<"g"> ' + seq + '],' +
+            '[\\instr<"Cello", dx=-1.65cm, dy=-0.5cm>\\meter<"4/4"> \\clef<"f"> ' + temp[0] + '],' +
+            '[\\instr<"Piano", dx=-1.65cm, dy=-1.75cm> \\meter<"4/4"> \\clef<"g"> ' + temp[1] + '],' +
+            '[\\meter<"4/4"> \\clef<"f"> ' + temp[2] + ']}';
+
+        return res;
+    };
+})();
+(function () {
+    var m = dtm.model('bl-piano', 'part');
+
+    m.params.meta = {
+        section: 1
+    };
+
+    var scale = [0, 2, 3, 5, 7, 9, 10];
+
+    m.params.left = {
+        div: 16,
+        rhythm: [1, 1, -1, 3, 2, 2, 2],
+        shape: [0, 7, 12, 5, 10, 7]
+    };
+
+    m.params.right = {
+        div: 16,
+        //models.rhythm: [-2, 2, -1, 2, -2, 3]
+        rhythm: [-3, 5, 4],
+        shape: [1, 0, -1, 0],
+        voice: [0, 2, 7]
+    };
+
+    m.test = function (rhy, shp, div) {
+        var temp = [];
+        var note = 'c';
+
+        var j = 0;
+
+        for (var i = 0; i < rhy.length; i++) {
+            if (rhy[i] > 0) {
+                var oct = Math.floor(shp[j]/12);
+                note = dtm.guido().pc[shp[j]-oct*12] + (oct+1);
+                j++;
+            } else {
+                note = '_';
+                rhy[i] *= -1;
+            }
+            temp[i] = note + '*' + rhy[i] + '/' + div;
+        }
+
+        temp = temp.join(' ');
+        return temp;
+    };
+
+    m.output = function () {
+        return m.test(m.params.left.rhythm, m.params.left.shape, 16);
+    }
 })();
 })();

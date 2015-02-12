@@ -837,6 +837,31 @@ dtm.transform = {
 
     unique: function (input) {
         return _.uniq(input);
+    },
+
+    classId: function (input) {
+        var res = [];
+        var sortedClasses = dtm.analyzer.classes(input).sort();
+        var classIds = {};
+
+        _.forEach(sortedClasses, function (val, id) {
+            classIds[val] = id;
+        });
+
+        _.forEach(input, function (val, idx) {
+            res[idx] = classIds[val];
+        });
+
+        return res;
+    },
+
+    stringify: function (input) {
+        var res = [];
+        _.forEach(input, function (val, idx) {
+            res[idx] = val.toString();
+        });
+
+        return res;
     }
 
     //getClasses: function (input) {

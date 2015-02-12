@@ -352,6 +352,7 @@ dtm.clock = function (bpm, subDiv, time) {
     var clockSrc;
 
     // TODO: refactor big time!!!!
+    // TODO: also implement swing / random to the af-based clock
     /**
      * Makes the clock tick once.
      * @param [timeErr=0] {float}

@@ -173,6 +173,14 @@ dtm.array = function (arr, name) {
                 case 'classes':
                     return dtm.analyzer.classes(params.value);
 
+                case 'classID':
+                case 'classId':
+                    return dtm.transform.classId(params.value);
+
+                case 'string':
+                case 'stringify':
+                    return dtm.transform.stringify(params.value);
+
                 case 'numClasses':
                     return dtm.analyzer.classes(params.value).length;
 
@@ -739,7 +747,13 @@ dtm.array = function (arr, name) {
 
     array.uniq = array.unique;
 
+    array.classId = function () {
+        return array.set(dtm.transform.classId(params.value));
+    };
 
+    array.stringify = function () {
+        return array.set(dtm.transform.stringify(params.value));
+    };
 
 
     /* MUSICAL */

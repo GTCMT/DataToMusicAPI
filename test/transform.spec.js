@@ -231,4 +231,21 @@ describe('array helper functions', function () {
         var offset = [0, -1, 2];
         var res = dtm.transform.applyOffsetToBeats(src, offset);
     });
+
+    describe('classId', function () {
+        var arr = ['foo', 'bar', 'bar', 'buz', 'buz', 'foo'];
+
+        var res = dtm.transform.classId(arr);
+        it('sould return 2 0 0 1 1 2', function () {
+            expect(res.toString()).toBe([2, 0, 0, 1, 1, 2].toString());
+        });
+    });
+
+    describe('stringify', function () {
+        var arr = [1, 2, 3];
+        var res = dtm.transform.stringify(arr);
+        it('should be converted to string type', function () {
+            expect(typeof(res[2])).toBe('string');
+        });
+    });
 });
