@@ -133,6 +133,8 @@ dtm.clock = function (bpm, subDiv, time) {
         return clock;
     };
 
+    clock.tempo = clock.bpm;
+
     /**
      * Sets the subdivision of the clock.
      * @param [val=4] {integer} Note quality value. E.g. 4 = quarter note, 8 = eighth note.
@@ -159,6 +161,7 @@ dtm.clock = function (bpm, subDiv, time) {
         params.isMaster = bool;
         return clock;
     };
+
     /**
      * Registers a callback function to selected or all ticks of the clock.
      * @function module:clock#add
@@ -252,7 +255,7 @@ dtm.clock = function (bpm, subDiv, time) {
      * @param id {function|string}
      * @returns {dtm.clock}
      */
-    clock.rem = clock.remove;
+    clock.del = clock.delete = clock.rem = clock.remove;
 
     /**
      * Modifies or replaces the content of a callback function while the clock may be running. Note that the target callback needs to be a named function.

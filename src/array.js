@@ -65,6 +65,8 @@ dtm.array = function (arr, name) {
                 case 'length':
                     return params.length;
 
+
+                /* STATS */
                 case 'minimum':
                 case 'min':
                     return dtm.analyzer.min(params.value);
@@ -98,15 +100,8 @@ dtm.array = function (arr, name) {
                 case 'pvar':
                     return dtm.analyzer.pvar(params.value);
 
-                case 'index':
-                case 'idx':
-                    return params.index;
 
-                case 'relative':
-                case 'location':
-                case 'loc':
-                    break;
-
+                /* ITERATORS */
                 case 'current':
                 case 'curr':
                 case 'cur':
@@ -132,6 +127,17 @@ dtm.array = function (arr, name) {
                 case 'urn':
                     break;
 
+                case 'index':
+                case 'idx':
+                    return params.index;
+
+                case 'relative':
+                case 'location':
+                case 'loc':
+                    break;
+
+
+                /* TRANSFORMED LIST */
                 case 'original':
                     return params.original;
                     break;
@@ -165,6 +171,7 @@ dtm.array = function (arr, name) {
             }
         }
     };
+
     /**
      * Sets or overwrites the contents of the array object.
      * @function module:array#set
@@ -215,6 +222,8 @@ dtm.array = function (arr, name) {
         return array;
     };
 
+    array.name = array.setName;
+
     array.setType = function (arg) {
         params.type = arg.toString();
         return array;
@@ -258,61 +267,8 @@ dtm.array = function (arr, name) {
     }
 
 
-    // TODO: need this in transformer???
-    /**
-    * Generates a histogram from a nominal array, such as the string type.
-    * @function module:array#histo
-    * @returns {dtm.array}
-    */
-    array.histo = function () {
-        //params.classes = _.clone(params.value);
-        //params.histogram = _.countBy(params.value);
-        ////array.numClasses =
-        //
-        //_.forEach(params.classes, function (val, idx) {
-        //    params.value[idx] = params.histogram[val];
-        //});
 
-        //params.mode = dtm.analyzer.mode(params.classes);
-
-        array.set(dtm.analyzer.histo(params.value));
-
-        // CHECK: this is hacky
-        params.type = 'string'; // re-set the type to string from number
-
-        return array;
-    };
-
-    array.histogram = array.histo;
-
-    /**
-     * Overwrites the contents with unsorted unique values of the array.
-     * @function module:array#unique
-     * @returns {dtm.array}
-     */
-    array.unique = function () {
-        array.set(dtm.transform.unique(params.value));
-        return array;
-    };
-
-    array.uniq = array.unique;
-    /**
-     * Returns a clone of the array object. It can be used when you don't want to reference the same array object from different places.
-     * @function module:array#clone
-     * @returns {dtm.array}
-     */
-    array.clone = function () {
-        // this doesn't work
-        //return dtm.clone(array);
-
-        var newArr = dtm.array(params.value, params.name);
-        if (params.type === 'string') {
-            newArr.classes = params.classes;
-            newArr.histogram = _.clone(params.histogram);
-            newArr.setType('string');
-        }
-        return newArr;
-    };
+    /* GENERATORS */
 
     // CHECK: is this only for the array ojbect?
     /**
@@ -340,6 +296,58 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.generate = array.fill;
+
+    /**
+     * Returns a clone of the array object. It can be used when you don't want to reference the same array object from different places.
+     * @function module:array#clone
+     * @returns {dtm.array}
+     */
+    array.clone = function () {
+        // this doesn't work
+        //return dtm.clone(array);
+
+        var newArr = dtm.array(params.value, params.name);
+        if (params.type === 'string') {
+            newArr.classes = params.classes;
+            newArr.histogram = _.clone(params.histogram);
+            newArr.setType('string');
+        }
+        return newArr;
+    };
+
+    /**
+     * Morphs the array values with a target array / dtm.array values. The lengths can be mismatched.
+     * @function module:array#morph
+     * @param tgtArr {array | dtm.array}
+     * @param morphIdx {number} between 0-1
+     * @returns {dtm.array}
+     */
+    array.morph = function (tgtArr, morphIdx) {
+        if (typeof(tgtArr) !== 'array') {
+            if (tgtArr.type === 'dtm.array') {
+                tgtArr = tgtArr.value;
+            }
+        }
+        params.value = dtm.transform.morph(params.value, tgtArr, morphIdx);
+        array.set(params.value);
+        return array;
+    };
+
+    /**
+     * Retrieves the original values from when the array object was first created.
+     * @function module:array#reset
+     * @returns {dtm.array}
+     */
+    array.reset = function () {
+        array.set(params.original);
+        return array;
+    };
+
+    array.original = array.reset;
+
+
+
+    /* SCALERS */
 
     /**
      * Rescales the range of the numerical values to 0-1.
@@ -380,6 +388,68 @@ dtm.array = function (arr, name) {
     };
 
     /**
+     * Scales the array with an exponential curve.
+     * @function module:array#expCurve
+     * @param factor {number}
+     * @returns {dtm.array}
+     */
+    array.expCurve = function (factor) {
+        var min = params.min;
+        var max = params.max;
+        var arr = dtm.transform.expCurve(params.normalized, factor);
+        array.set(dtm.transform.rescale(arr, min, max));
+        return array;
+    };
+
+    /**
+     * Applies a logarithmic scaling to the array.
+     * @function module:array#logCurve
+     * @param factor {number}
+     * @returns {dtm.array}
+     */
+    array.logCurve = function (factor) {
+        var min = params.min;
+        var max = params.max;
+        var arr = dtm.transform.logCurve(params.normalized, factor);
+        array.set(dtm.transform.rescale(arr, min, max));
+        return array;
+    };
+
+    // TODO: there might be a memory leak / some inefficiency
+    /**
+     * Stretches or shrinks the length of the array into the specified length.
+     * @function module:array#fit
+     * @param len {integer}
+     * @param [interp='linear'] {string}
+     * @returns {dtm.array}
+     */
+    array.fit = function (len, interp) {
+        params.value = dtm.transform.fit(params.value, len, interp);
+        array.set(params.value);
+        return array;
+    };
+
+    /**
+     * Multiplies the length of the array by the given factor.
+     * @function module:array#stretch
+     * @param factor {number}
+     * @param [interp='linear'] {string}
+     * @returns {dtm.array}
+     */
+    array.stretch = function (factor, interp) {
+        params.value = dtm.transform.stretch(params.value, factor, interp);
+        array.set(params.value);
+        return array;
+    };
+
+    array.summarize = function () {
+        return array;
+    };
+
+
+    /* ARITHMETIC */
+
+    /**
      * Adds a value to all the array elements.
      * @function module:array#add
      * @param val {number}
@@ -402,59 +472,64 @@ dtm.array = function (arr, name) {
     };
 
     /**
-     * Flips the array contents horizontally.
-     * @function module:array#mirror
+     * Rounds float values of the array to integer values.
+     * @function module:array#round
      * @returns {dtm.array}
      */
-    array.mirror = function () {
-        params.value = dtm.transform.mirror(params.value);
+    array.round = function () {
+        params.value = dtm.transform.round(params.value);
         array.set(params.value);
         return array;
     };
 
     /**
-     * Same as array.mirror().
-     * @function module:array#reverse
-     * @type {Function}
-     */
-    array.reverse = array.mirror;
-
-    /**
-     * Flips the numerical values vertically at the given center point.
-     * @function module:array#invert
-     * @param [center=meanVal] {number}
+     * Quantizes float numbers to integer by flooring.
+     * @function module:array#floor
      * @returns {dtm.array}
      */
-    array.invert = function (center) {
-        params.value = dtm.transform.invert(params.value, center);
-        array.set(params.value);
+    array.floor = function () {
+        return array.set(dtm.transform.floor(params.value));
+    };
+
+    /**
+     * Quantizes float numbers to integer by ceiling.
+     * @function module:array#ceil
+     * @returns {dtm.array}
+     */
+    array.ceil = function () {
+        return array.set(dtm.transform.ceil(params.value));
+    };
+
+    /**
+     * Half-wave rectify the values, modifying all negative values to 0.
+     * @function module:array#hwr
+     * @returns {dtm.array}
+     */
+    array.hwr = function () {
+        array.set(dtm.transform.hwr(params.value));
         return array;
     };
 
     /**
-     * Same as array.invert().
-     * @function module:array#flip
-     * @type {Function}
-     */
-    array.flip = array.invert;
-
-    /**
-     * Randomizes the order of the array.
-     * @function module:array#shuffle
+     * Full-wave rectify the values, returning absolute values.
+     * @function module:array#fwr
      * @returns {dtm.array}
      */
-    array.shuffle = function () {
-        params.value = dtm.transform.shuffle(params.value);
-        array.set(params.value);
+    array.fwr = function () {
+        array.set(dtm.transform.fwr(params.value));
         return array;
     };
 
     /**
-     * Same as array.shuffle().
-     * @function module:array#randomize
-     * @type {Function}
+     * Same as the array.fwr() function.
+     * @function module:array#abs
+     * @returns {dtm.array}
      */
-    array.randomize = array.shuffle;
+    array.abs = array.fwr;
+
+
+
+    /* GENERAL LIST OPERATIONS*/
 
     /**
      * Sorts the contents of numerical array.
@@ -517,34 +592,7 @@ dtm.array = function (arr, name) {
         return array;
     };
 
-    /**
-     * Rounds float values of the array to integer values.
-     * @function module:array#round
-     * @returns {dtm.array}
-     */
-    array.round = function () {
-        params.value = dtm.transform.round(params.value);
-        array.set(params.value);
-        return array;
-    };
-
-    /**
-     * Quantizes float numbers to integer by flooring.
-     * @function module:array#floor
-     * @returns {dtm.array}
-     */
-    array.floor = function () {
-        return array.set(dtm.transform.floor(params.value));
-    };
-
-    /**
-     * Quantizes float numbers to integer by ceiling.
-     * @function module:array#ceil
-     * @returns {dtm.array}
-     */
-    array.ceil = function () {
-        return array.set(dtm.transform.ceil(params.value));
-    };
+    array.slice = array.truncate;
 
     /**
      * Shifts the indexing position of the array by the amount.
@@ -558,167 +606,99 @@ dtm.array = function (arr, name) {
         return array;
     };
 
+
+
+
+    /* NOMINAL */
+
     /**
-     * Scales the array with an exponential curve.
-     * @function module:array#expCurve
-     * @param factor {number}
+     * Generates a histogram from a nominal array, such as the string type.
+     * @function module:array#histo
      * @returns {dtm.array}
      */
-    array.expCurve = function (factor) {
-        var min = params.min;
-        var max = params.max;
-        var arr = dtm.transform.expCurve(params.normalized, factor);
-        array.set(dtm.transform.rescale(arr, min, max));
+    array.histo = function () {
+        array.set(dtm.analyzer.histo(params.value));
+
+        // CHECK: this is hacky
+        params.type = 'string'; // re-set the type to string from number
+
         return array;
     };
 
+    array.histogram = array.histo;
+
     /**
-     * Applies a logarithmic scaling to the array.
-     * @function module:array#logCurve
-     * @param factor {number}
+     * Overwrites the contents with unsorted unique values of the array.
+     * @function module:array#unique
      * @returns {dtm.array}
      */
-    array.logCurve = function (factor) {
-        var min = params.min;
-        var max = params.max;
-        var arr = dtm.transform.logCurve(params.normalized, factor);
-        array.set(dtm.transform.rescale(arr, min, max));
+    array.unique = function () {
+        array.set(dtm.transform.unique(params.value));
         return array;
     };
 
-    // TODO: there might be a memory leak / some inefficiency
+    array.uniq = array.unique;
+
+
+
+
+    /* MUSICAL */
+
     /**
-     * Stretches or shrinks the length of the array into the specified length.
-     * @function module:array#fit
-     * @param len {integer}
-     * @param [interp='linear'] {string}
+     * Flips the array contents horizontally.
+     * @function module:array#mirror
      * @returns {dtm.array}
      */
-    array.fit = function (len, interp) {
-        params.value = dtm.transform.fit(params.value, len, interp);
+    array.mirror = function () {
+        params.value = dtm.transform.mirror(params.value);
         array.set(params.value);
         return array;
     };
 
     /**
-     * Multiplies the length of the array by the given factor.
-     * @function module:array#stretch
-     * @param factor {number}
-     * @param [interp='linear'] {string}
+     * Same as array.mirror().
+     * @function module:array#reverse
+     * @type {Function}
+     */
+    array.reverse = array.mirror;
+
+    /**
+     * Flips the numerical values vertically at the given center point.
+     * @function module:array#invert
+     * @param [center=meanVal] {number}
      * @returns {dtm.array}
      */
-    array.stretch = function (factor, interp) {
-        params.value = dtm.transform.stretch(params.value, factor, interp);
+    array.invert = function (center) {
+        params.value = dtm.transform.invert(params.value, center);
         array.set(params.value);
         return array;
     };
 
     /**
-     * Morphs the array values with a target array / dtm.array values. The lengths can be mismatched.
-     * @function module:array#morph
-     * @param tgtArr {array | dtm.array}
-     * @param morphIdx {number} between 0-1
+     * Same as array.invert().
+     * @function module:array#flip
+     * @type {Function}
+     */
+    array.flip = array.invert;
+
+    /**
+     * Randomizes the order of the array.
+     * @function module:array#shuffle
      * @returns {dtm.array}
      */
-    array.morph = function (tgtArr, morphIdx) {
-        if (typeof(tgtArr) !== 'array') {
-            if (tgtArr.type === 'dtm.array') {
-                tgtArr = tgtArr.value;
-            }
-        }
-        params.value = dtm.transform.morph(params.value, tgtArr, morphIdx);
+    array.shuffle = function () {
+        params.value = dtm.transform.shuffle(params.value);
         array.set(params.value);
         return array;
     };
 
     /**
-     * Converts note values into a beat sequence.
-     * @function module:array#notesToBeats
-     * @param [resolution=4] {integer}
-     * @returns {dtm.array}
+     * Same as array.shuffle().
+     * @function module:array#randomize
+     * @type {Function}
      */
-    array.notesToBeats = function (resolution) {
-        resolution = resolution || 4;
-        params.value = dtm.transform.notesToBeats(params.value, resolution);
-        array.set(params.value);
-        return array;
-    };
+    array.randomize = array.shuffle;
 
-    /**
-     * Converts beat sequence into note values.
-     * @function module:array#beatsToNotes
-     * @param [resolution=4] {integer}
-     * @returns {dtm.array}
-     */
-    array.beatsToNotes = function (resolution) {
-        resolution = resolution || 4;
-        params.value = dtm.transform.beatsToNotes(params.value, resolution);
-        array.set(params.value);
-        return array;
-    };
-
-    /**
-     * Converts intervalic values into a beat sequence.
-     * @function module:array#intervalsToBeats
-     * @returns {dtm.array}
-     */
-    array.intervalsToBeats = function () {
-        params.value = dtm.transform.intervalsToBeats(params.value);
-        array.set(params.value);
-        return array;
-    };
-
-    /**
-     * Converts beat sequence into intervalic values.
-     * @function module:array#beatsToIntervals
-     * @returns {dtm.array}
-     */
-    array.beatsToIntervals = function () {
-        params.value = dtm.transform.beatsToIntervals(params.value);
-        array.set(params.value);
-        return array;
-    };
-
-    /**
-     * Converts beat sequence into an array of indices (or delays or onset-coordinate vectors.) Useful for creating time delay-based events.
-     * @function module:array#beatsToIndices
-     * @returns {dtm.array}
-     */
-    array.beatsToIndices = function () {
-        params.value = dtm.transform.beatsToIndices(params.value);
-        array.set(params.value);
-        return array;
-    };
-
-    /**
-     * Shorthand for notesToBeats() function.
-     * @function module:array#ntob
-     * @param resolution {integer}
-     * @returns {dtm.array}
-     */
-    array.ntob = array.notesToBeats;
-
-    /**
-     * Shorthand for beatsToNotes() function.
-     * @function module:array#bton
-     * @param resolution {integer}
-     * @returns {dtm.array}
-     */
-    array.bton = array.beatsToNotes;
-
-    /**
-     * Shorthand for intevalsToBeats() function.
-     * @function module:array#itob
-     * @returns {dtm.array}
-     */
-    array.itob = array.intervalsToBeats;
-
-    /**
-     * Shorthand for beatsToIntervals() function.
-     * @function module:array#btoi
-     * @returns {dtm.array}
-     */
-    array.btoi = array.beatsToIntervals;
 
     // CHECK: this is different from the trnsf function
     /**
@@ -742,54 +722,104 @@ dtm.array = function (arr, name) {
         return array.set(dtm.transform.pq(params.value, scale));
     };
 
-    array.pitchQuantize = array.pq;
+    array.pitchScale = array.pitchQuantize = array.pq;
 
     array.transpose = function (val) {
         return array;
     };
 
+
+
+    /* UNIT CONVERTERS */
+
     /**
-     * Half-wave rectify the values, modifying all negative values to 0.
-     * @function module:array#hwr
+     * Converts note values into a beat sequence.
+     * @function module:array#notesToBeats
+     * @param [resolution=4] {integer}
      * @returns {dtm.array}
      */
-    array.hwr = function () {
-        array.set(dtm.transform.hwr(params.value));
+    array.notesToBeats = function (resolution) {
+        resolution = resolution || 4;
+        params.value = dtm.transform.notesToBeats(params.value, resolution);
+        array.set(params.value);
         return array;
     };
 
     /**
-     * Full-wave rectify the values, returning absolute values.
-     * @function module:array#fwr
+     * Shorthand for notesToBeats() function.
+     * @function module:array#ntob
+     * @param resolution {integer}
      * @returns {dtm.array}
      */
-    array.fwr = function () {
-        array.set(dtm.transform.fwr(params.value));
+    array.ntob = array.notesToBeats;
+
+    /**
+     * Converts beat sequence into note values.
+     * @function module:array#beatsToNotes
+     * @param [resolution=4] {integer}
+     * @returns {dtm.array}
+     */
+    array.beatsToNotes = function (resolution) {
+        resolution = resolution || 4;
+        params.value = dtm.transform.beatsToNotes(params.value, resolution);
+        array.set(params.value);
         return array;
     };
 
     /**
-     * Same as the array.fwr() function.
-     * @function module:array#abs
+     * Shorthand for beatsToNotes() function.
+     * @function module:array#bton
+     * @param resolution {integer}
      * @returns {dtm.array}
      */
-    array.abs = array.fwr;
+    array.bton = array.beatsToNotes;
 
-    array.summarize = function () {
+    /**
+     * Converts intervalic values into a beat sequence.
+     * @function module:array#intervalsToBeats
+     * @returns {dtm.array}
+     */
+    array.intervalsToBeats = function () {
+        params.value = dtm.transform.intervalsToBeats(params.value);
+        array.set(params.value);
         return array;
     };
 
     /**
-     * Retrieves the original values from when the array object was first created.
-     * @function module:array#reset
+     * Shorthand for intevalsToBeats() function.
+     * @function module:array#itob
      * @returns {dtm.array}
      */
-    array.reset = function () {
-        array.set(params.original);
+    array.itob = array.intervalsToBeats;
+
+    /**
+     * Converts beat sequence into intervalic values.
+     * @function module:array#beatsToIntervals
+     * @returns {dtm.array}
+     */
+    array.beatsToIntervals = function () {
+        params.value = dtm.transform.beatsToIntervals(params.value);
+        array.set(params.value);
+        return array;
+    };
+    /**
+     * Shorthand for beatsToIntervals() function.
+     * @function module:array#btoi
+     * @returns {dtm.array}
+     */
+    array.btoi = array.beatsToIntervals;
+
+    /**
+     * Converts beat sequence into an array of indices (or delays or onset-coordinate vectors.) Useful for creating time delay-based events.
+     * @function module:array#beatsToIndices
+     * @returns {dtm.array}
+     */
+    array.beatsToIndices = function () {
+        params.value = dtm.transform.beatsToIndices(params.value);
+        array.set(params.value);
         return array;
     };
 
-    array.original = array.reset;
 
     return array;
 };

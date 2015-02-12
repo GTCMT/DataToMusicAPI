@@ -25,7 +25,11 @@ dtm.instr = function (arg) {
             voice: dtm.synth()
         },
 
-        instrModel: null
+        instrModel: null,
+
+
+        // temp
+        transpose: 0
     };
 
     var instr = {
@@ -34,9 +38,18 @@ dtm.instr = function (arg) {
     };
 
     instr.get = function (param) {
+        //return params[key];
+
         switch (param) {
+            case 'name':
+                return params.name;
+
+            case 'isPlaying':
+                return params.isPlaying;
+
             case 'clock':
                 return params.clock;
+
             default:
                 break;
         }
@@ -115,9 +128,14 @@ dtm.instr = function (arg) {
         return instr;
     };
 
+    instr.rhythm = function (arg) {
+        return instr;
+    };
+
     function defaultInstr(c) {
         var v = params.models.voice;
 
+        // this is not flexible at all...
         // CHECK: only for dtm.arrays
         if (typeof(params.models.beats) !== 'undefined') {
             if (params.models.beats.get('next')) {
@@ -138,7 +156,7 @@ dtm.instr = function (arg) {
                 v.nn(nn);
             }
 
-            v.play();
+            v.nn(69 + params.transpose).play();
         }
     }
 
@@ -148,13 +166,14 @@ dtm.instr = function (arg) {
      * @returns {dtm.instr}
      */
     instr.play = function () {
-        // can only play single voice / instance
+        // should only play single voice / part / instance
         if (params.isPlaying !== true) {
             params.isPlaying = true;
-            dtm.log('playing: ' + params.name);
+            dtm.log('playing instr: ' + params.name);
 
             if (!params.instrModel) {
-                params.clock.add(defaultInstr).start(); // ???
+                // CHECK: ???
+                params.clock.add(defaultInstr).start();
             }
 
             if (params.instrModel) {
@@ -166,6 +185,8 @@ dtm.instr = function (arg) {
 
             // register to the active instr list?
             dtm.master.activeInstrs.push(instr);
+        } else {
+            dtm.log('instrument ' + params.name + ' is already playing!');
         }
 
         return instr;
@@ -227,19 +248,24 @@ dtm.instr = function (arg) {
      * @returns {dtm.instr}
      */
     instr.mod = function () {
+        params.transpose = dtm.val.rescale(modHandler(arguments[0]), -12, 12, true);
+
         if (typeof(arguments[0]) === 'number') {
             if (arguments.length === 1) {
                 var val = arguments[0];
                 _.forEach(params.modDest, function (dest) {
                     // MEMO: don't use arguments[n] in forEach
                     dest.mod(val);
-                })
+                });
+
+                //modHandler(dtm.val.rescale(val, -12, 12, true), params.transpose);
+
             } else {
                 _.forEach(arguments, function (val, idx) {
                     if (params.modDest[idx]) {
                         params.modDest[idx].mod(val);
                     }
-                })
+                });
             }
 
         } else if (typeof(arguments[0]) === 'string') {
@@ -255,6 +281,21 @@ dtm.instr = function (arg) {
         return instr;
     };
 
+    function modHandler(src) {
+        if (typeof(src) === 'number') {
+            return src;
+        } else if (typeof(src) === 'object') {
+            if (src instanceof Array) {
+                var a = dtm.array(src).normalize();
+                return a.get('next');
+            } else if (src.type === 'dtm.array') {
+                return src.get('next');
+            } else if (src.type === 'dtm.model') {
+
+            }
+        }
+    }
+
     instr.modulate = instr.mod;
 
     instr.map = function (src, dest) {
@@ -269,10 +310,6 @@ dtm.instr = function (arg) {
         // use global index from the master
 
         return instr;
-    };
-
-    instr.get = function (key) {
-        return params[key];
     };
 
     instr.getModel = function (key) {

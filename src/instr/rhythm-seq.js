@@ -1,5 +1,5 @@
 (function () {
-    var m = dtm.model('rhythm-seq').categ('instr');
+    var m = dtm.model('models.rhythm-seq').categ('instr');
     m.complexity = 2;
 
     var buffer = dtm.synth2.noise(4192);
