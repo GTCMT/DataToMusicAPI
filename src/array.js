@@ -41,7 +41,7 @@ dtm.array = function (arr, name) {
     /**
      * Returns the array contents or an analyzed value
      * @function module:array#get
-     * @param [param] {string}
+     * @param [param] {string|number}
      * @returns {number|array|string}
      */
     array.get = function (param) {
@@ -136,6 +136,20 @@ dtm.array = function (arr, name) {
                 case 'loc':
                     break;
 
+                case 'block':
+                case 'window':
+                    var start, size;
+                    if (arguments[1] instanceof Array) {
+                        start = arguments[1][0];
+                        size = arguments[1][1];
+                        return dtm.transform.getBlock(params.value, start, size)
+                    } else if (typeof(arguments[1]) === 'number' && typeof(arguments[2]) === 'number') {
+                        start = arguments[1];
+                        size = arguments[2];
+                        return dtm.transform.getBlock(params.value, start, size);
+                    } else {
+                        return params.value;
+                    }
 
                 /* TRANSFORMED LIST */
                 case 'original':
@@ -180,19 +194,18 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.set = function (input, name) {
-        if (typeof(name) !== 'undefined') {
-            array.setName(name);
+        if (input instanceof Array) {
+            params.value = input;
+        } else if (input.type === 'dtm.array') {
+            params.value = input.get();
         }
 
-        // TODO: error checking
-        params.value = input;
-
         if (params.original === null) {
-            params.original = input;
+            params.original = params.value;
         }
 
         // CHECK: type checking - may be redundant
-        checkType(input);
+        checkType(params.value);
 
         if (params.type === 'number' || params.type === 'int' || params.type === 'float') {
             _.forEach(params.value, function (val, idx) {
@@ -206,7 +219,11 @@ dtm.array = function (arr, name) {
             params.std = dtm.analyzer.std(input);
         }
 
-        params.length = input.length;
+        params.length = params.value.length;
+
+        if (typeof(name) !== 'undefined') {
+            array.setName(name);
+        }
 
         return array;
     };
@@ -382,9 +399,21 @@ dtm.array = function (arr, name) {
      */
     array.range = array.scale = array.rescale;
 
-    // TODO: implement this
+    /**
+     * Caps the array value range at the min and max values. Only works with a numerical array.
+     * @function module:array#limit
+     * @param [min=0]
+     * @param [max=1]
+     * @returns {*}
+     */
     array.limit = function (min, max) {
-        return array;
+        if (params.type === 'number') {
+            min = min || 0;
+            max = max || 1;
+            return array.set(dtm.transform.limit(array.get(), min, max));
+        } else {
+            return array;
+        }
     };
 
     /**
@@ -401,6 +430,8 @@ dtm.array = function (arr, name) {
         return array;
     };
 
+    array.exp = array.expCurve;
+
     /**
      * Applies a logarithmic scaling to the array.
      * @function module:array#logCurve
@@ -414,6 +445,8 @@ dtm.array = function (arr, name) {
         array.set(dtm.transform.rescale(arr, min, max));
         return array;
     };
+
+    array.log = array.logCurve;
 
     // TODO: there might be a memory leak / some inefficiency
     /**
@@ -445,6 +478,153 @@ dtm.array = function (arr, name) {
     array.summarize = function () {
         return array;
     };
+
+
+
+    /* LIST OPERATIONS*/
+
+    /**
+     * Sorts the contents of numerical array.
+     * @function module:array#sort
+     * @returns {dtm.array}
+     */
+    array.sort = function () {
+        params.value = dtm.transform.sort(params.value);
+        array.set(params.value);
+        return array;
+    };
+
+    /**
+     * Concatenates new values to the contents.
+     * @function module:array#concat
+     * @param arr {array | dtm.array} A regular array or a dtm.array object.
+     * @returns {dtm.array}
+     */
+    array.concat = function (arr) {
+        arr = arr || [];
+        var temp = params.value;
+        if (arr instanceof Array) {
+            temp = temp.concat(arr);
+        } else if (arr.type === 'dtm.array') {
+            temp = temp.concat(arr.value);
+        }
+        array.set(temp);
+        return array;
+    };
+
+    /**
+     * Repeats the contents of the current array.
+     * @function module:array#repeat
+     * @param count {integer}
+     * @returns {dtm.array}
+     */
+    array.repeat = function (count) {
+        params.value = dtm.transform.repeat(params.value, count);
+        array.set(params.value);
+        return array;
+    };
+
+    /**
+     * Same as array.repeat().
+     * @function module:array#rep
+     * @type {Function}
+     */
+    array.rep = array.repeat;
+
+    /**
+     * Truncates some values either at the end or both at the beginning and the end.
+     * @param arg1 {integer} Start bits to truncate. If the arg2 is not present, it will be the End bits to truncate.
+     * @param [arg2] {integer} End bits to truncate.
+     * @function module:array#truncate
+     * @returns {dtm.array}
+     */
+    array.truncate = function (arg1, arg2) {
+        params.value = dtm.transform.truncate(params.value, arg1, arg2);
+        array.set(params.value);
+        return array;
+    };
+
+    array.slice = array.truncate;
+
+    /**
+     *
+     * @function module:array#getBlock
+     * @param start {number} Starting index of the array.
+     * @param size {number}
+     * @returns {dtm.array}
+     */
+    array.getBlock = function (start, size) {
+        return array.set(dtm.transform.getBlock(params.value, start, size))
+    };
+
+    array.block = array.getBlock;
+
+    /**
+     * Shifts the indexing position of the array by the amount.
+     * @function module:array#shift
+     * @param amount {integer}
+     * @returns {dtm.array}
+     */
+    array.shift = function (amount) {
+        params.value = dtm.transform.shift(params.value, amount);
+        array.set(params.value);
+        return array;
+    };
+
+    /**
+     * Flips the array contents horizontally.
+     * @function module:array#mirror
+     * @returns {dtm.array}
+     */
+    array.mirror = function () {
+        params.value = dtm.transform.mirror(params.value);
+        array.set(params.value);
+        return array;
+    };
+
+    /**
+     * Same as array.mirror().
+     * @function module:array#reverse
+     * @type {Function}
+     */
+    array.reverse = array.mirror;
+
+    /**
+     * Flips the numerical values vertically at the given center point.
+     * @function module:array#invert
+     * @param [center=meanVal] {number}
+     * @returns {dtm.array}
+     */
+    array.invert = function (center) {
+        params.value = dtm.transform.invert(params.value, center);
+        array.set(params.value);
+        return array;
+    };
+
+    /**
+     * Same as array.invert().
+     * @function module:array#flip
+     * @type {Function}
+     */
+    array.flip = array.invert;
+
+    /**
+     * Randomizes the order of the array.
+     * @function module:array#shuffle
+     * @returns {dtm.array}
+     */
+    array.shuffle = function () {
+        params.value = dtm.transform.shuffle(params.value);
+        array.set(params.value);
+        return array;
+    };
+
+    /**
+     * Same as array.shuffle().
+     * @function module:array#randomize
+     * @type {Function}
+     */
+    array.randomize = array.shuffle;
 
 
     /* ARITHMETIC */
@@ -529,86 +709,6 @@ dtm.array = function (arr, name) {
 
 
 
-    /* GENERAL LIST OPERATIONS*/
-
-    /**
-     * Sorts the contents of numerical array.
-     * @function module:array#sort
-     * @returns {dtm.array}
-     */
-    array.sort = function () {
-        params.value = dtm.transform.sort(params.value);
-        array.set(params.value);
-        return array;
-    };
-
-    /**
-     * Concatenates new values to the contents.
-     * @function module:array#concat
-     * @param arr {array | dtm.array} A regular array or a dtm.array object.
-     * @returns {dtm.array}
-     */
-    array.concat = function (arr) {
-        arr = arr || [];
-        var temp = params.value;
-        if (arr instanceof Array) {
-            temp = temp.concat(arr);
-        } else if (arr.type === 'dtm.array') {
-            temp = temp.concat(arr.value);
-        }
-        array.set(temp);
-        return array;
-    };
-
-    /**
-     * Repeats the contents of the current array.
-     * @function module:array#repeat
-     * @param count {integer}
-     * @returns {dtm.array}
-     */
-    array.repeat = function (count) {
-        params.value = dtm.transform.repeat(params.value, count);
-        array.set(params.value);
-        return array;
-    };
-
-    /**
-     * Same as array.repeat().
-     * @function module:array#rep
-     * @type {Function}
-     */
-    array.rep = array.repeat;
-
-    /**
-     * Truncates some values either at the end or both at the beginning and the end.
-     * @param arg1 {integer} Start bits to truncate. If the arg2 is not present, it will be the End bits to truncate.
-     * @param [arg2] {integer} End bits to truncate.
-     * @function module:array#truncate
-     * @returns {dtm.array}
-     */
-    array.truncate = function (arg1, arg2) {
-        params.value = dtm.transform.truncate(params.value, arg1, arg2);
-        array.set(params.value);
-        return array;
-    };
-
-    array.slice = array.truncate;
-
-    /**
-     * Shifts the indexing position of the array by the amount.
-     * @function module:array#shift
-     * @param amount {integer}
-     * @returns {dtm.array}
-     */
-    array.shift = function (amount) {
-        params.value = dtm.transform.shift(params.value, amount);
-        array.set(params.value);
-        return array;
-    };
-
-
-
-
     /* NOMINAL */
 
     /**
@@ -643,62 +743,6 @@ dtm.array = function (arr, name) {
 
 
     /* MUSICAL */
-
-    /**
-     * Flips the array contents horizontally.
-     * @function module:array#mirror
-     * @returns {dtm.array}
-     */
-    array.mirror = function () {
-        params.value = dtm.transform.mirror(params.value);
-        array.set(params.value);
-        return array;
-    };
-
-    /**
-     * Same as array.mirror().
-     * @function module:array#reverse
-     * @type {Function}
-     */
-    array.reverse = array.mirror;
-
-    /**
-     * Flips the numerical values vertically at the given center point.
-     * @function module:array#invert
-     * @param [center=meanVal] {number}
-     * @returns {dtm.array}
-     */
-    array.invert = function (center) {
-        params.value = dtm.transform.invert(params.value, center);
-        array.set(params.value);
-        return array;
-    };
-
-    /**
-     * Same as array.invert().
-     * @function module:array#flip
-     * @type {Function}
-     */
-    array.flip = array.invert;
-
-    /**
-     * Randomizes the order of the array.
-     * @function module:array#shuffle
-     * @returns {dtm.array}
-     */
-    array.shuffle = function () {
-        params.value = dtm.transform.shuffle(params.value);
-        array.set(params.value);
-        return array;
-    };
-
-    /**
-     * Same as array.shuffle().
-     * @function module:array#randomize
-     * @type {Function}
-     */
-    array.randomize = array.shuffle;
-
 
     // CHECK: this is different from the trnsf function
     /**

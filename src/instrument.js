@@ -37,6 +37,12 @@ dtm.instr = function (arg) {
         params: {}
     };
 
+    /**
+     * Returns a parameter of the instrument object.
+     * @function module:instr#get
+     * @param param {string}
+     * @returns {*}
+     */
     instr.get = function (param) {
         //return params[key];
 
@@ -50,9 +56,56 @@ dtm.instr = function (arg) {
             case 'clock':
                 return params.clock;
 
+            case 'model':
+                break;
+
             default:
                 break;
         }
+    };
+
+    instr.set = function () {
+        return instr;
+    };
+
+    instr.load = function (arg) {
+        if (typeof(arg) === 'string') {
+            var model = _.find(dtm.modelColl, {params: {
+                name: arg,
+                categ: 'instr'
+            }});
+
+            if (typeof(model) !== 'undefined') {
+                dtm.log('loading instrument model: ' + arg);
+                params.instrModel = model;
+                params.name = arg;
+                //params.models = model.models;
+                instr.model(model);
+                //instr.play = params.instrModel.play;
+                //instr.run = params.instrModel.run;
+
+                // CHECK: not good
+                params.modDest.push(model);
+            } else {
+                dtm.log('registering a new instrument: ' + arg);
+                params.name = arg;
+                params.categ = 'instr';
+                dtm.modelColl.push(instr);
+            }
+
+        } else if (typeof(arg) !== 'undefined') {
+            if (arg.params.categ === 'instr') {
+                params.instrModel = arg; // TODO: check the class name
+                instr.model(arg);
+            }
+        }
+
+        return instr;
+    };
+
+    // TODO: implement
+    instr.clone = function () {
+        return instr;
     };
 
     /**
@@ -116,19 +169,17 @@ dtm.instr = function (arg) {
         return instr;
     };
 
-    /**
-     * Sets the main voice / WebAudio synthesizer for the instrument.
-     * @param arg {string|dtm.synth}
-     * @returns {dtm.instr}
-     */
-    instr.voice = function (arg) {
-        if (typeof(arg) === 'string') {
-            params.models.voice.set(arg);
-        }
-        return instr;
-    };
+    instr.map = function (src, dest) {
+        if (src instanceof Array) {
+            params.models[dest] = dtm.array(src).normalize();
+        } else if (src.type === 'dtm.array') {
+            // CHECK: assigning an array here is maybe not so smart...
+            params.models[dest] = src.normalize();
+        } else if (src.type === 'dtm.model') {
 
-    instr.rhythm = function (arg) {
+        }
+        // use global index from the master
+
         return instr;
     };
 
@@ -211,35 +262,6 @@ dtm.instr = function (arg) {
         return instr;
     };
 
-    instr.clock = function (bpm, subDiv, time) {
-        params.clock.bpm(bpm);
-        params.clock.subDiv(subDiv);
-        return instr;
-    };
-
-    instr.bpm = function (val) {
-        params.clock.bpm(val);
-        return instr;
-    };
-
-    instr.tempo = instr.bpm;
-
-    instr.subDiv = function (val) {
-        params.clock.subDiv(val);
-        return instr;
-    };
-
-    instr.div = instr.subdiv = instr.subDiv;
-
-    instr.sync = function (bool) {
-        if (typeof(bool) === 'undefined') {
-            bool = true;
-        }
-        params.clock.sync(bool);
-        params.sync = bool;
-        return instr;
-    };
-
 
     /**
      * Modulates the parameter(s) of the instrument.
@@ -298,67 +320,53 @@ dtm.instr = function (arg) {
 
     instr.modulate = instr.mod;
 
-    instr.map = function (src, dest) {
-        if (src instanceof Array) {
-            params.models[dest] = dtm.array(src).normalize();
-        } else if (src.type === 'dtm.array') {
-            // CHECK: assigning an array here is maybe not so smart...
-            params.models[dest] = src.normalize();
-        } else if (src.type === 'dtm.model') {
 
-        }
-        // use global index from the master
 
-        return instr;
-    };
-
-    instr.getModel = function (key) {
-        return params.models[key];
-    };
-
-    instr.setModel = function (src, dest) {
-        params.models[dest] = src;
-        return instr;
-    };
-
-    instr.clone = function () {
-        return instr;
-    };
-
-    instr.load = function (arg) {
+    /**
+     * Sets the main voice / WebAudio synthesizer for the instrument.
+     * @param arg {string|dtm.synth}
+     * @returns {dtm.instr}
+     */
+    instr.voice = function (arg) {
         if (typeof(arg) === 'string') {
-            var model = _.find(dtm.modelColl, {params: {
-                name: arg,
-                categ: 'instr'
-            }});
-
-            if (typeof(model) !== 'undefined') {
-                dtm.log('loading instrument model: ' + arg);
-                params.instrModel = model;
-                params.name = arg;
-                //params.models = model.models;
-                instr.model(model);
-                //instr.play = params.instrModel.play;
-                //instr.run = params.instrModel.run;
-
-                // CHECK: not good
-                params.modDest.push(model);
-            } else {
-                dtm.log('registering a new instrument: ' + arg);
-                params.name = arg;
-                params.categ = 'instr';
-                dtm.modelColl.push(instr);
-            }
-
-        } else if (typeof(arg) !== 'undefined') {
-            if (arg.params.categ === 'instr') {
-                params.instrModel = arg; // TODO: check the class name
-                instr.model(arg);
-            }
+            params.models.voice.set(arg);
         }
-
         return instr;
     };
+
+    instr.rhythm = function (arg) {
+        return instr;
+    };
+
+    instr.clock = function (bpm, subDiv, time) {
+        params.clock.bpm(bpm);
+        params.clock.subDiv(subDiv);
+        return instr;
+    };
+
+    instr.bpm = function (val) {
+        params.clock.bpm(val);
+        return instr;
+    };
+
+    instr.tempo = instr.bpm;
+
+    instr.subDiv = function (val) {
+        params.clock.subDiv(val);
+        return instr;
+    };
+
+    instr.div = instr.subdiv = instr.subDiv;
+
+    instr.sync = function (bool) {
+        if (typeof(bool) === 'undefined') {
+            bool = true;
+        }
+        params.clock.sync(bool);
+        params.sync = bool;
+        return instr;
+    };
+
 
     instr.load(arg);
 

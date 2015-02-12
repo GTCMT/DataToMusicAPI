@@ -7,6 +7,8 @@
 dtm.transform = {
     type: 'dtm.transform',
 
+    /* GENERTORS */
+
     /**
      * Generates values for a new array.
      * @function module:transform#generate
@@ -136,6 +138,9 @@ dtm.transform = {
         return res;
     },
 
+
+    /* SCALERS */
+
     /**
      * Normalizes an numerical array into 0-1 range.
      * @function module:transform#normalize
@@ -186,206 +191,6 @@ dtm.transform = {
             res[idx] = dtm.value.rescale(val, min, max);
         });
 
-        return res;
-    },
-
-    /**
-     * Adds a value to the array contents.
-     * @function module:transform#add
-     * @param arr
-     * @param factor
-     * @returns {Array}
-     */
-    add: function (arr, factor) {
-        var res = [];
-
-        _.forEach(arr, function (val, idx) {
-            res[idx] = val + factor;
-        });
-
-        return res;
-    },
-
-    /**
-     * Multiplies the array contents.
-     * @function module:transform#mult
-     * @param arr
-     * @param factor
-     * @returns {Array}
-     */
-    mult: function (arr, factor) {
-        var res = [];
-
-        _.forEach(arr, function (val, idx) {
-            res[idx] = val * factor;
-        });
-
-        return res;
-    },
-
-    /**
-     * Creates a horizontal mirror of the input array.
-     * @function module:transform#mirror
-     * @param {array} vals One-dimensional array. Could be any type.
-     * @returns {array}
-     * @example
-     *
-     * var input = [4, 1, 2, 7, 5, 0, 6, 3];
-     *
-     * dtm.transform.mirror(input);
-     * -> [3, 6, 0, 5, 7, 2, 1, 4]
-     */
-    mirror: function (arr) {
-        var res = [];
-        for (var i = arr.length - 1; i >= 0; --i) {
-            res.push(arr[i]);
-        }
-        return res;
-    },
-
-    /**
-     * Vertical invertion.
-     * @function module:transform#invert
-     * @param {array} vals One-dimensional numerical array
-     * @param {number} [center] If not present, the mean of the input array is used as the center point.
-     * @returns {array}
-     * @example
-     *
-     * var input = [4, 0, 3, 1, 2, 7, 5, 6];
-     *
-     * dtm.transform.invert(input);
-     * -> [3, 7, 4, 6, 5, 0, 2, 1]
-     */
-    invert: function (arr, center) {
-        // CHECK: center = 0 will give the default value...
-        center = center || dtm.analyzer.mean(arr);
-
-        var res = [];
-        _.forEach(arr, function (val, idx) {
-            res[idx] = center - (val - center);
-        });
-        return res;
-    },
-
-    /**
-     * Randomizes the order of the contents of an array.
-     * @function module:transform#shuffle
-     * @param arr
-     * @returns {Array}
-     */
-    shuffle: function (arr) {
-        return _.shuffle(arr);
-    },
-
-    /**
-     * Sorts the contents of a numerical array.
-     * @function module:transform#sort
-     * @param arr {array}
-     * @returns {array}
-     */
-    sort: function (arr) {
-        return arr.sort();
-    },
-
-    /**
-     * Repeats the contents of an array.
-     * @param arr
-     * @param count
-     * @returns {Array}
-     */
-    repeat: function (arr, count) {
-        var res = [];
-
-        if (!count) {
-            count = 1;
-        }
-        for (var i = 0; i < count; i++) {
-            res = res.concat(arr);
-        }
-        return res;
-    },
-
-    /**
-     * Truncates some values either at the end or both at the beginning and the end of the given array.
-     * @function module:transform#truncate
-     * @param arr
-     * @param arg1
-     * @param [arg2]
-     * @returns {Array}
-     */
-    truncate: function (arr, arg1, arg2) {
-        var res = [];
-        if (typeof(arg2) !== 'undefined') {
-            for (var i = 0; i < (arr.length - (arg1 + arg2)); i++) {
-                res[i] = arr[arg1 + i];
-            }
-        } else {
-            for (var j = 0; j < (arr.length - arg1); j++) {
-                res[j] = arr[j];
-            }
-        }
-        return res;
-    },
-
-    /**
-     * Rounds the float values to the nearest integer values.
-     * @function module:transform#round
-     * @param arr {array} Numerical array
-     * @returns {Array}
-     */
-    round: function (arr) {
-        var res = [];
-
-        _.forEach(arr, function (val, idx) {
-            res[idx] = Math.round(val);
-        });
-        return res;
-    },
-
-    /**
-     * Floor quantizes the float values to the nearest integer values.
-     * @function module:transform#round
-     * @param arr {array} Numerical array
-     * @returns {Array}
-     */
-    floor: function (arr) {
-        var res = [];
-
-        _.forEach(arr, function (val, idx) {
-            res[idx] = Math.floor(val);
-        });
-        return res;
-    },
-
-    /**
-     * Ceiling quantizes the float values to the nearest integer values.
-     * @function module:transform#round
-     * @param arr {array} Numerical array
-     * @returns {Array}
-     */
-    ceil: function (arr) {
-        var res = [];
-
-        _.forEach(arr, function (val, idx) {
-            res[idx] = Math.floor(val);
-        });
-        return res;
-    },
-
-    /**
-     * Shifts the positions of array contents.
-     * @function module:transform#shift
-     * @param arr
-     * @param amount {integer}
-     * @returns {Array}
-     */
-    shift: function (arr, amount) {
-        var res = [];
-
-        for (var i = 0; i < arr.length; i++) {
-            var j = dtm.value.mod((i + amount), arr.length);
-            res[i] = arr[j];
-        }
         return res;
     },
 
@@ -517,6 +322,260 @@ dtm.transform = {
         return dtm.transform.fit(arr, targetLen, interp);
     },
 
+    limit: function (arr, min, max) {
+        var res = [];
+
+        _.forEach(arr, function (val, idx) {
+            var temp = val;
+            if (temp < min) {
+                temp = min;
+            }
+            if (temp > max) {
+                temp = max;
+            }
+            res[idx] = temp;
+        });
+
+        return res;
+    },
+
+    /* ARITHMETIC */
+
+    /**
+     * Adds a value to the array contents.
+     * @function module:transform#add
+     * @param arr
+     * @param factor
+     * @returns {Array}
+     */
+    add: function (arr, factor) {
+        var res = [];
+
+        _.forEach(arr, function (val, idx) {
+            res[idx] = val + factor;
+        });
+
+        return res;
+    },
+
+    /**
+     * Multiplies the array contents.
+     * @function module:transform#mult
+     * @param arr
+     * @param factor
+     * @returns {Array}
+     */
+    mult: function (arr, factor) {
+        var res = [];
+
+        _.forEach(arr, function (val, idx) {
+            res[idx] = val * factor;
+        });
+
+        return res;
+    },
+
+    /**
+     * Rounds the float values to the nearest integer values.
+     * @function module:transform#round
+     * @param arr {array} Numerical array
+     * @returns {Array}
+     */
+    round: function (arr) {
+        var res = [];
+
+        _.forEach(arr, function (val, idx) {
+            res[idx] = Math.round(val);
+        });
+        return res;
+    },
+
+    /**
+     * Floor quantizes the float values to the nearest integer values.
+     * @function module:transform#round
+     * @param arr {array} Numerical array
+     * @returns {Array}
+     */
+    floor: function (arr) {
+        var res = [];
+
+        _.forEach(arr, function (val, idx) {
+            res[idx] = Math.floor(val);
+        });
+        return res;
+    },
+
+    /**
+     * Ceiling quantizes the float values to the nearest integer values.
+     * @function module:transform#round
+     * @param arr {array} Numerical array
+     * @returns {Array}
+     */
+    ceil: function (arr) {
+        var res = [];
+
+        _.forEach(arr, function (val, idx) {
+            res[idx] = Math.floor(val);
+        });
+        return res;
+    },
+
+    hwr: function (input) {
+        var res = [];
+        _.forEach(input, function (val, idx) {
+            res[idx] = (val < 0) ? 0 : val;
+        });
+
+        return res;
+    },
+
+    fwr: function (input) {
+        var res = [];
+        _.forEach(input, function (val, idx) {
+            res[idx] = (val < 0) ? Math.abs(val) : val;
+        });
+
+        return res;
+    },
+
+    /* LIST OPERATIONS */
+
+    /**
+     * Creates a horizontal mirror of the input array.
+     * @function module:transform#mirror
+     * @param {array} vals One-dimensional array. Could be any type.
+     * @returns {array}
+     * @example
+     *
+     * var input = [4, 1, 2, 7, 5, 0, 6, 3];
+     *
+     * dtm.transform.mirror(input);
+     * -> [3, 6, 0, 5, 7, 2, 1, 4]
+     */
+    mirror: function (arr) {
+        var res = [];
+        for (var i = arr.length - 1; i >= 0; --i) {
+            res.push(arr[i]);
+        }
+        return res;
+    },
+
+    /**
+     * Vertical invertion.
+     * @function module:transform#invert
+     * @param {array} vals One-dimensional numerical array
+     * @param {number} [center] If not present, the mean of the input array is used as the center point.
+     * @returns {array}
+     * @example
+     *
+     * var input = [4, 0, 3, 1, 2, 7, 5, 6];
+     *
+     * dtm.transform.invert(input);
+     * -> [3, 7, 4, 6, 5, 0, 2, 1]
+     */
+    invert: function (arr, center) {
+        // CHECK: center = 0 will give the default value...
+        center = center || dtm.analyzer.mean(arr);
+
+        var res = [];
+        _.forEach(arr, function (val, idx) {
+            res[idx] = center - (val - center);
+        });
+        return res;
+    },
+
+    /**
+     * Randomizes the order of the contents of an array.
+     * @function module:transform#shuffle
+     * @param arr
+     * @returns {Array}
+     */
+    shuffle: function (arr) {
+        return _.shuffle(arr);
+    },
+
+    /**
+     * Sorts the contents of a numerical array.
+     * @function module:transform#sort
+     * @param arr {array}
+     * @returns {array}
+     */
+    sort: function (arr) {
+        return arr.sort();
+    },
+
+    /**
+     * Repeats the contents of an array.
+     * @param arr
+     * @param count
+     * @returns {Array}
+     */
+    repeat: function (arr, count) {
+        var res = [];
+
+        if (!count) {
+            count = 1;
+        }
+        for (var i = 0; i < count; i++) {
+            res = res.concat(arr);
+        }
+        return res;
+    },
+
+    // TODO: it should just have one behavior
+    /**
+     * Truncates some values either at the end or both at the beginning and the end of the given array.
+     * @function module:transform#truncate
+     * @param arr {number}
+     * @param arg1 {number}
+     * @param [arg2]
+     * @returns {Array}
+     */
+    truncate: function (arr, arg1, arg2) {
+        var res = [];
+        if (typeof(arg2) !== 'undefined') {
+            for (var i = 0; i < (arr.length - (arg1 + arg2)); i++) {
+                res[i] = arr[arg1 + i];
+            }
+        } else {
+            for (var j = 0; j < (arr.length - arg1); j++) {
+                res[j] = arr[j];
+            }
+        }
+        return res;
+    },
+
+    getBlock: function (arr, start, size, wrap) {
+        var res = [];
+        var idx = 0;
+
+        // TODO: non-wrapping zero-padded version
+        for (var i = 0; i < size; i++) {
+            idx = dtm.val.mod(i + start, arr.length);
+            res[i] = arr[idx];
+        }
+
+        return res;
+    },
+
+    /**
+     * Shifts the positions of array contents.
+     * @function module:transform#shift
+     * @param arr
+     * @param amount {integer}
+     * @returns {Array}
+     */
+    shift: function (arr, amount) {
+        var res = [];
+
+        for (var i = 0; i < arr.length; i++) {
+            var j = dtm.value.mod((i + amount), arr.length);
+            res[i] = arr[j];
+        }
+        return res;
+    },
+
+
     /**
      * Variable length array morphing!
      * @function module:transform#morph
@@ -541,6 +600,8 @@ dtm.transform = {
 
     },
 
+
+    /* UNIT CONVERTIONS */
     // CHECK: maybe should say Note To Beats
     /**
      * Converts a beat sequence (e.g. [1, 0, 1, 0]) into a sequence of note qualities.
@@ -769,24 +830,6 @@ dtm.transform = {
         var res = [];
         _.forEach(input, function (val, idx) {
             res[idx] = dtm.value.pq(val, scale);
-        });
-
-        return res;
-    },
-
-    hwr: function (input) {
-        var res = [];
-        _.forEach(input, function (val, idx) {
-            res[idx] = (val < 0) ? 0 : val;
-        });
-
-        return res;
-    },
-
-    fwr: function (input) {
-        var res = [];
-        _.forEach(input, function (val, idx) {
-            res[idx] = (val < 0) ? Math.abs(val) : val;
         });
 
         return res;

@@ -16,15 +16,23 @@
  */
 dtm.clock = function (bpm, subDiv, time) {
     var params = {
+        source: 'animationFrame',
+
         name: null,
         isOn: false,
         sync: true,
         isMaster: false,
 
         bpm: 120,
-        subDiv: 4,
+        subDiv: 16,
         random: 0,
-        swing: 0.5
+        swing: 0.5,
+
+        current: 0,
+        previous: 0,
+        reported: 0,
+        resolution: 480,
+        beat: 0
     };
 
     var clock = {
@@ -36,6 +44,9 @@ dtm.clock = function (bpm, subDiv, time) {
         beat: 0,
 
         list: [],
+
+        // temp
+        prev: 0,
 
         // CHECK: just for debugging
         callbacks: []
@@ -65,6 +76,24 @@ dtm.clock = function (bpm, subDiv, time) {
             case 'isOn':
             case 'isPlaying':
                 return params.isOn;
+
+            case 'source':
+                return params.source;
+
+            case 'beat':
+                return params.beat;
+
+            case 'cur':
+            case 'current':
+                return params.current;
+
+            case 'prev':
+            case 'previous':
+                return params.previous;
+
+            case 'rep':
+            case 'reported':
+                return params.reported;
 
             default:
                 return clock;
@@ -126,11 +155,13 @@ dtm.clock = function (bpm, subDiv, time) {
      */
     clock.bpm = function (val) {
         if (!arguments || !val) {
-            params.bpm = 60;
+            //params.bpm = 60;
+            return clock;
+        } else {
+            params.bpm = val;
+            params.sync = false;
             return clock;
         }
-        params.bpm = val;
-        return clock;
     };
 
     clock.tempo = clock.bpm;
@@ -295,6 +326,10 @@ dtm.clock = function (bpm, subDiv, time) {
      * @returns {dtm.clock} self
      */
     clock.start = function (timeErr) {
+        if (params.source === 'animationFrame') {
+            window.requestAnimationFrame(clock.tick);
+        }
+
         if (params.isMaster) {
             dtm.log('starting the master clock');
         } else {
@@ -316,101 +351,150 @@ dtm.clock = function (bpm, subDiv, time) {
 
     var clockSrc;
 
+    // TODO: refactor big time!!!!
     /**
      * Makes the clock tick once.
      * @param [timeErr=0] {float}
      * @returns clock {dtm.clock}
      */
-    clock.tick = function (timeErr) {
-        timeErr = timeErr || 0;
-//            if (isNaN(timeErr)) {
-//                timeErr = 0;
-//            }
+    clock.tick = function (timestamp) {
         if (params.isOn) {
-
             if (!params.sync && !params.isMaster) {
-                clockSrc = actx.createBufferSource();
-                clockSrc.buffer = clockBuf;
-                clockSrc.connect(out());
+                if (params.source === 'webAudio') {
+                    clockSrc = actx.createBufferSource();
+                    clockSrc.buffer = clockBuf;
+                    clockSrc.connect(out());
 
-                var freq = params.bpm / 60.0 * (params.subDiv / 4.0);
-                //var pbRate = 1/(1/freq - Math.abs(timeErr));
+                    var freq = params.bpm / 60.0 * (params.subDiv / 4.0);
+                    //var pbRate = 1/(1/freq - Math.abs(timeErr));
 
-                clockSrc.playbackRate.value = freq * clMult;
-                clockSrc.playbackRate.value += clockSrc.playbackRate.value * params.random * _.sample([1, -1]);
+                    clockSrc.playbackRate.value = freq * clMult;
+                    clockSrc.playbackRate.value += clockSrc.playbackRate.value * params.random * _.sample([1, -1]);
 
-                if (clock.beat % 2 == 0) {
-                    clockSrc.playbackRate.value *= (1.0 - params.swing) / 0.5;
-                } else {
-                    clockSrc.playbackRate.value *= params.swing / 0.5;
-                }
+                    if (clock.beat % 2 == 0) {
+                        clockSrc.playbackRate.value *= (1.0 - params.swing) / 0.5;
+                    } else {
+                        clockSrc.playbackRate.value *= params.swing / 0.5;
+                    }
 
-                clockSrc.start(now() + 0.0000001);
+                    clockSrc.start(now() + 0.0000001);
 
-                clockSrc.onended = function () {
-                    curTime += 1/freq;
-                    var error = now() - curTime;
-                    //clock.tick(error);
-                    clock.tick();
+                    clockSrc.onended = function () {
+                        curTime += 1/freq;
+                        var error = now() - curTime;
+                        //clock.tick(error);
+                        clock.tick();
 //                curTime = now();
-                };
+                    };
 
-                _.forEach(clock.callbacks, function (cb) {
-                    cb(clock);
-                });
+                    _.forEach(clock.callbacks, function (cb) {
+                        cb(clock);
+                    });
 
-                clock.beat = (clock.beat + 1) % (params.subDiv * clock.time[0] / clock.time[1]);
+                    clock.beat = (clock.beat + 1) % (params.subDiv * clock.time[0] / clock.time[1]);
 
-                return clock;
+                } else if (params.source === 'animationFrame') {
+                    params.reported = Math.round(timestamp / 1000. * params.bpm / 60. * params.resolution * params.subDiv / 4);
+
+                    if (params.reported !== params.current) {
+                        if ((params.current % params.resolution) > (params.reported % params.resolution)) {
+                            params.beat = Math.round(params.current / params.resolution);
+                            console.log(params.beat);
+
+                            _.forEach(clock.callbacks, function (cb) {
+                                cb(clock);
+                            });
+                        }
+
+                        params.current = params.reported;
+                    }
+
+                    window.requestAnimationFrame(clock.tick);
+                }
 
             } else if (params.sync && !params.isMaster) {
-                return clock;
+
             } else if (params.isMaster) {
-                clockSrc = actx.createBufferSource();
-                clockSrc.buffer = clockBuf;
-                clockSrc.connect(out());
+                if (params.source === 'webAudio') {
+                    clockSrc = actx.createBufferSource();
+                    clockSrc.buffer = clockBuf;
+                    clockSrc.connect(out());
 
-                var freq = params.bpm / 60.0 * (params.subDiv / 4.0);
+                    var freq = params.bpm / 60.0 * (params.subDiv / 4.0);
 
-                clockSrc.playbackRate.value = freq * clMult;
-                clockSrc.playbackRate.value += clockSrc.playbackRate.value * params.random * _.sample([1, -1]);
+                    clockSrc.playbackRate.value = freq * clMult;
+                    clockSrc.playbackRate.value += clockSrc.playbackRate.value * params.random * _.sample([1, -1]);
 
-                if (clock.beat % 2 == 0) {
-                    clockSrc.playbackRate.value *= (1.0 - params.swing) / 0.5;
-                } else {
-                    clockSrc.playbackRate.value *= params.swing / 0.5;
+                    if (clock.beat % 2 == 0) {
+                        clockSrc.playbackRate.value *= (1.0 - params.swing) / 0.5;
+                    } else {
+                        clockSrc.playbackRate.value *= params.swing / 0.5;
+                    }
+
+                    clockSrc.start(now() + 0.0000001);
+
+                    clockSrc.onended = function () {
+                        curTime += 1/freq;
+                        var error = now() - curTime;
+
+                        clock.tick(error);
+
+                        //return function (cb) {
+                        //    cb();
+                        //};
+                    };
+
+                    _.forEach(clock.callbacks, function (cb) {
+                        cb(clock);
+                    });
+
+                    clock.beat = (clock.beat + 1) % (params.subDiv * clock.time[0] / clock.time[1]);
+
+                } else if (params.source === 'animationFrame') {
+                    params.reported = Math.round(timestamp / 1000. * params.bpm / 60. * params.resolution);
+
+                    if (params.reported !== params.current) {
+                        if ((params.current % params.resolution) > (params.reported % params.resolution)) {
+                            params.beat = Math.round(params.current / params.resolution);
+                            //console.log(params.beat);
+                        }
+
+                        _.forEach(clock.callbacks, function (cb) {
+                            cb(clock);
+                        });
+
+                        params.current = params.reported;
+                    }
+
+                    window.requestAnimationFrame(clock.tick);
                 }
-
-                clockSrc.start(now() + 0.0000001);
-
-                clockSrc.onended = function () {
-                    curTime += 1/freq;
-                    var error = now() - curTime;
-                    clock.tick();
-
-                    //return function (cb) {
-                    //    cb();
-                    //};
-                };
-
-                _.forEach(clock.callbacks, function (cb) {
-                    cb(clock);
-                });
-
-                clock.beat = (clock.beat + 1) % (params.subDiv * clock.time[0] / clock.time[1]);
             }
-
         }
+
+        return clock;
     };
 
     // TODO: stopping system should remove these callbacks?
     // TODO: implement shuffle and randomizez
     clock.tickSynced = function () {
         if (params.sync && params.isOn) {
-            if (dtm.master.clock.beat % Math.round(480/params.subDiv) === 0) {
-                _.forEach(clock.callbacks, function (cb) {
-                    cb(clock);
-                });
+            if (dtm.master.clock.get('source') === 'webAudio') {
+                if (dtm.master.clock.beat % Math.round(params.resolution/params.subDiv) === 0) {
+                    _.forEach(clock.callbacks, function (cb) {
+                        cb(clock);
+                    });
+                }
+            }
+
+            else if (dtm.master.clock.get('source') === 'animationFrame') {
+                if ((dtm.master.clock.get('cur') % (params.resolution/params.subDiv*4)) < params.prev) {
+
+                    _.forEach(clock.callbacks, function (cb) {
+                        cb(clock);
+                    });
+
+                }
+                params.prev = dtm.master.clock.get('cur') % (params.resolution/params.subDiv*4);
             }
         }
         return clock;

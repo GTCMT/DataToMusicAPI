@@ -103,6 +103,13 @@ describe('array object', function () {
                 expect(a.get('unique').toString()).toBe([1, 2, 3].toString());
             });
         });
+
+        describe('block', function () {
+            var a = dtm.array().fill('seq', 10);
+            it('should return the first 3 items', function () {
+                expect(a.get('block', [3, 3]).length).toBe(3);
+            })
+        });
     });
 
     describe('histogram', function () {
@@ -118,4 +125,15 @@ describe('array object', function () {
             expect(a.get().toString()).toBe([1, 2, 3].toString());
         });
     });
+
+    describe('limit', function () {
+        var a = dtm.array([1, 3, 5, 7, 9]);
+        var min = 2;
+        var max = 6;
+        a.limit(min, max);
+        it('should have min=2 and max=6', function () {
+            expect(a.get('min')).toBe(min);
+            expect(a.get('max')).toBe(max);
+        })
+    })
 });

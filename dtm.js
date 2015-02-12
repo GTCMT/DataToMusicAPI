@@ -14,7 +14,7 @@ var clMult = 0.01;
 var clockBuf = actx.createBuffer(1, Math.round(actx.sampleRate * clMult), actx.sampleRate);
 
 var params = {
-    isLogging: true
+    isLogging: false
 };
 
 /**
@@ -581,6 +581,8 @@ function blockWise(arr, blockSize, hopSize, cb) {
 dtm.transform = {
     type: 'dtm.transform',
 
+    /* GENERTORS */
+
     /**
      * Generates values for a new array.
      * @function module:transform#generate
@@ -710,6 +712,9 @@ dtm.transform = {
         return res;
     },
 
+
+    /* SCALERS */
+
     /**
      * Normalizes an numerical array into 0-1 range.
      * @function module:transform#normalize
@@ -760,206 +765,6 @@ dtm.transform = {
             res[idx] = dtm.value.rescale(val, min, max);
         });
 
-        return res;
-    },
-
-    /**
-     * Adds a value to the array contents.
-     * @function module:transform#add
-     * @param arr
-     * @param factor
-     * @returns {Array}
-     */
-    add: function (arr, factor) {
-        var res = [];
-
-        _.forEach(arr, function (val, idx) {
-            res[idx] = val + factor;
-        });
-
-        return res;
-    },
-
-    /**
-     * Multiplies the array contents.
-     * @function module:transform#mult
-     * @param arr
-     * @param factor
-     * @returns {Array}
-     */
-    mult: function (arr, factor) {
-        var res = [];
-
-        _.forEach(arr, function (val, idx) {
-            res[idx] = val * factor;
-        });
-
-        return res;
-    },
-
-    /**
-     * Creates a horizontal mirror of the input array.
-     * @function module:transform#mirror
-     * @param {array} vals One-dimensional array. Could be any type.
-     * @returns {array}
-     * @example
-     *
-     * var input = [4, 1, 2, 7, 5, 0, 6, 3];
-     *
-     * dtm.transform.mirror(input);
-     * -> [3, 6, 0, 5, 7, 2, 1, 4]
-     */
-    mirror: function (arr) {
-        var res = [];
-        for (var i = arr.length - 1; i >= 0; --i) {
-            res.push(arr[i]);
-        }
-        return res;
-    },
-
-    /**
-     * Vertical invertion.
-     * @function module:transform#invert
-     * @param {array} vals One-dimensional numerical array
-     * @param {number} [center] If not present, the mean of the input array is used as the center point.
-     * @returns {array}
-     * @example
-     *
-     * var input = [4, 0, 3, 1, 2, 7, 5, 6];
-     *
-     * dtm.transform.invert(input);
-     * -> [3, 7, 4, 6, 5, 0, 2, 1]
-     */
-    invert: function (arr, center) {
-        // CHECK: center = 0 will give the default value...
-        center = center || dtm.analyzer.mean(arr);
-
-        var res = [];
-        _.forEach(arr, function (val, idx) {
-            res[idx] = center - (val - center);
-        });
-        return res;
-    },
-
-    /**
-     * Randomizes the order of the contents of an array.
-     * @function module:transform#shuffle
-     * @param arr
-     * @returns {Array}
-     */
-    shuffle: function (arr) {
-        return _.shuffle(arr);
-    },
-
-    /**
-     * Sorts the contents of a numerical array.
-     * @function module:transform#sort
-     * @param arr {array}
-     * @returns {array}
-     */
-    sort: function (arr) {
-        return arr.sort();
-    },
-
-    /**
-     * Repeats the contents of an array.
-     * @param arr
-     * @param count
-     * @returns {Array}
-     */
-    repeat: function (arr, count) {
-        var res = [];
-
-        if (!count) {
-            count = 1;
-        }
-        for (var i = 0; i < count; i++) {
-            res = res.concat(arr);
-        }
-        return res;
-    },
-
-    /**
-     * Truncates some values either at the end or both at the beginning and the end of the given array.
-     * @function module:transform#truncate
-     * @param arr
-     * @param arg1
-     * @param [arg2]
-     * @returns {Array}
-     */
-    truncate: function (arr, arg1, arg2) {
-        var res = [];
-        if (typeof(arg2) !== 'undefined') {
-            for (var i = 0; i < (arr.length - (arg1 + arg2)); i++) {
-                res[i] = arr[arg1 + i];
-            }
-        } else {
-            for (var j = 0; j < (arr.length - arg1); j++) {
-                res[j] = arr[j];
-            }
-        }
-        return res;
-    },
-
-    /**
-     * Rounds the float values to the nearest integer values.
-     * @function module:transform#round
-     * @param arr {array} Numerical array
-     * @returns {Array}
-     */
-    round: function (arr) {
-        var res = [];
-
-        _.forEach(arr, function (val, idx) {
-            res[idx] = Math.round(val);
-        });
-        return res;
-    },
-
-    /**
-     * Floor quantizes the float values to the nearest integer values.
-     * @function module:transform#round
-     * @param arr {array} Numerical array
-     * @returns {Array}
-     */
-    floor: function (arr) {
-        var res = [];
-
-        _.forEach(arr, function (val, idx) {
-            res[idx] = Math.floor(val);
-        });
-        return res;
-    },
-
-    /**
-     * Ceiling quantizes the float values to the nearest integer values.
-     * @function module:transform#round
-     * @param arr {array} Numerical array
-     * @returns {Array}
-     */
-    ceil: function (arr) {
-        var res = [];
-
-        _.forEach(arr, function (val, idx) {
-            res[idx] = Math.floor(val);
-        });
-        return res;
-    },
-
-    /**
-     * Shifts the positions of array contents.
-     * @function module:transform#shift
-     * @param arr
-     * @param amount {integer}
-     * @returns {Array}
-     */
-    shift: function (arr, amount) {
-        var res = [];
-
-        for (var i = 0; i < arr.length; i++) {
-            var j = dtm.value.mod((i + amount), arr.length);
-            res[i] = arr[j];
-        }
         return res;
     },
 
@@ -1091,6 +896,260 @@ dtm.transform = {
         return dtm.transform.fit(arr, targetLen, interp);
     },
 
+    limit: function (arr, min, max) {
+        var res = [];
+
+        _.forEach(arr, function (val, idx) {
+            var temp = val;
+            if (temp < min) {
+                temp = min;
+            }
+            if (temp > max) {
+                temp = max;
+            }
+            res[idx] = temp;
+        });
+
+        return res;
+    },
+
+    /* ARITHMETIC */
+
+    /**
+     * Adds a value to the array contents.
+     * @function module:transform#add
+     * @param arr
+     * @param factor
+     * @returns {Array}
+     */
+    add: function (arr, factor) {
+        var res = [];
+
+        _.forEach(arr, function (val, idx) {
+            res[idx] = val + factor;
+        });
+
+        return res;
+    },
+
+    /**
+     * Multiplies the array contents.
+     * @function module:transform#mult
+     * @param arr
+     * @param factor
+     * @returns {Array}
+     */
+    mult: function (arr, factor) {
+        var res = [];
+
+        _.forEach(arr, function (val, idx) {
+            res[idx] = val * factor;
+        });
+
+        return res;
+    },
+
+    /**
+     * Rounds the float values to the nearest integer values.
+     * @function module:transform#round
+     * @param arr {array} Numerical array
+     * @returns {Array}
+     */
+    round: function (arr) {
+        var res = [];
+
+        _.forEach(arr, function (val, idx) {
+            res[idx] = Math.round(val);
+        });
+        return res;
+    },
+
+    /**
+     * Floor quantizes the float values to the nearest integer values.
+     * @function module:transform#round
+     * @param arr {array} Numerical array
+     * @returns {Array}
+     */
+    floor: function (arr) {
+        var res = [];
+
+        _.forEach(arr, function (val, idx) {
+            res[idx] = Math.floor(val);
+        });
+        return res;
+    },
+
+    /**
+     * Ceiling quantizes the float values to the nearest integer values.
+     * @function module:transform#round
+     * @param arr {array} Numerical array
+     * @returns {Array}
+     */
+    ceil: function (arr) {
+        var res = [];
+
+        _.forEach(arr, function (val, idx) {
+            res[idx] = Math.floor(val);
+        });
+        return res;
+    },
+
+    hwr: function (input) {
+        var res = [];
+        _.forEach(input, function (val, idx) {
+            res[idx] = (val < 0) ? 0 : val;
+        });
+
+        return res;
+    },
+
+    fwr: function (input) {
+        var res = [];
+        _.forEach(input, function (val, idx) {
+            res[idx] = (val < 0) ? Math.abs(val) : val;
+        });
+
+        return res;
+    },
+
+    /* LIST OPERATIONS */
+
+    /**
+     * Creates a horizontal mirror of the input array.
+     * @function module:transform#mirror
+     * @param {array} vals One-dimensional array. Could be any type.
+     * @returns {array}
+     * @example
+     *
+     * var input = [4, 1, 2, 7, 5, 0, 6, 3];
+     *
+     * dtm.transform.mirror(input);
+     * -> [3, 6, 0, 5, 7, 2, 1, 4]
+     */
+    mirror: function (arr) {
+        var res = [];
+        for (var i = arr.length - 1; i >= 0; --i) {
+            res.push(arr[i]);
+        }
+        return res;
+    },
+
+    /**
+     * Vertical invertion.
+     * @function module:transform#invert
+     * @param {array} vals One-dimensional numerical array
+     * @param {number} [center] If not present, the mean of the input array is used as the center point.
+     * @returns {array}
+     * @example
+     *
+     * var input = [4, 0, 3, 1, 2, 7, 5, 6];
+     *
+     * dtm.transform.invert(input);
+     * -> [3, 7, 4, 6, 5, 0, 2, 1]
+     */
+    invert: function (arr, center) {
+        // CHECK: center = 0 will give the default value...
+        center = center || dtm.analyzer.mean(arr);
+
+        var res = [];
+        _.forEach(arr, function (val, idx) {
+            res[idx] = center - (val - center);
+        });
+        return res;
+    },
+
+    /**
+     * Randomizes the order of the contents of an array.
+     * @function module:transform#shuffle
+     * @param arr
+     * @returns {Array}
+     */
+    shuffle: function (arr) {
+        return _.shuffle(arr);
+    },
+
+    /**
+     * Sorts the contents of a numerical array.
+     * @function module:transform#sort
+     * @param arr {array}
+     * @returns {array}
+     */
+    sort: function (arr) {
+        return arr.sort();
+    },
+
+    /**
+     * Repeats the contents of an array.
+     * @param arr
+     * @param count
+     * @returns {Array}
+     */
+    repeat: function (arr, count) {
+        var res = [];
+
+        if (!count) {
+            count = 1;
+        }
+        for (var i = 0; i < count; i++) {
+            res = res.concat(arr);
+        }
+        return res;
+    },
+
+    // TODO: it should just have one behavior
+    /**
+     * Truncates some values either at the end or both at the beginning and the end of the given array.
+     * @function module:transform#truncate
+     * @param arr {number}
+     * @param arg1 {number}
+     * @param [arg2]
+     * @returns {Array}
+     */
+    truncate: function (arr, arg1, arg2) {
+        var res = [];
+        if (typeof(arg2) !== 'undefined') {
+            for (var i = 0; i < (arr.length - (arg1 + arg2)); i++) {
+                res[i] = arr[arg1 + i];
+            }
+        } else {
+            for (var j = 0; j < (arr.length - arg1); j++) {
+                res[j] = arr[j];
+            }
+        }
+        return res;
+    },
+
+    getBlock: function (arr, start, size, wrap) {
+        var res = [];
+        var idx = 0;
+
+        // TODO: non-wrapping zero-padded version
+        for (var i = 0; i < size; i++) {
+            idx = dtm.val.mod(i + start, arr.length);
+            res[i] = arr[idx];
+        }
+
+        return res;
+    },
+
+    /**
+     * Shifts the positions of array contents.
+     * @function module:transform#shift
+     * @param arr
+     * @param amount {integer}
+     * @returns {Array}
+     */
+    shift: function (arr, amount) {
+        var res = [];
+
+        for (var i = 0; i < arr.length; i++) {
+            var j = dtm.value.mod((i + amount), arr.length);
+            res[i] = arr[j];
+        }
+        return res;
+    },
+
+
     /**
      * Variable length array morphing!
      * @function module:transform#morph
@@ -1115,6 +1174,8 @@ dtm.transform = {
 
     },
 
+
+    /* UNIT CONVERTIONS */
     // CHECK: maybe should say Note To Beats
     /**
      * Converts a beat sequence (e.g. [1, 0, 1, 0]) into a sequence of note qualities.
@@ -1348,24 +1409,6 @@ dtm.transform = {
         return res;
     },
 
-    hwr: function (input) {
-        var res = [];
-        _.forEach(input, function (val, idx) {
-            res[idx] = (val < 0) ? 0 : val;
-        });
-
-        return res;
-    },
-
-    fwr: function (input) {
-        var res = [];
-        _.forEach(input, function (val, idx) {
-            res[idx] = (val < 0) ? Math.abs(val) : val;
-        });
-
-        return res;
-    },
-
     unique: function (input) {
         return _.uniq(input);
     }
@@ -1462,7 +1505,7 @@ dtm.array = function (arr, name) {
     /**
      * Returns the array contents or an analyzed value
      * @function module:array#get
-     * @param [param] {string}
+     * @param [param] {string|number}
      * @returns {number|array|string}
      */
     array.get = function (param) {
@@ -1557,6 +1600,20 @@ dtm.array = function (arr, name) {
                 case 'loc':
                     break;
 
+                case 'block':
+                case 'window':
+                    var start, size;
+                    if (arguments[1] instanceof Array) {
+                        start = arguments[1][0];
+                        size = arguments[1][1];
+                        return dtm.transform.getBlock(params.value, start, size)
+                    } else if (typeof(arguments[1]) === 'number' && typeof(arguments[2]) === 'number') {
+                        start = arguments[1];
+                        size = arguments[2];
+                        return dtm.transform.getBlock(params.value, start, size);
+                    } else {
+                        return params.value;
+                    }
 
                 /* TRANSFORMED LIST */
                 case 'original':
@@ -1601,19 +1658,18 @@ dtm.array = function (arr, name) {
      * @returns {dtm.array}
      */
     array.set = function (input, name) {
-        if (typeof(name) !== 'undefined') {
-            array.setName(name);
+        if (input instanceof Array) {
+            params.value = input;
+        } else if (input.type === 'dtm.array') {
+            params.value = input.get();
         }
 
-        // TODO: error checking
-        params.value = input;
-
         if (params.original === null) {
-            params.original = input;
+            params.original = params.value;
         }
 
         // CHECK: type checking - may be redundant
-        checkType(input);
+        checkType(params.value);
 
         if (params.type === 'number' || params.type === 'int' || params.type === 'float') {
             _.forEach(params.value, function (val, idx) {
@@ -1627,7 +1683,11 @@ dtm.array = function (arr, name) {
             params.std = dtm.analyzer.std(input);
         }
 
-        params.length = input.length;
+        params.length = params.value.length;
+
+        if (typeof(name) !== 'undefined') {
+            array.setName(name);
+        }
 
         return array;
     };
@@ -1803,9 +1863,21 @@ dtm.array = function (arr, name) {
      */
     array.range = array.scale = array.rescale;
 
-    // TODO: implement this
+    /**
+     * Caps the array value range at the min and max values. Only works with a numerical array.
+     * @function module:array#limit
+     * @param [min=0]
+     * @param [max=1]
+     * @returns {*}
+     */
     array.limit = function (min, max) {
-        return array;
+        if (params.type === 'number') {
+            min = min || 0;
+            max = max || 1;
+            return array.set(dtm.transform.limit(array.get(), min, max));
+        } else {
+            return array;
+        }
     };
 
     /**
@@ -1822,6 +1894,8 @@ dtm.array = function (arr, name) {
         return array;
     };
 
+    array.exp = array.expCurve;
+
     /**
      * Applies a logarithmic scaling to the array.
      * @function module:array#logCurve
@@ -1835,6 +1909,8 @@ dtm.array = function (arr, name) {
         array.set(dtm.transform.rescale(arr, min, max));
         return array;
     };
+
+    array.log = array.logCurve;
 
     // TODO: there might be a memory leak / some inefficiency
     /**
@@ -1866,6 +1942,153 @@ dtm.array = function (arr, name) {
     array.summarize = function () {
         return array;
     };
+
+
+
+    /* LIST OPERATIONS*/
+
+    /**
+     * Sorts the contents of numerical array.
+     * @function module:array#sort
+     * @returns {dtm.array}
+     */
+    array.sort = function () {
+        params.value = dtm.transform.sort(params.value);
+        array.set(params.value);
+        return array;
+    };
+
+    /**
+     * Concatenates new values to the contents.
+     * @function module:array#concat
+     * @param arr {array | dtm.array} A regular array or a dtm.array object.
+     * @returns {dtm.array}
+     */
+    array.concat = function (arr) {
+        arr = arr || [];
+        var temp = params.value;
+        if (arr instanceof Array) {
+            temp = temp.concat(arr);
+        } else if (arr.type === 'dtm.array') {
+            temp = temp.concat(arr.value);
+        }
+        array.set(temp);
+        return array;
+    };
+
+    /**
+     * Repeats the contents of the current array.
+     * @function module:array#repeat
+     * @param count {integer}
+     * @returns {dtm.array}
+     */
+    array.repeat = function (count) {
+        params.value = dtm.transform.repeat(params.value, count);
+        array.set(params.value);
+        return array;
+    };
+
+    /**
+     * Same as array.repeat().
+     * @function module:array#rep
+     * @type {Function}
+     */
+    array.rep = array.repeat;
+
+    /**
+     * Truncates some values either at the end or both at the beginning and the end.
+     * @param arg1 {integer} Start bits to truncate. If the arg2 is not present, it will be the End bits to truncate.
+     * @param [arg2] {integer} End bits to truncate.
+     * @function module:array#truncate
+     * @returns {dtm.array}
+     */
+    array.truncate = function (arg1, arg2) {
+        params.value = dtm.transform.truncate(params.value, arg1, arg2);
+        array.set(params.value);
+        return array;
+    };
+
+    array.slice = array.truncate;
+
+    /**
+     *
+     * @function module:array#getBlock
+     * @param start {number} Starting index of the array.
+     * @param size {number}
+     * @returns {dtm.array}
+     */
+    array.getBlock = function (start, size) {
+        return array.set(dtm.transform.getBlock(params.value, start, size))
+    };
+
+    array.block = array.getBlock;
+
+    /**
+     * Shifts the indexing position of the array by the amount.
+     * @function module:array#shift
+     * @param amount {integer}
+     * @returns {dtm.array}
+     */
+    array.shift = function (amount) {
+        params.value = dtm.transform.shift(params.value, amount);
+        array.set(params.value);
+        return array;
+    };
+
+    /**
+     * Flips the array contents horizontally.
+     * @function module:array#mirror
+     * @returns {dtm.array}
+     */
+    array.mirror = function () {
+        params.value = dtm.transform.mirror(params.value);
+        array.set(params.value);
+        return array;
+    };
+
+    /**
+     * Same as array.mirror().
+     * @function module:array#reverse
+     * @type {Function}
+     */
+    array.reverse = array.mirror;
+
+    /**
+     * Flips the numerical values vertically at the given center point.
+     * @function module:array#invert
+     * @param [center=meanVal] {number}
+     * @returns {dtm.array}
+     */
+    array.invert = function (center) {
+        params.value = dtm.transform.invert(params.value, center);
+        array.set(params.value);
+        return array;
+    };
+
+    /**
+     * Same as array.invert().
+     * @function module:array#flip
+     * @type {Function}
+     */
+    array.flip = array.invert;
+
+    /**
+     * Randomizes the order of the array.
+     * @function module:array#shuffle
+     * @returns {dtm.array}
+     */
+    array.shuffle = function () {
+        params.value = dtm.transform.shuffle(params.value);
+        array.set(params.value);
+        return array;
+    };
+
+    /**
+     * Same as array.shuffle().
+     * @function module:array#randomize
+     * @type {Function}
+     */
+    array.randomize = array.shuffle;
 
 
     /* ARITHMETIC */
@@ -1950,86 +2173,6 @@ dtm.array = function (arr, name) {
 
 
 
-    /* GENERAL LIST OPERATIONS*/
-
-    /**
-     * Sorts the contents of numerical array.
-     * @function module:array#sort
-     * @returns {dtm.array}
-     */
-    array.sort = function () {
-        params.value = dtm.transform.sort(params.value);
-        array.set(params.value);
-        return array;
-    };
-
-    /**
-     * Concatenates new values to the contents.
-     * @function module:array#concat
-     * @param arr {array | dtm.array} A regular array or a dtm.array object.
-     * @returns {dtm.array}
-     */
-    array.concat = function (arr) {
-        arr = arr || [];
-        var temp = params.value;
-        if (arr instanceof Array) {
-            temp = temp.concat(arr);
-        } else if (arr.type === 'dtm.array') {
-            temp = temp.concat(arr.value);
-        }
-        array.set(temp);
-        return array;
-    };
-
-    /**
-     * Repeats the contents of the current array.
-     * @function module:array#repeat
-     * @param count {integer}
-     * @returns {dtm.array}
-     */
-    array.repeat = function (count) {
-        params.value = dtm.transform.repeat(params.value, count);
-        array.set(params.value);
-        return array;
-    };
-
-    /**
-     * Same as array.repeat().
-     * @function module:array#rep
-     * @type {Function}
-     */
-    array.rep = array.repeat;
-
-    /**
-     * Truncates some values either at the end or both at the beginning and the end.
-     * @param arg1 {integer} Start bits to truncate. If the arg2 is not present, it will be the End bits to truncate.
-     * @param [arg2] {integer} End bits to truncate.
-     * @function module:array#truncate
-     * @returns {dtm.array}
-     */
-    array.truncate = function (arg1, arg2) {
-        params.value = dtm.transform.truncate(params.value, arg1, arg2);
-        array.set(params.value);
-        return array;
-    };
-
-    array.slice = array.truncate;
-
-    /**
-     * Shifts the indexing position of the array by the amount.
-     * @function module:array#shift
-     * @param amount {integer}
-     * @returns {dtm.array}
-     */
-    array.shift = function (amount) {
-        params.value = dtm.transform.shift(params.value, amount);
-        array.set(params.value);
-        return array;
-    };
-
-
-
-
     /* NOMINAL */
 
     /**
@@ -2064,62 +2207,6 @@ dtm.array = function (arr, name) {
 
 
     /* MUSICAL */
-
-    /**
-     * Flips the array contents horizontally.
-     * @function module:array#mirror
-     * @returns {dtm.array}
-     */
-    array.mirror = function () {
-        params.value = dtm.transform.mirror(params.value);
-        array.set(params.value);
-        return array;
-    };
-
-    /**
-     * Same as array.mirror().
-     * @function module:array#reverse
-     * @type {Function}
-     */
-    array.reverse = array.mirror;
-
-    /**
-     * Flips the numerical values vertically at the given center point.
-     * @function module:array#invert
-     * @param [center=meanVal] {number}
-     * @returns {dtm.array}
-     */
-    array.invert = function (center) {
-        params.value = dtm.transform.invert(params.value, center);
-        array.set(params.value);
-        return array;
-    };
-
-    /**
-     * Same as array.invert().
-     * @function module:array#flip
-     * @type {Function}
-     */
-    array.flip = array.invert;
-
-    /**
-     * Randomizes the order of the array.
-     * @function module:array#shuffle
-     * @returns {dtm.array}
-     */
-    array.shuffle = function () {
-        params.value = dtm.transform.shuffle(params.value);
-        array.set(params.value);
-        return array;
-    };
-
-    /**
-     * Same as array.shuffle().
-     * @function module:array#randomize
-     * @type {Function}
-     */
-    array.randomize = array.shuffle;
-
 
     // CHECK: this is different from the trnsf function
     /**
@@ -3019,15 +3106,23 @@ dtm.d = dtm.data;
  */
 dtm.clock = function (bpm, subDiv, time) {
     var params = {
+        source: 'animationFrame',
+
         name: null,
         isOn: false,
         sync: true,
         isMaster: false,
 
         bpm: 120,
-        subDiv: 4,
+        subDiv: 16,
         random: 0,
-        swing: 0.5
+        swing: 0.5,
+
+        current: 0,
+        previous: 0,
+        reported: 0,
+        resolution: 480,
+        beat: 0
     };
 
     var clock = {
@@ -3039,6 +3134,9 @@ dtm.clock = function (bpm, subDiv, time) {
         beat: 0,
 
         list: [],
+
+        // temp
+        prev: 0,
 
         // CHECK: just for debugging
         callbacks: []
@@ -3068,6 +3166,24 @@ dtm.clock = function (bpm, subDiv, time) {
             case 'isOn':
             case 'isPlaying':
                 return params.isOn;
+
+            case 'source':
+                return params.source;
+
+            case 'beat':
+                return params.beat;
+
+            case 'cur':
+            case 'current':
+                return params.current;
+
+            case 'prev':
+            case 'previous':
+                return params.previous;
+
+            case 'rep':
+            case 'reported':
+                return params.reported;
 
             default:
                 return clock;
@@ -3129,11 +3245,13 @@ dtm.clock = function (bpm, subDiv, time) {
      */
     clock.bpm = function (val) {
         if (!arguments || !val) {
-            params.bpm = 60;
+            //params.bpm = 60;
+            return clock;
+        } else {
+            params.bpm = val;
+            params.sync = false;
             return clock;
         }
-        params.bpm = val;
-        return clock;
     };
 
     clock.tempo = clock.bpm;
@@ -3298,6 +3416,10 @@ dtm.clock = function (bpm, subDiv, time) {
      * @returns {dtm.clock} self
      */
     clock.start = function (timeErr) {
+        if (params.source === 'animationFrame') {
+            window.requestAnimationFrame(clock.tick);
+        }
+
         if (params.isMaster) {
             dtm.log('starting the master clock');
         } else {
@@ -3319,101 +3441,150 @@ dtm.clock = function (bpm, subDiv, time) {
 
     var clockSrc;
 
+    // TODO: refactor big time!!!!
     /**
      * Makes the clock tick once.
      * @param [timeErr=0] {float}
      * @returns clock {dtm.clock}
      */
-    clock.tick = function (timeErr) {
-        timeErr = timeErr || 0;
-//            if (isNaN(timeErr)) {
-//                timeErr = 0;
-//            }
+    clock.tick = function (timestamp) {
         if (params.isOn) {
-
             if (!params.sync && !params.isMaster) {
-                clockSrc = actx.createBufferSource();
-                clockSrc.buffer = clockBuf;
-                clockSrc.connect(out());
+                if (params.source === 'webAudio') {
+                    clockSrc = actx.createBufferSource();
+                    clockSrc.buffer = clockBuf;
+                    clockSrc.connect(out());
 
-                var freq = params.bpm / 60.0 * (params.subDiv / 4.0);
-                //var pbRate = 1/(1/freq - Math.abs(timeErr));
+                    var freq = params.bpm / 60.0 * (params.subDiv / 4.0);
+                    //var pbRate = 1/(1/freq - Math.abs(timeErr));
 
-                clockSrc.playbackRate.value = freq * clMult;
-                clockSrc.playbackRate.value += clockSrc.playbackRate.value * params.random * _.sample([1, -1]);
+                    clockSrc.playbackRate.value = freq * clMult;
+                    clockSrc.playbackRate.value += clockSrc.playbackRate.value * params.random * _.sample([1, -1]);
 
-                if (clock.beat % 2 == 0) {
-                    clockSrc.playbackRate.value *= (1.0 - params.swing) / 0.5;
-                } else {
-                    clockSrc.playbackRate.value *= params.swing / 0.5;
-                }
+                    if (clock.beat % 2 == 0) {
+                        clockSrc.playbackRate.value *= (1.0 - params.swing) / 0.5;
+                    } else {
+                        clockSrc.playbackRate.value *= params.swing / 0.5;
+                    }
 
-                clockSrc.start(now() + 0.0000001);
+                    clockSrc.start(now() + 0.0000001);
 
-                clockSrc.onended = function () {
-                    curTime += 1/freq;
-                    var error = now() - curTime;
-                    //clock.tick(error);
-                    clock.tick();
+                    clockSrc.onended = function () {
+                        curTime += 1/freq;
+                        var error = now() - curTime;
+                        //clock.tick(error);
+                        clock.tick();
 //                curTime = now();
-                };
+                    };
 
-                _.forEach(clock.callbacks, function (cb) {
-                    cb(clock);
-                });
+                    _.forEach(clock.callbacks, function (cb) {
+                        cb(clock);
+                    });
 
-                clock.beat = (clock.beat + 1) % (params.subDiv * clock.time[0] / clock.time[1]);
+                    clock.beat = (clock.beat + 1) % (params.subDiv * clock.time[0] / clock.time[1]);
 
-                return clock;
+                } else if (params.source === 'animationFrame') {
+                    params.reported = Math.round(timestamp / 1000. * params.bpm / 60. * params.resolution * params.subDiv / 4);
+
+                    if (params.reported !== params.current) {
+                        if ((params.current % params.resolution) > (params.reported % params.resolution)) {
+                            params.beat = Math.round(params.current / params.resolution);
+                            console.log(params.beat);
+
+                            _.forEach(clock.callbacks, function (cb) {
+                                cb(clock);
+                            });
+                        }
+
+                        params.current = params.reported;
+                    }
+
+                    window.requestAnimationFrame(clock.tick);
+                }
 
             } else if (params.sync && !params.isMaster) {
-                return clock;
+
             } else if (params.isMaster) {
-                clockSrc = actx.createBufferSource();
-                clockSrc.buffer = clockBuf;
-                clockSrc.connect(out());
+                if (params.source === 'webAudio') {
+                    clockSrc = actx.createBufferSource();
+                    clockSrc.buffer = clockBuf;
+                    clockSrc.connect(out());
 
-                var freq = params.bpm / 60.0 * (params.subDiv / 4.0);
+                    var freq = params.bpm / 60.0 * (params.subDiv / 4.0);
 
-                clockSrc.playbackRate.value = freq * clMult;
-                clockSrc.playbackRate.value += clockSrc.playbackRate.value * params.random * _.sample([1, -1]);
+                    clockSrc.playbackRate.value = freq * clMult;
+                    clockSrc.playbackRate.value += clockSrc.playbackRate.value * params.random * _.sample([1, -1]);
 
-                if (clock.beat % 2 == 0) {
-                    clockSrc.playbackRate.value *= (1.0 - params.swing) / 0.5;
-                } else {
-                    clockSrc.playbackRate.value *= params.swing / 0.5;
+                    if (clock.beat % 2 == 0) {
+                        clockSrc.playbackRate.value *= (1.0 - params.swing) / 0.5;
+                    } else {
+                        clockSrc.playbackRate.value *= params.swing / 0.5;
+                    }
+
+                    clockSrc.start(now() + 0.0000001);
+
+                    clockSrc.onended = function () {
+                        curTime += 1/freq;
+                        var error = now() - curTime;
+
+                        clock.tick(error);
+
+                        //return function (cb) {
+                        //    cb();
+                        //};
+                    };
+
+                    _.forEach(clock.callbacks, function (cb) {
+                        cb(clock);
+                    });
+
+                    clock.beat = (clock.beat + 1) % (params.subDiv * clock.time[0] / clock.time[1]);
+
+                } else if (params.source === 'animationFrame') {
+                    params.reported = Math.round(timestamp / 1000. * params.bpm / 60. * params.resolution);
+
+                    if (params.reported !== params.current) {
+                        if ((params.current % params.resolution) > (params.reported % params.resolution)) {
+                            params.beat = Math.round(params.current / params.resolution);
+                            //console.log(params.beat);
+                        }
+
+                        _.forEach(clock.callbacks, function (cb) {
+                            cb(clock);
+                        });
+
+                        params.current = params.reported;
+                    }
+
+                    window.requestAnimationFrame(clock.tick);
                 }
-
-                clockSrc.start(now() + 0.0000001);
-
-                clockSrc.onended = function () {
-                    curTime += 1/freq;
-                    var error = now() - curTime;
-                    clock.tick();
-
-                    //return function (cb) {
-                    //    cb();
-                    //};
-                };
-
-                _.forEach(clock.callbacks, function (cb) {
-                    cb(clock);
-                });
-
-                clock.beat = (clock.beat + 1) % (params.subDiv * clock.time[0] / clock.time[1]);
             }
-
         }
+
+        return clock;
     };
 
     // TODO: stopping system should remove these callbacks?
     // TODO: implement shuffle and randomizez
     clock.tickSynced = function () {
         if (params.sync && params.isOn) {
-            if (dtm.master.clock.beat % Math.round(480/params.subDiv) === 0) {
-                _.forEach(clock.callbacks, function (cb) {
-                    cb(clock);
-                });
+            if (dtm.master.clock.get('source') === 'webAudio') {
+                if (dtm.master.clock.beat % Math.round(params.resolution/params.subDiv) === 0) {
+                    _.forEach(clock.callbacks, function (cb) {
+                        cb(clock);
+                    });
+                }
+            }
+
+            else if (dtm.master.clock.get('source') === 'animationFrame') {
+                if ((dtm.master.clock.get('cur') % (params.resolution/params.subDiv*4)) < params.prev) {
+
+                    _.forEach(clock.callbacks, function (cb) {
+                        cb(clock);
+                    });
+
+                }
+                params.prev = dtm.master.clock.get('cur') % (params.resolution/params.subDiv*4);
             }
         }
         return clock;
@@ -3550,6 +3721,12 @@ dtm.instr = function (arg) {
         params: {}
     };
 
+    /**
+     * Returns a parameter of the instrument object.
+     * @function module:instr#get
+     * @param param {string}
+     * @returns {*}
+     */
     instr.get = function (param) {
         //return params[key];
 
@@ -3563,9 +3740,56 @@ dtm.instr = function (arg) {
             case 'clock':
                 return params.clock;
 
+            case 'model':
+                break;
+
             default:
                 break;
         }
+    };
+
+    instr.set = function () {
+        return instr;
+    };
+
+    instr.load = function (arg) {
+        if (typeof(arg) === 'string') {
+            var model = _.find(dtm.modelColl, {params: {
+                name: arg,
+                categ: 'instr'
+            }});
+
+            if (typeof(model) !== 'undefined') {
+                dtm.log('loading instrument model: ' + arg);
+                params.instrModel = model;
+                params.name = arg;
+                //params.models = model.models;
+                instr.model(model);
+                //instr.play = params.instrModel.play;
+                //instr.run = params.instrModel.run;
+
+                // CHECK: not good
+                params.modDest.push(model);
+            } else {
+                dtm.log('registering a new instrument: ' + arg);
+                params.name = arg;
+                params.categ = 'instr';
+                dtm.modelColl.push(instr);
+            }
+
+        } else if (typeof(arg) !== 'undefined') {
+            if (arg.params.categ === 'instr') {
+                params.instrModel = arg; // TODO: check the class name
+                instr.model(arg);
+            }
+        }
+
+        return instr;
+    };
+
+    // TODO: implement
+    instr.clone = function () {
+        return instr;
     };
 
     /**
@@ -3629,19 +3853,17 @@ dtm.instr = function (arg) {
         return instr;
     };
 
-    /**
-     * Sets the main voice / WebAudio synthesizer for the instrument.
-     * @param arg {string|dtm.synth}
-     * @returns {dtm.instr}
-     */
-    instr.voice = function (arg) {
-        if (typeof(arg) === 'string') {
-            params.models.voice.set(arg);
-        }
-        return instr;
-    };
+    instr.map = function (src, dest) {
+        if (src instanceof Array) {
+            params.models[dest] = dtm.array(src).normalize();
+        } else if (src.type === 'dtm.array') {
+            // CHECK: assigning an array here is maybe not so smart...
+            params.models[dest] = src.normalize();
+        } else if (src.type === 'dtm.model') {
 
-    instr.rhythm = function (arg) {
+        }
+        // use global index from the master
+
         return instr;
     };
 
@@ -3724,35 +3946,6 @@ dtm.instr = function (arg) {
         return instr;
     };
 
-    instr.clock = function (bpm, subDiv, time) {
-        params.clock.bpm(bpm);
-        params.clock.subDiv(subDiv);
-        return instr;
-    };
-
-    instr.bpm = function (val) {
-        params.clock.bpm(val);
-        return instr;
-    };
-
-    instr.tempo = instr.bpm;
-
-    instr.subDiv = function (val) {
-        params.clock.subDiv(val);
-        return instr;
-    };
-
-    instr.div = instr.subdiv = instr.subDiv;
-
-    instr.sync = function (bool) {
-        if (typeof(bool) === 'undefined') {
-            bool = true;
-        }
-        params.clock.sync(bool);
-        params.sync = bool;
-        return instr;
-    };
-
 
     /**
      * Modulates the parameter(s) of the instrument.
@@ -3811,67 +4004,53 @@ dtm.instr = function (arg) {
 
     instr.modulate = instr.mod;
 
-    instr.map = function (src, dest) {
-        if (src instanceof Array) {
-            params.models[dest] = dtm.array(src).normalize();
-        } else if (src.type === 'dtm.array') {
-            // CHECK: assigning an array here is maybe not so smart...
-            params.models[dest] = src.normalize();
-        } else if (src.type === 'dtm.model') {
 
-        }
-        // use global index from the master
 
-        return instr;
-    };
-
-    instr.getModel = function (key) {
-        return params.models[key];
-    };
-
-    instr.setModel = function (src, dest) {
-        params.models[dest] = src;
-        return instr;
-    };
-
-    instr.clone = function () {
-        return instr;
-    };
-
-    instr.load = function (arg) {
+    /**
+     * Sets the main voice / WebAudio synthesizer for the instrument.
+     * @param arg {string|dtm.synth}
+     * @returns {dtm.instr}
+     */
+    instr.voice = function (arg) {
         if (typeof(arg) === 'string') {
-            var model = _.find(dtm.modelColl, {params: {
-                name: arg,
-                categ: 'instr'
-            }});
-
-            if (typeof(model) !== 'undefined') {
-                dtm.log('loading instrument model: ' + arg);
-                params.instrModel = model;
-                params.name = arg;
-                //params.models = model.models;
-                instr.model(model);
-                //instr.play = params.instrModel.play;
-                //instr.run = params.instrModel.run;
-
-                // CHECK: not good
-                params.modDest.push(model);
-            } else {
-                dtm.log('registering a new instrument: ' + arg);
-                params.name = arg;
-                params.categ = 'instr';
-                dtm.modelColl.push(instr);
-            }
-
-        } else if (typeof(arg) !== 'undefined') {
-            if (arg.params.categ === 'instr') {
-                params.instrModel = arg; // TODO: check the class name
-                instr.model(arg);
-            }
+            params.models.voice.set(arg);
         }
-
         return instr;
     };
+
+    instr.rhythm = function (arg) {
+        return instr;
+    };
+
+    instr.clock = function (bpm, subDiv, time) {
+        params.clock.bpm(bpm);
+        params.clock.subDiv(subDiv);
+        return instr;
+    };
+
+    instr.bpm = function (val) {
+        params.clock.bpm(val);
+        return instr;
+    };
+
+    instr.tempo = instr.bpm;
+
+    instr.subDiv = function (val) {
+        params.clock.subDiv(val);
+        return instr;
+    };
+
+    instr.div = instr.subdiv = instr.subDiv;
+
+    instr.sync = function (bool) {
+        if (typeof(bool) === 'undefined') {
+            bool = true;
+        }
+        params.clock.sync(bool);
+        params.sync = bool;
+        return instr;
+    };
+
 
     instr.load(arg);
 

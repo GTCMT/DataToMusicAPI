@@ -12,7 +12,7 @@ var clMult = 0.01;
 var clockBuf = actx.createBuffer(1, Math.round(actx.sampleRate * clMult), actx.sampleRate);
 
 var params = {
-    isLogging: true
+    isLogging: false
 };
 
 /**
