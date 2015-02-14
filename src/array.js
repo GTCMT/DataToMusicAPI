@@ -233,6 +233,7 @@ dtm.array = function (val, name) {
         if (params.type === 'number' || params.type === 'int' || params.type === 'float') {
             _.forEach(params.value, function (val, idx) {
                 params.value[idx] = Number.parseFloat(val);
+                //params.value[idx] = val;
             });
 
             params.normalized = dtm.transform.normalize(input);
@@ -701,6 +702,15 @@ dtm.array = function (val, name) {
     };
 
     /**
+     * Applys the array contents as the power to the argument as the base
+     * @param val
+     * @returns {dtm.array}
+     */
+    array.powof = function (val) {
+        return array.set(dtm.transform.powof(params.value, val));
+    };
+
+    /**
      * Rounds float values of the array to integer values.
      * @function module:array#round
      * @returns {dtm.array}
@@ -788,7 +798,8 @@ dtm.array = function (val, name) {
 
     array.uniq = array.unique;
 
-    array.classId = function () {
+    // TODO: id by occurrence / rarity, etc.
+    array.classId = function (by) {
         return array.set(dtm.transform.classId(params.value));
     };
 

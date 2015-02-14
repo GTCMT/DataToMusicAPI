@@ -59,10 +59,19 @@ module.exports = function (grunt) {
                     template: './node_modules/ink-docstrap/template'
                 }
             }
+        },
+
+        uglify: {
+            my_target: {
+                files: {
+                    'dtm_min.js': ['bower_components/lodash/dist/lodash.underscore.js', 'dtm.js']
+                }
+            }
         }
     });
 
     grunt.loadNpmTasks('grunt-contrib-concat');
     grunt.loadNpmTasks('grunt-jsdoc');
+    grunt.loadNpmTasks('grunt-contrib-uglify');
     grunt.registerTask('default', ['concat']);
 };

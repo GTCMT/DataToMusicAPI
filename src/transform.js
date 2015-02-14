@@ -398,6 +398,16 @@ dtm.transform = {
         return res;
     },
 
+    powof: function (arr, factor) {
+        var res = [];
+
+        _.forEach(arr, function (val, idx) {
+            res[idx] = Math.pow(factor, val);
+        });
+
+        return res;
+    },
+
     /**
      * Rounds the float values to the nearest integer values.
      * @function module:transform#round

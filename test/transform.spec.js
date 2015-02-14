@@ -248,4 +248,14 @@ describe('array helper functions', function () {
             expect(typeof(res[2])).toBe('string');
         });
     });
+
+    describe('powof', function () {
+        var arr = [0, 1, 2, 3];
+        var res = dtm.transform.powof(arr, 4);
+        it('should have values of 1, 4, 16, 64', function () {
+            for (var i = 0; i < arr.length; i++) {
+                expect(res[i]).toBe(Math.pow(4, arr[i])); // stupid
+            }
+        });
+    });
 });

@@ -327,4 +327,4 @@ dtm.data = function (arg, cb, type) {
     }
 };
 
-dtm.d = dtm.data;
+dtm.load = dtm.d = dtm.data;

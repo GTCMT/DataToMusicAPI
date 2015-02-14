@@ -962,6 +962,16 @@ dtm.transform = {
         return res;
     },
 
+    powof: function (arr, factor) {
+        var res = [];
+
+        _.forEach(arr, function (val, idx) {
+            res[idx] = Math.pow(factor, val);
+        });
+
+        return res;
+    },
+
     /**
      * Rounds the float values to the nearest integer values.
      * @function module:transform#round
@@ -1738,6 +1748,7 @@ dtm.array = function (val, name) {
         if (params.type === 'number' || params.type === 'int' || params.type === 'float') {
             _.forEach(params.value, function (val, idx) {
                 params.value[idx] = Number.parseFloat(val);
+                //params.value[idx] = val;
             });
 
             params.normalized = dtm.transform.normalize(input);
@@ -2206,6 +2217,15 @@ dtm.array = function (val, name) {
     };
 
     /**
+     * Applys the array contents as the power to the argument as the base
+     * @param val
+     * @returns {dtm.array}
+     */
+    array.powof = function (val) {
+        return array.set(dtm.transform.powof(params.value, val));
+    };
+
+    /**
      * Rounds float values of the array to integer values.
      * @function module:array#round
      * @returns {dtm.array}
@@ -2293,7 +2313,8 @@ dtm.array = function (val, name) {
 
     array.uniq = array.unique;
 
-    array.classId = function () {
+    // TODO: id by occurrence / rarity, etc.
+    array.classId = function (by) {
         return array.set(dtm.transform.classId(params.value));
     };
 
@@ -3195,7 +3216,7 @@ dtm.data = function (arg, cb, type) {
     }
 };
 
-dtm.d = dtm.data;
+dtm.load = dtm.d = dtm.data;
 
 /**
  * @fileOverview WebAudio buffer-based clock. Somewhat precise. But buggy.
@@ -3815,8 +3836,8 @@ dtm.instr = function (arg) {
         modDest: [],
 
         sync: true,
-        clock: dtm.clock(true, 16),
-        subDivision: 16,
+        clock: dtm.clock(true, 8),
+        //subDivision: 16,
 
         // default model coll
         models: {
@@ -3824,9 +3845,16 @@ dtm.instr = function (arg) {
             volume: dtm.array(1),
             scale: dtm.array().fill('seq', 12),
             rhythm: dtm.array(1),
-            pitch: dtm.array(0.5),
+            pitch: dtm.array(69),
             transpose: dtm.array([0, 1]),
-            chord: dtm.array(0)
+            chord: dtm.array(0),
+            bpm: dtm.array(120),
+            subdiv: dtm.array(8),
+            repeats: null,
+            step: null,
+
+            atk: null,
+            dur: null
         },
 
         instrModel: null,
@@ -3869,7 +3897,7 @@ dtm.instr = function (arg) {
     };
 
     // CHECK: when giving an array, should I clone it? ...probably yes
-    instr.set = function (dest, src) {
+    instr.set = function (dest, src, adapt) {
         if (typeof(src) === 'number') {
             params.models[dest] = dtm.array(src);
         } else {
@@ -4022,12 +4050,18 @@ dtm.instr = function (arg) {
     // CHECK: this is pretty memory-inefficient
     function defaultInstr(c) {
         var v = params.models.voice;
-        var vol = params.models.volume.rescale(0.1, 1).get('next');
-        var r = params.models.rhythm.normalize().round();
-        var p = params.models.pitch.normalize().get('next');
-        var sc = params.models.scale.normalize().scale(0,11).round().unique().sort().get();
+        var vol = params.models.volume.get('next');
+        var r = params.models.rhythm.get('next');
+        var p = params.models.pitch.get('next');
+        var sc = params.models.scale.get();
         var tr = params.models.transpose.scale(-12, 12).get('mean');
         var ct = params.models.chord.normalize().scale(0, 12).round().unique().sort();
+        var div = params.models.subdiv.get('next');
+        params.clock.subDiv(div);
+
+        if (params.sync === false) {
+            params.clock.bpm(params.models.bpm.get('next'));
+        }
 
         if (ct.get('len') > 4) {
             ct.fit(4).round().unique().sort();
@@ -4035,13 +4069,14 @@ dtm.instr = function (arg) {
 
         ct = ct.get();
 
-        var nn = dtm.val.pq(dtm.val.rescale(p, 60, 96), sc) + Math.round(tr);
+        //var nn = dtm.val.pq(dtm.val.rescale(p, 60, 96), sc) + Math.round(tr);
+        var nn = dtm.val.pq(p, sc) + Math.round(tr);
 
         _.forEach(params.callbacks, function (cb) {
             cb();
         });
 
-        if (r.get('next')) {
+        if (r) {
             _.forEach(ct, function (val) {
                 v.nn(nn + val).amp(vol).play();
             });
@@ -4157,6 +4192,26 @@ dtm.instr = function (arg) {
         }
     }
 
+    function mapper(dest, src) {
+        if (typeof(src) === 'number') {
+            params.models[dest] = dtm.array(src);
+        } else {
+            if (src instanceof Array) {
+                params.models[dest] = dtm.array(src);
+            } else if (src.type === 'dtm.array') {
+                if (src.get('type') === 'string') {
+                    params.models[dest] = src.clone().classify();
+                } else {
+                    params.models[dest] = src.clone();
+                }
+            } else if (src.type === 'dtm.model') {
+
+            } else if (src.type === 'dtm.synth') {
+                params.models[dest] = src;
+            }
+        }
+    }
+
     instr.modulate = instr.mod;
 
 
@@ -4173,7 +4228,58 @@ dtm.instr = function (arg) {
         return instr;
     };
 
-    instr.rhythm = function (arg) {
+    instr.rhythm = function (src, adapt) {
+        if (typeof(adapt) === 'undefined') {
+            adapt = true;
+        }
+
+        mapper('rhythm', src);
+
+        if (adapt) {
+            params.models.rhythm.normalize().round();
+        }
+
+        return instr;
+    };
+
+    instr.volume = function (src, adapt) {
+        if (typeof(adapt) === 'undefined') {
+            adapt = true;
+        }
+
+        mapper('volume', src);
+        if (adapt) {
+            params.models.volume.logCurve(5).rescale(0.1, 1);
+        }
+
+        return instr;
+    };
+
+    instr.pitch = function (src, adapt) {
+        if (typeof(adapt) === 'undefined') {
+            adapt = true;
+        }
+
+        mapper('pitch', src);
+
+        if (adapt) {
+            params.models.pitch.normalize().rescale(60, 96);
+        }
+
+        return instr;
+    };
+
+    instr.scale = function (src, adapt) {
+        if (typeof(adapt) === 'undefined') {
+            adapt = true;
+        }
+
+        mapper('scale', src);
+
+        if (adapt) {
+            params.models.scale.normalize().scale(0,11).round().unique().sort()
+        }
+
         return instr;
     };
 
@@ -4183,15 +4289,36 @@ dtm.instr = function (arg) {
         return instr;
     };
 
-    instr.bpm = function (val) {
-        params.clock.bpm(val);
+    instr.bpm = function (src, adapt) {
+        params.sync = false;
+
+        //params.clock.bpm(val);
+        if (typeof(adapt) === 'undefined') {
+            adapt = true;
+        }
+
+        mapper('bpm', src);
+
+        if (adapt) {
+            params.models.bpm.normalize().scale(60, 180);
+        }
+
         return instr;
     };
 
     instr.tempo = instr.bpm;
 
-    instr.subDiv = function (val) {
-        params.clock.subDiv(val);
+    instr.subDiv = function (src, adapt) {
+        //params.clock.subDiv(val);
+        if (typeof(adapt) === 'undefined') {
+            adapt = true;
+        }
+
+        mapper('subdiv', src);
+
+        if (adapt) {
+            params.models.subdiv.normalize().scale(1, 5).round().powof(2);
+        }
         return instr;
     };
 
