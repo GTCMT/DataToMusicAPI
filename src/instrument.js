@@ -21,6 +21,7 @@ dtm.instr = function (arg) {
         clock: dtm.clock(true, 16),
         subDivision: 16,
 
+        // default model coll
         models: {
             voice: dtm.synth(),
             volume: dtm.array(1),
@@ -88,6 +89,20 @@ dtm.instr = function (arg) {
             } else if (src.type === 'dtm.synth') {
                 params.models[dest] = src;
             }
+        }
+
+        switch (dest) {
+            case 'bpm':
+            case 'tempo':
+                break;
+
+            case 'div':
+            case 'subdiv':
+            case 'subDiv':
+                break;
+
+            default:
+                break;
         }
         return instr;
     };

@@ -601,6 +601,8 @@ dtm.array = function (val, name) {
      * @returns {dtm.array}
      */
     array.getBlock = function (start, size) {
+        start = start || 0;
+        size = size || params.length;
         return array.set(dtm.transform.getBlock(params.value, start, size))
     };
 

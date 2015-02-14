@@ -2,7 +2,10 @@ describe('analyzer', function () {
     var input = [0, 2, 2, 3, 4, 4, 4, 5];
 
     describe('mean', function () {
+        var arr = ['foo', 'bar', 'buz'];
+
         var output = dtm.analyzer.mean(input);
+        //console.log(output);
     });
 
     describe('mode', function () {

@@ -59,7 +59,6 @@ dtm.analyzer = {
         }
     },
 
-    // CHECK: ugly!
     /**
      * Returns the mean of a numeric array.
      * @function module:analyzer#mean
@@ -73,27 +72,16 @@ dtm.analyzer = {
     mean: function (arr) {
         var type = dtm.anal.checkType(arr);
 
-        var sum = _.reduce(arr, function (num, sum) {
-            return num + sum;
-        });
+        if (type === 'string') {
+            dtm.log('cannot get the miean value of a string array');
+            return null;
+        } else {
+            var sum = _.reduce(arr, function (num, sum) {
+                return num + sum;
+            });
 
-        //if (type === 'int') {
-        //    var sum = _.reduce(arr, function (num, sum) {
-        //        return Number.parseInt(num) + Number.parseInt(sum);
-        //    });
-        //
-        //    return sum / _.size(arr);
-        //} else if (type === 'float') {
-        //    var sum = _.reduce(arr, function (num, sum) {
-        //        return Number.parseFloat(num) + Number.parseFloat(sum);
-        //    });
-        //
-        //    return sum / _.size(arr);
-        //} else {
-        //    return null;
-        //}
-
-        return sum / _.size(arr);
+            return sum / _.size(arr);
+        }
     },
 
     /**

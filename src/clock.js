@@ -16,6 +16,7 @@
  */
 dtm.clock = function (bpm, subDiv, time) {
     var params = {
+        // webAudio, animationFrame, date, hrtime (node)
         source: 'animationFrame',
 
         name: null,
@@ -476,7 +477,7 @@ dtm.clock = function (bpm, subDiv, time) {
     };
 
     // TODO: stopping system should remove these callbacks?
-    // TODO: implement shuffle and randomizez
+    // TODO: implement shuffle and randomize
     clock.tickSynced = function () {
         if (params.sync && params.isOn) {
             if (dtm.master.clock.get('source') === 'webAudio') {
@@ -490,14 +491,14 @@ dtm.clock = function (bpm, subDiv, time) {
             else if (dtm.master.clock.get('source') === 'animationFrame') {
                 if ((dtm.master.clock.get('cur') % (params.resolution/params.subDiv*4)) < params.prev) {
 
-                    params.beat = Math.round(dtm.master.clock.get('cur') / params.resolution * 4);
+                    params.beat = Math.round(dtm.master.clock.get('cur') / params.resolution * params.subDiv / 4);
 
                     _.forEach(clock.callbacks, function (cb) {
                         cb(clock);
                     });
 
                 }
-                params.prev = dtm.master.clock.get('cur') % (params.resolution/params.subDiv*4);
+                params.prev = dtm.master.clock.get('cur') % (params.resolution / params.subDiv * 4);
             }
         }
         return clock;

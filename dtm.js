@@ -7,11 +7,11 @@
 
 // TODO: load WebAudio on demand
 /* Shared WebAudio Stuff */
-var actx = new (window.AudioContext || window.webkitAudioContext)();
-var now = function () { return actx.currentTime; };
-var out = function () { return actx.destination; };
-var clMult = 0.01;
-var clockBuf = actx.createBuffer(1, Math.round(actx.sampleRate * clMult), actx.sampleRate);
+//var actx = new (window.AudioContext || window.webkitAudioContext)();
+//var now = function () { return actx.currentTime; };
+//var out = function () { return actx.destination; };
+//var clMult = 0.01;
+//var clockBuf = actx.createBuffer(1, Math.round(actx.sampleRate * clMult), actx.sampleRate);
 
 var params = {
     isLogging: false
@@ -37,24 +37,9 @@ var dtm = {
     modelColl: [],
     clocks: [],
 
-    sampleRate: actx.sampleRate,
-    sr: actx.sampleRate,
-
     params: {},
 
     // TODO: a function to list currently loaded objects, such as data, arrays, models... - for console livecoding situation
-
-    ///**
-    // * Returns a singleton audio context object.
-    // * @function getAudioContext
-    // * @returns {object} Audio Context
-    // * @example
-    // *
-    // * var actx = dtm.getAudioContext();
-    // */
-    getAudioContext: function () {
-        return actx
-    },
 
     ///**
     // * Returns the name of available models
@@ -86,6 +71,23 @@ var dtm = {
             default:
                 return null;
         }
+    },
+
+    //getAudioContext: function () {
+    //    return actx
+    //},
+
+    //sampleRate: actx.sampleRate,
+    //sr: actx.sampleRate,
+
+    wa: {},
+
+    startWebAudio: function () {
+        dtm.wa.actx = new (window.AudioContext || window.webkitAudioContext)();
+        dtm.wa.now = function () { return dtm.wa.actx.currentTime; };
+        dtm.wa.out = function () { return dtm.wa.actx.destination; };
+        dtm.wa.clMult = 0.01;
+        dtm.wa.clockBuf = dtm.wa.actx.createBuffer(1, Math.round(dtm.wa.actx.sampleRate * dtm.wa.clMult), dtm.wa.actx.sampleRate);
     }
 };
 
@@ -354,7 +356,6 @@ dtm.analyzer = {
         }
     },
 
-    // CHECK: ugly!
     /**
      * Returns the mean of a numeric array.
      * @function module:analyzer#mean
@@ -368,27 +369,16 @@ dtm.analyzer = {
     mean: function (arr) {
         var type = dtm.anal.checkType(arr);
 
-        var sum = _.reduce(arr, function (num, sum) {
-            return num + sum;
-        });
+        if (type === 'string') {
+            dtm.log('cannot get the miean value of a string array');
+            return null;
+        } else {
+            var sum = _.reduce(arr, function (num, sum) {
+                return num + sum;
+            });
 
-        //if (type === 'int') {
-        //    var sum = _.reduce(arr, function (num, sum) {
-        //        return Number.parseInt(num) + Number.parseInt(sum);
-        //    });
-        //
-        //    return sum / _.size(arr);
-        //} else if (type === 'float') {
-        //    var sum = _.reduce(arr, function (num, sum) {
-        //        return Number.parseFloat(num) + Number.parseFloat(sum);
-        //    });
-        //
-        //    return sum / _.size(arr);
-        //} else {
-        //    return null;
-        //}
-
-        return sum / _.size(arr);
+            return sum / _.size(arr);
+        }
     },
 
     /**
@@ -633,8 +623,11 @@ dtm.transform = {
                 if (!min) {
                     min = 0;
                 }
+
+                max = max || 1;
+
                 for (var i = 0; i < len; i++) {
-                    res[i] = i + min;
+                    res[i] = i * max + min;
                 }
                 break;
 
@@ -702,6 +695,14 @@ dtm.transform = {
             case 'ones':
                 for (var i = 0; i < len; i++) {
                     res[i] = 1;
+                }
+                break;
+
+            case 'constant':
+            case 'const':
+                min = min || 0;
+                for (var i = 0; i < len; i++) {
+                    res[i] = min;
                 }
                 break;
 
@@ -2105,6 +2106,8 @@ dtm.array = function (val, name) {
      * @returns {dtm.array}
      */
     array.getBlock = function (start, size) {
+        start = start || 0;
+        size = size || params.length;
         return array.set(dtm.transform.getBlock(params.value, start, size))
     };
 
@@ -3102,7 +3105,7 @@ dtm.data = function (arg, cb, type) {
                 data = d;
                 return d.get(arg);
             });
-            return data.promise;
+            //return data.promise;
         };
 
         return data.promise;
@@ -3212,6 +3215,7 @@ dtm.d = dtm.data;
  */
 dtm.clock = function (bpm, subDiv, time) {
     var params = {
+        // webAudio, animationFrame, date, hrtime (node)
         source: 'animationFrame',
 
         name: null,
@@ -3672,7 +3676,7 @@ dtm.clock = function (bpm, subDiv, time) {
     };
 
     // TODO: stopping system should remove these callbacks?
-    // TODO: implement shuffle and randomizez
+    // TODO: implement shuffle and randomize
     clock.tickSynced = function () {
         if (params.sync && params.isOn) {
             if (dtm.master.clock.get('source') === 'webAudio') {
@@ -3686,14 +3690,14 @@ dtm.clock = function (bpm, subDiv, time) {
             else if (dtm.master.clock.get('source') === 'animationFrame') {
                 if ((dtm.master.clock.get('cur') % (params.resolution/params.subDiv*4)) < params.prev) {
 
-                    params.beat = Math.round(dtm.master.clock.get('cur') / params.resolution * 4);
+                    params.beat = Math.round(dtm.master.clock.get('cur') / params.resolution * params.subDiv / 4);
 
                     _.forEach(clock.callbacks, function (cb) {
                         cb(clock);
                     });
 
                 }
-                params.prev = dtm.master.clock.get('cur') % (params.resolution/params.subDiv*4);
+                params.prev = dtm.master.clock.get('cur') % (params.resolution / params.subDiv * 4);
             }
         }
         return clock;
@@ -3814,6 +3818,7 @@ dtm.instr = function (arg) {
         clock: dtm.clock(true, 16),
         subDivision: 16,
 
+        // default model coll
         models: {
             voice: dtm.synth(),
             volume: dtm.array(1),
@@ -3881,6 +3886,20 @@ dtm.instr = function (arg) {
             } else if (src.type === 'dtm.synth') {
                 params.models[dest] = src;
             }
+        }
+
+        switch (dest) {
+            case 'bpm':
+            case 'tempo':
+                break;
+
+            case 'div':
+            case 'subdiv':
+            case 'subDiv':
+                break;
+
+            default:
+                break;
         }
         return instr;
     };
@@ -4504,6 +4523,8 @@ dtm.synth = function (type) {
      * @returns {promise | dtm.synth}
      */
     synth.load = function (arg, cb) {
+        var actx = dtm.wa.actx;
+
         params.type = 'sampler';
 
         if (arg.constructor.name === 'AudioBuffer') {
@@ -4539,7 +4560,7 @@ dtm.synth = function (type) {
                         }
                     });
                 } else if (arg instanceof Array) {
-                    var buf = actx.createBuffer(1, arg.length, dtm.sr);
+                    var buf = actx.createBuffer(1, arg.length, dtm.wa.actx.sampleRate);
                     var content = buf.getChannelData(0);
                     _.forEach(content, function (val, idx) {
                         content[idx] = arg[idx];
@@ -4573,6 +4594,10 @@ dtm.synth = function (type) {
      * @returns {dtm.synth}
      */
     synth.play = function (del, dur) {
+        var actx = dtm.wa.actx;
+        var now = dtm.wa.now;
+        var out = dtm.wa.out;
+
         del = del || 0;
         dur = dur || params.duration;
 
@@ -4864,9 +4889,11 @@ dtm.synth = function (type) {
 dtm.s = dtm.syn = dtm.synth;
 
 function makeNoise(bufLen) {
+    var actx = dtm.wa.actx;
+
     bufLen = bufLen || 4192;
 
-    var buffer = actx.createBuffer(1, bufLen, dtm.sr);
+    var buffer = actx.createBuffer(1, bufLen, dtm.wa.actx.sampleRate);
     var contents = buffer.getChannelData(0);
 
     _.forEach(_.range(bufLen), function (idx) {
@@ -4876,26 +4903,28 @@ function makeNoise(bufLen) {
     return buffer;
 }
 
-function makeIr(decay) {
-    var bufLen = Math.round(decay * dtm.sr) || dtm.sr;
-
-    var buffer = actx.createBuffer(2, bufLen, dtm.sr);
-    var left = buffer.getChannelData(0);
-    var right = buffer.getChannelData(1);
-
-    var exp = 10;
-    _.forEach(_.range(bufLen), function (idx) {
-        left[idx] = dtm.val.rescale(dtm.val.expCurve(_.random(0, 1, true) * (bufLen-idx)/bufLen, exp), -1, 1);
-        right[idx] = dtm.val.rescale(dtm.val.expCurve(_.random(0, 1, true) * (bufLen-idx)/bufLen, exp), -1, 1);
-    });
-
-    return buffer;
-}
-
-dtm.makeIr = makeIr;
-dtm.buffs = {
-    verbIr: dtm.makeIr(2)
-};
+//function makeIr(decay) {
+//    var actx = dtm.wa.actx;
+//
+//    var bufLen = Math.round(decay * dtm.wa.actx.sampleRate) || dtm.wa.actx.sampleRate;
+//
+//    var buffer = actx.createBuffer(2, bufLen, dtm.wa.actx.sampleRate);
+//    var left = buffer.getChannelData(0);
+//    var right = buffer.getChannelData(1);
+//
+//    var exp = 10;
+//    _.forEach(_.range(bufLen), function (idx) {
+//        left[idx] = dtm.val.rescale(dtm.val.expCurve(_.random(0, 1, true) * (bufLen-idx)/bufLen, exp), -1, 1);
+//        right[idx] = dtm.val.rescale(dtm.val.expCurve(_.random(0, 1, true) * (bufLen-idx)/bufLen, exp), -1, 1);
+//    });
+//
+//    return buffer;
+//}
+//
+//dtm.makeIr = makeIr;
+//dtm.buffs = {
+//    verbIr: dtm.makeIr(2)
+//};
 
 ///**
 // * @fileOverview WebAudio helper functions...

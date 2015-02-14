@@ -5,11 +5,11 @@
 
 // TODO: load WebAudio on demand
 /* Shared WebAudio Stuff */
-var actx = new (window.AudioContext || window.webkitAudioContext)();
-var now = function () { return actx.currentTime; };
-var out = function () { return actx.destination; };
-var clMult = 0.01;
-var clockBuf = actx.createBuffer(1, Math.round(actx.sampleRate * clMult), actx.sampleRate);
+//var actx = new (window.AudioContext || window.webkitAudioContext)();
+//var now = function () { return actx.currentTime; };
+//var out = function () { return actx.destination; };
+//var clMult = 0.01;
+//var clockBuf = actx.createBuffer(1, Math.round(actx.sampleRate * clMult), actx.sampleRate);
 
 var params = {
     isLogging: false
@@ -35,24 +35,9 @@ var dtm = {
     modelColl: [],
     clocks: [],
 
-    sampleRate: actx.sampleRate,
-    sr: actx.sampleRate,
-
     params: {},
 
     // TODO: a function to list currently loaded objects, such as data, arrays, models... - for console livecoding situation
-
-    ///**
-    // * Returns a singleton audio context object.
-    // * @function getAudioContext
-    // * @returns {object} Audio Context
-    // * @example
-    // *
-    // * var actx = dtm.getAudioContext();
-    // */
-    getAudioContext: function () {
-        return actx
-    },
 
     ///**
     // * Returns the name of available models
@@ -84,6 +69,23 @@ var dtm = {
             default:
                 return null;
         }
+    },
+
+    //getAudioContext: function () {
+    //    return actx
+    //},
+
+    //sampleRate: actx.sampleRate,
+    //sr: actx.sampleRate,
+
+    wa: {},
+
+    startWebAudio: function () {
+        dtm.wa.actx = new (window.AudioContext || window.webkitAudioContext)();
+        dtm.wa.now = function () { return dtm.wa.actx.currentTime; };
+        dtm.wa.out = function () { return dtm.wa.actx.destination; };
+        dtm.wa.clMult = 0.01;
+        dtm.wa.clockBuf = dtm.wa.actx.createBuffer(1, Math.round(dtm.wa.actx.sampleRate * dtm.wa.clMult), dtm.wa.actx.sampleRate);
     }
 };
 

@@ -237,7 +237,7 @@ dtm.data = function (arg, cb, type) {
                 data = d;
                 return d.get(arg);
             });
-            return data.promise;
+            //return data.promise;
         };
 
         return data.promise;

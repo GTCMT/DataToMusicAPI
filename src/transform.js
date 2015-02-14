@@ -59,8 +59,11 @@ dtm.transform = {
                 if (!min) {
                     min = 0;
                 }
+
+                max = max || 1;
+
                 for (var i = 0; i < len; i++) {
-                    res[i] = i + min;
+                    res[i] = i * max + min;
                 }
                 break;
 
@@ -128,6 +131,14 @@ dtm.transform = {
             case 'ones':
                 for (var i = 0; i < len; i++) {
                     res[i] = 1;
+                }
+                break;
+
+            case 'constant':
+            case 'const':
+                min = min || 0;
+                for (var i = 0; i < len; i++) {
+                    res[i] = min;
                 }
                 break;
 
