@@ -501,6 +501,8 @@ dtm.instr = function (arg) {
         return instr;
     };
 
+    instr.nn = instr.noteNum = instr.pitch;
+
     instr.transpose = function (src, adapt) {
         if (typeof(adapt) === 'undefined') {
             adapt = true;

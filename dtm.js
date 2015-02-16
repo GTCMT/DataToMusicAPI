@@ -3164,7 +3164,7 @@ dtm.data = function (arg, cb, type) {
                 xhr.onreadystatechange = function () {
                     if (xhr.readyState == 4 && xhr.status == 200) {
                         if (xhr.responseType === 'arraybuffer') {
-                            actx.decodeAudioData(xhr.response, function (buf) {
+                            dtm.wa.actx.decodeAudioData(xhr.response, function (buf) {
                                 for (var c = 0; c < buf.numberOfChannels; c++) {
                                     var floatArr = buf.getChannelData(c);
                                     params.arrays['ch_' + c] = dtm.array(Array.prototype.slice.call(floatArr), 'ch_' + c);
@@ -4410,6 +4410,8 @@ dtm.instr = function (arg) {
 
         return instr;
     };
+
+    instr.nn = instr.noteNum = instr.pitch;
 
     instr.transpose = function (src, adapt) {
         if (typeof(adapt) === 'undefined') {
