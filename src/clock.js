@@ -586,6 +586,13 @@ dtm.clock = function (bpm, subDiv, time) {
         return clock;
     };
 
+    // single-shot schedular
+    clock.delayEvent = function () {
+        return clock;
+    };
+
+    clock.delay = clock.delayEvent;
+
     if (!params.isMaster && typeof(dtm.master) !== 'undefined') {
         dtm.master.clock.add(clock.tickSynced);
     }

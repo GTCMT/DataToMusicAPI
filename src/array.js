@@ -201,6 +201,7 @@ dtm.array = function (val, name) {
                 case 'numUniqs':
                     return dtm.analyzer.classes(params.value).length;
 
+                case 'unif':
                 case 'uniformity':
                     return dtm.analyzer.uniformity(params.value);
 

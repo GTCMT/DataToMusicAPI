@@ -24,6 +24,7 @@ dtm.instr = function (arg) {
         // default model coll
         models: {
             voice: dtm.synth(),
+            wavetable: null,
             volume: dtm.array(1),
             scale: dtm.array().fill('seq', 12),
             rhythm: dtm.array(1),
@@ -39,7 +40,8 @@ dtm.instr = function (arg) {
             dur: dtm.array(0.25),
             lpf: null,
             res: dtm.array(0),
-            comb: null
+            comb: null,
+            delay: null
         },
 
         pqRound: false,
@@ -250,8 +252,10 @@ dtm.instr = function (arg) {
         var div = params.models.subdiv.get('next');
         params.clock.subDiv(div);
 
+        var wt = params.models.wavetable;
         var lpf = params.models.lpf;
         var comb = params.models.comb;
+        var delay = params.models.delay;
 
         if (params.sync === false) {
             params.clock.bpm(params.models.bpm.get('next'));
@@ -272,12 +276,20 @@ dtm.instr = function (arg) {
 
         if (r) {
             _.forEach(ct, function (val) {
+                if (wt) {
+                    v.wt(wt.get());
+                }
+
                 if (lpf) {
                     v.lpf(lpf.get('next'), params.models.res.get('next'));
                 }
 
                 if (comb) {
                     v.comb(0.5, params.models.comb.get('next'));
+                }
+
+                if (delay) {
+                    v.delay(params.models.delay.get('next'));
                 }
 
                 v.dur(dur).decay(dur);
@@ -426,14 +438,32 @@ dtm.instr = function (arg) {
      * @returns {dtm.instr}
      */
     instr.voice = function (arg) {
-        params.models.voice = arg;
-        //if (typeof(arg) === 'string') {
-        //    params.models.voice.set(arg);
-        //}
+        if (typeof(arg) === 'string') {
+            params.models.voice.set(arg);
+        } else if (arg.type === 'dtm.synth') {
+            params.models.voice = arg;
+
+        }
         return instr;
     };
 
-    instr.synth = instr.voice;
+    instr.syn = instr.synth = instr.voice;
+
+    instr.wt = function (src, adapt) {
+        if (typeof(adapt) === 'undefined') {
+            adapt = true;
+        }
+
+        mapper('wavetable', src);
+
+        if (adapt) {
+            params.models.wavetable.normalize();
+        }
+
+        return instr;
+    };
+
+    instr.wavetable = instr.wt;
 
     instr.rhythm = function (src, adapt) {
         if (typeof(adapt) === 'undefined') {
@@ -464,7 +494,7 @@ dtm.instr = function (arg) {
         return instr;
     };
 
-    instr.amp = instr.vol = instr.volume;
+    instr.amp = instr.level = instr.vol = instr.volume;
 
     instr.pitch = function (src, adapt) {
         if (typeof(adapt) === 'undefined') {
@@ -589,6 +619,20 @@ dtm.instr = function (arg) {
 
         if (adapt) {
             params.models.comb.normalize().rescale(60, 90);
+        }
+
+        return instr;
+    };
+
+    instr.delay = function (src, adapt) {
+        if (typeof(adapt) === 'undefined') {
+            adapt = true;
+        }
+
+        mapper('delay', src);
+
+        if (adapt) {
+            params.models.delay.normalize();
         }
 
         return instr;

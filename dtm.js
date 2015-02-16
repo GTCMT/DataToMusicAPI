@@ -1757,6 +1757,7 @@ dtm.array = function (val, name) {
                 case 'numUniqs':
                     return dtm.analyzer.classes(params.value).length;
 
+                case 'unif':
                 case 'uniformity':
                     return dtm.analyzer.uniformity(params.value);
 
@@ -3889,6 +3890,13 @@ dtm.clock = function (bpm, subDiv, time) {
         return clock;
     };
 
+    // single-shot schedular
+    clock.delayEvent = function () {
+        return clock;
+    };
+
+    clock.delay = clock.delayEvent;
+
     if (!params.isMaster && typeof(dtm.master) !== 'undefined') {
         dtm.master.clock.add(clock.tickSynced);
     }
@@ -3925,6 +3933,7 @@ dtm.instr = function (arg) {
         // default model coll
         models: {
             voice: dtm.synth(),
+            wavetable: null,
             volume: dtm.array(1),
             scale: dtm.array().fill('seq', 12),
             rhythm: dtm.array(1),
@@ -3940,7 +3949,8 @@ dtm.instr = function (arg) {
             dur: dtm.array(0.25),
             lpf: null,
             res: dtm.array(0),
-            comb: null
+            comb: null,
+            delay: null
         },
 
         pqRound: false,
@@ -4151,8 +4161,10 @@ dtm.instr = function (arg) {
         var div = params.models.subdiv.get('next');
         params.clock.subDiv(div);
 
+        var wt = params.models.wavetable;
         var lpf = params.models.lpf;
         var comb = params.models.comb;
+        var delay = params.models.delay;
 
         if (params.sync === false) {
             params.clock.bpm(params.models.bpm.get('next'));
@@ -4173,12 +4185,20 @@ dtm.instr = function (arg) {
 
         if (r) {
             _.forEach(ct, function (val) {
+                if (wt) {
+                    v.wt(wt.get());
+                }
+
                 if (lpf) {
                     v.lpf(lpf.get('next'), params.models.res.get('next'));
                 }
 
                 if (comb) {
                     v.comb(0.5, params.models.comb.get('next'));
+                }
+
+                if (delay) {
+                    v.delay(params.models.delay.get('next'));
                 }
 
                 v.dur(dur).decay(dur);
@@ -4327,14 +4347,32 @@ dtm.instr = function (arg) {
      * @returns {dtm.instr}
      */
     instr.voice = function (arg) {
-        params.models.voice = arg;
-        //if (typeof(arg) === 'string') {
-        //    params.models.voice.set(arg);
-        //}
+        if (typeof(arg) === 'string') {
+            params.models.voice.set(arg);
+        } else if (arg.type === 'dtm.synth') {
+            params.models.voice = arg;
+
+        }
         return instr;
     };
 
-    instr.synth = instr.voice;
+    instr.syn = instr.synth = instr.voice;
+
+    instr.wt = function (src, adapt) {
+        if (typeof(adapt) === 'undefined') {
+            adapt = true;
+        }
+
+        mapper('wavetable', src);
+
+        if (adapt) {
+            params.models.wavetable.normalize();
+        }
+
+        return instr;
+    };
+
+    instr.wavetable = instr.wt;
 
     instr.rhythm = function (src, adapt) {
         if (typeof(adapt) === 'undefined') {
@@ -4365,7 +4403,7 @@ dtm.instr = function (arg) {
         return instr;
     };
 
-    instr.amp = instr.vol = instr.volume;
+    instr.amp = instr.level = instr.vol = instr.volume;
 
     instr.pitch = function (src, adapt) {
         if (typeof(adapt) === 'undefined') {
@@ -4490,6 +4528,20 @@ dtm.instr = function (arg) {
 
         if (adapt) {
             params.models.comb.normalize().rescale(60, 90);
+        }
+
+        return instr;
+    };
+
+    instr.delay = function (src, adapt) {
+        if (typeof(adapt) === 'undefined') {
+            adapt = true;
+        }
+
+        mapper('delay', src);
+
+        if (adapt) {
+            params.models.delay.normalize();
         }
 
         return instr;
@@ -4691,6 +4743,11 @@ dtm.synth = function (type) {
         freq: 440,
         noteNum: 69,
 
+        wt: {
+            isOn: false,
+            wt: null
+        },
+
         lpf: {
             isOn: false,
             cof: 4000,
@@ -4804,12 +4861,41 @@ dtm.synth = function (type) {
             case 'impulse':
                 params.type = 'click';
                 break;
+            case 'wt':
+            case 'wavetable':
+                params.type = 'wavetable';
+                if (typeof(arguments[2] !== 'undefined')) {
+                    synth.wt(arguments[2]);
+                } else {
+                    synth.wt([0]);
+                }
+                break;
             case 'sampler':
                 params.type = 'sampler';
                 break;
             default:
                 break;
         }
+
+        return synth;
+    };
+
+    synth.wt = function (arr) {
+        params.wt.isOn = true;
+
+        if (typeof(arr) === 'undefined') {
+            arr = [0];
+        }
+
+        var base = [0, 1];
+
+        for (var i = 0; i < arr.length; i++) {
+            base.push(arr[i]);
+        }
+
+        var real = new Float32Array(base);
+        var img = real;
+        params.wt.wt = dtm.wa.actx.createPeriodicWave(real, img);
 
         return synth;
     };
@@ -4964,8 +5050,13 @@ dtm.synth = function (type) {
             case 'triange':
                 src.type = 'triangle';
                 break;
+
             default:
                 break;
+        }
+
+        if (params.wt.isOn) {
+            src.setPeriodicWave(params.wt.wt);
         }
 
         var amp = actx.createGain();
@@ -5203,7 +5294,6 @@ dtm.synth = function (type) {
         return synth;
     };
 
-    synth.wt = synth.set;
     synth.set(type);
 
     return synth;

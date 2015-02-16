@@ -22,6 +22,11 @@ dtm.synth = function (type) {
         freq: 440,
         noteNum: 69,
 
+        wt: {
+            isOn: false,
+            wt: null
+        },
+
         lpf: {
             isOn: false,
             cof: 4000,
@@ -135,12 +140,41 @@ dtm.synth = function (type) {
             case 'impulse':
                 params.type = 'click';
                 break;
+            case 'wt':
+            case 'wavetable':
+                params.type = 'wavetable';
+                if (typeof(arguments[2] !== 'undefined')) {
+                    synth.wt(arguments[2]);
+                } else {
+                    synth.wt([0]);
+                }
+                break;
             case 'sampler':
                 params.type = 'sampler';
                 break;
             default:
                 break;
         }
+
+        return synth;
+    };
+
+    synth.wt = function (arr) {
+        params.wt.isOn = true;
+
+        if (typeof(arr) === 'undefined') {
+            arr = [0];
+        }
+
+        var base = [0, 1];
+
+        for (var i = 0; i < arr.length; i++) {
+            base.push(arr[i]);
+        }
+
+        var real = new Float32Array(base);
+        var img = real;
+        params.wt.wt = dtm.wa.actx.createPeriodicWave(real, img);
 
         return synth;
     };
@@ -295,8 +329,13 @@ dtm.synth = function (type) {
             case 'triange':
                 src.type = 'triangle';
                 break;
+
             default:
                 break;
+        }
+
+        if (params.wt.isOn) {
+            src.setPeriodicWave(params.wt.wt);
         }
 
         var amp = actx.createGain();
@@ -534,7 +573,6 @@ dtm.synth = function (type) {
         return synth;
     };
 
-    synth.wt = synth.set;
     synth.set(type);
 
     return synth;
