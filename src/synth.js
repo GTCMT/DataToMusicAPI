@@ -9,7 +9,7 @@
  * @param [type='sine'] {string} Choices: 'sine', 'saw', 'square', 'triange', 'noise', 'click', 'sampler', etc...
  * @returns {dtm.synth}
  */
-dtm.synth = function (type) {
+dtm.synth = function (type, wt) {
     var params = {
         type: 'sine',
         duration: 1,
@@ -143,8 +143,8 @@ dtm.synth = function (type) {
             case 'wt':
             case 'wavetable':
                 params.type = 'wavetable';
-                if (typeof(arguments[2] !== 'undefined')) {
-                    synth.wt(arguments[2]);
+                if (typeof(arguments[1] !== 'undefined')) {
+                    synth.wt(arguments[1]);
                 } else {
                     synth.wt([0]);
                 }
@@ -573,7 +573,7 @@ dtm.synth = function (type) {
         return synth;
     };
 
-    synth.set(type);
+    synth.set(type, wt);
 
     return synth;
 };

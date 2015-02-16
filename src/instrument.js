@@ -29,7 +29,7 @@ dtm.instr = function (arg) {
             scale: dtm.array().fill('seq', 12),
             rhythm: dtm.array(1),
             pitch: dtm.array(69),
-            transpose: dtm.array([0, 1]),
+            transp: dtm.array(0),
             chord: dtm.array(0),
             bpm: dtm.array(120),
             subdiv: dtm.array(8),
@@ -247,8 +247,8 @@ dtm.instr = function (arg) {
         var r = params.models.rhythm.get('next');
         var p = params.models.pitch.get('next');
         var sc = params.models.scale.get();
-        var tr = params.models.transpose.scale(-12, 12).get('mean');
-        var ct = params.models.chord.normalize().scale(0, 12).round().unique().sort();
+        var tr = params.models.transp.get('next');
+        var ct = params.models.chord.get();
         var div = params.models.subdiv.get('next');
         params.clock.subDiv(div);
 
@@ -260,15 +260,6 @@ dtm.instr = function (arg) {
         if (params.sync === false) {
             params.clock.bpm(params.models.bpm.get('next'));
         }
-
-        if (ct.get('len') > 4) {
-            ct.fit(4).round().unique().sort();
-        }
-
-        ct = ct.get();
-
-        //var nn = dtm.val.pq(dtm.val.rescale(p, 60, 96), sc) + Math.round(tr);
-        var nn = dtm.val.pq(p, sc, params.pqRound) + Math.round(tr);
 
         _.forEach(params.callbacks, function (cb) {
             cb(params.clock);
@@ -293,7 +284,7 @@ dtm.instr = function (arg) {
                 }
 
                 v.dur(dur).decay(dur);
-                v.nn(nn + val).amp(vol).play();
+                v.nn(dtm.val.pq(p + val, sc, params.pqRound) + tr).amp(vol).play();
             });
         }
     }
@@ -359,7 +350,7 @@ dtm.instr = function (arg) {
      * @returns {dtm.instr}
      */
     instr.mod = function () {
-        params.transpose = dtm.val.rescale(modHandler(arguments[0]), -12, 12, true);
+        params.transp = dtm.val.rescale(modHandler(arguments[0]), -12, 12, true);
 
         if (typeof(arguments[0]) === 'number') {
             if (arguments.length === 1) {
@@ -510,6 +501,22 @@ dtm.instr = function (arg) {
         return instr;
     };
 
+    instr.transpose = function (src, adapt) {
+        if (typeof(adapt) === 'undefined') {
+            adapt = true;
+        }
+
+        mapper('transp', src);
+
+        if (adapt) {
+            params.models.transp.normalize().scale(-12, 12);
+        }
+
+        return instr;
+    };
+
+    instr.tr = instr.transp = instr.transpose;
+
     instr.scale = function (src, adapt, round) {
         if (typeof(adapt) === 'undefined') {
             adapt = true;
@@ -531,6 +538,24 @@ dtm.instr = function (arg) {
     };
 
     instr.pq = instr.scale;
+
+    instr.chord = function (src, adapt) {
+        if (typeof(adapt) === 'undefined') {
+            adapt = true;
+        }
+
+        mapper('chord', src);
+
+        if (adapt) {
+            params.models.chord.normalize().scale(0, 12).round().unique().sort();
+
+            if (params.models.chord.get('len') > 4) {
+                params.models.chord.fit(4).round().unique().sort();
+            }
+        }
+
+        return instr;
+    };
 
     instr.clock = function (bpm, subDiv, time) {
         params.clock.bpm(bpm);

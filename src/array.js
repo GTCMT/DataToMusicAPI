@@ -126,6 +126,7 @@ dtm.array = function (val, name) {
                 case 'palindrome':
                     break;
 
+                case 'rand':
                 case 'random':
                     params.index = _.random(0, params.length - 1);
                     return params.value[params.index];
