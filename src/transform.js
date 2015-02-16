@@ -862,10 +862,10 @@ dtm.transform = {
         return res;
     },
 
-    pq: function (input, scale) {
+    pq: function (input, scale, round) {
         var res = [];
         _.forEach(input, function (val, idx) {
-            res[idx] = dtm.value.pq(val, scale);
+            res[idx] = dtm.value.pq(val, scale, round);
         });
 
         return res;

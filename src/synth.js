@@ -127,9 +127,12 @@ dtm.synth = function (type) {
                 break;
             case 'wn':
             case 'noise':
+            case 'rand':
+            case 'random':
                 params.type = 'noise';
                 break;
             case 'click':
+            case 'impulse':
                 params.type = 'click';
                 break;
             case 'sampler':
@@ -142,7 +145,7 @@ dtm.synth = function (type) {
         return synth;
     };
 
-    var noise = makeNoise(8192);
+    var noise = dtm.wa.makeNoise(8192);
 
     /**
      * Sets the ADSR envelope for the main amplitude.
@@ -346,7 +349,7 @@ dtm.synth = function (type) {
         // TODO: not chaning the effects...
         if (params.verb.isOn) {
             var verb = actx.createConvolver();
-            verb.buffer = dtm.buffs.verbIr;
+            verb.buffer = dtm.wa.buffs.verbIr;
 
             var verbAmp = actx.createGain();
             verbAmp.gain.setValueAtTime(params.verb.amount, startT);
@@ -538,41 +541,3 @@ dtm.synth = function (type) {
 };
 
 dtm.s = dtm.syn = dtm.synth;
-
-function makeNoise(bufLen) {
-    var actx = dtm.wa.actx;
-
-    bufLen = bufLen || 4192;
-
-    var buffer = actx.createBuffer(1, bufLen, dtm.wa.actx.sampleRate);
-    var contents = buffer.getChannelData(0);
-
-    _.forEach(_.range(bufLen), function (idx) {
-        contents[idx] = _.random(-1, 1, true);
-    });
-
-    return buffer;
-}
-
-//function makeIr(decay) {
-//    var actx = dtm.wa.actx;
-//
-//    var bufLen = Math.round(decay * dtm.wa.actx.sampleRate) || dtm.wa.actx.sampleRate;
-//
-//    var buffer = actx.createBuffer(2, bufLen, dtm.wa.actx.sampleRate);
-//    var left = buffer.getChannelData(0);
-//    var right = buffer.getChannelData(1);
-//
-//    var exp = 10;
-//    _.forEach(_.range(bufLen), function (idx) {
-//        left[idx] = dtm.val.rescale(dtm.val.expCurve(_.random(0, 1, true) * (bufLen-idx)/bufLen, exp), -1, 1);
-//        right[idx] = dtm.val.rescale(dtm.val.expCurve(_.random(0, 1, true) * (bufLen-idx)/bufLen, exp), -1, 1);
-//    });
-//
-//    return buffer;
-//}
-//
-//dtm.makeIr = makeIr;
-//dtm.buffs = {
-//    verbIr: dtm.makeIr(2)
-//};

@@ -36,8 +36,13 @@ dtm.instr = function (arg) {
             step: null,
 
             atk: null,
-            dur: null
+            dur: dtm.array(0.25),
+            lpf: null,
+            res: dtm.array(0),
+            comb: null
         },
+
+        pqRound: false,
 
         instrModel: null,
 
@@ -72,6 +77,9 @@ dtm.instr = function (arg) {
             case 'm':
             case 'model':
                 return params.models[arguments[1]];
+
+            case 'beat':
+                return params.clock.get('beat');
 
             default:
                 break;
@@ -233,6 +241,7 @@ dtm.instr = function (arg) {
     function defaultInstr(c) {
         var v = params.models.voice;
         var vol = params.models.volume.get('next');
+        var dur = params.models.dur.get('next');
         var r = params.models.rhythm.get('next');
         var p = params.models.pitch.get('next');
         var sc = params.models.scale.get();
@@ -240,6 +249,9 @@ dtm.instr = function (arg) {
         var ct = params.models.chord.normalize().scale(0, 12).round().unique().sort();
         var div = params.models.subdiv.get('next');
         params.clock.subDiv(div);
+
+        var lpf = params.models.lpf;
+        var comb = params.models.comb;
 
         if (params.sync === false) {
             params.clock.bpm(params.models.bpm.get('next'));
@@ -252,14 +264,23 @@ dtm.instr = function (arg) {
         ct = ct.get();
 
         //var nn = dtm.val.pq(dtm.val.rescale(p, 60, 96), sc) + Math.round(tr);
-        var nn = dtm.val.pq(p, sc) + Math.round(tr);
+        var nn = dtm.val.pq(p, sc, params.pqRound) + Math.round(tr);
 
         _.forEach(params.callbacks, function (cb) {
-            cb();
+            cb(params.clock);
         });
 
         if (r) {
             _.forEach(ct, function (val) {
+                if (lpf) {
+                    v.lpf(lpf.get('next'), params.models.res.get('next'));
+                }
+
+                if (comb) {
+                    v.comb(0.5, params.models.comb.get('next'));
+                }
+
+                v.dur(dur).decay(dur);
                 v.nn(nn + val).amp(vol).play();
             });
         }
@@ -353,7 +374,6 @@ dtm.instr = function (arg) {
 
         } else if (typeof(arguments[0]) === 'object') {
             var keys = _.keys(arguments[0]);
-            console.log(keys);
         }
 
         return instr;
@@ -377,6 +397,8 @@ dtm.instr = function (arg) {
     function mapper(dest, src) {
         if (typeof(src) === 'number') {
             params.models[dest] = dtm.array(src);
+        } else if (typeof(src) === 'string') {
+            params.models[dest] = dtm.array(src).classify();
         } else {
             if (src instanceof Array) {
                 params.models[dest] = dtm.array(src);
@@ -404,11 +426,14 @@ dtm.instr = function (arg) {
      * @returns {dtm.instr}
      */
     instr.voice = function (arg) {
-        if (typeof(arg) === 'string') {
-            params.models.voice.set(arg);
-        }
+        params.models.voice = arg;
+        //if (typeof(arg) === 'string') {
+        //    params.models.voice.set(arg);
+        //}
         return instr;
     };
+
+    instr.synth = instr.voice;
 
     instr.rhythm = function (src, adapt) {
         if (typeof(adapt) === 'undefined') {
@@ -424,6 +449,8 @@ dtm.instr = function (arg) {
         return instr;
     };
 
+    instr.beats = instr.rhythm;
+
     instr.volume = function (src, adapt) {
         if (typeof(adapt) === 'undefined') {
             adapt = true;
@@ -437,6 +464,8 @@ dtm.instr = function (arg) {
         return instr;
     };
 
+    instr.amp = instr.vol = instr.volume;
+
     instr.pitch = function (src, adapt) {
         if (typeof(adapt) === 'undefined') {
             adapt = true;
@@ -445,15 +474,21 @@ dtm.instr = function (arg) {
         mapper('pitch', src);
 
         if (adapt) {
-            params.models.pitch.normalize().rescale(60, 96);
+            params.models.pitch.normalize().rescale(60, 90);
         }
 
         return instr;
     };
 
-    instr.scale = function (src, adapt) {
+    instr.scale = function (src, adapt, round) {
         if (typeof(adapt) === 'undefined') {
             adapt = true;
+        }
+
+        if (typeof(round) === 'undefined') {
+            params.pqRound = false;
+        } else {
+            params.pqRound = round;
         }
 
         mapper('scale', src);
@@ -464,6 +499,8 @@ dtm.instr = function (arg) {
 
         return instr;
     };
+
+    instr.pq = instr.scale;
 
     instr.clock = function (bpm, subDiv, time) {
         params.clock.bpm(bpm);
@@ -504,7 +541,7 @@ dtm.instr = function (arg) {
         return instr;
     };
 
-    instr.div = instr.subdiv = instr.subDiv;
+    instr.len = instr.note = instr.div = instr.subdiv = instr.subDiv;
 
     instr.sync = function (bool) {
         if (typeof(bool) === 'undefined') {
@@ -515,11 +552,84 @@ dtm.instr = function (arg) {
         return instr;
     };
 
-    instr.on = function (arg, cb) {
+    instr.lpf = function (src, adapt) {
+        if (typeof(adapt) === 'undefined') {
+            adapt = true;
+        }
+
+        mapper('lpf', src);
+
+        if (adapt) {
+            params.models.lpf.normalize().log(10).scale(500, 5000);
+        }
+
+        return instr;
+    };
+
+    instr.res = function (src, adapt) {
+        if (typeof(adapt) === 'undefined') {
+            adapt = true;
+        }
+
+        mapper('res', src);
+
+        if (adapt) {
+            params.models.res.normalize().scale(0, 50);
+        }
+
+        return instr;
+    };
+
+    instr.comb = function (src, adapt) {
+        if (typeof(adapt) === 'undefined') {
+            adapt = true;
+        }
+
+        mapper('comb', src);
+
+        if (adapt) {
+            params.models.comb.normalize().rescale(60, 90);
+        }
+
+        return instr;
+    };
+
+    instr.dur = function (src, adapt) {
+        if (typeof(adapt) === 'undefined') {
+            adapt = true;
+        }
+
+        mapper('dur', src);
+
+        if (adapt) {
+            params.models.dur.normalize().exp(10).scale(0.01, 0.5);
+        }
+
+        return instr;
+    };
+
+    instr.on = function (arg) {
         switch (arg) {
             case 'note':
-                params.callbacks.push(cb);
+                params.callbacks.push(arguments[1]);
                 break;
+
+            case 'every':
+            case 'beat':
+                var foo = arguments[1];
+                var bar = arguments[2];
+                params.callbacks.push(function (c) {
+                    if (c.get('beat') % foo === 0) {
+                        bar(c)
+                    }
+                });
+                break;
+
+            case 'subDiv':
+            case 'subdiv':
+            case 'div':
+                break;
+
             default:
                 break;
         }

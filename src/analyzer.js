@@ -248,6 +248,10 @@ dtm.analyzer = {
         return _.uniq(input).sort();
     },
 
+    uniformity: function (input) {
+        return dtm.analyzer.classes(input).length / input.length;
+    },
+
     ///**
     // * Auto-correlation (WIP)
     // * @function module:analyzer#autoCorr

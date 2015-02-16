@@ -39,58 +39,75 @@ dtm.data = function (arg, cb, type) {
     data.get = function (param, id) {
         var out = null;
 
-        switch (param) {
-            case 'arrays':
-            case 'array':
-            case 'arr':
-            case 'a':
-                if (typeof(id) === 'number') {
-                    if (id >= 0 && id < params.size['col']) {
-                        return params.arrays[params.keys[id]].clone();
+        if (typeof(param) === 'string') {
+            switch (param) {
+                case 'column':
+                case 'arrays':
+                case 'array':
+                case 'arr':
+                case 'a':
+                    if (typeof(id) === 'number') {
+                        if (id >= 0 && id < params.size['col']) {
+                            return params.arrays[params.keys[id]].clone();
+                        } else {
+                            dtm.log('data.get(): index out of range');
+                            return data;
+                        }
+                    } else if (typeof(id) === 'string') {
+                        if (params.keys.indexOf(id) > -1) {
+                            return params.arrays[id].clone();
+                        } else {
+                            dtm.log('data.get(): key does not exist');
+                            return data;
+                        }
                     } else {
-                        dtm.log('data.get(): index out of range');
-                        return data;
+                        dtm.log('data.get(): please specify array with index or name');
+                        return params.arrays;
                     }
-                } else if (typeof(id) === 'string') {
-                    if (params.keys.indexOf(id) > -1) {
-                        return params.arrays[id].clone();
-                    } else {
-                        dtm.log('data.get(): key does not exist');
-                        return data;
-                    }
-                } else {
-                    dtm.log('data.get(): please specify array with index or name');
-                    return params.arrays;
-                }
 
-            case 'c':
-            case 'collection':
-            case 'coll':
-                return params.coll;
+                case 'c':
+                case 'collection':
+                case 'col':
+                case 'coll':
+                    return params.coll;
 
-            case 'size':
-            case 'dim':
-            case 'dimension':
-                return params.size;
+                case 'row':
+                case 'r':
+                    return params.coll[id];
 
-            case 'len':
-            case 'length':
-                return params.size.row;
+                case 'size':
+                case 'dim':
+                case 'dimension':
+                    return params.size;
 
-            case 'k':
-            case 'key':
-            case 'keys':
-            case 'list':
-            case 'names':
-                return params.keys;
+                case 'len':
+                case 'length':
+                    return params.size.row;
 
-            case 't':
-            case 'type':
-            case 'types':
-                return params.types;
+                case 'k':
+                case 'key':
+                case 'keys':
+                case 'list':
+                case 'names':
+                    return params.keys;
 
-            default:
+                case 't':
+                case 'type':
+                case 'types':
+                    return params.types;
+
+                default:
+                    return data;
+            }
+        } else if (typeof(param) === 'number') {
+            if (param >= 0 && param < params.size['col']) {
+                return params.arrays[params.keys[param]].clone();
+            } else {
+                dtm.log('data.get(): index out of range');
                 return data;
+            }
+        } else {
+            return data;
         }
     };
 

@@ -200,6 +200,13 @@ describe('array object', function () {
 
     
     describe('getBlock', function () {
-        //var a = dtm.a().fill('seq', 8, )
+        var a = dtm.a().fill('seq', 16, 0).block(2, 3);
+        it('should have the length of 3', function () {
+            expect(a.get('len')).toBe(3);
+        });
+
+        it('should start from 2', function () {
+            expect(a.get(0)).toBe(2);
+        });
     });
 });

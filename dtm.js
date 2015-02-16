@@ -88,6 +88,43 @@ var dtm = {
         dtm.wa.out = function () { return dtm.wa.actx.destination; };
         dtm.wa.clMult = 0.01;
         dtm.wa.clockBuf = dtm.wa.actx.createBuffer(1, Math.round(dtm.wa.actx.sampleRate * dtm.wa.clMult), dtm.wa.actx.sampleRate);
+
+        dtm.wa.makeNoise = function makeNoise(bufLen) {
+            var actx = dtm.wa.actx;
+
+            bufLen = bufLen || 4192;
+
+            var buffer = actx.createBuffer(1, bufLen, dtm.wa.actx.sampleRate);
+            var contents = buffer.getChannelData(0);
+
+            _.forEach(_.range(bufLen), function (idx) {
+                contents[idx] = _.random(-1, 1, true);
+            });
+
+            return buffer;
+        };
+
+        dtm.wa.makeIr = function makeIr(decay) {
+            var actx = dtm.wa.actx;
+
+            var bufLen = Math.round(decay * dtm.wa.actx.sampleRate) || dtm.wa.actx.sampleRate;
+
+            var buffer = actx.createBuffer(2, bufLen, dtm.wa.actx.sampleRate);
+            var left = buffer.getChannelData(0);
+            var right = buffer.getChannelData(1);
+
+            var exp = 10;
+            _.forEach(_.range(bufLen), function (idx) {
+                left[idx] = dtm.val.rescale(dtm.val.expCurve(_.random(0, 1, true) * (bufLen-idx)/bufLen, exp), -1, 1);
+                right[idx] = dtm.val.rescale(dtm.val.expCurve(_.random(0, 1, true) * (bufLen-idx)/bufLen, exp), -1, 1);
+            });
+
+            return buffer;
+        };
+
+        dtm.wa.buffs = {
+            verbIr: dtm.wa.makeIr(2)
+        };
     }
 };
 
@@ -543,6 +580,10 @@ dtm.analyzer = {
 
     classes: function (input) {
         return _.uniq(input).sort();
+    },
+
+    uniformity: function (input) {
+        return dtm.analyzer.classes(input).length / input.length;
     },
 
     ///**
@@ -1426,10 +1467,10 @@ dtm.transform = {
         return res;
     },
 
-    pq: function (input, scale) {
+    pq: function (input, scale, round) {
         var res = [];
         _.forEach(input, function (val, idx) {
-            res[idx] = dtm.value.pq(val, scale);
+            res[idx] = dtm.value.pq(val, scale, round);
         });
 
         return res;
@@ -1712,7 +1753,12 @@ dtm.array = function (val, name) {
                     return dtm.transform.stringify(params.value);
 
                 case 'numClasses':
+                case 'numUniques':
+                case 'numUniqs':
                     return dtm.analyzer.classes(params.value).length;
+
+                case 'uniformity':
+                    return dtm.analyzer.uniformity(params.value);
 
                 case 'histogram':
                 case 'histo':
@@ -1892,6 +1938,7 @@ dtm.array = function (val, name) {
         }
         return newArr;
     };
+    array.d = array.dup = array.duplicate = array.c = array.copy = array.clone;
 
     /**
      * Morphs the array values with a target array / dtm.array values. The lengths can be mismatched.
@@ -2152,7 +2199,7 @@ dtm.array = function (val, name) {
      * @function module:array#reverse
      * @type {Function}
      */
-    array.reverse = array.mirror;
+    array.rev = array.reverse = array.mirror;
 
     /**
      * Flips the numerical values vertically at the given center point.
@@ -2171,7 +2218,7 @@ dtm.array = function (val, name) {
      * @function module:array#flip
      * @type {Function}
      */
-    array.flip = array.invert;
+    array.flip = array.inv =  array.invert;
 
     /**
      * Randomizes the order of the array.
@@ -2189,7 +2236,7 @@ dtm.array = function (val, name) {
      * @function module:array#randomize
      * @type {Function}
      */
-    array.randomize = array.shuffle;
+    array.rand = array.randomize = array.shuffle;
 
 
     /* ARITHMETIC */
@@ -2324,6 +2371,18 @@ dtm.array = function (val, name) {
         return array.set(dtm.transform.stringify(params.value));
     };
 
+    // CHECK: occurrence or value??
+    array.morethan = function () {
+        return array;
+    };
+
+    array.mt = array.morethan;
+
+    array.lessthan = function () {
+        return array;
+    };
+
+    array.lt = array.lessthan;
 
     /* MUSICAL */
 
@@ -2331,22 +2390,19 @@ dtm.array = function (val, name) {
     /**
      * Pitch quantize the array values.
      * @function module:array#pq
-     * @param {array | string | numbers}
+     * @param {array | string}
      * @returns {dtm.array}
      */
-    array.pq = function () {
-        var scale;
-
+    array.pq = function (scale, round) {
         if (arguments.length === 0) {
             scale = _.range(12);
-        } else if (arguments[0] instanceof Array) {
-            scale = arguments[0];
-        } else if (typeof(arguments[0]) === 'string') {
-            scale = dtm.scales[arguments[0].toLowerCase()];
-        } else {
-            scale = arguments;
+        } else if (scale instanceof Array) {
+
+        } else if (typeof(scale) === 'string') {
+            scale = dtm.scales[scale.toLowerCase()];
         }
-        return array.set(dtm.transform.pq(params.value, scale));
+
+        return array.set(dtm.transform.pq(params.value, scale, round));
     };
 
     array.pitchScale = array.pitchQuantize = array.pq;
@@ -2563,17 +2619,27 @@ dtm.value = {
      * @function module:value#pq
      * @param nn {integer} Note number
      * @param scale
+     * @param [round=false] {boolean}
      * @returns {*}
      */
-    pq: function (nn, scale) {
+    pq: function (nn, scale, round) {
         if (typeof(scale) === 'undefined') {
-            scale = [0, 2, 4, 5, 7, 9, 11];
+            scale = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+        }
+
+        if (typeof(round) === 'undefined') {
+            round = false;
         }
 
         var pc = nn % 12;
         var oct = nn - pc;
         var idx = Math.floor(pc / 12. * scale.length);
-        return oct + scale[idx];
+        var frac = 0.0;
+
+        if (!round) {
+            frac = nn % 1;
+        }
+        return oct + scale[idx] + frac;
     },
 
     /**
@@ -2928,58 +2994,75 @@ dtm.data = function (arg, cb, type) {
     data.get = function (param, id) {
         var out = null;
 
-        switch (param) {
-            case 'arrays':
-            case 'array':
-            case 'arr':
-            case 'a':
-                if (typeof(id) === 'number') {
-                    if (id >= 0 && id < params.size['col']) {
-                        return params.arrays[params.keys[id]].clone();
+        if (typeof(param) === 'string') {
+            switch (param) {
+                case 'column':
+                case 'arrays':
+                case 'array':
+                case 'arr':
+                case 'a':
+                    if (typeof(id) === 'number') {
+                        if (id >= 0 && id < params.size['col']) {
+                            return params.arrays[params.keys[id]].clone();
+                        } else {
+                            dtm.log('data.get(): index out of range');
+                            return data;
+                        }
+                    } else if (typeof(id) === 'string') {
+                        if (params.keys.indexOf(id) > -1) {
+                            return params.arrays[id].clone();
+                        } else {
+                            dtm.log('data.get(): key does not exist');
+                            return data;
+                        }
                     } else {
-                        dtm.log('data.get(): index out of range');
-                        return data;
+                        dtm.log('data.get(): please specify array with index or name');
+                        return params.arrays;
                     }
-                } else if (typeof(id) === 'string') {
-                    if (params.keys.indexOf(id) > -1) {
-                        return params.arrays[id].clone();
-                    } else {
-                        dtm.log('data.get(): key does not exist');
-                        return data;
-                    }
-                } else {
-                    dtm.log('data.get(): please specify array with index or name');
-                    return params.arrays;
-                }
 
-            case 'c':
-            case 'collection':
-            case 'coll':
-                return params.coll;
+                case 'c':
+                case 'collection':
+                case 'col':
+                case 'coll':
+                    return params.coll;
 
-            case 'size':
-            case 'dim':
-            case 'dimension':
-                return params.size;
+                case 'row':
+                case 'r':
+                    return params.coll[id];
 
-            case 'len':
-            case 'length':
-                return params.size.row;
+                case 'size':
+                case 'dim':
+                case 'dimension':
+                    return params.size;
 
-            case 'k':
-            case 'key':
-            case 'keys':
-            case 'list':
-            case 'names':
-                return params.keys;
+                case 'len':
+                case 'length':
+                    return params.size.row;
 
-            case 't':
-            case 'type':
-            case 'types':
-                return params.types;
+                case 'k':
+                case 'key':
+                case 'keys':
+                case 'list':
+                case 'names':
+                    return params.keys;
 
-            default:
+                case 't':
+                case 'type':
+                case 'types':
+                    return params.types;
+
+                default:
+                    return data;
+            }
+        } else if (typeof(param) === 'number') {
+            if (param >= 0 && param < params.size['col']) {
+                return params.arrays[params.keys[param]].clone();
+            } else {
+                dtm.log('data.get(): index out of range');
                 return data;
+            }
+        } else {
+            return data;
         }
     };
 
@@ -3854,8 +3937,13 @@ dtm.instr = function (arg) {
             step: null,
 
             atk: null,
-            dur: null
+            dur: dtm.array(0.25),
+            lpf: null,
+            res: dtm.array(0),
+            comb: null
         },
+
+        pqRound: false,
 
         instrModel: null,
 
@@ -3890,6 +3978,9 @@ dtm.instr = function (arg) {
             case 'm':
             case 'model':
                 return params.models[arguments[1]];
+
+            case 'beat':
+                return params.clock.get('beat');
 
             default:
                 break;
@@ -4051,6 +4142,7 @@ dtm.instr = function (arg) {
     function defaultInstr(c) {
         var v = params.models.voice;
         var vol = params.models.volume.get('next');
+        var dur = params.models.dur.get('next');
         var r = params.models.rhythm.get('next');
         var p = params.models.pitch.get('next');
         var sc = params.models.scale.get();
@@ -4058,6 +4150,9 @@ dtm.instr = function (arg) {
         var ct = params.models.chord.normalize().scale(0, 12).round().unique().sort();
         var div = params.models.subdiv.get('next');
         params.clock.subDiv(div);
+
+        var lpf = params.models.lpf;
+        var comb = params.models.comb;
 
         if (params.sync === false) {
             params.clock.bpm(params.models.bpm.get('next'));
@@ -4070,14 +4165,23 @@ dtm.instr = function (arg) {
         ct = ct.get();
 
         //var nn = dtm.val.pq(dtm.val.rescale(p, 60, 96), sc) + Math.round(tr);
-        var nn = dtm.val.pq(p, sc) + Math.round(tr);
+        var nn = dtm.val.pq(p, sc, params.pqRound) + Math.round(tr);
 
         _.forEach(params.callbacks, function (cb) {
-            cb();
+            cb(params.clock);
         });
 
         if (r) {
             _.forEach(ct, function (val) {
+                if (lpf) {
+                    v.lpf(lpf.get('next'), params.models.res.get('next'));
+                }
+
+                if (comb) {
+                    v.comb(0.5, params.models.comb.get('next'));
+                }
+
+                v.dur(dur).decay(dur);
                 v.nn(nn + val).amp(vol).play();
             });
         }
@@ -4171,7 +4275,6 @@ dtm.instr = function (arg) {
 
         } else if (typeof(arguments[0]) === 'object') {
             var keys = _.keys(arguments[0]);
-            console.log(keys);
         }
 
         return instr;
@@ -4195,6 +4298,8 @@ dtm.instr = function (arg) {
     function mapper(dest, src) {
         if (typeof(src) === 'number') {
             params.models[dest] = dtm.array(src);
+        } else if (typeof(src) === 'string') {
+            params.models[dest] = dtm.array(src).classify();
         } else {
             if (src instanceof Array) {
                 params.models[dest] = dtm.array(src);
@@ -4222,11 +4327,14 @@ dtm.instr = function (arg) {
      * @returns {dtm.instr}
      */
     instr.voice = function (arg) {
-        if (typeof(arg) === 'string') {
-            params.models.voice.set(arg);
-        }
+        params.models.voice = arg;
+        //if (typeof(arg) === 'string') {
+        //    params.models.voice.set(arg);
+        //}
         return instr;
     };
+
+    instr.synth = instr.voice;
 
     instr.rhythm = function (src, adapt) {
         if (typeof(adapt) === 'undefined') {
@@ -4242,6 +4350,8 @@ dtm.instr = function (arg) {
         return instr;
     };
 
+    instr.beats = instr.rhythm;
+
     instr.volume = function (src, adapt) {
         if (typeof(adapt) === 'undefined') {
             adapt = true;
@@ -4255,6 +4365,8 @@ dtm.instr = function (arg) {
         return instr;
     };
 
+    instr.amp = instr.vol = instr.volume;
+
     instr.pitch = function (src, adapt) {
         if (typeof(adapt) === 'undefined') {
             adapt = true;
@@ -4263,15 +4375,21 @@ dtm.instr = function (arg) {
         mapper('pitch', src);
 
         if (adapt) {
-            params.models.pitch.normalize().rescale(60, 96);
+            params.models.pitch.normalize().rescale(60, 90);
         }
 
         return instr;
     };
 
-    instr.scale = function (src, adapt) {
+    instr.scale = function (src, adapt, round) {
         if (typeof(adapt) === 'undefined') {
             adapt = true;
+        }
+
+        if (typeof(round) === 'undefined') {
+            params.pqRound = false;
+        } else {
+            params.pqRound = round;
         }
 
         mapper('scale', src);
@@ -4282,6 +4400,8 @@ dtm.instr = function (arg) {
 
         return instr;
     };
+
+    instr.pq = instr.scale;
 
     instr.clock = function (bpm, subDiv, time) {
         params.clock.bpm(bpm);
@@ -4322,7 +4442,7 @@ dtm.instr = function (arg) {
         return instr;
     };
 
-    instr.div = instr.subdiv = instr.subDiv;
+    instr.len = instr.note = instr.div = instr.subdiv = instr.subDiv;
 
     instr.sync = function (bool) {
         if (typeof(bool) === 'undefined') {
@@ -4333,11 +4453,84 @@ dtm.instr = function (arg) {
         return instr;
     };
 
-    instr.on = function (arg, cb) {
+    instr.lpf = function (src, adapt) {
+        if (typeof(adapt) === 'undefined') {
+            adapt = true;
+        }
+
+        mapper('lpf', src);
+
+        if (adapt) {
+            params.models.lpf.normalize().log(10).scale(500, 5000);
+        }
+
+        return instr;
+    };
+
+    instr.res = function (src, adapt) {
+        if (typeof(adapt) === 'undefined') {
+            adapt = true;
+        }
+
+        mapper('res', src);
+
+        if (adapt) {
+            params.models.res.normalize().scale(0, 50);
+        }
+
+        return instr;
+    };
+
+    instr.comb = function (src, adapt) {
+        if (typeof(adapt) === 'undefined') {
+            adapt = true;
+        }
+
+        mapper('comb', src);
+
+        if (adapt) {
+            params.models.comb.normalize().rescale(60, 90);
+        }
+
+        return instr;
+    };
+
+    instr.dur = function (src, adapt) {
+        if (typeof(adapt) === 'undefined') {
+            adapt = true;
+        }
+
+        mapper('dur', src);
+
+        if (adapt) {
+            params.models.dur.normalize().exp(10).scale(0.01, 0.5);
+        }
+
+        return instr;
+    };
+
+    instr.on = function (arg) {
         switch (arg) {
             case 'note':
-                params.callbacks.push(cb);
+                params.callbacks.push(arguments[1]);
                 break;
+
+            case 'every':
+            case 'beat':
+                var foo = arguments[1];
+                var bar = arguments[2];
+                params.callbacks.push(function (c) {
+                    if (c.get('beat') % foo === 0) {
+                        bar(c)
+                    }
+                });
+                break;
+
+            case 'subDiv':
+            case 'subdiv':
+            case 'div':
+                break;
+
             default:
                 break;
         }
@@ -4603,9 +4796,12 @@ dtm.synth = function (type) {
                 break;
             case 'wn':
             case 'noise':
+            case 'rand':
+            case 'random':
                 params.type = 'noise';
                 break;
             case 'click':
+            case 'impulse':
                 params.type = 'click';
                 break;
             case 'sampler':
@@ -4618,7 +4814,7 @@ dtm.synth = function (type) {
         return synth;
     };
 
-    var noise = makeNoise(8192);
+    var noise = dtm.wa.makeNoise(8192);
 
     /**
      * Sets the ADSR envelope for the main amplitude.
@@ -4822,7 +5018,7 @@ dtm.synth = function (type) {
         // TODO: not chaning the effects...
         if (params.verb.isOn) {
             var verb = actx.createConvolver();
-            verb.buffer = dtm.buffs.verbIr;
+            verb.buffer = dtm.wa.buffs.verbIr;
 
             var verbAmp = actx.createGain();
             verbAmp.gain.setValueAtTime(params.verb.amount, startT);
@@ -5014,45 +5210,6 @@ dtm.synth = function (type) {
 };
 
 dtm.s = dtm.syn = dtm.synth;
-
-function makeNoise(bufLen) {
-    var actx = dtm.wa.actx;
-
-    bufLen = bufLen || 4192;
-
-    var buffer = actx.createBuffer(1, bufLen, dtm.wa.actx.sampleRate);
-    var contents = buffer.getChannelData(0);
-
-    _.forEach(_.range(bufLen), function (idx) {
-        contents[idx] = _.random(-1, 1, true);
-    });
-
-    return buffer;
-}
-
-//function makeIr(decay) {
-//    var actx = dtm.wa.actx;
-//
-//    var bufLen = Math.round(decay * dtm.wa.actx.sampleRate) || dtm.wa.actx.sampleRate;
-//
-//    var buffer = actx.createBuffer(2, bufLen, dtm.wa.actx.sampleRate);
-//    var left = buffer.getChannelData(0);
-//    var right = buffer.getChannelData(1);
-//
-//    var exp = 10;
-//    _.forEach(_.range(bufLen), function (idx) {
-//        left[idx] = dtm.val.rescale(dtm.val.expCurve(_.random(0, 1, true) * (bufLen-idx)/bufLen, exp), -1, 1);
-//        right[idx] = dtm.val.rescale(dtm.val.expCurve(_.random(0, 1, true) * (bufLen-idx)/bufLen, exp), -1, 1);
-//    });
-//
-//    return buffer;
-//}
-//
-//dtm.makeIr = makeIr;
-//dtm.buffs = {
-//    verbIr: dtm.makeIr(2)
-//};
-
 ///**
 // * @fileOverview WebAudio helper functions...
 // * @module synth

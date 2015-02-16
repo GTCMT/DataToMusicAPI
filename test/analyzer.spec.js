@@ -55,4 +55,8 @@ describe('analyzer', function () {
     describe('rms', function () {
         var output = dtm.analyzer.rms(input);
     });
+
+    describe('uniformity', function () {
+        var output = dtm.analyzer.uniformity(input);
+    });
 });

@@ -197,7 +197,12 @@ dtm.array = function (val, name) {
                     return dtm.transform.stringify(params.value);
 
                 case 'numClasses':
+                case 'numUniques':
+                case 'numUniqs':
                     return dtm.analyzer.classes(params.value).length;
+
+                case 'uniformity':
+                    return dtm.analyzer.uniformity(params.value);
 
                 case 'histogram':
                 case 'histo':
@@ -377,6 +382,7 @@ dtm.array = function (val, name) {
         }
         return newArr;
     };
+    array.d = array.dup = array.duplicate = array.c = array.copy = array.clone;
 
     /**
      * Morphs the array values with a target array / dtm.array values. The lengths can be mismatched.
@@ -637,7 +643,7 @@ dtm.array = function (val, name) {
      * @function module:array#reverse
      * @type {Function}
      */
-    array.reverse = array.mirror;
+    array.rev = array.reverse = array.mirror;
 
     /**
      * Flips the numerical values vertically at the given center point.
@@ -656,7 +662,7 @@ dtm.array = function (val, name) {
      * @function module:array#flip
      * @type {Function}
      */
-    array.flip = array.invert;
+    array.flip = array.inv =  array.invert;
 
     /**
      * Randomizes the order of the array.
@@ -674,7 +680,7 @@ dtm.array = function (val, name) {
      * @function module:array#randomize
      * @type {Function}
      */
-    array.randomize = array.shuffle;
+    array.rand = array.randomize = array.shuffle;
 
 
     /* ARITHMETIC */
@@ -809,6 +815,18 @@ dtm.array = function (val, name) {
         return array.set(dtm.transform.stringify(params.value));
     };
 
+    // CHECK: occurrence or value??
+    array.morethan = function () {
+        return array;
+    };
+
+    array.mt = array.morethan;
+
+    array.lessthan = function () {
+        return array;
+    };
+
+    array.lt = array.lessthan;
 
     /* MUSICAL */
 
@@ -816,22 +834,19 @@ dtm.array = function (val, name) {
     /**
      * Pitch quantize the array values.
      * @function module:array#pq
-     * @param {array | string | numbers}
+     * @param {array | string}
      * @returns {dtm.array}
      */
-    array.pq = function () {
-        var scale;
-
+    array.pq = function (scale, round) {
         if (arguments.length === 0) {
             scale = _.range(12);
-        } else if (arguments[0] instanceof Array) {
-            scale = arguments[0];
-        } else if (typeof(arguments[0]) === 'string') {
-            scale = dtm.scales[arguments[0].toLowerCase()];
-        } else {
-            scale = arguments;
+        } else if (scale instanceof Array) {
+
+        } else if (typeof(scale) === 'string') {
+            scale = dtm.scales[scale.toLowerCase()];
         }
-        return array.set(dtm.transform.pq(params.value, scale));
+
+        return array.set(dtm.transform.pq(params.value, scale, round));
     };
 
     array.pitchScale = array.pitchQuantize = array.pq;
