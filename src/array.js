@@ -252,6 +252,8 @@ dtm.array = function (val, name) {
 
         params.length = params.value.length;
 
+        params.index = params.length - 1;
+
         if (typeof(name) !== 'undefined') {
             array.setName(name);
         }
@@ -440,10 +442,12 @@ dtm.array = function (val, name) {
      * @function module:array#rescale
      * @param min {number}
      * @param max {number}
+     * @param [dmin] {number} The minimum of the domain (original) value range.
+     * @param [dmax] {number} The maximum of the domain value range.
      * @returns {dtm.array}
      */
-    array.rescale = function (min, max) {
-        params.value = dtm.transform.rescale(params.value, min, max);
+    array.rescale = function (min, max, dmin, dmax) {
+        params.value = dtm.transform.rescale(params.value, min, max, dmin, dmax);
         array.set(params.value);
         return array;
     };

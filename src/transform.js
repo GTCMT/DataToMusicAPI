@@ -208,8 +208,8 @@ dtm.transform = {
      * dtm.transform.rescale([2, 1, 8, 9, 1, 3, 6, 9], -1, 1);
      * -> [-0.75, -1, 0.75, 1, -1, -0.5, 0.25, 1]
      */
-    rescale: function (arr, min, max) {
-        var normalized = dtm.transform.normalize(arr);
+    rescale: function (arr, min, max, dmin, dmax) {
+        var normalized = dtm.transform.normalize(arr, dmin, dmax);
         var res = [];
 
         _.forEach(normalized, function (val, idx) {

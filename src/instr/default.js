@@ -92,14 +92,10 @@
 
     m.setter.syn = m.setter.synth = m.setter.voice;
 
-    m.setter.wt = function (src, adapt) {
-        if (typeof(adapt) === 'undefined') {
-            adapt = true;
-        }
-
+    m.setter.wt = function (src, literal) {
         mapper('wavetable', src);
 
-        if (adapt) {
+        if (!literal) {
             params.modules.wavetable.normalize();
         }
 
@@ -108,14 +104,10 @@
 
     m.setter.wavetable = m.setter.wt;
 
-    m.setter.rhythm = function (src, adapt) {
-        if (typeof(adapt) === 'undefined') {
-            adapt = true;
-        }
-
+    m.setter.rhythm = function (src, literal) {
         mapper('rhythm', src);
 
-        if (adapt) {
+        if (!literal) {
             params.modules.rhythm.normalize().round();
         }
 
@@ -124,13 +116,10 @@
 
     m.setter.beats = m.setter.rhythm;
 
-    m.setter.volume = function (src, adapt) {
-        if (typeof(adapt) === 'undefined') {
-            adapt = true;
-        }
-
+    m.setter.volume = function (src, literal) {
         mapper('volume', src);
-        if (adapt) {
+
+        if (!literal) {
             params.modules.volume.logCurve(5).rescale(0.1, 1);
         }
 
@@ -139,15 +128,15 @@
 
     m.setter.amp = m.setter.level = m.setter.vol = m.setter.volume;
 
-    m.setter.pitch = function (src, adapt, round) {
-        if (typeof(adapt) === 'undefined') {
-            adapt = true;
-        }
-
+    m.setter.pitch = function (src, literal, round) {
         mapper('pitch', src);
 
-        if (adapt) {
+        if (!literal) {
             params.modules.pitch.normalize().rescale(60, 90);
+        }
+
+        if (round) {
+            params.modules.pitch.round();
         }
 
         return m.parent;
@@ -155,15 +144,15 @@
 
     m.setter.nn = m.setter.noteNum = m.setter.pitch;
 
-    m.setter.transpose = function (src, adapt, round) {
-        if (typeof(adapt) === 'undefined') {
-            adapt = true;
-        }
-
+    m.setter.transpose = function (src, literal, round) {
         mapper('transp', src);
 
-        if (adapt) {
+        if (!literal) {
             params.modules.transp.normalize().scale(-12, 12);
+        }
+
+        if (round) {
+            params.modules.transp.round();
         }
 
         return m.parent;
@@ -171,11 +160,7 @@
 
     m.setter.tr = m.setter.transp = m.setter.transpose;
 
-    m.setter.scale = function (src, adapt, round) {
-        if (typeof(adapt) === 'undefined') {
-            adapt = true;
-        }
-
+    m.setter.scale = function (src, literal, round) {
         if (typeof(round) === 'undefined') {
             params.pqRound = false;
         } else {
@@ -184,7 +169,7 @@
 
         mapper('scale', src);
 
-        if (adapt) {
+        if (!literal) {
             params.modules.scale.normalize().scale(0,11).round().unique().sort()
         }
 
@@ -193,14 +178,10 @@
 
     m.setter.pq = m.setter.scale;
 
-    m.setter.chord = function (src, adapt) {
-        if (typeof(adapt) === 'undefined') {
-            adapt = true;
-        }
-
+    m.setter.chord = function (src, literal) {
         mapper('chord', src);
 
-        if (adapt) {
+        if (!literal) {
             params.modules.chord.normalize().scale(0, 12).round().unique().sort();
 
             if (params.modules.chord.get('len') > 4) {
@@ -217,17 +198,12 @@
         return m.parent;
     };
 
-    m.setter.bpm = function (src, adapt) {
+    m.setter.bpm = function (src, literal) {
         params.sync = false;
-
-        //params.clock.bpm(val);
-        if (typeof(adapt) === 'undefined') {
-            adapt = true;
-        }
 
         mapper('bpm', src);
 
-        if (adapt) {
+        if (!literal) {
             params.modules.bpm.normalize().scale(60, 180);
         }
 
@@ -237,14 +213,10 @@
     m.setter.tempo = m.setter.bpm;
 
     // CHECK: not working
-    m.setter.subDiv = function (src, adapt) {
-        if (typeof(adapt) === 'undefined') {
-            adapt = true;
-        }
-
+    m.setter.subDiv = function (src, literal) {
         mapper('subdiv', src);
 
-        if (adapt) {
+        if (!literal) {
             params.modules.subdiv.normalize().scale(1, 5).round().powof(2);
         }
         return m.parent;
@@ -261,70 +233,50 @@
         return m.parent;
     };
 
-    m.setter.lpf = function (src, adapt) {
-        if (typeof(adapt) === 'undefined') {
-            adapt = true;
-        }
-
+    m.setter.lpf = function (src, literal) {
         mapper('lpf', src);
 
-        if (adapt) {
+        if (!literal) {
             params.modules.lpf.normalize().log(10).scale(500, 5000);
         }
 
         return m.parent;
     };
 
-    m.setter.res = function (src, adapt) {
-        if (typeof(adapt) === 'undefined') {
-            adapt = true;
-        }
-
+    m.setter.res = function (src, literal) {
         mapper('res', src);
 
-        if (adapt) {
+        if (!literal) {
             params.modules.res.normalize().scale(0, 50);
         }
 
         return m.parent;
     };
 
-    m.setter.comb = function (src, adapt) {
-        if (typeof(adapt) === 'undefined') {
-            adapt = true;
-        }
-
+    m.setter.comb = function (src, literal) {
         mapper('comb', src);
 
-        if (adapt) {
+        if (!literal) {
             params.modules.comb.normalize().rescale(60, 90);
         }
 
         return m.parent;
     };
 
-    m.setter.delay = function (src, adapt) {
-        if (typeof(adapt) === 'undefined') {
-            adapt = true;
-        }
-
+    m.setter.delay = function (src, literal) {
         mapper('delay', src);
 
-        if (adapt) {
+        if (!literal) {
             params.modules.delay.normalize();
         }
 
         return m.parent;
     };
 
-    m.setter.dur = function (src, adapt) {
-        if (typeof(adapt) === 'undefined') {
-            adapt = true;
-        }
-
+    m.setter.dur = function (src, literal) {
         mapper('dur', src);
 
-        if (adapt) {
+        if (!literal) {
             params.modules.dur.normalize().exp(10).scale(0.01, 0.5);
         }
 

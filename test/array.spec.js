@@ -159,34 +159,43 @@ describe('array object', function () {
 
     describe('scalers', function () {
         describe('normalize', function () {
-            it('should return 1s for ones', function () {
-                var a = dtm.array().fill('ones');
-                a.normalize();
-                expect(a.get('sum')).toBe(8);
+            describe('normalize to full 0-1 range', function () {
+                it('should return 1s for ones', function () {
+                    var a = dtm.array().fill('ones');
+                    a.normalize();
+                    expect(a.get('sum')).toBe(8);
+                });
+
+                it('should return 0s for zeros', function () {
+                    var a = dtm.array().fill('zeros');
+                    a.normalize();
+                    expect(a.get('sum')).toBe(0);
+                });
+
+                it('should return 0s for minuses', function () {
+                    var a = dtm.array().fill('zeros').add(-.5);
+                    a.normalize();
+                    expect(a.get('sum')).toBe(0);
+                });
+
+                it('should return 1s for repeated big values', function () {
+                    var a = dtm.array().fill('zeros').add(3);
+                    a.normalize();
+                    expect(a.get('sum')).toBe(8);
+                });
+
+                it('should return raw values for repeated values between 0-1', function () {
+                    var a = dtm.array().fill('zeros').add(0.5);
+                    a.normalize();
+                    expect(a.get('sum')).toBe(4);
+                });
             });
 
-            it('should return 0s for zeros', function () {
-                var a = dtm.array().fill('zeros');
-                a.normalize();
-                expect(a.get('sum')).toBe(0);
-            });
-
-            it('should return 0s for minuses', function () {
-                var a = dtm.array().fill('zeros').add(-.5);
-                a.normalize();
-                expect(a.get('sum')).toBe(0);
-            });
-
-            it('should return 1s for repeated big values', function () {
-                var a = dtm.array().fill('zeros').add(3);
-                a.normalize();
-                expect(a.get('sum')).toBe(8);
-            });
-
-            it('should return raw values for repeated values between 0-1', function () {
-                var a = dtm.array().fill('zeros').add(0.5);
-                a.normalize();
-                expect(a.get('sum')).toBe(4);
+            describe('normalize to 0-1 with the domain range specified', function () {
+                var a = dtm.a(7).normalize(0, 10);
+                it('should have the value of 0.7', function () {
+                    expect(a.get()[0]).toBe(0.7);
+                });
             });
         });
 
@@ -195,6 +204,13 @@ describe('array object', function () {
                 var a = dtm.a(0.5).rescale(0, 100);
                 //console.log(a.get());
             });
+
+            describe('rescale w/ domain range specified', function () {
+                var a = dtm.a(0.3).rescale(0, 10, 0, 1);
+                it('should have the value of 3', function () {
+                    expect(a.get()[0]).toBe(3);
+                })
+            })
         });
     });
 

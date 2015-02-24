@@ -4,6 +4,9 @@
         sync: true,
         callbacks: [],
 
+        measures: 4,
+        time: '4/4',
+
         modules: {
             voice: dtm.synth(),
             wavetable: null,
@@ -30,20 +33,22 @@
     m.output = function (c) {
         osc.start();
 
+        var time = params.time.split('/');
+        var len = time[0] / time[1] *  params.measures;
+
         var res = [];
         var pc = [];
         var oct = [];
         var div = params.modules.subdiv.get();
+        var p = params.modules.pitch.get();
 
         //var vol = params.modules.volume.get('next');
         //var dur = params.modules.dur.get('next');
         //var r = params.modules.rhythm.get('next');
-        var p = params.modules.pitch.get();
 
         //var sc = params.modules.scale.get();
         //var tr = params.modules.transp.get('next');
         //var ct = params.modules.chord.get();
-
 
         for (var i = 0; i < 8; i++) {
             pc[i] = g.pc[dtm.val.mod(p[i], 12)];
@@ -57,33 +62,30 @@
         return m.parent;
     };
 
-    m.setter.pitch = function (src, adapt) {
-        if (typeof(adapt) === 'undefined') {
-            adapt = true;
-        }
+    m.setter.measures = function (val) {
+        params.measures = val;
+        return m.parent;
+    };
 
+    m.setter.pitch = function (src, literal) {
         mapper('pitch', src);
 
-        if (adapt) {
-            params.modules.pitch.normalize().rescale(60, 90).round();
-        } else {
+        if (literal) {
             params.modules.pitch.round();
+        } else {
+            params.modules.pitch.normalize().rescale(60, 90).round();
         }
 
         return m.parent;
     };
 
-    m.setter.subDiv = function (src, adapt) {
-        if (typeof(adapt) === 'undefined') {
-            adapt = true;
-        }
-
+    m.setter.subDiv = function (src, literal) {
         mapper('subdiv', src);
 
-        if (adapt) {
-            params.modules.subdiv.normalize().scale(1, 5).round().powof(2);
-        } else {
+        if (literal) {
             params.modules.subdiv.round();
+        } else {
+            params.modules.subdiv.normalize().scale(1, 5).round().powof(2);
         }
         return m.parent;
     };
