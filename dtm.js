@@ -14,7 +14,7 @@
 //var clockBuf = actx.createBuffer(1, Math.round(actx.sampleRate * clMult), actx.sampleRate);
 
 var params = {
-    isLogging: false
+    isLogging: true
 };
 
 /**
@@ -27,7 +27,11 @@ var dtm = {
 
     log: function (arg) {
         if (params.isLogging) {
-            console.log(arg);
+            if (arguments.callee.caller.name) {
+                console.log(arguments.callee.caller.name +  ': ' + arg);
+            } else {
+                console.log(arg);
+            }
         }
     },
 
@@ -73,16 +77,13 @@ var dtm = {
         }
     },
 
-    //getAudioContext: function () {
-    //    return actx
-    //},
-
-    //sampleRate: actx.sampleRate,
-    //sr: actx.sampleRate,
-
-    wa: {},
+    wa: {
+        isOn: false
+    },
 
     startWebAudio: function () {
+        dtm.wa.isOn = true;
+
         dtm.wa.actx = new (window.AudioContext || window.webkitAudioContext)();
         dtm.wa.now = function () { return dtm.wa.actx.currentTime; };
         dtm.wa.out = function () { return dtm.wa.actx.destination; };
@@ -127,10 +128,6 @@ var dtm = {
         };
     }
 };
-
-//dtm.buffs = {
-//    verbIr: makeIr(2)
-//};
 
 this.dtm = dtm;
 
@@ -307,15 +304,71 @@ dtm.scales = {
 };
 dtm.osc = function () {
     var params = {};
-    var myOsc = {};
+    var myOsc = {
+        type: 'dtm.osc',
+        oscPort: null,
+        isOpen: false
+    };
 
     myOsc.setup = function () {
-        myOsc.oscPort = new osc.WebSocketPort({
-            url: 'ws://localhost:8081'
+        if (typeof(osc) !== 'undefined' && !myOsc.isOpen) {
+            console.log('opening OSC port');
+            myOsc.oscPort = new osc.WebSocketPort({
+                url: 'ws://localhost:8081'
+            });
+
+            myOsc.oscPort.open();
+            myOsc.isOpen = true;
+
+            myOsc.oscPort.listen();
+
+            myOsc.oscPort.on('ready', function () {
+                //myOsc.oscPort.socket.onmessage = function (e) {
+                //    console.log('test');
+                //    var foo =String.fromCharCode.apply(null, new Uint16Array(e));
+                //    console.log("message", e);
+                //};
+
+                myOsc.oscPort.on('message', function (msg) {
+                    switch (msg.address) {
+                        case '/test':
+                            //console.log(msg.args[0]);
+                            break;
+                        default:
+                            break;
+                    }
+                });
+
+                myOsc.oscPort.on("error", function (err) {
+                    throw new Error(err);
+                });
+            });
+        }
+
+        return myOsc;
+    };
+
+    myOsc.start = myOsc.setup;
+
+    myOsc.stop = function () {
+        if (myOsc.oscPort) {
+            myOsc.oscPort.close();
+        }
+
+        myOsc.isOpen = false;
+        return myOsc;
+    };
+
+    myOsc.on = function (arg, cb) {
+        myOsc.oscPort.on('message', function (msg) {
+            switch (msg.address) {
+                case '/test':
+                    cb(msg.args[0]);
+                    break;
+                default:
+                    break;
+            }
         });
-
-        myOsc.oscPort.open();
-
         return myOsc;
     };
 
@@ -328,10 +381,31 @@ dtm.osc = function () {
         return myOsc;
     };
 
+
     myOsc.send = myOsc.write;
 
+    myOsc.map = function (src, dest) {
+        if (dest.type === 'dtm.array') {
+            myOsc.oscPort.on('message', function (msg) {
+                switch (msg.address) {
+                    case '/test':
+                        dest.queue(msg.args[0]);
+                        break;
+                    default:
+                        break;
+                }
+            });
+        }
+
+        return myOsc;
+    };
+
+
+    myOsc.setup();
     return myOsc;
 };
+
+
 /**
  * @fileOverview Analyze a thing or two about an array. Singleton.
  * @module analyzer
@@ -740,7 +814,9 @@ dtm.transform = {
                 break;
 
             case 'constant':
+            case 'constants':
             case 'const':
+            case 'consts':
                 min = min || 0;
                 for (var i = 0; i < len; i++) {
                     res[i] = min;
@@ -2240,6 +2316,21 @@ dtm.array = function (val, name) {
      */
     array.rand = array.randomize = array.shuffle;
 
+    array.queue = function (input) {
+        if (typeof(input) === 'number') {
+            params.value.push(input);
+            params.value.shift();
+        } else if (input instanceof Array) {
+            params.value = params.value.concat(input);
+            params.value = params.value.splice(input.length);
+        } else if (input.type === 'dtm.array') {
+            params.value = params.value.concat(input.get());
+            params.value = params.value.splice(input.get('len'));
+        }
+        return array.set(params.value);
+    };
+
+    array.fifo = array.queue;
 
     /* ARITHMETIC */
 
@@ -3921,7 +4012,7 @@ dtm.c = dtm.clock;
  */
 dtm.instr = function (arg) {
     var params = {
-        name: null,
+        name: 'default',
         isPlaying: false,
         poly: false,
 
@@ -3929,36 +4020,84 @@ dtm.instr = function (arg) {
 
         sync: true,
         clock: dtm.clock(true, 8),
-        //subDivision: 16,
 
         // default model coll
-        models: {
-            voice: dtm.synth(),
-            wavetable: null,
-            volume: dtm.array(1),
-            scale: dtm.array().fill('seq', 12),
-            rhythm: dtm.array(1),
-            pitch: dtm.array(69),
-            transp: dtm.array(0),
-            chord: dtm.array(0),
-            bpm: dtm.array(120),
-            subdiv: dtm.array(8),
-            repeats: null,
-            step: null,
-
-            atk: null,
-            dur: dtm.array(0.25),
-            lpf: null,
-            res: dtm.array(0),
-            comb: null,
-            delay: null
-        },
-
-        pqRound: false,
+        //models: {
+        //    voice: dtm.synth(),
+        //    wavetable: null,
+        //    volume: dtm.array(1),
+        //    scale: dtm.array().fill('seq', 12),
+        //    rhythm: dtm.array(1),
+        //    pitch: dtm.array(69),
+        //    transp: dtm.array(0),
+        //    chord: dtm.array(0),
+        //    bpm: dtm.array(120),
+        //    subdiv: dtm.array(8),
+        //    repeats: null,
+        //    step: null,
+        //
+        //    atk: null,
+        //    dur: dtm.array(0.25),
+        //    lpf: null,
+        //    res: dtm.array(0),
+        //    comb: null,
+        //    delay: null
+        //},
+        //
+        //pqRound: false,
 
         instrModel: null,
 
-        callbacks: []
+        callbacks: [],
+
+        defInstr: function defaultInstr(c) {
+            var v = params.models.voice;
+            var vol = params.models.volume.get('next');
+            var dur = params.models.dur.get('next');
+            var r = params.models.rhythm.get('next');
+            var p = params.models.pitch.get('next');
+            var sc = params.models.scale.get();
+            var tr = params.models.transp.get('next');
+            var ct = params.models.chord.get();
+            var div = params.models.subdiv.get('next');
+            params.clock.subDiv(div);
+
+            var wt = params.models.wavetable;
+            var lpf = params.models.lpf;
+            var comb = params.models.comb;
+            var delay = params.models.delay;
+
+            if (params.sync === false) {
+                params.clock.bpm(params.models.bpm.get('next'));
+            }
+
+            _.forEach(params.callbacks, function (cb) {
+                cb(params.clock);
+            });
+
+            if (r) {
+                _.forEach(ct, function (val) {
+                    if (wt) {
+                        v.wt(wt.get());
+                    }
+
+                    if (lpf) {
+                        v.lpf(lpf.get('next'), params.models.res.get('next'));
+                    }
+
+                    if (comb) {
+                        v.comb(0.5, params.models.comb.get('next'));
+                    }
+
+                    if (delay) {
+                        v.delay(params.models.delay.get('next'));
+                    }
+
+                    v.dur(dur).decay(dur);
+                    v.nn(dtm.val.pq(p + val, sc, params.pqRound) + tr).amp(vol).play();
+                });
+            }
+        }
     };
 
     var instr = {
@@ -3988,17 +4127,23 @@ dtm.instr = function (arg) {
 
             case 'm':
             case 'model':
-                return params.models[arguments[1]];
+                if (!arguments[1]) {
+                    return params.models;
+                } else {
+                    return params.models[arguments[1]];
+                }
 
             case 'beat':
                 return params.clock.get('beat');
+
+            case 'params':
+                break;
 
             default:
                 break;
         }
     };
 
-    // CHECK: when giving an array, should I clone it? ...probably yes
     instr.set = function (dest, src, adapt) {
         if (typeof(src) === 'number') {
             params.models[dest] = dtm.array(src);
@@ -4031,41 +4176,6 @@ dtm.instr = function (arg) {
             default:
                 break;
         }
-        return instr;
-    };
-
-    instr.load = function (arg) {
-        if (typeof(arg) === 'string') {
-            var model = _.find(dtm.modelColl, {params: {
-                name: arg,
-                categ: 'instr'
-            }});
-
-            if (typeof(model) !== 'undefined') {
-                dtm.log('loading instrument model: ' + arg);
-                params.instrModel = model;
-                params.name = arg;
-                //params.models = model.models;
-                instr.model(model);
-                //instr.play = params.instrModel.play;
-                //instr.run = params.instrModel.run;
-
-                // CHECK: not good
-                params.modDest.push(model);
-            } else {
-                dtm.log('registering a new instrument: ' + arg);
-                params.name = arg;
-                params.categ = 'instr';
-                dtm.modelColl.push(instr);
-            }
-
-        } else if (typeof(arg) !== 'undefined') {
-            if (arg.params.categ === 'instr') {
-                params.instrModel = arg; // TODO: check the class name
-                instr.model(arg);
-            }
-        }
-
         return instr;
     };
 
@@ -4149,56 +4259,6 @@ dtm.instr = function (arg) {
         return instr;
     };
 
-    // CHECK: this is pretty memory-inefficient
-    function defaultInstr(c) {
-        var v = params.models.voice;
-        var vol = params.models.volume.get('next');
-        var dur = params.models.dur.get('next');
-        var r = params.models.rhythm.get('next');
-        var p = params.models.pitch.get('next');
-        var sc = params.models.scale.get();
-        var tr = params.models.transp.get('next');
-        var ct = params.models.chord.get();
-        var div = params.models.subdiv.get('next');
-        params.clock.subDiv(div);
-
-        var wt = params.models.wavetable;
-        var lpf = params.models.lpf;
-        var comb = params.models.comb;
-        var delay = params.models.delay;
-
-        if (params.sync === false) {
-            params.clock.bpm(params.models.bpm.get('next'));
-        }
-
-        _.forEach(params.callbacks, function (cb) {
-            cb(params.clock);
-        });
-
-        if (r) {
-            _.forEach(ct, function (val) {
-                if (wt) {
-                    v.wt(wt.get());
-                }
-
-                if (lpf) {
-                    v.lpf(lpf.get('next'), params.models.res.get('next'));
-                }
-
-                if (comb) {
-                    v.comb(0.5, params.models.comb.get('next'));
-                }
-
-                if (delay) {
-                    v.delay(params.models.delay.get('next'));
-                }
-
-                v.dur(dur).decay(dur);
-                v.nn(dtm.val.pq(p + val, sc, params.pqRound) + tr).amp(vol).play();
-            });
-        }
-    }
-
     /**
      * Starts performing the instrument.
      * @function module:instr#play
@@ -4211,14 +4271,18 @@ dtm.instr = function (arg) {
             dtm.log('playing instr: ' + params.name);
 
             if (!params.instrModel) {
-                // CHECK: ???
-                params.clock.add(defaultInstr).start();
+                //params.clock.add(params.defInstr).start();
+                //params.clock.add(params.instrModel.play).start();
             }
 
             if (params.instrModel) {
                 if (params.instrModel.get('categ') === 'instr') {
-                    params.instrModel.stop();
-                    params.instrModel.play();
+                    //params.instrModel.stop();
+                    //params.instrModel.play();
+
+                    if (params.instrModel.output) {
+                        params.clock.add(params.instrModel.output).start();
+                    }
                 }
             }
 
@@ -4331,296 +4395,64 @@ dtm.instr = function (arg) {
 
     instr.modulate = instr.mod;
 
+    //instr.load = function (arg) {
+    //    if (typeof(arg) === 'string') {
+    //        var model = _.find(dtm.modelColl, {params: {
+    //            name: arg,
+    //            categ: 'instr'
+    //        }});
+    //
+    //        if (typeof(model) !== 'undefined') {
+    //            dtm.log('loading instrument model: ' + arg);
+    //            params.instrModel = model;
+    //            params.name = arg;
+    //            //params.models = model.models;
+    //            instr.model(model);
+    //            //instr.play = params.instrModel.play;
+    //            //instr.run = params.instrModel.run;
+    //
+    //            // CHECK: not good
+    //            params.modDest.push(model);
+    //        } else {
+    //            dtm.log('registering a new instrument: ' + arg);
+    //            params.name = arg;
+    //            params.categ = 'instr';
+    //            dtm.modelColl.push(instr);
+    //        }
+    //
+    //    } else if (typeof(arg) !== 'undefined') {
+    //        if (arg.params.categ === 'instr') {
+    //            params.instrModel = arg; // TODO: check the class name
+    //            instr.model(arg);
+    //        }
+    //    }
+    //
+    //    return instr;
+    //};
 
+    instr.load = function (arg) {
+        var model;
 
-    /**
-     * Sets the main voice / WebAudio synthesizer for the instrument.
-     * @param arg {string|dtm.synth}
-     * @returns {dtm.instr}
-     */
-    instr.voice = function (arg) {
         if (typeof(arg) === 'string') {
-            params.models.voice.set(arg);
-        } else if (arg.type === 'dtm.synth') {
-            params.models.voice = arg;
-
-        }
-        return instr;
-    };
-
-    instr.syn = instr.synth = instr.voice;
-
-    instr.wt = function (src, adapt) {
-        if (typeof(adapt) === 'undefined') {
-            adapt = true;
+            model = _.find(dtm.modelColl, function (m) {
+                return m.get('name') == arg;
+            });
+        } else if (arg.type === 'dtm.model') {
+            model = arg;
         }
 
-        mapper('wavetable', src);
+        if (typeof(model) !== 'undefined') {
+            model.parent = instr;
+            model.map(instr);
 
-        if (adapt) {
-            params.models.wavetable.normalize();
+            params.instrModel = model;
         }
 
         return instr;
     };
 
-    instr.wavetable = instr.wt;
-
-    instr.rhythm = function (src, adapt) {
-        if (typeof(adapt) === 'undefined') {
-            adapt = true;
-        }
-
-        mapper('rhythm', src);
-
-        if (adapt) {
-            params.models.rhythm.normalize().round();
-        }
-
-        return instr;
-    };
-
-    instr.beats = instr.rhythm;
-
-    instr.volume = function (src, adapt) {
-        if (typeof(adapt) === 'undefined') {
-            adapt = true;
-        }
-
-        mapper('volume', src);
-        if (adapt) {
-            params.models.volume.logCurve(5).rescale(0.1, 1);
-        }
-
-        return instr;
-    };
-
-    instr.amp = instr.level = instr.vol = instr.volume;
-
-    instr.pitch = function (src, adapt) {
-        if (typeof(adapt) === 'undefined') {
-            adapt = true;
-        }
-
-        mapper('pitch', src);
-
-        if (adapt) {
-            params.models.pitch.normalize().rescale(60, 90);
-        }
-
-        return instr;
-    };
-
-    instr.nn = instr.noteNum = instr.pitch;
-
-    instr.transpose = function (src, adapt) {
-        if (typeof(adapt) === 'undefined') {
-            adapt = true;
-        }
-
-        mapper('transp', src);
-
-        if (adapt) {
-            params.models.transp.normalize().scale(-12, 12);
-        }
-
-        return instr;
-    };
-
-    instr.tr = instr.transp = instr.transpose;
-
-    instr.scale = function (src, adapt, round) {
-        if (typeof(adapt) === 'undefined') {
-            adapt = true;
-        }
-
-        if (typeof(round) === 'undefined') {
-            params.pqRound = false;
-        } else {
-            params.pqRound = round;
-        }
-
-        mapper('scale', src);
-
-        if (adapt) {
-            params.models.scale.normalize().scale(0,11).round().unique().sort()
-        }
-
-        return instr;
-    };
-
-    instr.pq = instr.scale;
-
-    instr.chord = function (src, adapt) {
-        if (typeof(adapt) === 'undefined') {
-            adapt = true;
-        }
-
-        mapper('chord', src);
-
-        if (adapt) {
-            params.models.chord.normalize().scale(0, 12).round().unique().sort();
-
-            if (params.models.chord.get('len') > 4) {
-                params.models.chord.fit(4).round().unique().sort();
-            }
-        }
-
-        return instr;
-    };
-
-    instr.clock = function (bpm, subDiv, time) {
-        params.clock.bpm(bpm);
-        params.clock.subDiv(subDiv);
-        return instr;
-    };
-
-    instr.bpm = function (src, adapt) {
-        params.sync = false;
-
-        //params.clock.bpm(val);
-        if (typeof(adapt) === 'undefined') {
-            adapt = true;
-        }
-
-        mapper('bpm', src);
-
-        if (adapt) {
-            params.models.bpm.normalize().scale(60, 180);
-        }
-
-        return instr;
-    };
-
-    instr.tempo = instr.bpm;
-
-    instr.subDiv = function (src, adapt) {
-        //params.clock.subDiv(val);
-        if (typeof(adapt) === 'undefined') {
-            adapt = true;
-        }
-
-        mapper('subdiv', src);
-
-        if (adapt) {
-            params.models.subdiv.normalize().scale(1, 5).round().powof(2);
-        }
-        return instr;
-    };
-
-    instr.len = instr.note = instr.div = instr.subdiv = instr.subDiv;
-
-    instr.sync = function (bool) {
-        if (typeof(bool) === 'undefined') {
-            bool = true;
-        }
-        params.clock.sync(bool);
-        params.sync = bool;
-        return instr;
-    };
-
-    instr.lpf = function (src, adapt) {
-        if (typeof(adapt) === 'undefined') {
-            adapt = true;
-        }
-
-        mapper('lpf', src);
-
-        if (adapt) {
-            params.models.lpf.normalize().log(10).scale(500, 5000);
-        }
-
-        return instr;
-    };
-
-    instr.res = function (src, adapt) {
-        if (typeof(adapt) === 'undefined') {
-            adapt = true;
-        }
-
-        mapper('res', src);
-
-        if (adapt) {
-            params.models.res.normalize().scale(0, 50);
-        }
-
-        return instr;
-    };
-
-    instr.comb = function (src, adapt) {
-        if (typeof(adapt) === 'undefined') {
-            adapt = true;
-        }
-
-        mapper('comb', src);
-
-        if (adapt) {
-            params.models.comb.normalize().rescale(60, 90);
-        }
-
-        return instr;
-    };
-
-    instr.delay = function (src, adapt) {
-        if (typeof(adapt) === 'undefined') {
-            adapt = true;
-        }
-
-        mapper('delay', src);
-
-        if (adapt) {
-            params.models.delay.normalize();
-        }
-
-        return instr;
-    };
-
-    instr.dur = function (src, adapt) {
-        if (typeof(adapt) === 'undefined') {
-            adapt = true;
-        }
-
-        mapper('dur', src);
-
-        if (adapt) {
-            params.models.dur.normalize().exp(10).scale(0.01, 0.5);
-        }
-
-        return instr;
-    };
-
-    instr.on = function (arg) {
-        switch (arg) {
-            case 'note':
-                params.callbacks.push(arguments[1]);
-                break;
-
-            case 'every':
-            case 'beat':
-                var foo = arguments[1];
-                var bar = arguments[2];
-                params.callbacks.push(function (c) {
-                    if (c.get('beat') % foo === 0) {
-                        bar(c)
-                    }
-                });
-                break;
-
-            case 'subDiv':
-            case 'subdiv':
-            case 'div':
-                break;
-
-            default:
-                break;
-        }
-        return instr;
-    };
-
-    instr.when = instr.on;
-
+    arg = arg || 'default';
     instr.load(arg);
-
     return instr;
 };
 
@@ -4654,7 +4486,8 @@ dtm.model = function (name, categ) {
         // assigning array or data/coll???
         //array: null,
         //data: null,
-        parents: {},
+        parent: {},
+        setter: {},
 
         params: {},
         models: {}
@@ -4718,12 +4551,6 @@ dtm.model = function (name, categ) {
 
     model.modulate = model.mod;
 
-    // CHECK: mapping an automatic modulation source???
-    model.map = function (arrobj) {
-
-        return model;
-    };
-
     // for instr-type models
     model.start = function () {
         return model;
@@ -4740,6 +4567,15 @@ dtm.model = function (name, categ) {
     model.clone = function () {
         return model;
     };
+
+    model.assignMethods = function (parent) {
+        _.forEach(model.setter, function (method, key) {
+            parent[key] = method;
+        });
+        return model;
+    };
+
+    model.map = model.assignMethods;
 
     model.load(name);
 
@@ -4761,15 +4597,29 @@ dtm.m = dtm.model;
 dtm.synth = function (type, wt) {
     var params = {
         type: 'sine',
-        duration: 1,
+
+        note: {
+            delay: 0,
+            duration: 1
+        },
+
+        output: {
+            gain: 0.5
+        },
 
         //isPlaying: false,
         buffer: null,
-        gain: 0.5,
-        adsr: [0.001, 0.2, 0, 0.001],
 
-        freq: 440,
-        noteNum: 69,
+        // TODO: amp gain & out gain
+        amp: {
+            gain: 0.5,
+            adsr: [0.001, 0.2, 0, 0.001]
+        },
+
+        pitch: {
+            freq: 440,
+            noteNum: 69
+        },
 
         wt: {
             isOn: false,
@@ -4810,6 +4660,12 @@ dtm.synth = function (type, wt) {
         }
     };
 
+    var noise = null;
+
+    if (dtm.wa.isOn) {
+        noise = dtm.wa.makeNoise(8192);
+    }
+
     var synth = {
         type: 'dtm.synth',
 
@@ -4826,22 +4682,25 @@ dtm.synth = function (type, wt) {
 
         switch (param) {
             case 'amp':
+                out = params.amp.gain;
+                break;
+
             case 'volume':
             case 'gain':
-                out = params.gain;
+                out = params.output.gain;
                 break;
 
             case 'frequency':
             case 'freq':
             case 'cps':
-                out = params.freq;
+                out = params.pitch.freq;
                 break;
 
             case 'noteNum':
             case 'notenum':
             case 'note':
             case 'nn':
-                out = params.noteNum;
+                out = params.pitch.noteNum;
                 break;
 
             case 'buffer':
@@ -4928,8 +4787,6 @@ dtm.synth = function (type, wt) {
         return synth;
     };
 
-    var noise = dtm.wa.makeNoise(8192);
-
     /**
      * Sets the ADSR envelope for the main amplitude.
      * @function module:synth#adsr
@@ -4943,10 +4800,10 @@ dtm.synth = function (type, wt) {
         // TODO: take indiv values OR array
 
         if (typeof(arguments) !== 'undefeined') {
-            params.adsr[0] = arguments[0] || 0.001;
-            params.adsr[1] = arguments[1] || 0.001;
-            params.adsr[2] = arguments[2];
-            params.adsr[3] = arguments[3] || 0.001;
+            params.amp.adsr[0] = arguments[0] || 0.001;
+            params.amp.adsr[1] = arguments[1] || 0.001;
+            params.amp.adsr[2] = arguments[2];
+            params.amp.adsr[3] = arguments[3] || 0.001;
         }
 
         return synth;
@@ -5036,7 +4893,7 @@ dtm.synth = function (type, wt) {
         var out = dtm.wa.out;
 
         del = del || 0;
-        dur = dur || params.duration;
+        dur = dur || params.note.duration;
 
         var startT = now() + del;
         var src;
@@ -5062,7 +4919,7 @@ dtm.synth = function (type, wt) {
             src.loop = false;
         } else {
             src = actx.createOscillator();
-            src.frequency.setValueAtTime(params.freq, startT);
+            src.frequency.setValueAtTime(params.pitch.freq, startT);
         }
 
         switch (params.type) {
@@ -5147,18 +5004,22 @@ dtm.synth = function (type, wt) {
             verbAmp.connect(out());
         }
 
-        amp.connect(out());
+        var gain = actx.createGain();
+        gain.gain.setValueAtTime(params.output.gain, startT);
 
-        var susLevel = params.adsr[2] * params.gain;
+        amp.connect(gain);
+        gain.connect(out());
+
+        var susLevel = params.amp.adsr[2] * params.amp.gain;
         amp.gain.setValueAtTime(0, now());
-        amp.gain.setTargetAtTime(params.gain, startT, params.adsr[0]);
-        amp.gain.setTargetAtTime(susLevel, startT+params.adsr[0], params.adsr[1]);
+        amp.gain.setTargetAtTime(params.amp.gain, startT, params.amp.adsr[0]);
+        amp.gain.setTargetAtTime(susLevel, startT+params.amp.adsr[0], params.amp.adsr[1]);
 
-        var relStart = startT + params.adsr[0] + params.adsr[1] + dur;
-        amp.gain.setTargetAtTime(0, relStart, params.adsr[3]);
+        var relStart = startT + params.amp.adsr[0] + params.amp.adsr[1] + dur;
+        amp.gain.setTargetAtTime(0, relStart, params.amp.adsr[3]);
 
         src.start(startT);
-        src.stop(relStart + params.adsr[3] + 0.3);
+        src.stop(relStart + params.amp.adsr[3] + 0.3);
 
         return synth;
     };
@@ -5181,8 +5042,8 @@ dtm.synth = function (type, wt) {
     synth.nn = function (nn) {
         nn = nn || 69;
 
-        params.noteNum = nn;
-        params.freq = dtm.value.mtof(nn);
+        params.pitch.noteNum = nn;
+        params.pitch.freq = dtm.value.mtof(nn);
 
         return synth;
     };
@@ -5194,7 +5055,7 @@ dtm.synth = function (type, wt) {
      * @returns {dtm.synth}
      */
     synth.freq = function (freq) {
-        params.freq = freq;
+        params.pitch.freq = freq;
         return synth;
     };
 
@@ -5205,7 +5066,7 @@ dtm.synth = function (type, wt) {
      * @returns {dtm.synth}
      */
     synth.amp = function (val) {
-        params.gain = val;
+        params.amp.gain = val;
         return synth;
     };
 
@@ -5216,7 +5077,7 @@ dtm.synth = function (type, wt) {
      * @returns {dtm.synth}
      */
     synth.dur = function (val) {
-        params.duration = val;
+        params.note.duration = val;
         return synth;
     };
 
@@ -5233,22 +5094,22 @@ dtm.synth = function (type, wt) {
     };
 
     synth.attack = function (val) {
-        params.adsr[0] = val;
+        params.amp.adsr[0] = val;
         return synth;
     };
 
     synth.decay = function (val) {
-        params.adsr[1] = val;
+        params.amp.adsr[1] = val;
         return synth;
     };
 
     synth.sustain = function (val) {
-        params.adsr[2] = val;
+        params.amp.adsr[2] = val;
         return synth;
     };
 
     synth.release = function (val) {
-        params.adsr[3] = val;
+        params.amp.adsr[3] = val;
         return synth;
     };
 
@@ -5751,281 +5612,530 @@ dtm.inscore = function () {
 
     return inscore;
 };
-(function () {
-    var m = dtm.model('rhythm', 'rhythm');
+(function (){
+    var m = dtm.model('default', 'instr');
 
-    var defIntervals = [4, 4, 4, 4];
-    var div = 16;
+    var params = {
+        clock: dtm.clock(true, 8),
+        sync: true,
+        callbacks: [],
 
-    m.set = function (arr) {
-        defIntervals = arr;
-        return m;
+        modules: {
+            voice: dtm.synth(),
+            wavetable: null,
+            volume: dtm.array(1),
+            scale: dtm.array().fill('seq', 12),
+            rhythm: dtm.array(1),
+            pitch: dtm.array(69),
+            transp: dtm.array(0),
+            chord: dtm.array(0),
+            bpm: dtm.array(120),
+            subdiv: dtm.array(8),
+            repeats: null,
+            step: null,
+
+            atk: null,
+            dur: dtm.array(0.25),
+            lpf: null,
+            res: dtm.array(0),
+            comb: null,
+            delay: null
+        },
+
+        pqRound: false
     };
 
-    //m.get = function () {
-    //    return defIntervals;
-    //};
-})();
-(function () {
-    var m = dtm.model('chord', 'chord');
+    m.output = function (c) {
+        var v = params.modules.voice;
+        var vol = params.modules.volume.get('next');
+        var dur = params.modules.dur.get('next');
+        var r = params.modules.rhythm.get('next');
+        var p = params.modules.pitch.get('next');
+        var sc = params.modules.scale.get();
+        var tr = params.modules.transp.get('next');
+        var ct = params.modules.chord.get();
+        var div = params.modules.subdiv.get('next');
+        c.subDiv(div);
 
-    //m.params = {
-    //    key: null
-    //};
+        var wt = params.modules.wavetable;
+        var lpf = params.modules.lpf;
+        var comb = params.modules.comb;
+        var delay = params.modules.delay;
 
-    //m.get = function () {
-    //    return [0, 4, 7, 11];
-    //};
-})();
-(function () {
-    var m = dtm.model('scale', 'scale');
-
-    var scale = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
-
-    //m.get = function () {
-    //    return scale;
-    //};
-
-    m.set = function (arr) {
-        scale = arr;
-        return m;
-    };
-
-    m.reset = function () {
-        scale = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
-        return m;
-    };
-})();
-(function () {
-    var m = dtm.model('phrase', 'phrase');
-
-    m.rhythm = function (input) {
-        m.models.rhythm = input;
-        return m;
-    };
-
-    m.toneRow = function (input) {
-        m.models.toneRow = input;
-        return m;
-    };
-
-    m.synthesize = function () {
-        var len = 0;
-        m.models.rhythm.beatsToIndices();
-        m.models.toneRow.fit(m.models.rhythm.get('len'));
-
-        m.set();
-        return m;
-    };
-})();
-(function () {
-    var m = dtm.model('instr', 'instr');
-
-    m.play = function () {
-        console.log('playing!');
-        return m;
-    };
-
-    m.stop = function () {
-        return m;
-    };
-})();
-(function () {
-    var m = dtm.model('form', 'form');
-});
-(function () {
-    var m = dtm.model('song', 'song');
-
-    m.models = {
-        form: dtm.model('form')
-    };
-
-    m.run = function () {
-        return m;
-    };
-
-})();
-// a synthetic scale model for generic models.scales
-(function () {
-    // CHECK: how to inherit from the scale model?
-    var m = dtm.model('synthetic', 'scale');
-
-    // tetra chords
-    var tc = [[1, 2, 2], [2, 1, 2], [2, 2, 1]];
-
-    m.params.upper = 0;
-    m.params.lower = 0;
-    m.params.scale = [0, 2, 4, 5, 7, 9, 11];
-
-    m.mod = function (lower, upper) {
-        // expect the inputs to be in the range of 0-1
-        lower = Math.round(lower * 2);
-        upper = Math.round(upper * 2);
-
-        m.params.scale[0] = 0;
-
-        for (var i = 0; i < 3; i++) {
-            m.params.scale[i+1] = m.params.scale[i] + tc[lower][i];
+        if (params.sync === false) {
+            c.bpm(params.modules.bpm.get('next'));
         }
 
-        m.params.scale[4] = 7;
+        _.forEach(params.callbacks, function (cb) {
+            cb(params.clock);
+        });
 
-        for (var j = 0; j < 2; j++) {
-            m.params.scale[j+5] = m.params.scale[j+4] + tc[upper][j];
+        if (r) {
+            _.forEach(ct, function (val) {
+                if (wt) {
+                    v.wt(wt.get());
+                }
+
+                if (lpf) {
+                    v.lpf(lpf.get('next'), params.modules.res.get('next'));
+                }
+
+                if (comb) {
+                    v.comb(0.5, params.modules.comb.get('next'));
+                }
+
+                if (delay) {
+                    v.delay(params.modules.delay.get('next'));
+                }
+
+                v.dur(dur).decay(dur);
+                v.nn(dtm.val.pq(p + val, sc, params.pqRound) + tr).amp(vol).play();
+            });
+        }
+    };
+
+    m.setter.voice = function (arg) {
+        if (typeof(arg) === 'string') {
+            params.modules.voice.set(arg);
+        } else if (arg.type === 'dtm.synth') {
+            params.modules.voice = arg;
+
+        }
+        return m.parent;
+    };
+
+    m.setter.syn = m.setter.synth = m.setter.voice;
+
+    m.setter.wt = function (src, adapt) {
+        if (typeof(adapt) === 'undefined') {
+            adapt = true;
         }
 
-        return m;
+        mapper('wavetable', src);
+
+        if (adapt) {
+            params.modules.wavetable.normalize();
+        }
+
+        return m.parent;
     };
 
-    //m.get = function () {
-    //    return m.params.scale;
-    //};
-})();
+    m.setter.wavetable = m.setter.wt;
 
+    m.setter.rhythm = function (src, adapt) {
+        if (typeof(adapt) === 'undefined') {
+            adapt = true;
+        }
 
+        mapper('rhythm', src);
 
-(function () {
-    var m = dtm.model('playback', 'playback');
+        if (adapt) {
+            params.modules.rhythm.normalize().round();
+        }
 
-    // maybe this is what instr is?
-
-    m.play = function () {
-        console.log('playing!');
-    };
-})();
-(function () {
-    var m = dtm.model('bl-motif', 'motif');
-
-    m.params.isPercussion = false;
-    m.params.rhythm = null;
-    m.params.pitches = null;
-    m.params.weights = null;
-
-    var pc = {
-        '-1': '_',
-        'r': '_',
-        0: 'c',
-        1: 'd&',
-        2: 'd',
-        3: 'e&',
-        4: 'e',
-        5: 'f',
-        6: 'f#',
-        7: 'g',
-        8: 'a&',
-        9: 'a',
-        10: 'b&',
-        11: 'b'
+        return m.parent;
     };
 
-    var generateRhythm = function (arr) {
-        var a = dtm.array(arr);
-        var intv = a.fit(32).rescale(0, 1).round().btoi().get();
+    m.setter.beats = m.setter.rhythm;
 
-        //var res = [];
-        //for (var i = 0; i < 32/4; i++) {
-        //
-        //}
+    m.setter.volume = function (src, adapt) {
+        if (typeof(adapt) === 'undefined') {
+            adapt = true;
+        }
 
-        //seq = seq.join(' ');
+        mapper('volume', src);
+        if (adapt) {
+            params.modules.volume.logCurve(5).rescale(0.1, 1);
+        }
 
-
-        return intv;
+        return m.parent;
     };
 
-    var generatePitch = function (arr, intv) {
-        var a = dtm.array(arr);
-        var p = a.fit(intv.length).rescale(-6, 11).round().get();
+    m.setter.amp = m.setter.level = m.setter.vol = m.setter.volume;
 
-        var seq = [];
+    m.setter.pitch = function (src, adapt, round) {
+        if (typeof(adapt) === 'undefined') {
+            adapt = true;
+        }
 
-        for (var i = 0; i < intv.length; i++) {
-            if (p[i] < 0) {
-                p[i] = -1;
+        mapper('pitch', src);
+
+        if (adapt) {
+            params.modules.pitch.normalize().rescale(60, 90);
+        }
+
+        return m.parent;
+    };
+
+    m.setter.nn = m.setter.noteNum = m.setter.pitch;
+
+    m.setter.transpose = function (src, adapt, round) {
+        if (typeof(adapt) === 'undefined') {
+            adapt = true;
+        }
+
+        mapper('transp', src);
+
+        if (adapt) {
+            params.modules.transp.normalize().scale(-12, 12);
+        }
+
+        return m.parent;
+    };
+
+    m.setter.tr = m.setter.transp = m.setter.transpose;
+
+    m.setter.scale = function (src, adapt, round) {
+        if (typeof(adapt) === 'undefined') {
+            adapt = true;
+        }
+
+        if (typeof(round) === 'undefined') {
+            params.pqRound = false;
+        } else {
+            params.pqRound = round;
+        }
+
+        mapper('scale', src);
+
+        if (adapt) {
+            params.modules.scale.normalize().scale(0,11).round().unique().sort()
+        }
+
+        return m.parent;
+    };
+
+    m.setter.pq = m.setter.scale;
+
+    m.setter.chord = function (src, adapt) {
+        if (typeof(adapt) === 'undefined') {
+            adapt = true;
+        }
+
+        mapper('chord', src);
+
+        if (adapt) {
+            params.modules.chord.normalize().scale(0, 12).round().unique().sort();
+
+            if (params.modules.chord.get('len') > 4) {
+                params.modules.chord.fit(4).round().unique().sort();
             }
-            seq[i] = pc[p[i]] + '*' + intv[i] + '/16';
         }
 
-        return seq;
+        return m.parent;
     };
 
-    m.generate = function (arr) {
-        var temp = [];
-        for (var ch = 0; ch < 3; ch++) {
-            temp[ch] = [];
+    m.setter.clock = function (bpm, subDiv, time) {
+        params.clock.bpm(bpm);
+        params.clock.subDiv(subDiv);
+        return m.parent;
+    };
 
-            for (var i = 0; i < arr.length; i++) {
-                temp[ch][i] = _.random(0, 1, true);
+    m.setter.bpm = function (src, adapt) {
+        params.sync = false;
+
+        //params.clock.bpm(val);
+        if (typeof(adapt) === 'undefined') {
+            adapt = true;
+        }
+
+        mapper('bpm', src);
+
+        if (adapt) {
+            params.modules.bpm.normalize().scale(60, 180);
+        }
+
+        return m.parent;
+    };
+
+    m.setter.tempo = m.setter.bpm;
+
+    // CHECK: not working
+    m.setter.subDiv = function (src, adapt) {
+        if (typeof(adapt) === 'undefined') {
+            adapt = true;
+        }
+
+        mapper('subdiv', src);
+
+        if (adapt) {
+            params.modules.subdiv.normalize().scale(1, 5).round().powof(2);
+        }
+        return m.parent;
+    };
+
+    m.setter.len = m.setter.note = m.setter.div = m.setter.subdiv = m.setter.subDiv;
+
+    m.setter.sync = function (bool) {
+        if (typeof(bool) === 'undefined') {
+            bool = true;
+        }
+        params.clock.sync(bool);
+        params.sync = bool;
+        return m.parent;
+    };
+
+    m.setter.lpf = function (src, adapt) {
+        if (typeof(adapt) === 'undefined') {
+            adapt = true;
+        }
+
+        mapper('lpf', src);
+
+        if (adapt) {
+            params.modules.lpf.normalize().log(10).scale(500, 5000);
+        }
+
+        return m.parent;
+    };
+
+    m.setter.res = function (src, adapt) {
+        if (typeof(adapt) === 'undefined') {
+            adapt = true;
+        }
+
+        mapper('res', src);
+
+        if (adapt) {
+            params.modules.res.normalize().scale(0, 50);
+        }
+
+        return m.parent;
+    };
+
+    m.setter.comb = function (src, adapt) {
+        if (typeof(adapt) === 'undefined') {
+            adapt = true;
+        }
+
+        mapper('comb', src);
+
+        if (adapt) {
+            params.modules.comb.normalize().rescale(60, 90);
+        }
+
+        return m.parent;
+    };
+
+    m.setter.delay = function (src, adapt) {
+        if (typeof(adapt) === 'undefined') {
+            adapt = true;
+        }
+
+        mapper('delay', src);
+
+        if (adapt) {
+            params.modules.delay.normalize();
+        }
+
+        return m.parent;
+    };
+
+    m.setter.dur = function (src, adapt) {
+        if (typeof(adapt) === 'undefined') {
+            adapt = true;
+        }
+
+        mapper('dur', src);
+
+        if (adapt) {
+            params.modules.dur.normalize().exp(10).scale(0.01, 0.5);
+        }
+
+        return m.parent;
+    };
+
+    // CHECK: kind of broken now
+    m.setter.on = function (arg) {
+        switch (arg) {
+            case 'note':
+                params.callbacks.push(arguments[1]);
+                break;
+
+            case 'every':
+            case 'beat':
+                var foo = arguments[1];
+                var bar = arguments[2];
+                params.callbacks.push(function (c) {
+                    if (c.get('beat') % foo === 0) {
+                        bar(c)
+                    }
+                });
+                break;
+
+            case 'subDiv':
+            case 'subdiv':
+            case 'div':
+                break;
+
+            default:
+                break;
+        }
+        return m.parent;
+    };
+
+    m.setter.when = m.setter.on;
+
+    function mapper(dest, src) {
+        if (typeof(src) === 'number') {
+            params.modules[dest] = dtm.array(src);
+        } else if (typeof(src) === 'string') {
+            params.modules[dest] = dtm.array(src).classify();
+        } else {
+            if (src instanceof Array) {
+                params.modules[dest] = dtm.array(src);
+            } else if (src.type === 'dtm.array') {
+                if (src.get('type') === 'string') {
+                    params.modules[dest] = src.clone().classify();
+                } else {
+                    params.modules[dest] = src.clone();
+                }
+            } else if (src.type === 'dtm.model') {
+
+            } else if (src.type === 'dtm.synth') {
+                params.modules[dest] = src;
             }
-
-            temp[ch] = generatePitch(temp[ch], generateRhythm(temp[ch]));
-
-            temp[ch] = temp[ch].join(' ');
         }
-
-        var intervals = generateRhythm(arr);
-        var seq = generatePitch(arr, intervals);
-
-
-        seq = seq.join(' ');
-        //seq = '[\\meter<"4/4"> ' + seq + ' \\newLine' + ' _*2/1' + ']';
-
-        var res = '{' +
-            '[\\instr<"Flute", dx=-1.65cm, dy=-0.5cm>\\meter<"4/4"> \\clef<"g"> ' + seq + '],' +
-            '[\\instr<"Cello", dx=-1.65cm, dy=-0.5cm>\\meter<"4/4"> \\clef<"f"> ' + temp[0] + '],' +
-            '[\\instr<"Piano", dx=-1.65cm, dy=-1.75cm> \\meter<"4/4"> \\clef<"g"> ' + temp[1] + '],' +
-            '[\\meter<"4/4"> \\clef<"f"> ' + temp[2] + ']}';
-
-        return res;
-    };
-})();
-(function () {
-    var m = dtm.model('bl-piano', 'part');
-
-    m.params.meta = {
-        section: 1
-    };
-
-    var scale = [0, 2, 3, 5, 7, 9, 10];
-
-    m.params.left = {
-        div: 16,
-        rhythm: [1, 1, -1, 3, 2, 2, 2],
-        shape: [0, 7, 12, 5, 10, 7]
-    };
-
-    m.params.right = {
-        div: 16,
-        //models.rhythm: [-2, 2, -1, 2, -2, 3]
-        rhythm: [-3, 5, 4],
-        shape: [1, 0, -1, 0],
-        voice: [0, 2, 7]
-    };
-
-    m.test = function (rhy, shp, div) {
-        var temp = [];
-        var note = 'c';
-
-        var j = 0;
-
-        for (var i = 0; i < rhy.length; i++) {
-            if (rhy[i] > 0) {
-                var oct = Math.floor(shp[j]/12);
-                note = dtm.guido().pc[shp[j]-oct*12] + (oct+1);
-                j++;
-            } else {
-                note = '_';
-                rhy[i] *= -1;
-            }
-            temp[i] = note + '*' + rhy[i] + '/' + div;
-        }
-
-        temp = temp.join(' ');
-        return temp;
-    };
-
-    m.output = function () {
-        return m.test(m.params.left.rhythm, m.params.left.shape, 16);
     }
+
+})();
+(function () {
+    var m = dtm.model('testInstr', 'instr');
+
+    m.setter.doThis = function () {
+        console.log('doing this');
+        return m.parent;
+    };
+
+    m.setter.testSetter = function (src, adapt) {
+        console.log('testing');
+
+        if (typeof(adapt) === 'undefined') {
+            adapt = true;
+        }
+
+        if (adapt) {
+
+        } else {
+
+        }
+
+        return m.parent;
+    };
+})();
+(function () {
+    var params = {
+        clock: dtm.clock(true, 16),
+        sync: true,
+        callbacks: [],
+
+        modules: {
+            voice: dtm.synth(),
+            wavetable: null,
+            volume: dtm.array(1),
+            scale: dtm.array().fill('seq', 12),
+            rhythm: dtm.array(1),
+            pitch: dtm.array().fill('line', 8, 60, 72).round(),
+            transp: dtm.array(0),
+            chord: dtm.array(0),
+
+            repeats: null,
+            step: null,
+            dur: dtm.array(0.25),
+
+            bpm: dtm.array(120),
+            subdiv: dtm.array().fill('consts', 8, 8)
+        }
+    };
+
+    var m = dtm.model('testNotation', 'instr');
+    var g = dtm.guido();
+    var osc = dtm.osc();
+
+    m.output = function (c) {
+        osc.start();
+
+        var res = [];
+        var pc = [];
+        var oct = [];
+        var div = params.modules.subdiv.get();
+
+        //var vol = params.modules.volume.get('next');
+        //var dur = params.modules.dur.get('next');
+        //var r = params.modules.rhythm.get('next');
+        var p = params.modules.pitch.get();
+
+        //var sc = params.modules.scale.get();
+        //var tr = params.modules.transp.get('next');
+        //var ct = params.modules.chord.get();
+
+
+        for (var i = 0; i < 8; i++) {
+            pc[i] = g.pc[dtm.val.mod(p[i], 12)];
+            oct[i] = (p[i] - dtm.val.mod(p[i], 12)) / 12 - 4;
+            res[i] = pc[i] + oct[i].toString() + '/' + div[i];
+        }
+
+        res = res.join(' ');
+        osc.send('[\\instr<"Flute", dx=-1.65cm, dy=-0.5cm>\\meter<"4/4"> \\clef<"g"> ' + res + ']');
+
+        return m.parent;
+    };
+
+    m.setter.pitch = function (src, adapt) {
+        if (typeof(adapt) === 'undefined') {
+            adapt = true;
+        }
+
+        mapper('pitch', src);
+
+        if (adapt) {
+            params.modules.pitch.normalize().rescale(60, 90).round();
+        } else {
+            params.modules.pitch.round();
+        }
+
+        return m.parent;
+    };
+
+    m.setter.subDiv = function (src, adapt) {
+        if (typeof(adapt) === 'undefined') {
+            adapt = true;
+        }
+
+        mapper('subdiv', src);
+
+        if (adapt) {
+            params.modules.subdiv.normalize().scale(1, 5).round().powof(2);
+        } else {
+            params.modules.subdiv.round();
+        }
+        return m.parent;
+    };
+
+    m.setter.len = m.setter.note = m.setter.div = m.setter.subdiv = m.setter.subDiv;
+
+    function mapper(dest, src) {
+        if (typeof(src) === 'number') {
+            params.modules[dest] = dtm.array(src);
+        } else if (typeof(src) === 'string') {
+            params.modules[dest] = dtm.array(src).classify();
+        } else {
+            if (src instanceof Array) {
+                params.modules[dest] = dtm.array(src);
+            } else if (src.type === 'dtm.array') {
+                if (src.get('type') === 'string') {
+                    params.modules[dest] = src.clone().classify();
+                } else {
+                    params.modules[dest] = src.clone();
+                }
+            } else if (src.type === 'dtm.model') {
+
+            } else if (src.type === 'dtm.synth') {
+                params.modules[dest] = src;
+            }
+        }
+    }
+
 })();
 })();

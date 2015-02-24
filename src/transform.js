@@ -135,7 +135,9 @@ dtm.transform = {
                 break;
 
             case 'constant':
+            case 'constants':
             case 'const':
+            case 'consts':
                 min = min || 0;
                 for (var i = 0; i < len; i++) {
                     res[i] = min;

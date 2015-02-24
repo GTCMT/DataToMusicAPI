@@ -12,7 +12,7 @@
 //var clockBuf = actx.createBuffer(1, Math.round(actx.sampleRate * clMult), actx.sampleRate);
 
 var params = {
-    isLogging: false
+    isLogging: true
 };
 
 /**
@@ -25,7 +25,11 @@ var dtm = {
 
     log: function (arg) {
         if (params.isLogging) {
-            console.log(arg);
+            if (arguments.callee.caller.name) {
+                console.log(arguments.callee.caller.name +  ': ' + arg);
+            } else {
+                console.log(arg);
+            }
         }
     },
 
@@ -71,16 +75,13 @@ var dtm = {
         }
     },
 
-    //getAudioContext: function () {
-    //    return actx
-    //},
-
-    //sampleRate: actx.sampleRate,
-    //sr: actx.sampleRate,
-
-    wa: {},
+    wa: {
+        isOn: false
+    },
 
     startWebAudio: function () {
+        dtm.wa.isOn = true;
+
         dtm.wa.actx = new (window.AudioContext || window.webkitAudioContext)();
         dtm.wa.now = function () { return dtm.wa.actx.currentTime; };
         dtm.wa.out = function () { return dtm.wa.actx.destination; };
@@ -125,10 +126,6 @@ var dtm = {
         };
     }
 };
-
-//dtm.buffs = {
-//    verbIr: makeIr(2)
-//};
 
 this.dtm = dtm;
 

@@ -684,6 +684,21 @@ dtm.array = function (val, name) {
      */
     array.rand = array.randomize = array.shuffle;
 
+    array.queue = function (input) {
+        if (typeof(input) === 'number') {
+            params.value.push(input);
+            params.value.shift();
+        } else if (input instanceof Array) {
+            params.value = params.value.concat(input);
+            params.value = params.value.splice(input.length);
+        } else if (input.type === 'dtm.array') {
+            params.value = params.value.concat(input.get());
+            params.value = params.value.splice(input.get('len'));
+        }
+        return array.set(params.value);
+    };
+
+    array.fifo = array.queue;
 
     /* ARITHMETIC */
 

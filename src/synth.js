@@ -12,15 +12,29 @@
 dtm.synth = function (type, wt) {
     var params = {
         type: 'sine',
-        duration: 1,
+
+        note: {
+            delay: 0,
+            duration: 1
+        },
+
+        output: {
+            gain: 0.5
+        },
 
         //isPlaying: false,
         buffer: null,
-        gain: 0.5,
-        adsr: [0.001, 0.2, 0, 0.001],
 
-        freq: 440,
-        noteNum: 69,
+        // TODO: amp gain & out gain
+        amp: {
+            gain: 0.5,
+            adsr: [0.001, 0.2, 0, 0.001]
+        },
+
+        pitch: {
+            freq: 440,
+            noteNum: 69
+        },
 
         wt: {
             isOn: false,
@@ -61,6 +75,12 @@ dtm.synth = function (type, wt) {
         }
     };
 
+    var noise = null;
+
+    if (dtm.wa.isOn) {
+        noise = dtm.wa.makeNoise(8192);
+    }
+
     var synth = {
         type: 'dtm.synth',
 
@@ -77,22 +97,25 @@ dtm.synth = function (type, wt) {
 
         switch (param) {
             case 'amp':
+                out = params.amp.gain;
+                break;
+
             case 'volume':
             case 'gain':
-                out = params.gain;
+                out = params.output.gain;
                 break;
 
             case 'frequency':
             case 'freq':
             case 'cps':
-                out = params.freq;
+                out = params.pitch.freq;
                 break;
 
             case 'noteNum':
             case 'notenum':
             case 'note':
             case 'nn':
-                out = params.noteNum;
+                out = params.pitch.noteNum;
                 break;
 
             case 'buffer':
@@ -179,8 +202,6 @@ dtm.synth = function (type, wt) {
         return synth;
     };
 
-    var noise = dtm.wa.makeNoise(8192);
-
     /**
      * Sets the ADSR envelope for the main amplitude.
      * @function module:synth#adsr
@@ -194,10 +215,10 @@ dtm.synth = function (type, wt) {
         // TODO: take indiv values OR array
 
         if (typeof(arguments) !== 'undefeined') {
-            params.adsr[0] = arguments[0] || 0.001;
-            params.adsr[1] = arguments[1] || 0.001;
-            params.adsr[2] = arguments[2];
-            params.adsr[3] = arguments[3] || 0.001;
+            params.amp.adsr[0] = arguments[0] || 0.001;
+            params.amp.adsr[1] = arguments[1] || 0.001;
+            params.amp.adsr[2] = arguments[2];
+            params.amp.adsr[3] = arguments[3] || 0.001;
         }
 
         return synth;
@@ -287,7 +308,7 @@ dtm.synth = function (type, wt) {
         var out = dtm.wa.out;
 
         del = del || 0;
-        dur = dur || params.duration;
+        dur = dur || params.note.duration;
 
         var startT = now() + del;
         var src;
@@ -313,7 +334,7 @@ dtm.synth = function (type, wt) {
             src.loop = false;
         } else {
             src = actx.createOscillator();
-            src.frequency.setValueAtTime(params.freq, startT);
+            src.frequency.setValueAtTime(params.pitch.freq, startT);
         }
 
         switch (params.type) {
@@ -398,18 +419,22 @@ dtm.synth = function (type, wt) {
             verbAmp.connect(out());
         }
 
-        amp.connect(out());
+        var gain = actx.createGain();
+        gain.gain.setValueAtTime(params.output.gain, startT);
 
-        var susLevel = params.adsr[2] * params.gain;
+        amp.connect(gain);
+        gain.connect(out());
+
+        var susLevel = params.amp.adsr[2] * params.amp.gain;
         amp.gain.setValueAtTime(0, now());
-        amp.gain.setTargetAtTime(params.gain, startT, params.adsr[0]);
-        amp.gain.setTargetAtTime(susLevel, startT+params.adsr[0], params.adsr[1]);
+        amp.gain.setTargetAtTime(params.amp.gain, startT, params.amp.adsr[0]);
+        amp.gain.setTargetAtTime(susLevel, startT+params.amp.adsr[0], params.amp.adsr[1]);
 
-        var relStart = startT + params.adsr[0] + params.adsr[1] + dur;
-        amp.gain.setTargetAtTime(0, relStart, params.adsr[3]);
+        var relStart = startT + params.amp.adsr[0] + params.amp.adsr[1] + dur;
+        amp.gain.setTargetAtTime(0, relStart, params.amp.adsr[3]);
 
         src.start(startT);
-        src.stop(relStart + params.adsr[3] + 0.3);
+        src.stop(relStart + params.amp.adsr[3] + 0.3);
 
         return synth;
     };
@@ -432,8 +457,8 @@ dtm.synth = function (type, wt) {
     synth.nn = function (nn) {
         nn = nn || 69;
 
-        params.noteNum = nn;
-        params.freq = dtm.value.mtof(nn);
+        params.pitch.noteNum = nn;
+        params.pitch.freq = dtm.value.mtof(nn);
 
         return synth;
     };
@@ -445,7 +470,7 @@ dtm.synth = function (type, wt) {
      * @returns {dtm.synth}
      */
     synth.freq = function (freq) {
-        params.freq = freq;
+        params.pitch.freq = freq;
         return synth;
     };
 
@@ -456,7 +481,7 @@ dtm.synth = function (type, wt) {
      * @returns {dtm.synth}
      */
     synth.amp = function (val) {
-        params.gain = val;
+        params.amp.gain = val;
         return synth;
     };
 
@@ -467,7 +492,7 @@ dtm.synth = function (type, wt) {
      * @returns {dtm.synth}
      */
     synth.dur = function (val) {
-        params.duration = val;
+        params.note.duration = val;
         return synth;
     };
 
@@ -484,22 +509,22 @@ dtm.synth = function (type, wt) {
     };
 
     synth.attack = function (val) {
-        params.adsr[0] = val;
+        params.amp.adsr[0] = val;
         return synth;
     };
 
     synth.decay = function (val) {
-        params.adsr[1] = val;
+        params.amp.adsr[1] = val;
         return synth;
     };
 
     synth.sustain = function (val) {
-        params.adsr[2] = val;
+        params.amp.adsr[2] = val;
         return synth;
     };
 
     synth.release = function (val) {
-        params.adsr[3] = val;
+        params.amp.adsr[3] = val;
         return synth;
     };
 

@@ -11,7 +11,7 @@
  */
 dtm.instr = function (arg) {
     var params = {
-        name: null,
+        name: 'default',
         isPlaying: false,
         poly: false,
 
@@ -19,36 +19,84 @@ dtm.instr = function (arg) {
 
         sync: true,
         clock: dtm.clock(true, 8),
-        //subDivision: 16,
 
         // default model coll
-        models: {
-            voice: dtm.synth(),
-            wavetable: null,
-            volume: dtm.array(1),
-            scale: dtm.array().fill('seq', 12),
-            rhythm: dtm.array(1),
-            pitch: dtm.array(69),
-            transp: dtm.array(0),
-            chord: dtm.array(0),
-            bpm: dtm.array(120),
-            subdiv: dtm.array(8),
-            repeats: null,
-            step: null,
-
-            atk: null,
-            dur: dtm.array(0.25),
-            lpf: null,
-            res: dtm.array(0),
-            comb: null,
-            delay: null
-        },
-
-        pqRound: false,
+        //models: {
+        //    voice: dtm.synth(),
+        //    wavetable: null,
+        //    volume: dtm.array(1),
+        //    scale: dtm.array().fill('seq', 12),
+        //    rhythm: dtm.array(1),
+        //    pitch: dtm.array(69),
+        //    transp: dtm.array(0),
+        //    chord: dtm.array(0),
+        //    bpm: dtm.array(120),
+        //    subdiv: dtm.array(8),
+        //    repeats: null,
+        //    step: null,
+        //
+        //    atk: null,
+        //    dur: dtm.array(0.25),
+        //    lpf: null,
+        //    res: dtm.array(0),
+        //    comb: null,
+        //    delay: null
+        //},
+        //
+        //pqRound: false,
 
         instrModel: null,
 
-        callbacks: []
+        callbacks: [],
+
+        defInstr: function defaultInstr(c) {
+            var v = params.models.voice;
+            var vol = params.models.volume.get('next');
+            var dur = params.models.dur.get('next');
+            var r = params.models.rhythm.get('next');
+            var p = params.models.pitch.get('next');
+            var sc = params.models.scale.get();
+            var tr = params.models.transp.get('next');
+            var ct = params.models.chord.get();
+            var div = params.models.subdiv.get('next');
+            params.clock.subDiv(div);
+
+            var wt = params.models.wavetable;
+            var lpf = params.models.lpf;
+            var comb = params.models.comb;
+            var delay = params.models.delay;
+
+            if (params.sync === false) {
+                params.clock.bpm(params.models.bpm.get('next'));
+            }
+
+            _.forEach(params.callbacks, function (cb) {
+                cb(params.clock);
+            });
+
+            if (r) {
+                _.forEach(ct, function (val) {
+                    if (wt) {
+                        v.wt(wt.get());
+                    }
+
+                    if (lpf) {
+                        v.lpf(lpf.get('next'), params.models.res.get('next'));
+                    }
+
+                    if (comb) {
+                        v.comb(0.5, params.models.comb.get('next'));
+                    }
+
+                    if (delay) {
+                        v.delay(params.models.delay.get('next'));
+                    }
+
+                    v.dur(dur).decay(dur);
+                    v.nn(dtm.val.pq(p + val, sc, params.pqRound) + tr).amp(vol).play();
+                });
+            }
+        }
     };
 
     var instr = {
@@ -78,17 +126,23 @@ dtm.instr = function (arg) {
 
             case 'm':
             case 'model':
-                return params.models[arguments[1]];
+                if (!arguments[1]) {
+                    return params.models;
+                } else {
+                    return params.models[arguments[1]];
+                }
 
             case 'beat':
                 return params.clock.get('beat');
+
+            case 'params':
+                break;
 
             default:
                 break;
         }
     };
 
-    // CHECK: when giving an array, should I clone it? ...probably yes
     instr.set = function (dest, src, adapt) {
         if (typeof(src) === 'number') {
             params.models[dest] = dtm.array(src);
@@ -121,41 +175,6 @@ dtm.instr = function (arg) {
             default:
                 break;
         }
-        return instr;
-    };
-
-    instr.load = function (arg) {
-        if (typeof(arg) === 'string') {
-            var model = _.find(dtm.modelColl, {params: {
-                name: arg,
-                categ: 'instr'
-            }});
-
-            if (typeof(model) !== 'undefined') {
-                dtm.log('loading instrument model: ' + arg);
-                params.instrModel = model;
-                params.name = arg;
-                //params.models = model.models;
-                instr.model(model);
-                //instr.play = params.instrModel.play;
-                //instr.run = params.instrModel.run;
-
-                // CHECK: not good
-                params.modDest.push(model);
-            } else {
-                dtm.log('registering a new instrument: ' + arg);
-                params.name = arg;
-                params.categ = 'instr';
-                dtm.modelColl.push(instr);
-            }
-
-        } else if (typeof(arg) !== 'undefined') {
-            if (arg.params.categ === 'instr') {
-                params.instrModel = arg; // TODO: check the class name
-                instr.model(arg);
-            }
-        }
-
         return instr;
     };
 
@@ -239,56 +258,6 @@ dtm.instr = function (arg) {
         return instr;
     };
 
-    // CHECK: this is pretty memory-inefficient
-    function defaultInstr(c) {
-        var v = params.models.voice;
-        var vol = params.models.volume.get('next');
-        var dur = params.models.dur.get('next');
-        var r = params.models.rhythm.get('next');
-        var p = params.models.pitch.get('next');
-        var sc = params.models.scale.get();
-        var tr = params.models.transp.get('next');
-        var ct = params.models.chord.get();
-        var div = params.models.subdiv.get('next');
-        params.clock.subDiv(div);
-
-        var wt = params.models.wavetable;
-        var lpf = params.models.lpf;
-        var comb = params.models.comb;
-        var delay = params.models.delay;
-
-        if (params.sync === false) {
-            params.clock.bpm(params.models.bpm.get('next'));
-        }
-
-        _.forEach(params.callbacks, function (cb) {
-            cb(params.clock);
-        });
-
-        if (r) {
-            _.forEach(ct, function (val) {
-                if (wt) {
-                    v.wt(wt.get());
-                }
-
-                if (lpf) {
-                    v.lpf(lpf.get('next'), params.models.res.get('next'));
-                }
-
-                if (comb) {
-                    v.comb(0.5, params.models.comb.get('next'));
-                }
-
-                if (delay) {
-                    v.delay(params.models.delay.get('next'));
-                }
-
-                v.dur(dur).decay(dur);
-                v.nn(dtm.val.pq(p + val, sc, params.pqRound) + tr).amp(vol).play();
-            });
-        }
-    }
-
     /**
      * Starts performing the instrument.
      * @function module:instr#play
@@ -301,14 +270,18 @@ dtm.instr = function (arg) {
             dtm.log('playing instr: ' + params.name);
 
             if (!params.instrModel) {
-                // CHECK: ???
-                params.clock.add(defaultInstr).start();
+                //params.clock.add(params.defInstr).start();
+                //params.clock.add(params.instrModel.play).start();
             }
 
             if (params.instrModel) {
                 if (params.instrModel.get('categ') === 'instr') {
-                    params.instrModel.stop();
-                    params.instrModel.play();
+                    //params.instrModel.stop();
+                    //params.instrModel.play();
+
+                    if (params.instrModel.output) {
+                        params.clock.add(params.instrModel.output).start();
+                    }
                 }
             }
 
@@ -421,296 +394,64 @@ dtm.instr = function (arg) {
 
     instr.modulate = instr.mod;
 
+    //instr.load = function (arg) {
+    //    if (typeof(arg) === 'string') {
+    //        var model = _.find(dtm.modelColl, {params: {
+    //            name: arg,
+    //            categ: 'instr'
+    //        }});
+    //
+    //        if (typeof(model) !== 'undefined') {
+    //            dtm.log('loading instrument model: ' + arg);
+    //            params.instrModel = model;
+    //            params.name = arg;
+    //            //params.models = model.models;
+    //            instr.model(model);
+    //            //instr.play = params.instrModel.play;
+    //            //instr.run = params.instrModel.run;
+    //
+    //            // CHECK: not good
+    //            params.modDest.push(model);
+    //        } else {
+    //            dtm.log('registering a new instrument: ' + arg);
+    //            params.name = arg;
+    //            params.categ = 'instr';
+    //            dtm.modelColl.push(instr);
+    //        }
+    //
+    //    } else if (typeof(arg) !== 'undefined') {
+    //        if (arg.params.categ === 'instr') {
+    //            params.instrModel = arg; // TODO: check the class name
+    //            instr.model(arg);
+    //        }
+    //    }
+    //
+    //    return instr;
+    //};
 
+    instr.load = function (arg) {
+        var model;
 
-    /**
-     * Sets the main voice / WebAudio synthesizer for the instrument.
-     * @param arg {string|dtm.synth}
-     * @returns {dtm.instr}
-     */
-    instr.voice = function (arg) {
         if (typeof(arg) === 'string') {
-            params.models.voice.set(arg);
-        } else if (arg.type === 'dtm.synth') {
-            params.models.voice = arg;
-
-        }
-        return instr;
-    };
-
-    instr.syn = instr.synth = instr.voice;
-
-    instr.wt = function (src, adapt) {
-        if (typeof(adapt) === 'undefined') {
-            adapt = true;
+            model = _.find(dtm.modelColl, function (m) {
+                return m.get('name') == arg;
+            });
+        } else if (arg.type === 'dtm.model') {
+            model = arg;
         }
 
-        mapper('wavetable', src);
+        if (typeof(model) !== 'undefined') {
+            model.parent = instr;
+            model.map(instr);
 
-        if (adapt) {
-            params.models.wavetable.normalize();
+            params.instrModel = model;
         }
 
         return instr;
     };
 
-    instr.wavetable = instr.wt;
-
-    instr.rhythm = function (src, adapt) {
-        if (typeof(adapt) === 'undefined') {
-            adapt = true;
-        }
-
-        mapper('rhythm', src);
-
-        if (adapt) {
-            params.models.rhythm.normalize().round();
-        }
-
-        return instr;
-    };
-
-    instr.beats = instr.rhythm;
-
-    instr.volume = function (src, adapt) {
-        if (typeof(adapt) === 'undefined') {
-            adapt = true;
-        }
-
-        mapper('volume', src);
-        if (adapt) {
-            params.models.volume.logCurve(5).rescale(0.1, 1);
-        }
-
-        return instr;
-    };
-
-    instr.amp = instr.level = instr.vol = instr.volume;
-
-    instr.pitch = function (src, adapt) {
-        if (typeof(adapt) === 'undefined') {
-            adapt = true;
-        }
-
-        mapper('pitch', src);
-
-        if (adapt) {
-            params.models.pitch.normalize().rescale(60, 90);
-        }
-
-        return instr;
-    };
-
-    instr.nn = instr.noteNum = instr.pitch;
-
-    instr.transpose = function (src, adapt) {
-        if (typeof(adapt) === 'undefined') {
-            adapt = true;
-        }
-
-        mapper('transp', src);
-
-        if (adapt) {
-            params.models.transp.normalize().scale(-12, 12);
-        }
-
-        return instr;
-    };
-
-    instr.tr = instr.transp = instr.transpose;
-
-    instr.scale = function (src, adapt, round) {
-        if (typeof(adapt) === 'undefined') {
-            adapt = true;
-        }
-
-        if (typeof(round) === 'undefined') {
-            params.pqRound = false;
-        } else {
-            params.pqRound = round;
-        }
-
-        mapper('scale', src);
-
-        if (adapt) {
-            params.models.scale.normalize().scale(0,11).round().unique().sort()
-        }
-
-        return instr;
-    };
-
-    instr.pq = instr.scale;
-
-    instr.chord = function (src, adapt) {
-        if (typeof(adapt) === 'undefined') {
-            adapt = true;
-        }
-
-        mapper('chord', src);
-
-        if (adapt) {
-            params.models.chord.normalize().scale(0, 12).round().unique().sort();
-
-            if (params.models.chord.get('len') > 4) {
-                params.models.chord.fit(4).round().unique().sort();
-            }
-        }
-
-        return instr;
-    };
-
-    instr.clock = function (bpm, subDiv, time) {
-        params.clock.bpm(bpm);
-        params.clock.subDiv(subDiv);
-        return instr;
-    };
-
-    instr.bpm = function (src, adapt) {
-        params.sync = false;
-
-        //params.clock.bpm(val);
-        if (typeof(adapt) === 'undefined') {
-            adapt = true;
-        }
-
-        mapper('bpm', src);
-
-        if (adapt) {
-            params.models.bpm.normalize().scale(60, 180);
-        }
-
-        return instr;
-    };
-
-    instr.tempo = instr.bpm;
-
-    instr.subDiv = function (src, adapt) {
-        //params.clock.subDiv(val);
-        if (typeof(adapt) === 'undefined') {
-            adapt = true;
-        }
-
-        mapper('subdiv', src);
-
-        if (adapt) {
-            params.models.subdiv.normalize().scale(1, 5).round().powof(2);
-        }
-        return instr;
-    };
-
-    instr.len = instr.note = instr.div = instr.subdiv = instr.subDiv;
-
-    instr.sync = function (bool) {
-        if (typeof(bool) === 'undefined') {
-            bool = true;
-        }
-        params.clock.sync(bool);
-        params.sync = bool;
-        return instr;
-    };
-
-    instr.lpf = function (src, adapt) {
-        if (typeof(adapt) === 'undefined') {
-            adapt = true;
-        }
-
-        mapper('lpf', src);
-
-        if (adapt) {
-            params.models.lpf.normalize().log(10).scale(500, 5000);
-        }
-
-        return instr;
-    };
-
-    instr.res = function (src, adapt) {
-        if (typeof(adapt) === 'undefined') {
-            adapt = true;
-        }
-
-        mapper('res', src);
-
-        if (adapt) {
-            params.models.res.normalize().scale(0, 50);
-        }
-
-        return instr;
-    };
-
-    instr.comb = function (src, adapt) {
-        if (typeof(adapt) === 'undefined') {
-            adapt = true;
-        }
-
-        mapper('comb', src);
-
-        if (adapt) {
-            params.models.comb.normalize().rescale(60, 90);
-        }
-
-        return instr;
-    };
-
-    instr.delay = function (src, adapt) {
-        if (typeof(adapt) === 'undefined') {
-            adapt = true;
-        }
-
-        mapper('delay', src);
-
-        if (adapt) {
-            params.models.delay.normalize();
-        }
-
-        return instr;
-    };
-
-    instr.dur = function (src, adapt) {
-        if (typeof(adapt) === 'undefined') {
-            adapt = true;
-        }
-
-        mapper('dur', src);
-
-        if (adapt) {
-            params.models.dur.normalize().exp(10).scale(0.01, 0.5);
-        }
-
-        return instr;
-    };
-
-    instr.on = function (arg) {
-        switch (arg) {
-            case 'note':
-                params.callbacks.push(arguments[1]);
-                break;
-
-            case 'every':
-            case 'beat':
-                var foo = arguments[1];
-                var bar = arguments[2];
-                params.callbacks.push(function (c) {
-                    if (c.get('beat') % foo === 0) {
-                        bar(c)
-                    }
-                });
-                break;
-
-            case 'subDiv':
-            case 'subdiv':
-            case 'div':
-                break;
-
-            default:
-                break;
-        }
-        return instr;
-    };
-
-    instr.when = instr.on;
-
+    arg = arg || 'default';
     instr.load(arg);
-
     return instr;
 };
 

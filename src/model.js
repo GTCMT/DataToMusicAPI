@@ -26,7 +26,8 @@ dtm.model = function (name, categ) {
         // assigning array or data/coll???
         //array: null,
         //data: null,
-        parents: {},
+        parent: {},
+        setter: {},
 
         params: {},
         models: {}
@@ -90,12 +91,6 @@ dtm.model = function (name, categ) {
 
     model.modulate = model.mod;
 
-    // CHECK: mapping an automatic modulation source???
-    model.map = function (arrobj) {
-
-        return model;
-    };
-
     // for instr-type models
     model.start = function () {
         return model;
@@ -112,6 +107,15 @@ dtm.model = function (name, categ) {
     model.clone = function () {
         return model;
     };
+
+    model.assignMethods = function (parent) {
+        _.forEach(model.setter, function (method, key) {
+            parent[key] = method;
+        });
+        return model;
+    };
+
+    model.map = model.assignMethods;
 
     model.load(name);
 
