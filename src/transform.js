@@ -509,8 +509,9 @@ dtm.transform = {
      * -> [3, 7, 4, 6, 5, 0, 2, 1]
      */
     invert: function (arr, center) {
-        // CHECK: center = 0 will give the default value...
-        center = center || dtm.analyzer.mean(arr);
+        if (typeof(center) === 'undefined') {
+            center = dtm.analyzer.mean(arr);
+        }
 
         var res = [];
         _.forEach(arr, function (val, idx) {

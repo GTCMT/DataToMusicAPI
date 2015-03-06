@@ -7,6 +7,8 @@
         measures: 4,
         time: '4/4',
 
+        updateFreq: 1/4,
+
         modules: {
             voice: dtm.synth(),
             wavetable: null,
@@ -22,11 +24,15 @@
             dur: dtm.array().fill('consts', 8, 16),
 
             bpm: dtm.array(120),
-            subdiv: dtm.array(16)
+            subdiv: dtm.array(16),
+
+            note: dtm.array(72),
+            pos: dtm.array(0)
         }
     };
 
-    var m = dtm.model('testNotation', 'instr').register();
+    var m = dtm.model('decatur', 'instr').register();
+
     var g = dtm.guido();
     var osc = dtm.osc;
 
@@ -58,7 +64,7 @@
         }
 
         res = res.join(' ');
-        osc.send('[\\instr<"Flute", dx=-1.65cm, dy=-0.5cm>\\meter<"4/4"> \\clef<"f"> ' + res + ']');
+        osc.send('/guido/score', ['set', '[\\instr<"Flute", dx=-1.65cm, dy=-0.5cm>\\meter<"4/4"> \\repeatBegin ' + res + ' \\repeatEnd ]']);
 
         return m.parent;
     };
@@ -94,6 +100,8 @@
         return m.parent;
     };
 
+    m.setter.len = m.setter.note = m.setter.div = m.setter.subdiv = m.setter.subDiv;
+
     m.setter.dur = function (src, literal) {
         mapper('dur', src);
 
@@ -107,7 +115,13 @@
         return m.parent;
     };
 
-    m.setter.len = m.setter.note = m.setter.div = m.setter.subdiv = m.setter.subDiv;
+    m.setter.test = function (src1, src2, literal) {
+        if (!literal) {
+
+        }
+
+        return m.parent;
+    };
 
     function mapper(dest, src) {
         if (typeof(src) === 'number') {

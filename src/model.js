@@ -105,20 +105,33 @@ dtm.model = function (name, categ) {
     };
 
     model.clone = function () {
-        return model;
+        //var m = dtm.model();
+        //m.output = clone(model.output);
+        //_.forEach(model.setter, function (val, key) {
+        //    m.setter[key] = clone(val);
+        //});
+        //m.modules = clone(model.modules);
+        //
+        //return m;
+        return clone(model);
     };
 
     model.assignMethods = function (parent) {
         _.forEach(model.setter, function (method, key) {
             parent[key] = method;
+            parent.params.push(key);
         });
         return model;
     };
 
     model.map = model.assignMethods;
 
-    model.load(name);
+    model.register = function () {
+        dtm.modelCallers[model.get('name')] = arguments.callee.caller;
+        return model;
+    };
 
+    model.load(name);
     return model;
 };
 

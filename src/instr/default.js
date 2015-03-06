@@ -1,5 +1,5 @@
 (function (){
-    var m = dtm.model('default', 'instr');
+    var m = dtm.model('default', 'instr').register();
 
     var params = {
         clock: dtm.clock(true, 8),
@@ -85,7 +85,6 @@
             params.modules.voice.set(arg);
         } else if (arg.type === 'dtm.synth') {
             params.modules.voice = arg;
-
         }
         return m.parent;
     };
@@ -336,4 +335,5 @@
         }
     }
 
+    return m;
 })();

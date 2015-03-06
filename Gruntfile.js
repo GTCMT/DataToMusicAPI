@@ -49,6 +49,8 @@ module.exports = function (grunt) {
                     'src/instr/default.js',
                     'src/instr/testInstr.js',
                     'src/instr/testNotation.js',
+                    'src/instr/decatur.js',
+                    'src/instr/csd-score.js',
                     'misc/end.js'
                 ],
                 dest: 'dtm.js'

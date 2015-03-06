@@ -1,5 +1,5 @@
 (function () {
-    var m = dtm.model('testInstr', 'instr');
+    var m = dtm.model('testInstr', 'instr').register();
 
     m.setter.doThis = function () {
         console.log('doing this');
@@ -21,4 +21,6 @@
 
         return m.parent;
     };
+
+    return m;
 })();

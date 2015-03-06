@@ -73,7 +73,7 @@ dtm.analyzer = {
         var type = dtm.anal.checkType(arr);
 
         if (type === 'string') {
-            dtm.log('cannot get the miean value of a string array');
+            dtm.log('cannot get the mean value of a string array');
             return null;
         } else {
             var sum = _.reduce(arr, function (num, sum) {
@@ -232,6 +232,12 @@ dtm.analyzer = {
         return Math.sqrt(dtm.analyzer.mean(res));
     },
 
+    /**
+     * Counts occurrences of each class in the list.
+     * @function module:analyzer#histo
+     * @param input {array}
+     * @returns {array}
+     */
     histo: function (input) {
         var res = [];
         var classes = _.clone(input);
@@ -244,9 +250,16 @@ dtm.analyzer = {
         return res;
     },
 
+    /**
+     * List unique items as "class" in sorted order.
+     * @function module:analyzer#classes
+     * @param input {array}
+     * @returns {array}
+     */
     classes: function (input) {
         return _.uniq(input).sort();
     },
+
 
     uniformity: function (input) {
         return dtm.analyzer.classes(input).length / input.length;

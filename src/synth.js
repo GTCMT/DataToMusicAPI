@@ -317,6 +317,9 @@ dtm.synth = function (type, wt) {
 
         if (params.type === 'noise') {
             src = actx.createBufferSource();
+            if (!noise) {
+                noise = dtm.wa.makeNoise(8192);
+            }
             src.buffer = noise;
             src.loop = true;
         } else if (params.type === 'sampler') {

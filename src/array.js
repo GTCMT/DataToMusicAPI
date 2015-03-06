@@ -105,6 +105,9 @@ dtm.array = function (val, name) {
                 case 'sum':
                     return dtm.analyzer.sum(params.value);
 
+                case 'pdf':
+                    break;
+
 
                 /* ITERATORS */
                 case 'current':
@@ -115,6 +118,7 @@ dtm.array = function (val, name) {
                     return params.value[params.index];
 
                 case 'next':
+                    // TODO: increment after return
                     params.index = dtm.value.mod(params.index + params.step, params.length);
                     return params.value[params.index];
 
@@ -164,6 +168,7 @@ dtm.array = function (val, name) {
 
                 // TODO: incomplete
                 case 'blockNext':
+                    // TODO: incr w/ the size of block after return
                     params.index = dtm.value.mod(params.index + params.step, params.length);
                     return dtm.transform.getBlock(params.value, params.index, arguments[1]);
 
@@ -272,8 +277,19 @@ dtm.array = function (val, name) {
         return array;
     };
 
+    /**
+     * Same as setName.
+     * @funciton module:array#name
+     * @type {Function}
+     */
     array.name = array.setName;
 
+    /**
+     * Sets the value type of the array content. Should be either 'number' or 'string'?
+     * @funciton mudule:array#setType
+     * @param arg
+     * @returns {dtm.array}
+     */
     array.setType = function (arg) {
         params.type = arg.toString();
         return array;
@@ -319,13 +335,30 @@ dtm.array = function (val, name) {
         //array.type = res;
     }
 
+    /**
+     * Sets the size of the iteration step.
+     * @function module:array#step
+     * @param val {number}
+     * @returns {dtm.array}
+     */
     array.step = function (val) {
         params.step = Math.round(val);
         return array;
     };
 
+    /**
+     * Same as the step().
+     * @function module:array#stepSize
+     * @type {Function}
+     */
     array.stepSize = array.step;
 
+    /**
+     * Sets the current index within the array for the iterator. Value exceeding the max or min value will be wrapped around.
+     * @function module:array#index
+     * @param val {number}
+     * @returns {dtm.array}
+     */
     array.index = function (val) {
         params.index = dtm.value.mod(Math.round(val), params.length);
         return array;
@@ -418,7 +451,11 @@ dtm.array = function (val, name) {
 
     array.original = array.reset;
 
+    array.flush = function () {
+        return array.set([]);
+    };
 
+    array.clear = array.flush;
 
     /* SCALERS */
 
@@ -440,8 +477,8 @@ dtm.array = function (val, name) {
     /**
      * Modifies the range of the array.
      * @function module:array#rescale
-     * @param min {number}
-     * @param max {number}
+     * @param min {number} The target minimum value of the scaled range.
+     * @param max {number} The target maximum value of the scaled range.
      * @param [dmin] {number} The minimum of the domain (original) value range.
      * @param [dmax] {number} The maximum of the domain value range.
      * @returns {dtm.array}
@@ -563,7 +600,7 @@ dtm.array = function (val, name) {
     array.concat = function (arr) {
         arr = arr || [];
         var temp = params.value;
-        if (arr instanceof Array) {
+        if (arr instanceof Array || typeof(arr) === 'number') {
             temp = temp.concat(arr);
         } else if (arr.type === 'dtm.array') {
             temp = temp.concat(arr.value);
@@ -571,6 +608,8 @@ dtm.array = function (val, name) {
         array.set(temp);
         return array;
     };
+
+    array.append = array.concat;
 
     /**
      * Repeats the contents of the current array.
@@ -688,6 +727,12 @@ dtm.array = function (val, name) {
      */
     array.rand = array.randomize = array.shuffle;
 
+    /**
+     * Adds new value(s) at the end of the array, and removes the oldest value(s) at the beginning of the array. The size of the array is unchanged.
+     * @function module:array#queue
+     * @param input {number|array}
+     * @returns {dtm.array}
+     */
     array.queue = function (input) {
         if (typeof(input) === 'number') {
             params.value.push(input);
@@ -702,6 +747,11 @@ dtm.array = function (val, name) {
         return array.set(params.value);
     };
 
+    /**
+     * Same as array.queue()
+     * @function module:array#fifo
+     * @type {Function}
+     */
     array.fifo = array.queue;
 
     /* ARITHMETIC */
@@ -793,6 +843,13 @@ dtm.array = function (val, name) {
      */
     array.abs = array.fwr;
 
+    array.derivative = function (order) {
+        return array;
+    };
+
+    array.diff = function () {
+        return array;
+    };
 
 
     /* NOMINAL */
@@ -832,6 +889,11 @@ dtm.array = function (val, name) {
 
     array.class = array.classify = array.classId;
 
+    /**
+     * Converts the array values (such as numbers) into string format.
+     * @function module:array#stringify
+     * @returns {dtm.array}
+     */
     array.stringify = function () {
         return array.set(dtm.transform.stringify(params.value));
     };
@@ -967,7 +1029,6 @@ dtm.array = function (val, name) {
         array.set(params.value);
         return array;
     };
-
 
     return array;
 };

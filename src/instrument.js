@@ -15,7 +15,10 @@ dtm.instr = function (arg) {
         isPlaying: false,
         poly: false,
 
+        // what is this for?
         modDest: [],
+
+        modList: [],
 
         sync: true,
         clock: dtm.clock(true, 8),
@@ -101,7 +104,8 @@ dtm.instr = function (arg) {
 
     var instr = {
         type: 'dtm.instrument',
-        params: {}
+        //params: {}
+        params: []
     };
 
     /**
@@ -135,8 +139,9 @@ dtm.instr = function (arg) {
             case 'beat':
                 return params.clock.get('beat');
 
+            case 'modList':
             case 'params':
-                break;
+                return instr.params;
 
             default:
                 break;
@@ -294,7 +299,7 @@ dtm.instr = function (arg) {
         return instr;
     };
 
-    instr.start = instr.run = instr.play;
+    instr.start = instr.print = instr.run = instr.play;
 
     instr.stop = function () {
         if (params.isPlaying === true) {
@@ -316,59 +321,29 @@ dtm.instr = function (arg) {
     };
 
 
+    // TODO: implement this
     /**
-     * Modulates the parameter(s) of the instrument.
+     * Modulates a parameter of the instrument by the index or the name.
      * @function module:instr#mod
-     * @arg {number}
+     * @param tgt {number|string}
+     * @param src
      * @returns {dtm.instr}
      */
-    instr.mod = function () {
-        params.transp = dtm.val.rescale(modHandler(arguments[0]), -12, 12, true);
+    instr.mod = function (tgt, src, literal) {
+        var dest = '';
 
-        if (typeof(arguments[0]) === 'number') {
-            if (arguments.length === 1) {
-                var val = arguments[0];
-                _.forEach(params.modDest, function (dest) {
-                    // MEMO: don't use arguments[n] in forEach
-                    dest.mod(val);
-                });
-
-                //modHandler(dtm.val.rescale(val, -12, 12, true), params.transpose);
-
-            } else {
-                _.forEach(arguments, function (val, idx) {
-                    if (params.modDest[idx]) {
-                        params.modDest[idx].mod(val);
-                    }
-                });
-            }
-
-        } else if (typeof(arguments[0]) === 'string') {
-            if (typeof(arguments[1] === 'number') && typeof(instr.params[arguments[0]]) !== 'undefined') {
-                params[arguments[0]] = arguments[1]; // CHECK: ???????
-            }
-
-        } else if (typeof(arguments[0]) === 'object') {
-            var keys = _.keys(arguments[0]);
+        if (typeof(tgt) === 'string') {
+            dest = tgt;
+        } else if (typeof(tgt) === 'number') {
+            // TODO: error check
+            dest = instr.params[tgt];
         }
+
+        instr[dest](src, literal);
+        // maybe feed arguments[1-];
 
         return instr;
     };
-
-    function modHandler(src) {
-        if (typeof(src) === 'number') {
-            return src;
-        } else if (typeof(src) === 'object') {
-            if (src instanceof Array) {
-                var a = dtm.array(src).normalize();
-                return a.get('next');
-            } else if (src.type === 'dtm.array') {
-                return src.get('next');
-            } else if (src.type === 'dtm.model') {
-
-            }
-        }
-    }
 
     function mapper(dest, src) {
         if (typeof(src) === 'number') {
@@ -433,9 +408,12 @@ dtm.instr = function (arg) {
         var model;
 
         if (typeof(arg) === 'string') {
-            model = _.find(dtm.modelColl, function (m) {
-                return m.get('name') == arg;
-            });
+            //model = _.find(dtm.modelColl, function (m) {
+            //    return m.get('name') == arg;
+            //});
+            model = dtm.modelCallers[arg]();
+            console.log(model);
+
         } else if (arg.type === 'dtm.model') {
             model = arg;
         }

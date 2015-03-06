@@ -180,6 +180,10 @@ dtm.clock = function (bpm, subDiv, time) {
 
     clock.div = clock.subdiv = clock.subDiv;
 
+    clock.interval = function (sec) {
+        return clock;
+    };
+
     clock.setTime = function (input) {
         if (typeof(input) === 'Array') {
             clock.time = input;
@@ -583,6 +587,22 @@ dtm.clock = function (bpm, subDiv, time) {
                 }
             }
         }
+        return clock;
+    };
+
+    clock.on = function (condition) {
+        switch (condition) {
+            case 'every':
+                clock.callbacks.push(function (c) {
+                    if (c.get('beat') % arguments[1] === 0) {
+                        arguments[2](c);
+                    }
+                });
+                break;
+            default:
+                break;
+        }
+
         return clock;
     };
 

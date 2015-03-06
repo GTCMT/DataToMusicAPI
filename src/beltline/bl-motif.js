@@ -55,11 +55,32 @@
     };
 
     m.generate = function (arr) {
+        var temp = [];
+        for (var ch = 0; ch < 3; ch++) {
+            temp[ch] = [];
+
+            for (var i = 0; i < arr.length; i++) {
+                temp[ch][i] = _.random(0, 1, true);
+            }
+
+            temp[ch] = generatePitch(temp[ch], generateRhythm(temp[ch]));
+
+            temp[ch] = temp[ch].join(' ');
+        }
+
         var intervals = generateRhythm(arr);
         var seq = generatePitch(arr, intervals);
 
+
         seq = seq.join(' ');
-        seq = '[\\meter<"4/4"> ' + seq + ' \\newLine' + ' _*2/1' + ']';
-        return seq;
+        //seq = '[\\meter<"4/4"> ' + seq + ' \\newLine' + ' _*2/1' + ']';
+
+        var res = '{' +
+            '[\\instr<"Flute", dx=-1.65cm, dy=-0.5cm>\\meter<"4/4"> \\clef<"g"> ' + seq + '],' +
+            '[\\instr<"Cello", dx=-1.65cm, dy=-0.5cm>\\meter<"4/4"> \\clef<"f"> ' + temp[0] + '],' +
+            '[\\instr<"Piano", dx=-1.65cm, dy=-1.75cm> \\meter<"4/4"> \\clef<"g"> ' + temp[1] + '],' +
+            '[\\meter<"4/4"> \\clef<"f"> ' + temp[2] + ']}';
+
+        return res;
     };
 })();

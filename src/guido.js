@@ -1,6 +1,6 @@
 dtm.guido = function () {
     var guido = {
-        tupe: 'dtm.guido',
+        type: 'dtm.guido',
         parts: [],
         numParts: 1
     };
@@ -21,6 +21,11 @@ dtm.guido = function () {
         10: 'b&',
         11: 'b'
     };
+
+    //guido.dur = {
+    //    1: '/1',
+    //    2: '/'
+    //};
 
     guido.setup = function () {
         return guido;

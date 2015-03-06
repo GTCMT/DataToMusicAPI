@@ -3,14 +3,6 @@
  * @module core
  */
 
-// TODO: load WebAudio on demand
-/* Shared WebAudio Stuff */
-//var actx = new (window.AudioContext || window.webkitAudioContext)();
-//var now = function () { return actx.currentTime; };
-//var out = function () { return actx.destination; };
-//var clMult = 0.01;
-//var clockBuf = actx.createBuffer(1, Math.round(actx.sampleRate * clMult), actx.sampleRate);
-
 var params = {
     isLogging: true
 };
@@ -21,12 +13,12 @@ var params = {
  * @type {object}
  */
 var dtm = {
-    version: '0.0.1',
+    version: '0.0.2',
 
     log: function (arg) {
         if (params.isLogging) {
             if (arguments.callee.caller.name) {
-                console.log(arguments.callee.caller.name +  ': ' + arg);
+                console.log(arguments.callee.caller.name + ': ' + arg);
             } else {
                 console.log(arg);
             }
@@ -37,20 +29,12 @@ var dtm = {
     //activeInstrs: [],
 
     modelColl: [],
+    modelCallers: {},
     clocks: [],
 
     params: {},
 
     // TODO: a function to list currently loaded objects, such as data, arrays, models... - for console livecoding situation
-
-    ///**
-    // * Returns the name of available models
-    // * @function getModelNames
-    // * @returns {Array}
-    // */
-    getModelNames: function () {
-        return _.pluck(dtm.modelColl, 'name');
-    },
 
     //ajaxGet: ajaxGet,
     //jsonp: jsonp,
@@ -83,8 +67,12 @@ var dtm = {
         dtm.wa.isOn = true;
 
         dtm.wa.actx = new (window.AudioContext || window.webkitAudioContext)();
-        dtm.wa.now = function () { return dtm.wa.actx.currentTime; };
-        dtm.wa.out = function () { return dtm.wa.actx.destination; };
+        dtm.wa.now = function () {
+            return dtm.wa.actx.currentTime;
+        };
+        dtm.wa.out = function () {
+            return dtm.wa.actx.destination;
+        };
         dtm.wa.clMult = 0.01;
         dtm.wa.clockBuf = dtm.wa.actx.createBuffer(1, Math.round(dtm.wa.actx.sampleRate * dtm.wa.clMult), dtm.wa.actx.sampleRate);
 
@@ -114,8 +102,8 @@ var dtm = {
 
             var exp = 10;
             _.forEach(_.range(bufLen), function (idx) {
-                left[idx] = dtm.val.rescale(dtm.val.expCurve(_.random(0, 1, true) * (bufLen-idx)/bufLen, exp), -1, 1);
-                right[idx] = dtm.val.rescale(dtm.val.expCurve(_.random(0, 1, true) * (bufLen-idx)/bufLen, exp), -1, 1);
+                left[idx] = dtm.val.rescale(dtm.val.expCurve(_.random(0, 1, true) * (bufLen - idx) / bufLen, exp), -1, 1);
+                right[idx] = dtm.val.rescale(dtm.val.expCurve(_.random(0, 1, true) * (bufLen - idx) / bufLen, exp), -1, 1);
             });
 
             return buffer;
@@ -124,6 +112,16 @@ var dtm = {
         dtm.wa.buffs = {
             verbIr: dtm.wa.makeIr(2)
         };
+    },
+
+    oscParams: {
+        isOpen: false,
+        port: null
+    },
+
+    startOsc: function () {
+        dtm.osc.isOn = true;
+        dtm.osc.start();
     }
 };
 
@@ -278,9 +276,52 @@ function loadBuffer(arrayBuf) {
 }
 
 
-function clone(obj) {
+//function clone(obj) {
     //return JSON.parse(JSON.stringify(obj));
-    return _.cloneDeep(obj); // CHECK: broken????????
+    //return _.cloneDeep(obj); // CHECK: broken????????
+//}
+
+
+function clone(obj) {
+    var copy;
+
+    // Handle the 3 simple types, and null or undefined
+    if (null == obj || "object" != typeof obj) {
+        return obj;
+    }
+
+    // Handle Date
+    if (obj instanceof Date) {
+        copy = new Date();
+        copy.setTime(obj.getTime());
+        return copy;
+    }
+
+    // Handle Array
+    if (obj instanceof Array) {
+        copy = [];
+        for (var i = 0, len = obj.length; i < len; i++) {
+            copy[i] = clone(obj[i]);
+        }
+        return copy;
+    }
+
+    // Handle Object
+    if (obj instanceof Object) {
+        if (obj.type == 'dtm.array') {
+            return obj.clone();
+        } else {
+            copy = {};
+            for (var attr in obj) {
+                if (obj.hasOwnProperty(attr)) {
+                    copy[attr] = clone(obj[attr]);
+                }
+            }
+            return copy;
+        }
+    }
+
+    throw new Error("Unable to copy obj! Its type isn't supported.");
 }
 
 

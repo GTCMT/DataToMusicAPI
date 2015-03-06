@@ -15,7 +15,7 @@
 
     m.params.right = {
         div: 16,
-        //rhythm: [-2, 2, -1, 2, -2, 3]
+        //models.rhythm: [-2, 2, -1, 2, -2, 3]
         rhythm: [-3, 5, 4],
         shape: [1, 0, -1, 0],
         voice: [0, 2, 7]

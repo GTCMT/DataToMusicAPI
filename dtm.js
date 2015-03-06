@@ -5,14 +5,6 @@
  * @module core
  */
 
-// TODO: load WebAudio on demand
-/* Shared WebAudio Stuff */
-//var actx = new (window.AudioContext || window.webkitAudioContext)();
-//var now = function () { return actx.currentTime; };
-//var out = function () { return actx.destination; };
-//var clMult = 0.01;
-//var clockBuf = actx.createBuffer(1, Math.round(actx.sampleRate * clMult), actx.sampleRate);
-
 var params = {
     isLogging: true
 };
@@ -23,12 +15,12 @@ var params = {
  * @type {object}
  */
 var dtm = {
-    version: '0.0.1',
+    version: '0.0.2',
 
     log: function (arg) {
         if (params.isLogging) {
             if (arguments.callee.caller.name) {
-                console.log(arguments.callee.caller.name +  ': ' + arg);
+                console.log(arguments.callee.caller.name + ': ' + arg);
             } else {
                 console.log(arg);
             }
@@ -39,20 +31,12 @@ var dtm = {
     //activeInstrs: [],
 
     modelColl: [],
+    modelCallers: {},
     clocks: [],
 
     params: {},
 
     // TODO: a function to list currently loaded objects, such as data, arrays, models... - for console livecoding situation
-
-    ///**
-    // * Returns the name of available models
-    // * @function getModelNames
-    // * @returns {Array}
-    // */
-    getModelNames: function () {
-        return _.pluck(dtm.modelColl, 'name');
-    },
 
     //ajaxGet: ajaxGet,
     //jsonp: jsonp,
@@ -85,8 +69,12 @@ var dtm = {
         dtm.wa.isOn = true;
 
         dtm.wa.actx = new (window.AudioContext || window.webkitAudioContext)();
-        dtm.wa.now = function () { return dtm.wa.actx.currentTime; };
-        dtm.wa.out = function () { return dtm.wa.actx.destination; };
+        dtm.wa.now = function () {
+            return dtm.wa.actx.currentTime;
+        };
+        dtm.wa.out = function () {
+            return dtm.wa.actx.destination;
+        };
         dtm.wa.clMult = 0.01;
         dtm.wa.clockBuf = dtm.wa.actx.createBuffer(1, Math.round(dtm.wa.actx.sampleRate * dtm.wa.clMult), dtm.wa.actx.sampleRate);
 
@@ -116,8 +104,8 @@ var dtm = {
 
             var exp = 10;
             _.forEach(_.range(bufLen), function (idx) {
-                left[idx] = dtm.val.rescale(dtm.val.expCurve(_.random(0, 1, true) * (bufLen-idx)/bufLen, exp), -1, 1);
-                right[idx] = dtm.val.rescale(dtm.val.expCurve(_.random(0, 1, true) * (bufLen-idx)/bufLen, exp), -1, 1);
+                left[idx] = dtm.val.rescale(dtm.val.expCurve(_.random(0, 1, true) * (bufLen - idx) / bufLen, exp), -1, 1);
+                right[idx] = dtm.val.rescale(dtm.val.expCurve(_.random(0, 1, true) * (bufLen - idx) / bufLen, exp), -1, 1);
             });
 
             return buffer;
@@ -126,6 +114,16 @@ var dtm = {
         dtm.wa.buffs = {
             verbIr: dtm.wa.makeIr(2)
         };
+    },
+
+    oscParams: {
+        isOpen: false,
+        port: null
+    },
+
+    startOsc: function () {
+        dtm.osc.isOn = true;
+        dtm.osc.start();
     }
 };
 
@@ -280,9 +278,52 @@ function loadBuffer(arrayBuf) {
 }
 
 
-function clone(obj) {
+//function clone(obj) {
     //return JSON.parse(JSON.stringify(obj));
-    return _.cloneDeep(obj); // CHECK: broken????????
+    //return _.cloneDeep(obj); // CHECK: broken????????
+//}
+
+
+function clone(obj) {
+    var copy;
+
+    // Handle the 3 simple types, and null or undefined
+    if (null == obj || "object" != typeof obj) {
+        return obj;
+    }
+
+    // Handle Date
+    if (obj instanceof Date) {
+        copy = new Date();
+        copy.setTime(obj.getTime());
+        return copy;
+    }
+
+    // Handle Array
+    if (obj instanceof Array) {
+        copy = [];
+        for (var i = 0, len = obj.length; i < len; i++) {
+            copy[i] = clone(obj[i]);
+        }
+        return copy;
+    }
+
+    // Handle Object
+    if (obj instanceof Object) {
+        if (obj.type == 'dtm.array') {
+            return obj.clone();
+        } else {
+            copy = {};
+            for (var attr in obj) {
+                if (obj.hasOwnProperty(attr)) {
+                    copy[attr] = clone(obj[attr]);
+                }
+            }
+            return copy;
+        }
+    }
+
+    throw new Error("Unable to copy obj! Its type isn't supported.");
 }
 
 
@@ -302,34 +343,138 @@ dtm.scales = {
     "7": [0, 4, 7, 10],
     "7sus4": [0, 5, 7, 10]
 };
-dtm.osc = function () {
-    var params = {};
-    var myOsc = {
-        type: 'dtm.osc',
-        oscPort: null,
-        isOpen: false
-    };
+//dtm.osc = function () {
+//    var params = {};
+//
+//    var myOsc = {
+//        type: 'dtm.osc',
+//        oscPort: null,
+//        isOpen: false
+//    };
+//
+//    myOsc.setup = function () {
+//        if (typeof(osc) !== 'undefined' && !myOsc.isOpen) {
+//            myOsc.isOpen = true;
+//            dtm.log('opening OSC port');
+//            myOsc.oscPort = new osc.WebSocketPort({
+//                url: 'ws://localhost:8081'
+//            });
+//
+//            myOsc.oscPort.open();
+//
+//            myOsc.oscPort.listen();
+//
+//            myOsc.oscPort.on('ready', function () {
+//                //myOsc.oscPort.socket.onmessage = function (e) {
+//                //    console.log('test');
+//                //    var foo =String.fromCharCode.apply(null, new Uint16Array(e));
+//                //    console.log("message", e);
+//                //};
+//
+//                myOsc.oscPort.on('message', function (msg) {
+//                    switch (msg.address) {
+//                        case '/test':
+//                            //console.log(msg.args[0]);
+//                            break;
+//                        default:
+//                            break;
+//                    }
+//                });
+//
+//                myOsc.oscPort.on("error", function (err) {
+//                    throw new Error(err);
+//                });
+//            });
+//        } else if (myOsc.isOpen) {
+//            dtm.log('OSC port is already open');
+//        }
+//
+//        return myOsc;
+//    };
+//
+//    myOsc.start = myOsc.setup;
+//
+//    myOsc.stop = function () {
+//        if (myOsc.oscPort) {
+//            myOsc.oscPort.close(1000);
+//        }
+//
+//        myOsc.isOpen = false;
+//        return myOsc;
+//    };
+//
+//    myOsc.close = myOsc.stop;
+//
+//    myOsc.on = function (addr, cb) {
+//        myOsc.oscPort.on('message', function (msg) {
+//            if (addr[0] !== '/') {
+//                addr = '/'.concat(addr);
+//            }
+//            if (msg.address == addr) {
+//                cb(msg.args);
+//            }
+//        });
+//        return myOsc;
+//    };
+//
+//    myOsc.write = function (addr, args) {
+//        myOsc.oscPort.send({
+//            address: addr,
+//            args: args
+//        });
+//
+//        return myOsc;
+//    };
+//
+//    myOsc.send = myOsc.write;
+//
+//    myOsc.map = function (src, dest) {
+//        if (dest.type === 'dtm.array') {
+//            myOsc.oscPort.on('message', function (msg) {
+//                switch (msg.address) {
+//                    case '/test':
+//                        dest.queue(msg.args[0]);
+//                        break;
+//                    default:
+//                        break;
+//                }
+//            });
+//        }
+//
+//        return myOsc;
+//    };
+//
+//    myOsc.setup();
+//    return myOsc;
+//};
 
-    myOsc.setup = function () {
-        if (typeof(osc) !== 'undefined' && !myOsc.isOpen) {
-            console.log('opening OSC port');
-            myOsc.oscPort = new osc.WebSocketPort({
+dtm.osc = {
+    type: 'dtm.osc',
+    oscPort: null,
+    isOn: false,
+    isOpen: false,
+
+    start: function () {
+        if (typeof(osc) !== 'undefined' && !dtm.osc.isOpen) {
+            dtm.osc.isOpen = true;
+            dtm.log('opening OSC port');
+
+            dtm.osc.oscPort = new osc.WebSocketPort({
                 url: 'ws://localhost:8081'
             });
 
-            myOsc.oscPort.open();
-            myOsc.isOpen = true;
+            dtm.osc.oscPort.open();
 
-            myOsc.oscPort.listen();
+            dtm.osc.oscPort.listen();
 
-            myOsc.oscPort.on('ready', function () {
-                //myOsc.oscPort.socket.onmessage = function (e) {
+            dtm.osc.oscPort.on('ready', function () {
+                //dtm.osc.oscPort.socket.onmessage = function (e) {
                 //    console.log('test');
                 //    var foo =String.fromCharCode.apply(null, new Uint16Array(e));
                 //    console.log("message", e);
                 //};
 
-                myOsc.oscPort.on('message', function (msg) {
+                dtm.osc.oscPort.on('message', function (msg) {
                     switch (msg.address) {
                         case '/test':
                             //console.log(msg.args[0]);
@@ -339,71 +484,50 @@ dtm.osc = function () {
                     }
                 });
 
-                myOsc.oscPort.on("error", function (err) {
+                dtm.osc.oscPort.on("error", function (err) {
                     throw new Error(err);
                 });
             });
+        } else if (dtm.osc.isOpen) {
+            dtm.log('OSC port is already open');
         }
 
-        return myOsc;
-    };
+        return dtm.osc;
+    },
 
-    myOsc.start = myOsc.setup;
-
-    myOsc.stop = function () {
-        if (myOsc.oscPort) {
-            myOsc.oscPort.close();
+    stop: function () {
+        if (dtm.osc.oscPort) {
+            dtm.osc.oscPort.close(1000);
         }
 
-        myOsc.isOpen = false;
-        return myOsc;
-    };
+        dtm.osc.isOpen = false;
+        return dtm.osc;
+    },
 
-    myOsc.on = function (arg, cb) {
-        myOsc.oscPort.on('message', function (msg) {
-            switch (msg.address) {
-                case '/test':
-                    cb(msg.args[0]);
-                    break;
-                default:
-                    break;
+
+    on: function (addr, cb) {
+        dtm.osc.oscPort.on('message', function (msg) {
+            if (addr[0] !== '/') {
+                addr = '/'.concat(addr);
+            }
+            if (msg.address == addr) {
+                cb(msg.args);
             }
         });
-        return myOsc;
-    };
+        return dtm.osc;
+    },
 
-    myOsc.write = function (input) {
-        myOsc.oscPort.send({
-            address: '/guido/score',
-            args: ['set', input]
+    send: function (addr, args) {
+        dtm.osc.oscPort.send({
+            address: addr,
+            args: args
         });
 
-        return myOsc;
-    };
-
-
-    myOsc.send = myOsc.write;
-
-    myOsc.map = function (src, dest) {
-        if (dest.type === 'dtm.array') {
-            myOsc.oscPort.on('message', function (msg) {
-                switch (msg.address) {
-                    case '/test':
-                        dest.queue(msg.args[0]);
-                        break;
-                    default:
-                        break;
-                }
-            });
-        }
-
-        return myOsc;
-    };
-
-
-    myOsc.setup();
-    return myOsc;
+        return dtm.osc;
+    }
 };
+
+dtm.osc.close = dtm.osc.stop;
 
 
 /**
@@ -481,7 +605,7 @@ dtm.analyzer = {
         var type = dtm.anal.checkType(arr);
 
         if (type === 'string') {
-            dtm.log('cannot get the miean value of a string array');
+            dtm.log('cannot get the mean value of a string array');
             return null;
         } else {
             var sum = _.reduce(arr, function (num, sum) {
@@ -640,6 +764,12 @@ dtm.analyzer = {
         return Math.sqrt(dtm.analyzer.mean(res));
     },
 
+    /**
+     * Counts occurrences of each class in the list.
+     * @function module:analyzer#histo
+     * @param input {array}
+     * @returns {array}
+     */
     histo: function (input) {
         var res = [];
         var classes = _.clone(input);
@@ -652,9 +782,16 @@ dtm.analyzer = {
         return res;
     },
 
+    /**
+     * List unique items as "class" in sorted order.
+     * @function module:analyzer#classes
+     * @param input {array}
+     * @returns {array}
+     */
     classes: function (input) {
         return _.uniq(input).sort();
     },
+
 
     uniformity: function (input) {
         return dtm.analyzer.classes(input).length / input.length;
@@ -1188,8 +1325,9 @@ dtm.transform = {
      * -> [3, 7, 4, 6, 5, 0, 2, 1]
      */
     invert: function (arr, center) {
-        // CHECK: center = 0 will give the default value...
-        center = center || dtm.analyzer.mean(arr);
+        if (typeof(center) === 'undefined') {
+            center = dtm.analyzer.mean(arr);
+        }
 
         var res = [];
         _.forEach(arr, function (val, idx) {
@@ -1737,6 +1875,9 @@ dtm.array = function (val, name) {
                 case 'sum':
                     return dtm.analyzer.sum(params.value);
 
+                case 'pdf':
+                    break;
+
 
                 /* ITERATORS */
                 case 'current':
@@ -1747,6 +1888,7 @@ dtm.array = function (val, name) {
                     return params.value[params.index];
 
                 case 'next':
+                    // TODO: increment after return
                     params.index = dtm.value.mod(params.index + params.step, params.length);
                     return params.value[params.index];
 
@@ -1796,6 +1938,7 @@ dtm.array = function (val, name) {
 
                 // TODO: incomplete
                 case 'blockNext':
+                    // TODO: incr w/ the size of block after return
                     params.index = dtm.value.mod(params.index + params.step, params.length);
                     return dtm.transform.getBlock(params.value, params.index, arguments[1]);
 
@@ -1904,8 +2047,19 @@ dtm.array = function (val, name) {
         return array;
     };
 
+    /**
+     * Same as setName.
+     * @funciton module:array#name
+     * @type {Function}
+     */
     array.name = array.setName;
 
+    /**
+     * Sets the value type of the array content. Should be either 'number' or 'string'?
+     * @funciton mudule:array#setType
+     * @param arg
+     * @returns {dtm.array}
+     */
     array.setType = function (arg) {
         params.type = arg.toString();
         return array;
@@ -1951,13 +2105,30 @@ dtm.array = function (val, name) {
         //array.type = res;
     }
 
+    /**
+     * Sets the size of the iteration step.
+     * @function module:array#step
+     * @param val {number}
+     * @returns {dtm.array}
+     */
     array.step = function (val) {
         params.step = Math.round(val);
         return array;
     };
 
+    /**
+     * Same as the step().
+     * @function module:array#stepSize
+     * @type {Function}
+     */
     array.stepSize = array.step;
 
+    /**
+     * Sets the current index within the array for the iterator. Value exceeding the max or min value will be wrapped around.
+     * @function module:array#index
+     * @param val {number}
+     * @returns {dtm.array}
+     */
     array.index = function (val) {
         params.index = dtm.value.mod(Math.round(val), params.length);
         return array;
@@ -2050,7 +2221,11 @@ dtm.array = function (val, name) {
 
     array.original = array.reset;
 
+    array.flush = function () {
+        return array.set([]);
+    };
 
+    array.clear = array.flush;
 
     /* SCALERS */
 
@@ -2072,8 +2247,8 @@ dtm.array = function (val, name) {
     /**
      * Modifies the range of the array.
      * @function module:array#rescale
-     * @param min {number}
-     * @param max {number}
+     * @param min {number} The target minimum value of the scaled range.
+     * @param max {number} The target maximum value of the scaled range.
      * @param [dmin] {number} The minimum of the domain (original) value range.
      * @param [dmax] {number} The maximum of the domain value range.
      * @returns {dtm.array}
@@ -2195,7 +2370,7 @@ dtm.array = function (val, name) {
     array.concat = function (arr) {
         arr = arr || [];
         var temp = params.value;
-        if (arr instanceof Array) {
+        if (arr instanceof Array || typeof(arr) === 'number') {
             temp = temp.concat(arr);
         } else if (arr.type === 'dtm.array') {
             temp = temp.concat(arr.value);
@@ -2203,6 +2378,8 @@ dtm.array = function (val, name) {
         array.set(temp);
         return array;
     };
+
+    array.append = array.concat;
 
     /**
      * Repeats the contents of the current array.
@@ -2320,6 +2497,12 @@ dtm.array = function (val, name) {
      */
     array.rand = array.randomize = array.shuffle;
 
+    /**
+     * Adds new value(s) at the end of the array, and removes the oldest value(s) at the beginning of the array. The size of the array is unchanged.
+     * @function module:array#queue
+     * @param input {number|array}
+     * @returns {dtm.array}
+     */
     array.queue = function (input) {
         if (typeof(input) === 'number') {
             params.value.push(input);
@@ -2334,6 +2517,11 @@ dtm.array = function (val, name) {
         return array.set(params.value);
     };
 
+    /**
+     * Same as array.queue()
+     * @function module:array#fifo
+     * @type {Function}
+     */
     array.fifo = array.queue;
 
     /* ARITHMETIC */
@@ -2425,6 +2613,13 @@ dtm.array = function (val, name) {
      */
     array.abs = array.fwr;
 
+    array.derivative = function (order) {
+        return array;
+    };
+
+    array.diff = function () {
+        return array;
+    };
 
 
     /* NOMINAL */
@@ -2464,6 +2659,11 @@ dtm.array = function (val, name) {
 
     array.class = array.classify = array.classId;
 
+    /**
+     * Converts the array values (such as numbers) into string format.
+     * @function module:array#stringify
+     * @returns {dtm.array}
+     */
     array.stringify = function () {
         return array.set(dtm.transform.stringify(params.value));
     };
@@ -2599,7 +2799,6 @@ dtm.array = function (val, name) {
         array.set(params.value);
         return array;
     };
-
 
     return array;
 };
@@ -3580,6 +3779,10 @@ dtm.clock = function (bpm, subDiv, time) {
 
     clock.div = clock.subdiv = clock.subDiv;
 
+    clock.interval = function (sec) {
+        return clock;
+    };
+
     clock.setTime = function (input) {
         if (typeof(input) === 'Array') {
             clock.time = input;
@@ -3986,6 +4189,22 @@ dtm.clock = function (bpm, subDiv, time) {
         return clock;
     };
 
+    clock.on = function (condition) {
+        switch (condition) {
+            case 'every':
+                clock.callbacks.push(function (c) {
+                    if (c.get('beat') % arguments[1] === 0) {
+                        arguments[2](c);
+                    }
+                });
+                break;
+            default:
+                break;
+        }
+
+        return clock;
+    };
+
     // single-shot schedular
     clock.delayEvent = function () {
         return clock;
@@ -4020,7 +4239,10 @@ dtm.instr = function (arg) {
         isPlaying: false,
         poly: false,
 
+        // what is this for?
         modDest: [],
+
+        modList: [],
 
         sync: true,
         clock: dtm.clock(true, 8),
@@ -4106,7 +4328,8 @@ dtm.instr = function (arg) {
 
     var instr = {
         type: 'dtm.instrument',
-        params: {}
+        //params: {}
+        params: []
     };
 
     /**
@@ -4140,8 +4363,9 @@ dtm.instr = function (arg) {
             case 'beat':
                 return params.clock.get('beat');
 
+            case 'modList':
             case 'params':
-                break;
+                return instr.params;
 
             default:
                 break;
@@ -4299,7 +4523,7 @@ dtm.instr = function (arg) {
         return instr;
     };
 
-    instr.start = instr.run = instr.play;
+    instr.start = instr.print = instr.run = instr.play;
 
     instr.stop = function () {
         if (params.isPlaying === true) {
@@ -4321,59 +4545,29 @@ dtm.instr = function (arg) {
     };
 
 
+    // TODO: implement this
     /**
-     * Modulates the parameter(s) of the instrument.
+     * Modulates a parameter of the instrument by the index or the name.
      * @function module:instr#mod
-     * @arg {number}
+     * @param tgt {number|string}
+     * @param src
      * @returns {dtm.instr}
      */
-    instr.mod = function () {
-        params.transp = dtm.val.rescale(modHandler(arguments[0]), -12, 12, true);
+    instr.mod = function (tgt, src, literal) {
+        var dest = '';
 
-        if (typeof(arguments[0]) === 'number') {
-            if (arguments.length === 1) {
-                var val = arguments[0];
-                _.forEach(params.modDest, function (dest) {
-                    // MEMO: don't use arguments[n] in forEach
-                    dest.mod(val);
-                });
-
-                //modHandler(dtm.val.rescale(val, -12, 12, true), params.transpose);
-
-            } else {
-                _.forEach(arguments, function (val, idx) {
-                    if (params.modDest[idx]) {
-                        params.modDest[idx].mod(val);
-                    }
-                });
-            }
-
-        } else if (typeof(arguments[0]) === 'string') {
-            if (typeof(arguments[1] === 'number') && typeof(instr.params[arguments[0]]) !== 'undefined') {
-                params[arguments[0]] = arguments[1]; // CHECK: ???????
-            }
-
-        } else if (typeof(arguments[0]) === 'object') {
-            var keys = _.keys(arguments[0]);
+        if (typeof(tgt) === 'string') {
+            dest = tgt;
+        } else if (typeof(tgt) === 'number') {
+            // TODO: error check
+            dest = instr.params[tgt];
         }
+
+        instr[dest](src, literal);
+        // maybe feed arguments[1-];
 
         return instr;
     };
-
-    function modHandler(src) {
-        if (typeof(src) === 'number') {
-            return src;
-        } else if (typeof(src) === 'object') {
-            if (src instanceof Array) {
-                var a = dtm.array(src).normalize();
-                return a.get('next');
-            } else if (src.type === 'dtm.array') {
-                return src.get('next');
-            } else if (src.type === 'dtm.model') {
-
-            }
-        }
-    }
 
     function mapper(dest, src) {
         if (typeof(src) === 'number') {
@@ -4438,9 +4632,12 @@ dtm.instr = function (arg) {
         var model;
 
         if (typeof(arg) === 'string') {
-            model = _.find(dtm.modelColl, function (m) {
-                return m.get('name') == arg;
-            });
+            //model = _.find(dtm.modelColl, function (m) {
+            //    return m.get('name') == arg;
+            //});
+            model = dtm.modelCallers[arg]();
+            console.log(model);
+
         } else if (arg.type === 'dtm.model') {
             model = arg;
         }
@@ -4569,20 +4766,33 @@ dtm.model = function (name, categ) {
     };
 
     model.clone = function () {
-        return model;
+        //var m = dtm.model();
+        //m.output = clone(model.output);
+        //_.forEach(model.setter, function (val, key) {
+        //    m.setter[key] = clone(val);
+        //});
+        //m.modules = clone(model.modules);
+        //
+        //return m;
+        return clone(model);
     };
 
     model.assignMethods = function (parent) {
         _.forEach(model.setter, function (method, key) {
             parent[key] = method;
+            parent.params.push(key);
         });
         return model;
     };
 
     model.map = model.assignMethods;
 
-    model.load(name);
+    model.register = function () {
+        dtm.modelCallers[model.get('name')] = arguments.callee.caller;
+        return model;
+    };
 
+    model.load(name);
     return model;
 };
 
@@ -4906,6 +5116,9 @@ dtm.synth = function (type, wt) {
 
         if (params.type === 'noise') {
             src = actx.createBufferSource();
+            if (!noise) {
+                noise = dtm.wa.makeNoise(8192);
+            }
             src.buffer = noise;
             src.loop = true;
         } else if (params.type === 'sampler') {
@@ -5472,7 +5685,7 @@ dtm.master.clock.setMaster(true);
 dtm.master.clock.start();
 dtm.guido = function () {
     var guido = {
-        tupe: 'dtm.guido',
+        type: 'dtm.guido',
         parts: [],
         numParts: 1
     };
@@ -5493,6 +5706,11 @@ dtm.guido = function () {
         10: 'b&',
         11: 'b'
     };
+
+    //guido.dur = {
+    //    1: '/1',
+    //    2: '/'
+    //};
 
     guido.setup = function () {
         return guido;
@@ -5617,7 +5835,7 @@ dtm.inscore = function () {
     return inscore;
 };
 (function (){
-    var m = dtm.model('default', 'instr');
+    var m = dtm.model('default', 'instr').register();
 
     var params = {
         clock: dtm.clock(true, 8),
@@ -5703,7 +5921,6 @@ dtm.inscore = function () {
             params.modules.voice.set(arg);
         } else if (arg.type === 'dtm.synth') {
             params.modules.voice = arg;
-
         }
         return m.parent;
     };
@@ -5954,9 +6171,10 @@ dtm.inscore = function () {
         }
     }
 
+    return m;
 })();
 (function () {
-    var m = dtm.model('testInstr', 'instr');
+    var m = dtm.model('testInstr', 'instr').register();
 
     m.setter.doThis = function () {
         console.log('doing this');
@@ -5978,6 +6196,8 @@ dtm.inscore = function () {
 
         return m.parent;
     };
+
+    return m;
 })();
 (function () {
     var params = {
@@ -6000,16 +6220,16 @@ dtm.inscore = function () {
 
             repeats: null,
             step: null,
-            dur: dtm.array(0.25),
+            dur: dtm.array().fill('consts', 8, 16),
 
             bpm: dtm.array(120),
-            subdiv: dtm.array().fill('consts', 8, 8)
+            subdiv: dtm.array(16)
         }
     };
 
-    var m = dtm.model('testNotation', 'instr');
+    var m = dtm.model('testNotation', 'instr').register();
     var g = dtm.guido();
-    var osc = dtm.osc();
+    var osc = dtm.osc;
 
     m.output = function (c) {
         osc.start();
@@ -6022,23 +6242,24 @@ dtm.inscore = function () {
         var oct = [];
         var div = params.modules.subdiv.get();
         var p = params.modules.pitch.get();
+        var dur = params.modules.dur.get();
 
         //var vol = params.modules.volume.get('next');
-        //var dur = params.modules.dur.get('next');
         //var r = params.modules.rhythm.get('next');
 
         //var sc = params.modules.scale.get();
         //var tr = params.modules.transp.get('next');
         //var ct = params.modules.chord.get();
 
+
         for (var i = 0; i < 8; i++) {
             pc[i] = g.pc[dtm.val.mod(p[i], 12)];
             oct[i] = (p[i] - dtm.val.mod(p[i], 12)) / 12 - 4;
-            res[i] = pc[i] + oct[i].toString() + '/' + div[i];
+            res[i] = pc[i] + oct[i].toString() + '*' + dur[i] + '/' + div[0];
         }
 
         res = res.join(' ');
-        osc.send('[\\instr<"Flute", dx=-1.65cm, dy=-0.5cm>\\meter<"4/4"> \\clef<"g"> ' + res + ']');
+        osc.send('[\\instr<"Flute", dx=-1.65cm, dy=-0.5cm>\\meter<"4/4"> \\clef<"f"> ' + res + ']');
 
         return m.parent;
     };
@@ -6067,7 +6288,23 @@ dtm.inscore = function () {
             params.modules.subdiv.round();
         } else {
             params.modules.subdiv.normalize().scale(1, 5).round().powof(2);
+            //params.modules.subdiv.normalize();
+            //params.modules.mult(params.measures/params.modules.subdiv.get('sum'));
+            //params.modules.add(-1).mult(-1).scale(1, 5).round().powof(2);
         }
+        return m.parent;
+    };
+
+    m.setter.dur = function (src, literal) {
+        mapper('dur', src);
+
+        if (literal) {
+            params.modules.dur.round();
+        } else {
+            params.modules.dur.normalize();
+            params.modules.dur.mult(params.measures * params.modules.subdiv.get(0)/params.modules.dur.get('sum')).round();
+        }
+
         return m.parent;
     };
 
@@ -6095,5 +6332,216 @@ dtm.inscore = function () {
         }
     }
 
+    return m;
+})();
+(function () {
+    var params = {
+        clock: dtm.clock(true, 16),
+        sync: true,
+        callbacks: [],
+
+        measures: 4,
+        time: '4/4',
+
+        updateFreq: 1/4,
+
+        modules: {
+            voice: dtm.synth(),
+            wavetable: null,
+            volume: dtm.array(1),
+            scale: dtm.array().fill('seq', 12),
+            rhythm: dtm.array(1),
+            pitch: dtm.array().fill('line', 8, 60, 72).round(),
+            transp: dtm.array(0),
+            chord: dtm.array(0),
+
+            repeats: null,
+            step: null,
+            dur: dtm.array().fill('consts', 8, 16),
+
+            bpm: dtm.array(120),
+            subdiv: dtm.array(16),
+
+            note: dtm.array(72),
+            pos: dtm.array(0)
+        }
+    };
+
+    var m = dtm.model('decatur', 'instr').register();
+
+    var g = dtm.guido();
+    var osc = dtm.osc;
+
+    m.output = function (c) {
+        osc.start();
+
+        var time = params.time.split('/');
+        var len = time[0] / time[1] *  params.measures;
+
+        var res = [];
+        var pc = [];
+        var oct = [];
+        var div = params.modules.subdiv.get();
+        var p = params.modules.pitch.get();
+        var dur = params.modules.dur.get();
+
+        //var vol = params.modules.volume.get('next');
+        //var r = params.modules.rhythm.get('next');
+
+        //var sc = params.modules.scale.get();
+        //var tr = params.modules.transp.get('next');
+        //var ct = params.modules.chord.get();
+
+
+        for (var i = 0; i < 8; i++) {
+            pc[i] = g.pc[dtm.val.mod(p[i], 12)];
+            oct[i] = (p[i] - dtm.val.mod(p[i], 12)) / 12 - 4;
+            res[i] = pc[i] + oct[i].toString() + '*' + dur[i] + '/' + div[0];
+        }
+
+        res = res.join(' ');
+        osc.send('/guido/score', ['set', '[\\instr<"Flute", dx=-1.65cm, dy=-0.5cm>\\meter<"4/4"> \\repeatBegin ' + res + ' \\repeatEnd ]']);
+
+        return m.parent;
+    };
+
+    m.setter.measures = function (val) {
+        params.measures = val;
+        return m.parent;
+    };
+
+    m.setter.pitch = function (src, literal) {
+        mapper('pitch', src);
+
+        if (literal) {
+            params.modules.pitch.round();
+        } else {
+            params.modules.pitch.normalize().rescale(60, 90).round();
+        }
+
+        return m.parent;
+    };
+
+    m.setter.subDiv = function (src, literal) {
+        mapper('subdiv', src);
+
+        if (literal) {
+            params.modules.subdiv.round();
+        } else {
+            params.modules.subdiv.normalize().scale(1, 5).round().powof(2);
+            //params.modules.subdiv.normalize();
+            //params.modules.mult(params.measures/params.modules.subdiv.get('sum'));
+            //params.modules.add(-1).mult(-1).scale(1, 5).round().powof(2);
+        }
+        return m.parent;
+    };
+
+    m.setter.len = m.setter.note = m.setter.div = m.setter.subdiv = m.setter.subDiv;
+
+    m.setter.dur = function (src, literal) {
+        mapper('dur', src);
+
+        if (literal) {
+            params.modules.dur.round();
+        } else {
+            params.modules.dur.normalize();
+            params.modules.dur.mult(params.measures * params.modules.subdiv.get(0)/params.modules.dur.get('sum')).round();
+        }
+
+        return m.parent;
+    };
+
+    m.setter.test = function (src1, src2, literal) {
+        if (!literal) {
+
+        }
+
+        return m.parent;
+    };
+
+    function mapper(dest, src) {
+        if (typeof(src) === 'number') {
+            params.modules[dest] = dtm.array(src);
+        } else if (typeof(src) === 'string') {
+            params.modules[dest] = dtm.array(src).classify();
+        } else {
+            if (src instanceof Array) {
+                params.modules[dest] = dtm.array(src);
+            } else if (src.type === 'dtm.array') {
+                if (src.get('type') === 'string') {
+                    params.modules[dest] = src.clone().classify();
+                } else {
+                    params.modules[dest] = src.clone();
+                }
+            } else if (src.type === 'dtm.model') {
+
+            } else if (src.type === 'dtm.synth') {
+                params.modules[dest] = src;
+            }
+        }
+    }
+
+    return m;
+})();
+(function () {
+    var m = dtm.model('csd-score', 'instr').register();
+
+    m.modules = {
+        pitch: dtm.a(72),
+        div: dtm.a(16)
+    };
+
+    m.output = function (c) {
+        var p = m.modules.pitch.get('next');
+        var div = m.modules.div.get('next');
+        c.div(div);
+
+        dtm.osc.send('/csd/event', ['i1', 0, 0.1, p]);
+        return m.parent;
+    };
+
+    m.setter.pitch = function (src, literal) {
+        mapper(src, 'pitch');
+
+        if (!literal) {
+            m.modules.pitch.normalize().rescale(60, 90).round();
+        }
+
+        return m.parent;
+    };
+
+    m.setter.div = function (src, literal) {
+        mapper(src, 'div');
+
+        if (!literal) {
+            m.modules.div.normalize().scale(1, 5).round().powof(2);
+        }
+        return m.parent;
+    };
+
+    // TODO: this needs to be a core function?
+    function mapper(src, dest) {
+        if (typeof(src) === 'number') {
+            m.modules[dest] = dtm.array(src);
+        } else if (typeof(src) === 'string') {
+            m.modules[dest] = dtm.array(src).classify();
+        } else {
+            if (src instanceof Array) {
+                m.modules[dest] = dtm.array(src);
+            } else if (src.type === 'dtm.array') {
+                if (src.get('type') === 'string') {
+                    m.modules[dest] = src.clone().classify();
+                } else {
+                    m.modules[dest] = src.clone();
+                }
+            } else if (src.type === 'dtm.model') {
+
+            } else if (src.type === 'dtm.synth') {
+                m.modules[dest] = src;
+            }
+        }
+    }
+
+    return m;
 })();
 })();
