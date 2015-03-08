@@ -1,17 +1,21 @@
 (function () {
-    var m = dtm.model('csd-score', 'instr').register();
+    var m = dtm.model('csd', 'instr').register();
 
-    m.modules = {
-        pitch: dtm.a(72),
-        div: dtm.a(16)
+    var mods = {
+        pitch: dtm.a(60),
+        div: dtm.a(8)
     };
 
-    m.output = function (c) {
-        var p = m.modules.pitch.get('next');
-        var div = m.modules.div.get('next');
-        c.div(div);
+    var csd = null;
+    if (typeof(csound) !== 'undefined') {
+        csd = csound;
+    }
 
-        dtm.osc.send('/csd/event', ['i1', 0, 0.1, p]);
+    m.output = function (c) {
+        var p = mods.pitch.get('next');
+        c.div(mods.div.get('next'));
+
+        csd.Event('i1 0 0.2 ' + p);
         return m.parent;
     };
 
@@ -19,7 +23,7 @@
         mapper(src, 'pitch');
 
         if (!literal) {
-            m.modules.pitch.normalize().rescale(60, 90).round();
+            mods.pitch.normalize().scale(60, 90);
         }
 
         return m.parent;
@@ -29,30 +33,34 @@
         mapper(src, 'div');
 
         if (!literal) {
-            m.modules.div.normalize().scale(1, 5).round().powof(2);
+            mods.div.normalize().scale(0, 5).round().powof(2);
         }
+
         return m.parent;
     };
 
-    // TODO: this needs to be a core function?
+    m.setter.file = function (src, literal) {
+        return m.parent;
+    };
+
     function mapper(src, dest) {
         if (typeof(src) === 'number') {
-            m.modules[dest] = dtm.array(src);
+            mods[dest] = dtm.array(src);
         } else if (typeof(src) === 'string') {
-            m.modules[dest] = dtm.array(src).classify();
+            mods[dest] = dtm.array(src).classify();
         } else {
             if (src instanceof Array) {
-                m.modules[dest] = dtm.array(src);
+                mods[dest] = dtm.array(src);
             } else if (src.type === 'dtm.array') {
                 if (src.get('type') === 'string') {
-                    m.modules[dest] = src.clone().classify();
+                    mods[dest] = src.clone().classify();
                 } else {
-                    m.modules[dest] = src.clone();
+                    mods[dest] = src.clone();
                 }
             } else if (src.type === 'dtm.model') {
 
             } else if (src.type === 'dtm.synth') {
-                m.modules[dest] = src;
+                mods[dest] = src;
             }
         }
     }

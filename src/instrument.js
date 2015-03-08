@@ -412,8 +412,6 @@ dtm.instr = function (arg) {
             //    return m.get('name') == arg;
             //});
             model = dtm.modelCallers[arg]();
-            console.log(model);
-
         } else if (arg.type === 'dtm.model') {
             model = arg;
         }

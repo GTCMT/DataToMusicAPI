@@ -1,11 +1,12 @@
 (function () {
     var params = {
-        clock: dtm.clock(true, 16),
-        sync: true,
+        name: 'Flute',
         callbacks: [],
 
         measures: 4,
         time: '4/4',
+
+        clef: 'g',
 
         updateFreq: 1/4,
 
@@ -35,10 +36,9 @@
 
     var g = dtm.guido();
     var osc = dtm.osc;
+    //osc.start();
 
     m.output = function (c) {
-        osc.start();
-
         var time = params.time.split('/');
         var len = time[0] / time[1] *  params.measures;
 
@@ -64,7 +64,11 @@
         }
 
         res = res.join(' ');
-        osc.send('/guido/score', ['set', '[\\instr<"Flute", dx=-1.65cm, dy=-0.5cm>\\meter<"4/4"> \\repeatBegin ' + res + ' \\repeatEnd ]']);
+        var name = '\\instr<"' + params.name + '", dx=-1.65cm, dy=-0.5cm>';
+
+        var clef = '\\clef<"' + params.clef + '">';
+
+        osc.send('/guido/score', [params.name, '[' + name + clef + '\\meter<"4/4"> \\repeatBegin ' + res + ' \\repeatEnd ]']);
 
         return m.parent;
     };
@@ -120,6 +124,16 @@
 
         }
 
+        return m.parent;
+    };
+
+    m.setter.name = function (src) {
+        params.name = src;
+        return m.parent;
+    };
+
+    m.setter.clef = function (src) {
+        params.clef = src;
         return m.parent;
     };
 

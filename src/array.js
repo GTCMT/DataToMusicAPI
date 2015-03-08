@@ -576,7 +576,18 @@ dtm.array = function (val, name) {
         return array;
     };
 
+    /**
+     * Scales the values so that the sum fits the target value. Useful, for example, for fitting intervallic values to a specific measure length.
+     * @function module:array#fitSum
+     * @param tgt {number} If the round argument is true, the target value is also rounded.
+     * @param [round=false] {boolean}
+     * @returns {dtm.array}
+     */
+    array.fitSum = function (tgt, round) {
+        return array.set(params.value, tgt, round);
+    };
 
+    array.fitsum = array.fitSum;
 
     /* LIST OPERATIONS*/
 

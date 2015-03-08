@@ -364,6 +364,37 @@ dtm.transform = {
         return res;
     },
 
+    fitSum: function (arr, tgt, round) {
+        if (typeof(round) === 'undefined') {
+            round = false;
+        }
+
+        var sum = dtm.analyzer.sum(arr);
+
+        if (sum === 0) {
+            arr = dtm.transform.add(arr, 0.000001);
+            sum = dtm.analyzer.sum(arr);
+        }
+
+        if (round) {
+            tgt = Math.round(tgt);
+        }
+
+        var res = dtm.transform.mult(arr, 1/sum * tgt);
+
+        if (round) {
+            res = dtm.transform.round(res);
+
+            if (dtm.analyzer.sum(res) > tgt) {
+                res[arr.length-1]--;
+            } else if (dtm.analyzer.sum(res) < tgt) {
+                res[arr.length-1]++;
+            }
+        }
+
+        return res;
+    },
+
     /* ARITHMETIC */
 
     /**

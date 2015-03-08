@@ -6,7 +6,7 @@
  */
 
 var params = {
-    isLogging: true
+    isLogging: false
 };
 
 /**
@@ -1180,6 +1180,37 @@ dtm.transform = {
         return res;
     },
 
+    fitSum: function (arr, tgt, round) {
+        if (typeof(round) === 'undefined') {
+            round = false;
+        }
+
+        var sum = dtm.analyzer.sum(arr);
+
+        if (sum === 0) {
+            arr = dtm.transform.add(arr, 0.000001);
+            sum = dtm.analyzer.sum(arr);
+        }
+
+        if (round) {
+            tgt = Math.round(tgt);
+        }
+
+        var res = dtm.transform.mult(arr, 1/sum * tgt);
+
+        if (round) {
+            res = dtm.transform.round(res);
+
+            if (dtm.analyzer.sum(res) > tgt) {
+                res[arr.length-1]--;
+            } else if (dtm.analyzer.sum(res) < tgt) {
+                res[arr.length-1]++;
+            }
+        }
+
+        return res;
+    },
+
     /* ARITHMETIC */
 
     /**
@@ -2346,7 +2377,18 @@ dtm.array = function (val, name) {
         return array;
     };
 
+    /**
+     * Scales the values so that the sum fits the target value. Useful, for example, for fitting intervallic values to a specific measure length.
+     * @function module:array#fitSum
+     * @param tgt {number} If the round argument is true, the target value is also rounded.
+     * @param [round=false] {boolean}
+     * @returns {dtm.array}
+     */
+    array.fitSum = function (tgt, round) {
+        return array.set(params.value, tgt, round);
+    };
 
+    array.fitsum = array.fitSum;
 
     /* LIST OPERATIONS*/
 
@@ -4636,8 +4678,6 @@ dtm.instr = function (arg) {
             //    return m.get('name') == arg;
             //});
             model = dtm.modelCallers[arg]();
-            console.log(model);
-
         } else if (arg.type === 'dtm.model') {
             model = arg;
         }
@@ -6336,12 +6376,13 @@ dtm.inscore = function () {
 })();
 (function () {
     var params = {
-        clock: dtm.clock(true, 16),
-        sync: true,
+        name: 'Flute',
         callbacks: [],
 
         measures: 4,
         time: '4/4',
+
+        clef: 'g',
 
         updateFreq: 1/4,
 
@@ -6371,10 +6412,9 @@ dtm.inscore = function () {
 
     var g = dtm.guido();
     var osc = dtm.osc;
+    //osc.start();
 
     m.output = function (c) {
-        osc.start();
-
         var time = params.time.split('/');
         var len = time[0] / time[1] *  params.measures;
 
@@ -6400,7 +6440,11 @@ dtm.inscore = function () {
         }
 
         res = res.join(' ');
-        osc.send('/guido/score', ['set', '[\\instr<"Flute", dx=-1.65cm, dy=-0.5cm>\\meter<"4/4"> \\repeatBegin ' + res + ' \\repeatEnd ]']);
+        var name = '\\instr<"' + params.name + '", dx=-1.65cm, dy=-0.5cm>';
+
+        var clef = '\\clef<"' + params.clef + '">';
+
+        osc.send('/guido/score', [params.name, '[' + name + clef + '\\meter<"4/4"> \\repeatBegin ' + res + ' \\repeatEnd ]']);
 
         return m.parent;
     };
@@ -6459,6 +6503,16 @@ dtm.inscore = function () {
         return m.parent;
     };
 
+    m.setter.name = function (src) {
+        params.name = src;
+        return m.parent;
+    };
+
+    m.setter.clef = function (src) {
+        params.clef = src;
+        return m.parent;
+    };
+
     function mapper(dest, src) {
         if (typeof(src) === 'number') {
             params.modules[dest] = dtm.array(src);
@@ -6484,7 +6538,80 @@ dtm.inscore = function () {
     return m;
 })();
 (function () {
-    var m = dtm.model('csd-score', 'instr').register();
+    var m = dtm.model('csd', 'instr').register();
+
+    var mods = {
+        pitch: dtm.a(60),
+        div: dtm.a(8)
+    };
+
+    var csd = null;
+    if (typeof(csound) !== 'undefined') {
+        csd = csound;
+    }
+
+    m.output = function (c) {
+        var p = mods.pitch.get('next');
+        c.div(mods.div.get('next'));
+
+        csd.Event('i1 0 0.2 ' + p);
+        return m.parent;
+    };
+
+    m.setter.pitch = function (src, literal) {
+        mapper(src, 'pitch');
+
+        if (!literal) {
+            mods.pitch.normalize().scale(60, 90);
+        }
+
+        return m.parent;
+    };
+
+    m.setter.div = function (src, literal) {
+        mapper(src, 'div');
+
+        if (!literal) {
+            mods.div.normalize().scale(0, 5).round().powof(2);
+        }
+
+        return m.parent;
+    };
+
+    m.setter.file = function (src, literal) {
+        return m.parent;
+    };
+
+    function mapper(src, dest) {
+        if (typeof(src) === 'number') {
+            mods[dest] = dtm.array(src);
+        } else if (typeof(src) === 'string') {
+            mods[dest] = dtm.array(src).classify();
+        } else {
+            if (src instanceof Array) {
+                mods[dest] = dtm.array(src);
+            } else if (src.type === 'dtm.array') {
+                if (src.get('type') === 'string') {
+                    mods[dest] = src.clone().classify();
+                } else {
+                    mods[dest] = src.clone();
+                }
+            } else if (src.type === 'dtm.model') {
+
+            } else if (src.type === 'dtm.synth') {
+                mods[dest] = src;
+            }
+        }
+    }
+
+    return m;
+})();
+(function () {
+    var m = dtm.model('csd-osc', 'instr').register();
+
+    var params = {
+        iNum: 1
+    };
 
     m.modules = {
         pitch: dtm.a(72),
@@ -6496,7 +6623,14 @@ dtm.inscore = function () {
         var div = m.modules.div.get('next');
         c.div(div);
 
-        dtm.osc.send('/csd/event', ['i1', 0, 0.1, p]);
+        var i = params.iNum;
+        if (typeof(i) === 'number') {
+            i = 'i'.concat(i);
+        } else {
+            i = 'i\\"'+i+'\\"';
+        }
+
+        dtm.osc.send('/csd/event', [i, 0, 0.1, p]);
         return m.parent;
     };
 
@@ -6516,6 +6650,11 @@ dtm.inscore = function () {
         if (!literal) {
             m.modules.div.normalize().scale(1, 5).round().powof(2);
         }
+        return m.parent;
+    };
+
+    m.setter.name = function (src, literal) {
+        params.iNum = src;
         return m.parent;
     };
 

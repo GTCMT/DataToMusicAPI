@@ -10,65 +10,79 @@ describe('array helper functions', function () {
         //it('should ...')
     });
 
-    describe('normalize', function () {
+    describe('scalers', function () {
+        describe('normalize', function () {
+            describe('normalize autmatically to 0-1 range', function () {
+                var input = [];
+                for (var i = 0; i < 8; i++) {
+                    input[i] = _.random(-10, 10);
+                }
+                var norm = dtm.transform.normalize(input);
 
-        describe('normalize autmatically to 0-1 range', function () {
-            var input = [];
-            for (var i = 0; i < 8; i++) {
-                input[i] = _.random(-10, 10);
-            }
-            var norm = dtm.transform.normalize(input);
+                it('should have 0 as min, 1 as max', function () {
+                    expect(_.min(norm)).toBe(0);
+                    expect(_.max(norm)).toBe(1);
+                });
+            });
 
-            it('should have 0 as min, 1 as max', function () {
-                expect(_.min(norm)).toBe(0);
-                expect(_.max(norm)).toBe(1);
+            describe('normalize w/ domain min max', function () {
+                var input = [0, 2, 4, 1, 3, 5];
+                var dmin = -0;
+                var dmax = 20;
+
+                var norm = dtm.transform.normalize(input, dmin, dmax);
+                it('should have the max val of 0.25', function () {
+                    expect(_.max(norm)).toBe(0.25);
+                })
             });
         });
 
-        describe('normalize w/ domain min max', function () {
-            var input = [0, 2, 4, 1, 3, 5];
-            var dmin = -0;
-            var dmax = 20;
+        describe('rescale', function () {
 
-            var norm = dtm.transform.normalize(input, dmin, dmax);
-            it('should have the max val of 0.25', function () {
-                expect(_.max(norm)).toBe(0.25);
+            describe('rescale to the full range specified', function () {
+                var input = [];
+
+                var max = 1;
+                var min = -1;
+
+                for (var i = 0; i < 8; i++) {
+                    input[i] = _.random(0, 10);
+                }
+
+                var output = dtm.transform.rescale(input, min, max);
+                it('should have corresponding min & max', function () {
+                    expect(_.max(output)).toBe(max);
+                    expect(_.min(output)).toBe(min);
+                });
+            });
+
+            describe('rescale to the range with domain range specified', function () {
+                var input = [0, 2, 4, 1, 3, 5];
+                var dmin = 0;
+                var dmax = 10;
+
+                var min = -1;
+                var max = 1;
+
+                var output = dtm.transform.rescale(input, min, max, dmin, dmax);
+
+                it('should have max of ...', function () {
+                    expect(_.max(output)).toBe(0);
+                    expect(_.min(output)).toBe(-1);
+                })
             })
         });
-    });
 
-    describe('rescale', function () {
+        describe('fitSum', function () {
+            var input = [3, 5, 2, 4.5, 1, 7, 9];
 
-        describe('rescale to the full range specified', function () {
-            var input = [];
+            it('should return the sum of 32', function () {
+                var tgt = 30;
+                var fracOut = dtm.transform.fitSum(input, tgt, false);
+                expect(dtm.analyzer.sum(fracOut)).toBe(tgt);
 
-            var max = 1;
-            var min = -1;
-
-            for (var i = 0; i < 8; i++) {
-                input[i] = _.random(0, 10);
-            }
-
-            var output = dtm.transform.rescale(input, min, max);
-            it('should have corresponding min & max', function () {
-                expect(_.max(output)).toBe(max);
-                expect(_.min(output)).toBe(min);
-            });
-        });
-
-        describe('rescale to the range with domain range specified', function () {
-            var input = [0, 2, 4, 1, 3, 5];
-            var dmin = 0;
-            var dmax = 10;
-
-            var min = -1;
-            var max = 1;
-
-            var output = dtm.transform.rescale(input, min, max, dmin, dmax);
-
-            it('should have max of ...', function () {
-                expect(_.max(output)).toBe(0);
-                expect(_.min(output)).toBe(-1);
+                var roundedOut = dtm.transform.fitSum(input, tgt, true);
+                expect(dtm.analyzer.sum(roundedOut)).toBe(Math.round(tgt));
             })
         })
     });
