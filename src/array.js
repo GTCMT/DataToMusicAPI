@@ -584,7 +584,7 @@ dtm.array = function (val, name) {
      * @returns {dtm.array}
      */
     array.fitSum = function (tgt, round) {
-        return array.set(params.value, tgt, round);
+        return array.set(dtm.transform.fitSum(params.value, tgt, round));
     };
 
     array.fitsum = array.fitSum;
