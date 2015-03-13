@@ -23,31 +23,6 @@ dtm.instr = function (arg) {
         sync: true,
         clock: dtm.clock(true, 8),
 
-        // default model coll
-        //models: {
-        //    voice: dtm.synth(),
-        //    wavetable: null,
-        //    volume: dtm.array(1),
-        //    scale: dtm.array().fill('seq', 12),
-        //    rhythm: dtm.array(1),
-        //    pitch: dtm.array(69),
-        //    transp: dtm.array(0),
-        //    chord: dtm.array(0),
-        //    bpm: dtm.array(120),
-        //    subdiv: dtm.array(8),
-        //    repeats: null,
-        //    step: null,
-        //
-        //    atk: null,
-        //    dur: dtm.array(0.25),
-        //    lpf: null,
-        //    res: dtm.array(0),
-        //    comb: null,
-        //    delay: null
-        //},
-        //
-        //pqRound: false,
-
         instrModel: null,
 
         callbacks: [],

@@ -609,7 +609,9 @@ dtm.array = function (val, name) {
      * @returns {dtm.array}
      */
     array.concat = function (arr) {
-        arr = arr || [];
+        if (typeof(arr) === 'undefined') {
+            arr = [];
+        }
         var temp = params.value;
         if (arr instanceof Array || typeof(arr) === 'number') {
             temp = temp.concat(arr);

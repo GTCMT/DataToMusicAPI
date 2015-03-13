@@ -11,7 +11,7 @@
         updateFreq: 1/4,
 
         durFx: ['rest', 'stacc', 'half', 'normal', 'tenuto', 'slur'],
-        dynamicsFx: ['pp', 'p', 'mp', 'mf', 'f', 'ff']
+        dynFx: ['pp', 'p', 'mp', 'mf', 'f', 'ff']
     };
 
     var mods = {
@@ -38,7 +38,7 @@
 
     var m = dtm.model('decatur', 'instr').register();
 
-    var g = dtm.guido();
+    var g = dtm.guido;
     var osc = dtm.osc;
     //osc.start();
 
@@ -58,14 +58,12 @@
 
         var div = mods.subdiv.get();
         var p = mods.pitch.clone().fit(numNotes, 'step').get();
-        var len = mods.note.clone().fitSum(params.measures * mods.subdiv.get(0), true).get();
+        var len = mods.note.clone().fit(numNotes, 'step').fitSum(params.measures * mods.subdiv.get(0), true).get();
 
         //var slur = mods.slur.clone().fit(numNotes, 'step').get();
         var dur = mods.dur.clone().fit(numNotes, 'step').scale(0, 5).round().get();
 
         var dyn = mods.dyn.clone().fit(numNotes, 'step').get();
-
-        console.log(len);
 
         for (var i = 0; i < numNotes; i++) {
             seq[i] = '';
@@ -85,7 +83,7 @@
             }
             accum += len[i];
 
-            pc[i] = g.pc[dtm.val.mod(p[i], 12)];
+            pc[i] = g.pitchClass[dtm.val.mod(p[i], 12)];
             oct[i] = (p[i] - dtm.val.mod(p[i], 12)) / 12 - 4;
 
             // pitch
@@ -150,11 +148,11 @@
 
             if (i > 0) {
                 if (dyn[i] != dyn[i-1] && params.durFx[dur[i]] != 'rest') {
-                    seq[i] = '\\intens<"' + params.dynamicsFx[dyn[i]] + '", dx=-0.3, dy=-4> ' + seq[i];
+                    seq[i] = '\\intens<"' + params.dynFx[dyn[i]] + '", dx=-0.3, dy=-4> ' + seq[i];
                 }
             } else {
                 if (params.durFx[dur[i]] != 'rest') {
-                    seq[i] = '\\intens<"' + params.dynamicsFx[dyn[i]] + '", dx=-0.3, dy=-4> ' + seq[i];
+                    seq[i] = '\\intens<"' + params.dynFx[dyn[i]] + '", dx=-0.3, dy=-4> ' + seq[i];
                 }
             }
 

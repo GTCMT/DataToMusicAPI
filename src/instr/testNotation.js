@@ -27,7 +27,7 @@
     };
 
     var m = dtm.model('testNotation', 'instr').register();
-    var g = dtm.guido();
+    var g = dtm.guido;
     var osc = dtm.osc;
 
     m.output = function (c) {
@@ -52,7 +52,7 @@
 
 
         for (var i = 0; i < 8; i++) {
-            pc[i] = g.pc[dtm.val.mod(p[i], 12)];
+            pc[i] = g.pitchClass[dtm.val.mod(p[i], 12)];
             oct[i] = (p[i] - dtm.val.mod(p[i], 12)) / 12 - 4;
             res[i] = pc[i] + oct[i].toString() + '*' + dur[i] + '/' + div[0];
         }

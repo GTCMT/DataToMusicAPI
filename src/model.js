@@ -6,6 +6,7 @@
 // TODO: modeling - sharing information...
 
 /**
+ * Creates a new empty musical model object, or overloads on an existing model in the collection.
  * @function module:model.model
  * @param [name] {string} Give it a unique name.
  * @param [categ] {string}
@@ -23,9 +24,6 @@ dtm.model = function (name, categ) {
     var model = {
         type: 'dtm.model',
 
-        // assigning array or data/coll???
-        //array: null,
-        //data: null,
         parent: {},
         setter: {},
 
@@ -126,6 +124,11 @@ dtm.model = function (name, categ) {
 
     model.map = model.assignMethods;
 
+    /**
+     * Call this when creating a new model, which you may want to reuse with new instanciation.
+     * @function module:model#register
+     * @returns {dtm.model}
+     */
     model.register = function () {
         dtm.modelCallers[model.get('name')] = arguments.callee.caller;
         return model;

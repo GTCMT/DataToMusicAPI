@@ -7,14 +7,15 @@
  * Creates a new instance of clock. Don't put "new".
  * @function module:clock.clock
  * @param [bpm=60] {number} Tempo in beats-per-minute. Recommended value range is around 60-140.
- * @param [subDiv=4] {integer} Sub division / tick speed. Recommended: 4, 8, 16, etc.
+ * @param [subDiv=4] {number} Sub division / tick speed. Recommended: 4, 8, 16, etc.
+ * @param [autoStart=true] {boolean} If true, the clock is started when it is instantiated. Works well with a synced clock.
  * @returns {dtm.clock} a new clock object
  * @example
  *
  * var cl = dtm.clock(120);
  * cl.start();
  */
-dtm.clock = function (bpm, subDiv, time) {
+dtm.clock = function (bpm, subDiv, autoStart) {
     var params = {
         // webAudio, animationFrame, date, hrtime (node)
         source: 'animationFrame',
@@ -33,7 +34,9 @@ dtm.clock = function (bpm, subDiv, time) {
         previous: 0,
         reported: 0,
         resolution: 480,
-        beat: 0
+        beat: 0,
+
+        autoStart: true
     };
 
     var clock = {
@@ -109,7 +112,7 @@ dtm.clock = function (bpm, subDiv, time) {
      * @param [time] {number}
      * @returns {dtm.clock}
      */
-    clock.set = function (bpm, subDiv, time) {
+    clock.set = function (bpm, subDiv, autoStart) {
         if (typeof(bpm) === 'number') {
             params.bpm = bpm;
             params.sync = false;
@@ -121,8 +124,8 @@ dtm.clock = function (bpm, subDiv, time) {
             params.subDiv = subDiv;
         }
 
-        if (typeof(time) !== 'undefined') {
-            params.time = time;
+        if (typeof(autoStart) !== 'undefined') {
+            params.autoStart = autoStart;
         }
 
         return clock;
@@ -615,9 +618,13 @@ dtm.clock = function (bpm, subDiv, time) {
 
     if (!params.isMaster && typeof(dtm.master) !== 'undefined') {
         dtm.master.clock.add(clock.tickSynced);
+
+        if (params.autoStart) {
+            clock.start();
+        }
     }
 
-    clock.set(bpm, subDiv, time);
+    clock.set(bpm, subDiv, autoStart);
 
     return clock;
 };

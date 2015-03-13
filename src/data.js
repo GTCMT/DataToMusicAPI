@@ -335,6 +335,38 @@ dtm.data = function (arg, cb, type) {
         return data;
     };
 
+    data.init = function (arg) {
+        if (typeof(arg) === 'number') {
+            for (var i = 0; i < arg; i++) {
+                params.arrays[i] = dtm.array();
+                params.keys[i] = i.toString();
+                params.size.col = arg;
+                params.size.row = 0;
+            }
+        }
+        return data;
+    };
+
+    data.append = function (arg) {
+        if (arg instanceof Array) {
+            for (var i = 0; i < arg.length; i++) {
+                if (typeof(params.arrays[i]) !== 'undefined') {
+                    params.arrays[i].append(arg[i]);
+                }
+            }
+            params.size.row++;
+        }
+        return data;
+    };
+
+    data.flush = function () {
+        _.forEach(params.arrays, function (a) {
+            a.flush();
+        });
+        params.size.row = 0;
+        return data;
+    };
+
     if (typeof(arg) !== 'undefined') {
         if (typeof(arg) === 'string') {
             return data.load(arg);

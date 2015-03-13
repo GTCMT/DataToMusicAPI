@@ -2410,7 +2410,9 @@ dtm.array = function (val, name) {
      * @returns {dtm.array}
      */
     array.concat = function (arr) {
-        arr = arr || [];
+        if (typeof(arr) === 'undefined') {
+            arr = [];
+        }
         var temp = params.value;
         if (arr instanceof Array || typeof(arr) === 'number') {
             temp = temp.concat(arr);
@@ -3628,6 +3630,38 @@ dtm.data = function (arg, cb, type) {
         return data;
     };
 
+    data.init = function (arg) {
+        if (typeof(arg) === 'number') {
+            for (var i = 0; i < arg; i++) {
+                params.arrays[i] = dtm.array();
+                params.keys[i] = i.toString();
+                params.size.col = arg;
+                params.size.row = 0;
+            }
+        }
+        return data;
+    };
+
+    data.append = function (arg) {
+        if (arg instanceof Array) {
+            for (var i = 0; i < arg.length; i++) {
+                if (typeof(params.arrays[i]) !== 'undefined') {
+                    params.arrays[i].append(arg[i]);
+                }
+            }
+            params.size.row++;
+        }
+        return data;
+    };
+
+    data.flush = function () {
+        _.forEach(params.arrays, function (a) {
+            a.flush();
+        });
+        params.size.row = 0;
+        return data;
+    };
+
     if (typeof(arg) !== 'undefined') {
         if (typeof(arg) === 'string') {
             return data.load(arg);
@@ -3648,14 +3682,15 @@ dtm.load = dtm.d = dtm.data;
  * Creates a new instance of clock. Don't put "new".
  * @function module:clock.clock
  * @param [bpm=60] {number} Tempo in beats-per-minute. Recommended value range is around 60-140.
- * @param [subDiv=4] {integer} Sub division / tick speed. Recommended: 4, 8, 16, etc.
+ * @param [subDiv=4] {number} Sub division / tick speed. Recommended: 4, 8, 16, etc.
+ * @param [autoStart=true] {boolean} If true, the clock is started when it is instantiated. Works well with a synced clock.
  * @returns {dtm.clock} a new clock object
  * @example
  *
  * var cl = dtm.clock(120);
  * cl.start();
  */
-dtm.clock = function (bpm, subDiv, time) {
+dtm.clock = function (bpm, subDiv, autoStart) {
     var params = {
         // webAudio, animationFrame, date, hrtime (node)
         source: 'animationFrame',
@@ -3674,7 +3709,9 @@ dtm.clock = function (bpm, subDiv, time) {
         previous: 0,
         reported: 0,
         resolution: 480,
-        beat: 0
+        beat: 0,
+
+        autoStart: true
     };
 
     var clock = {
@@ -3750,7 +3787,7 @@ dtm.clock = function (bpm, subDiv, time) {
      * @param [time] {number}
      * @returns {dtm.clock}
      */
-    clock.set = function (bpm, subDiv, time) {
+    clock.set = function (bpm, subDiv, autoStart) {
         if (typeof(bpm) === 'number') {
             params.bpm = bpm;
             params.sync = false;
@@ -3762,8 +3799,8 @@ dtm.clock = function (bpm, subDiv, time) {
             params.subDiv = subDiv;
         }
 
-        if (typeof(time) !== 'undefined') {
-            params.time = time;
+        if (typeof(autoStart) !== 'undefined') {
+            params.autoStart = autoStart;
         }
 
         return clock;
@@ -4256,9 +4293,13 @@ dtm.clock = function (bpm, subDiv, time) {
 
     if (!params.isMaster && typeof(dtm.master) !== 'undefined') {
         dtm.master.clock.add(clock.tickSynced);
+
+        if (params.autoStart) {
+            clock.start();
+        }
     }
 
-    clock.set(bpm, subDiv, time);
+    clock.set(bpm, subDiv, autoStart);
 
     return clock;
 };
@@ -4288,31 +4329,6 @@ dtm.instr = function (arg) {
 
         sync: true,
         clock: dtm.clock(true, 8),
-
-        // default model coll
-        //models: {
-        //    voice: dtm.synth(),
-        //    wavetable: null,
-        //    volume: dtm.array(1),
-        //    scale: dtm.array().fill('seq', 12),
-        //    rhythm: dtm.array(1),
-        //    pitch: dtm.array(69),
-        //    transp: dtm.array(0),
-        //    chord: dtm.array(0),
-        //    bpm: dtm.array(120),
-        //    subdiv: dtm.array(8),
-        //    repeats: null,
-        //    step: null,
-        //
-        //    atk: null,
-        //    dur: dtm.array(0.25),
-        //    lpf: null,
-        //    res: dtm.array(0),
-        //    comb: null,
-        //    delay: null
-        //},
-        //
-        //pqRound: false,
 
         instrModel: null,
 
@@ -4707,6 +4723,7 @@ dtm.voice = dtm.instr;
 // TODO: modeling - sharing information...
 
 /**
+ * Creates a new empty musical model object, or overloads on an existing model in the collection.
  * @function module:model.model
  * @param [name] {string} Give it a unique name.
  * @param [categ] {string}
@@ -4724,9 +4741,6 @@ dtm.model = function (name, categ) {
     var model = {
         type: 'dtm.model',
 
-        // assigning array or data/coll???
-        //array: null,
-        //data: null,
         parent: {},
         setter: {},
 
@@ -4827,6 +4841,11 @@ dtm.model = function (name, categ) {
 
     model.map = model.assignMethods;
 
+    /**
+     * Call this when creating a new model, which you may want to reuse with new instanciation.
+     * @function module:model#register
+     * @returns {dtm.model}
+     */
     model.register = function () {
         dtm.modelCallers[model.get('name')] = arguments.callee.caller;
         return model;
@@ -5723,14 +5742,12 @@ dtm.master = {
 
 dtm.master.clock.setMaster(true);
 dtm.master.clock.start();
-dtm.guido = function () {
-    var guido = {
-        type: 'dtm.guido',
-        parts: [],
-        numParts: 1
-    };
+dtm.guido = {
+    //type: 'dtm.guido',
+    //parts: [],
+    //numParts: 1,
 
-    guido.pc = {
+    pitchClass: {
         '-1': '_',
         'r': '_',
         0: 'c',
@@ -5745,55 +5762,53 @@ dtm.guido = function () {
         9: 'a',
         10: 'b&',
         11: 'b'
-    };
+    }
 
     //guido.dur = {
     //    1: '/1',
     //    2: '/'
     //};
 
-    guido.setup = function () {
-        return guido;
-    };
-
-    guido.format = function () {
-        return guido;
-    };
-
-    guido.test = function (arr) {
-        var res = [];
-
-        _.forEach(arr, function (val, idx) {
-            res[idx] = [guido.pc[_.random(-1, 11)], '*', val + '/16'].join('');
-        });
-
-        res = res.join(' ');
-        console.log(res);
-
-        return guido;
-    };
-
-    guido.meow = function (rhythm, pitches) {
-        var res = [];
-
-        for (var i = 0; i < rhythm.length; i++) {
-            if (pitches[i] instanceof Array) {
-                var chord = [];
-                _.forEach(pitches[i], function (val, idx) {
-                    chord[idx] = [guido.pc[val], '*', rhythm[i] + '/16'].join('');
-                });
-                res[i] = '{' + chord.join(', ') + '}';
-            } else {
-                res[i] = [guido.pc[pitches[i]], '*', rhythm[i] + '/16'].join('');
-            }
-        }
-
-        res = res.join(' ');
-        console.log(res);
-        return guido;
-    };
-
-    return guido;
+    //guido.setup = function () {
+    //    return guido;
+    //};
+    //
+    //guido.format = function () {
+    //    return guido;
+    //};
+    //
+    //guido.test = function (arr) {
+    //    var res = [];
+    //
+    //    _.forEach(arr, function (val, idx) {
+    //        res[idx] = [guido.pc[_.random(-1, 11)], '*', val + '/16'].join('');
+    //    });
+    //
+    //    res = res.join(' ');
+    //    console.log(res);
+    //
+    //    return guido;
+    //};
+    //
+    //guido.meow = function (rhythm, pitches) {
+    //    var res = [];
+    //
+    //    for (var i = 0; i < rhythm.length; i++) {
+    //        if (pitches[i] instanceof Array) {
+    //            var chord = [];
+    //            _.forEach(pitches[i], function (val, idx) {
+    //                chord[idx] = [guido.pc[val], '*', rhythm[i] + '/16'].join('');
+    //            });
+    //            res[i] = '{' + chord.join(', ') + '}';
+    //        } else {
+    //            res[i] = [guido.pc[pitches[i]], '*', rhythm[i] + '/16'].join('');
+    //        }
+    //    }
+    //
+    //    res = res.join(' ');
+    //    console.log(res);
+    //    return guido;
+    //};
 };
 dtm.inscore = function () {
     var inscore = {
@@ -6268,7 +6283,7 @@ dtm.inscore = function () {
     };
 
     var m = dtm.model('testNotation', 'instr').register();
-    var g = dtm.guido();
+    var g = dtm.guido;
     var osc = dtm.osc;
 
     m.output = function (c) {
@@ -6293,7 +6308,7 @@ dtm.inscore = function () {
 
 
         for (var i = 0; i < 8; i++) {
-            pc[i] = g.pc[dtm.val.mod(p[i], 12)];
+            pc[i] = g.pitchClass[dtm.val.mod(p[i], 12)];
             oct[i] = (p[i] - dtm.val.mod(p[i], 12)) / 12 - 4;
             res[i] = pc[i] + oct[i].toString() + '*' + dur[i] + '/' + div[0];
         }
@@ -6387,7 +6402,7 @@ dtm.inscore = function () {
         updateFreq: 1/4,
 
         durFx: ['rest', 'stacc', 'half', 'normal', 'tenuto', 'slur'],
-        dynamicsFx: ['pp', 'p', 'mp', 'mf', 'f', 'ff']
+        dynFx: ['pp', 'p', 'mp', 'mf', 'f', 'ff']
     };
 
     var mods = {
@@ -6414,7 +6429,7 @@ dtm.inscore = function () {
 
     var m = dtm.model('decatur', 'instr').register();
 
-    var g = dtm.guido();
+    var g = dtm.guido;
     var osc = dtm.osc;
     //osc.start();
 
@@ -6434,14 +6449,12 @@ dtm.inscore = function () {
 
         var div = mods.subdiv.get();
         var p = mods.pitch.clone().fit(numNotes, 'step').get();
-        var len = mods.note.clone().fitSum(params.measures * mods.subdiv.get(0), true).get();
+        var len = mods.note.clone().fit(numNotes, 'step').fitSum(params.measures * mods.subdiv.get(0), true).get();
 
         //var slur = mods.slur.clone().fit(numNotes, 'step').get();
         var dur = mods.dur.clone().fit(numNotes, 'step').scale(0, 5).round().get();
 
         var dyn = mods.dyn.clone().fit(numNotes, 'step').get();
-
-        console.log(len);
 
         for (var i = 0; i < numNotes; i++) {
             seq[i] = '';
@@ -6461,7 +6474,7 @@ dtm.inscore = function () {
             }
             accum += len[i];
 
-            pc[i] = g.pc[dtm.val.mod(p[i], 12)];
+            pc[i] = g.pitchClass[dtm.val.mod(p[i], 12)];
             oct[i] = (p[i] - dtm.val.mod(p[i], 12)) / 12 - 4;
 
             // pitch
@@ -6526,11 +6539,11 @@ dtm.inscore = function () {
 
             if (i > 0) {
                 if (dyn[i] != dyn[i-1] && params.durFx[dur[i]] != 'rest') {
-                    seq[i] = '\\intens<"' + params.dynamicsFx[dyn[i]] + '", dx=-0.3, dy=-4> ' + seq[i];
+                    seq[i] = '\\intens<"' + params.dynFx[dyn[i]] + '", dx=-0.3, dy=-4> ' + seq[i];
                 }
             } else {
                 if (params.durFx[dur[i]] != 'rest') {
-                    seq[i] = '\\intens<"' + params.dynamicsFx[dyn[i]] + '", dx=-0.3, dy=-4> ' + seq[i];
+                    seq[i] = '\\intens<"' + params.dynFx[dyn[i]] + '", dx=-0.3, dy=-4> ' + seq[i];
                 }
             }
 
