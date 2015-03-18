@@ -13,7 +13,7 @@
     };
 
     var mods = {
-        repeat: dtm.a(2),
+        repeat: dtm.a(1),
         pitch: dtm.a().fill('random', 8, 60, 90).round(),
         scale: dtm.array().fill('seq', 12),
 
@@ -30,7 +30,7 @@
         var numNotes = params.div * params.measures;
         var pLen = Math.round(numNotes/rep);
         var sc = mods.scale.get();
-        var p = mods.pitch.clone().fit(pLen, 'step').pq(sc, true);
+        var p = mods.pitch.clone().fit(pLen, 'linear').pq(sc, true);
 
         var dur = mods.dur.clone().fit(pLen, 'step');
 

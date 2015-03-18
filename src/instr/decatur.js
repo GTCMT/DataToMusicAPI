@@ -176,7 +176,7 @@
         return m.parent;
     };
 
-    m.mod.measures = function (val) {
+    m.param.measures = function (val) {
         params.measures = val;
         return m.parent;
     };
@@ -263,17 +263,17 @@
         return m.parent;
     };
 
-    m.mod.name = function (src) {
+    m.param.name = function (src) {
         params.name = src;
         return m.parent;
     };
 
-    m.mod.clef = function (src) {
+    m.param.clef = function (src) {
         params.clef = src;
         return m.parent;
     };
 
-    m.mod.staves = function (num) {
+    m.param.staves = function (num) {
         params.staves = num;
         return m.parent;
     };

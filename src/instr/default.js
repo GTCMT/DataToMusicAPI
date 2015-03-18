@@ -80,7 +80,7 @@
         }
     };
 
-    m.mod.voice = function (arg) {
+    m.param.voice = function (arg) {
         if (typeof(arg) === 'string') {
             params.modules.voice.set(arg);
         } else if (arg.type === 'dtm.synth') {
@@ -197,9 +197,9 @@
         return m.parent;
     };
 
-    m.mod.clock = function (bpm, subDiv, time) {
-        params.clock.bpm(bpm);
-        params.clock.subDiv(subDiv);
+    m.param.clock = function (bpm, subDiv, time) {
+        m.parent.get('clock').bpm(bpm);
+        m.parent.get('clock').subDiv(subDiv);
         return m.parent;
     };
 
@@ -229,7 +229,7 @@
 
     m.mod.len = m.mod.note = m.mod.div = m.mod.subdiv = m.mod.subDiv;
 
-    m.mod.sync = function (bool) {
+    m.param.sync = function (bool) {
         if (typeof(bool) === 'undefined') {
             bool = true;
         }

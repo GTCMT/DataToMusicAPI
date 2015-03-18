@@ -63,7 +63,7 @@
         return m.parent;
     };
 
-    m.mod.measures = function (val) {
+    m.param.measures = function (val) {
         params.measures = val;
         return m.parent;
     };

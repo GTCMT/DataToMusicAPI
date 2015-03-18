@@ -26,6 +26,7 @@ dtm.model = function (name, categ) {
 
         parent: {},
         mod: {},
+        param: {},
 
         params: {},
         models: {}
@@ -113,6 +114,12 @@ dtm.model = function (name, categ) {
             parent[key] = method;
             parent.params.push(key);
         });
+
+        _.forEach(model.param, function (method, key) {
+            parent[key] = method;
+            parent.params.push(key);
+        });
+
         return model;
     };
 

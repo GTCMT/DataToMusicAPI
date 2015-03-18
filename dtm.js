@@ -4853,6 +4853,7 @@ dtm.model = function (name, categ) {
 
         parent: {},
         mod: {},
+        param: {},
 
         params: {},
         models: {}
@@ -4940,6 +4941,12 @@ dtm.model = function (name, categ) {
             parent[key] = method;
             parent.params.push(key);
         });
+
+        _.forEach(model.param, function (method, key) {
+            parent[key] = method;
+            parent.params.push(key);
+        });
+
         return model;
     };
 
@@ -6075,7 +6082,7 @@ dtm.inscore = function () {
         }
     };
 
-    m.mod.voice = function (arg) {
+    m.param.voice = function (arg) {
         if (typeof(arg) === 'string') {
             params.modules.voice.set(arg);
         } else if (arg.type === 'dtm.synth') {
@@ -6192,9 +6199,9 @@ dtm.inscore = function () {
         return m.parent;
     };
 
-    m.mod.clock = function (bpm, subDiv, time) {
-        params.clock.bpm(bpm);
-        params.clock.subDiv(subDiv);
+    m.param.clock = function (bpm, subDiv, time) {
+        m.parent.get('clock').bpm(bpm);
+        m.parent.get('clock').subDiv(subDiv);
         return m.parent;
     };
 
@@ -6224,7 +6231,7 @@ dtm.inscore = function () {
 
     m.mod.len = m.mod.note = m.mod.div = m.mod.subdiv = m.mod.subDiv;
 
-    m.mod.sync = function (bool) {
+    m.param.sync = function (bool) {
         if (typeof(bool) === 'undefined') {
             bool = true;
         }
@@ -6429,7 +6436,7 @@ dtm.inscore = function () {
         return m.parent;
     };
 
-    m.mod.measures = function (val) {
+    m.param.measures = function (val) {
         params.measures = val;
         return m.parent;
     };
@@ -6677,7 +6684,7 @@ dtm.inscore = function () {
         return m.parent;
     };
 
-    m.mod.measures = function (val) {
+    m.param.measures = function (val) {
         params.measures = val;
         return m.parent;
     };
@@ -6764,17 +6771,17 @@ dtm.inscore = function () {
         return m.parent;
     };
 
-    m.mod.name = function (src) {
+    m.param.name = function (src) {
         params.name = src;
         return m.parent;
     };
 
-    m.mod.clef = function (src) {
+    m.param.clef = function (src) {
         params.clef = src;
         return m.parent;
     };
 
-    m.mod.staves = function (num) {
+    m.param.staves = function (num) {
         params.staves = num;
         return m.parent;
     };
@@ -6973,7 +6980,7 @@ dtm.inscore = function () {
         return m.parent;
     };
 
-    m.mod.measures = function (val) {
+    m.param.measures = function (val) {
         params.measures = val;
         return m.parent;
     };
@@ -7033,29 +7040,17 @@ dtm.inscore = function () {
         return m.parent;
     };
 
-    m.mod.magic = function (src, literal) {
-        return m.parent;
-    };
-
-    m.mod.test = function (src1, src2, literal) {
-        if (!literal) {
-
-        }
-
-        return m.parent;
-    };
-
-    m.mod.name = function (src) {
+    m.param.name = function (src) {
         params.name = src;
         return m.parent;
     };
 
-    m.mod.clef = function (src) {
+    m.param.clef = function (src) {
         params.clef = src;
         return m.parent;
     };
 
-    m.mod.staves = function (num) {
+    m.param.staves = function (num) {
         params.staves = num;
         return m.parent;
     };
@@ -7099,7 +7094,7 @@ dtm.inscore = function () {
     };
 
     var mods = {
-        repeat: dtm.a(2),
+        repeat: dtm.a(1),
         pitch: dtm.a().fill('random', 8, 60, 90).round(),
         scale: dtm.array().fill('seq', 12),
 
@@ -7116,7 +7111,7 @@ dtm.inscore = function () {
         var numNotes = params.div * params.measures;
         var pLen = Math.round(numNotes/rep);
         var sc = mods.scale.get();
-        var p = mods.pitch.clone().fit(pLen, 'step').pq(sc, true);
+        var p = mods.pitch.clone().fit(pLen, 'linear').pq(sc, true);
 
         var dur = mods.dur.clone().fit(pLen, 'step');
 
@@ -7302,7 +7297,7 @@ dtm.inscore = function () {
         return m.parent;
     };
 
-    m.mod.name = function (src, literal) {
+    m.param.name = function (src, literal) {
         params.iNum = src;
         return m.parent;
     };

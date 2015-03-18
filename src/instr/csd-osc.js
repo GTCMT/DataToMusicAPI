@@ -45,7 +45,7 @@
         return m.parent;
     };
 
-    m.mod.name = function (src, literal) {
+    m.param.name = function (src, literal) {
         params.iNum = src;
         return m.parent;
     };
