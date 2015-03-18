@@ -25,7 +25,7 @@ dtm.model = function (name, categ) {
         type: 'dtm.model',
 
         parent: {},
-        setter: {},
+        mod: {},
 
         params: {},
         models: {}
@@ -83,12 +83,6 @@ dtm.model = function (name, categ) {
         return model;
     };
 
-    model.mod = function (val) {
-        return model;
-    };
-
-    model.modulate = model.mod;
-
     // for instr-type models
     model.start = function () {
         return model;
@@ -115,7 +109,7 @@ dtm.model = function (name, categ) {
     };
 
     model.assignMethods = function (parent) {
-        _.forEach(model.setter, function (method, key) {
+        _.forEach(model.mod, function (method, key) {
             parent[key] = method;
             parent.params.push(key);
         });

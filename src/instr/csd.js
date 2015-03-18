@@ -19,7 +19,7 @@
         return m.parent;
     };
 
-    m.setter.pitch = function (src, literal) {
+    m.mod.pitch = function (src, literal) {
         mapper(src, 'pitch');
 
         if (!literal) {
@@ -29,7 +29,7 @@
         return m.parent;
     };
 
-    m.setter.div = function (src, literal) {
+    m.mod.div = function (src, literal) {
         mapper(src, 'div');
 
         if (!literal) {
@@ -39,7 +39,7 @@
         return m.parent;
     };
 
-    m.setter.file = function (src, literal) {
+    m.mod.file = function (src, literal) {
         return m.parent;
     };
 

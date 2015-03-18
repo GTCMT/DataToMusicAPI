@@ -47,7 +47,7 @@
         return m.parent;
     };
 
-    m.setter.scale = function (src, literal) {
+    m.mod.scale = function (src, literal) {
         mapper(src, 'scale');
 
         if (!literal) {
@@ -57,16 +57,16 @@
         return m.parent;
     };
 
-    m.setter.pq = m.setter.scale;
+    m.mod.pq = m.mod.scale;
 
 
-    m.setter.repeat = function (src, literal) {
+    m.mod.repeat = function (src, literal) {
         mapper(src, 'repeat');
 
         return m.parent;
     };
 
-    m.setter.dur = function (src, literal) {
+    m.mod.dur = function (src, literal) {
         mapper(src, 'dur');
 
         if (!literal) {

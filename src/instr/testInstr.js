@@ -1,12 +1,12 @@
 (function () {
     var m = dtm.model('testInstr', 'instr').register();
 
-    m.setter.doThis = function () {
+    m.mod.doThis = function () {
         console.log('doing this');
         return m.parent;
     };
 
-    m.setter.testSetter = function (src, adapt) {
+    m.mod.testSetter = function (src, adapt) {
         console.log('testing');
 
         if (typeof(adapt) === 'undefined') {

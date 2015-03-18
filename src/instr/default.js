@@ -80,7 +80,7 @@
         }
     };
 
-    m.setter.voice = function (arg) {
+    m.mod.voice = function (arg) {
         if (typeof(arg) === 'string') {
             params.modules.voice.set(arg);
         } else if (arg.type === 'dtm.synth') {
@@ -89,9 +89,9 @@
         return m.parent;
     };
 
-    m.setter.syn = m.setter.synth = m.setter.voice;
+    m.mod.syn = m.mod.synth = m.mod.voice;
 
-    m.setter.wt = function (src, literal) {
+    m.mod.wt = function (src, literal) {
         mapper(src, 'wavetable');
 
         if (!literal) {
@@ -101,15 +101,15 @@
         return m.parent;
     };
 
-    m.setter.wavetable = m.setter.wt;
+    m.mod.wavetable = m.mod.wt;
 
-    m.setter.at = function (src, literal) {
+    m.mod.at = function (src, literal) {
         mapper(src, 'at');
 
         return m.parent;
     };
 
-    m.setter.rhythm = function (src, literal) {
+    m.mod.rhythm = function (src, literal) {
         mapper(src, 'rhythm');
 
         if (!literal) {
@@ -119,9 +119,9 @@
         return m.parent;
     };
 
-    m.setter.beats = m.setter.rhythm;
+    m.mod.beats = m.mod.rhythm;
 
-    m.setter.volume = function (src, literal) {
+    m.mod.volume = function (src, literal) {
         mapper(src, 'volume');
 
         if (!literal) {
@@ -131,9 +131,9 @@
         return m.parent;
     };
 
-    m.setter.amp = m.setter.level = m.setter.vol = m.setter.volume;
+    m.mod.amp = m.mod.level = m.mod.vol = m.mod.volume;
 
-    m.setter.pitch = function (src, literal, round) {
+    m.mod.pitch = function (src, literal, round) {
         mapper(src, 'pitch');
 
         if (!literal) {
@@ -147,9 +147,9 @@
         return m.parent;
     };
 
-    m.setter.nn = m.setter.noteNum = m.setter.pitch;
+    m.mod.nn = m.mod.noteNum = m.mod.pitch;
 
-    m.setter.transpose = function (src, literal, round) {
+    m.mod.transpose = function (src, literal, round) {
         mapper(src, 'transp');
 
         if (!literal) {
@@ -163,9 +163,9 @@
         return m.parent;
     };
 
-    m.setter.tr = m.setter.transp = m.setter.transpose;
+    m.mod.tr = m.mod.transp = m.mod.transpose;
 
-    m.setter.scale = function (src, literal, round) {
+    m.mod.scale = function (src, literal, round) {
         if (typeof(round) === 'undefined') {
             params.pqRound = false;
         } else {
@@ -181,9 +181,9 @@
         return m.parent;
     };
 
-    m.setter.pq = m.setter.scale;
+    m.mod.pq = m.mod.scale;
 
-    m.setter.chord = function (src, literal) {
+    m.mod.chord = function (src, literal) {
         mapper(src, 'chord');
 
         if (!literal) {
@@ -197,13 +197,13 @@
         return m.parent;
     };
 
-    m.setter.clock = function (bpm, subDiv, time) {
+    m.mod.clock = function (bpm, subDiv, time) {
         params.clock.bpm(bpm);
         params.clock.subDiv(subDiv);
         return m.parent;
     };
 
-    m.setter.bpm = function (src, literal) {
+    m.mod.bpm = function (src, literal) {
         params.sync = false;
 
         mapper(src, 'bpm');
@@ -215,10 +215,10 @@
         return m.parent;
     };
 
-    m.setter.tempo = m.setter.bpm;
+    m.mod.tempo = m.mod.bpm;
 
     // CHECK: not working
-    m.setter.subDiv = function (src, literal) {
+    m.mod.subDiv = function (src, literal) {
         mapper(src, 'subdiv');
 
         if (!literal) {
@@ -227,9 +227,9 @@
         return m.parent;
     };
 
-    m.setter.len = m.setter.note = m.setter.div = m.setter.subdiv = m.setter.subDiv;
+    m.mod.len = m.mod.note = m.mod.div = m.mod.subdiv = m.mod.subDiv;
 
-    m.setter.sync = function (bool) {
+    m.mod.sync = function (bool) {
         if (typeof(bool) === 'undefined') {
             bool = true;
         }
@@ -238,7 +238,7 @@
         return m.parent;
     };
 
-    m.setter.lpf = function (src, literal) {
+    m.mod.lpf = function (src, literal) {
         mapper(src, 'lpf');
 
         if (!literal) {
@@ -248,7 +248,7 @@
         return m.parent;
     };
 
-    m.setter.res = function (src, literal) {
+    m.mod.res = function (src, literal) {
         mapper(src, 'res');
 
         if (!literal) {
@@ -258,7 +258,7 @@
         return m.parent;
     };
 
-    m.setter.comb = function (src, literal) {
+    m.mod.comb = function (src, literal) {
         mapper('comb', src);
 
         if (!literal) {
@@ -268,7 +268,7 @@
         return m.parent;
     };
 
-    m.setter.delay = function (src, literal) {
+    m.mod.delay = function (src, literal) {
         mapper(src, 'delay');
 
         if (!literal) {
@@ -278,7 +278,7 @@
         return m.parent;
     };
 
-    m.setter.dur = function (src, literal) {
+    m.mod.dur = function (src, literal) {
         mapper(src, 'dur');
 
         if (!literal) {
@@ -289,7 +289,7 @@
     };
 
     // CHECK: kind of broken now
-    m.setter.on = function (arg) {
+    m.mod.on = function (arg) {
         switch (arg) {
             case 'note':
                 params.callbacks.push(arguments[1]);
@@ -317,7 +317,7 @@
         return m.parent;
     };
 
-    m.setter.when = m.setter.on;
+    m.mod.when = m.mod.on;
 
     function mapper(src, dest) {
         if (typeof(src) === 'number') {

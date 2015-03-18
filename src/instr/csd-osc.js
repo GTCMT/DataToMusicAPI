@@ -26,7 +26,7 @@
         return m.parent;
     };
 
-    m.setter.pitch = function (src, literal) {
+    m.mod.pitch = function (src, literal) {
         mapper(src, 'pitch');
 
         if (!literal) {
@@ -36,7 +36,7 @@
         return m.parent;
     };
 
-    m.setter.div = function (src, literal) {
+    m.mod.div = function (src, literal) {
         mapper(src, 'div');
 
         if (!literal) {
@@ -45,7 +45,7 @@
         return m.parent;
     };
 
-    m.setter.name = function (src, literal) {
+    m.mod.name = function (src, literal) {
         params.iNum = src;
         return m.parent;
     };

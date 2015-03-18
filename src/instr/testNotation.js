@@ -63,12 +63,12 @@
         return m.parent;
     };
 
-    m.setter.measures = function (val) {
+    m.mod.measures = function (val) {
         params.measures = val;
         return m.parent;
     };
 
-    m.setter.pitch = function (src, literal) {
+    m.mod.pitch = function (src, literal) {
         mapper('pitch', src);
 
         if (literal) {
@@ -80,7 +80,7 @@
         return m.parent;
     };
 
-    m.setter.subDiv = function (src, literal) {
+    m.mod.subDiv = function (src, literal) {
         mapper('subdiv', src);
 
         if (literal) {
@@ -94,7 +94,7 @@
         return m.parent;
     };
 
-    m.setter.dur = function (src, literal) {
+    m.mod.dur = function (src, literal) {
         mapper('dur', src);
 
         if (literal) {
@@ -107,7 +107,7 @@
         return m.parent;
     };
 
-    m.setter.len = m.setter.note = m.setter.div = m.setter.subdiv = m.setter.subDiv;
+    m.mod.len = m.mod.note = m.mod.div = m.mod.subdiv = m.mod.subDiv;
 
     function mapper(dest, src) {
         if (typeof(src) === 'number') {

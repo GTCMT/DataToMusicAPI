@@ -176,12 +176,12 @@
         return m.parent;
     };
 
-    m.setter.measures = function (val) {
+    m.mod.measures = function (val) {
         params.measures = val;
         return m.parent;
     };
 
-    m.setter.dur = function (src, literal) {
+    m.mod.dur = function (src, literal) {
         mapper(src, 'dur');
         if (!literal) {
             mods.dur.normalize();
@@ -189,7 +189,7 @@
         return m.parent;
     };
 
-    m.setter.pitch = function (src, literal) {
+    m.mod.pitch = function (src, literal) {
         mapper(src, 'pitch');
 
         if (literal) {
@@ -207,7 +207,7 @@
         return m.parent;
     };
 
-    m.setter.subDiv = function (src, literal) {
+    m.mod.subDiv = function (src, literal) {
         mapper(src, 'subdiv');
 
         if (literal) {
@@ -218,9 +218,9 @@
         return m.parent;
     };
 
-    m.setter.len = m.setter.div = m.setter.subdiv = m.setter.subDiv;
+    m.mod.len = m.mod.div = m.mod.subdiv = m.mod.subDiv;
 
-    m.setter.note = function (src, literal) {
+    m.mod.note = function (src, literal) {
         mapper(src, 'note');
 
         if (literal) {
@@ -233,7 +233,7 @@
         return m.parent;
     };
 
-    m.setter.dyn = function (src, literal) {
+    m.mod.dyn = function (src, literal) {
         mapper(src, 'dyn');
 
         if (!literal) {
@@ -243,7 +243,7 @@
         return m.parent;
     };
 
-    m.setter.density = function (src, literal) {
+    m.mod.density = function (src, literal) {
         mapper(src, 'density');
 
         if (!literal) {
@@ -253,7 +253,7 @@
         return m.parent;
     };
 
-    m.setter.repeat = function (src, literal) {
+    m.mod.repeat = function (src, literal) {
         mapper(src, 'repeat');
 
         if (!literal) {
@@ -263,17 +263,17 @@
         return m.parent;
     };
 
-    m.setter.name = function (src) {
+    m.mod.name = function (src) {
         params.name = src;
         return m.parent;
     };
 
-    m.setter.clef = function (src) {
+    m.mod.clef = function (src) {
         params.clef = src;
         return m.parent;
     };
 
-    m.setter.staves = function (num) {
+    m.mod.staves = function (num) {
         params.staves = num;
         return m.parent;
     };
