@@ -385,10 +385,28 @@ dtm.transform = {
         if (round) {
             res = dtm.transform.round(res);
 
-            if (dtm.analyzer.sum(res) > tgt) {
-                res[arr.length-1]--;
-            } else if (dtm.analyzer.sum(res) < tgt) {
-                res[arr.length-1]++;
+            if (dtm.analyzer.sum(res) !== tgt) {
+                var n = 1;
+                var rem = dtm.analyzer.sum(res) - tgt;
+                var add = rem < 0;
+
+                if (add) {
+                    while (rem < 0) {
+                        res[dtm.val.mod(arr.length-n, arr.length)]++;
+                        rem++;
+                        n++;
+                    }
+                } else {
+                    while (rem > 0) {
+                        if (res[arr.length-n] > 0) {
+                            res[dtm.val.mod(arr.length-n, arr.length)]--;
+                            rem--;
+                            n++;
+                        } else {
+                            n++;
+                        }
+                    }
+                }
             }
         }
 
@@ -500,6 +518,28 @@ dtm.transform = {
         _.forEach(input, function (val, idx) {
             res[idx] = (val < 0) ? Math.abs(val) : val;
         });
+
+        return res;
+    },
+
+    removeZeros: function (input) {
+        var res = [];
+
+        for (var i = 0; i < input.length; i++) {
+            if (input[i] !== 0) {
+                res.push(input[i]);
+            }
+        }
+
+        return res;
+    },
+
+    diff: function (input) {
+        var res = [];
+
+        for (var i = 1; i < input.length; i++) {
+            res.push(input[i] - input[i-1]);
+        }
 
         return res;
     },
@@ -795,12 +835,34 @@ dtm.transform = {
         return res;
     },
 
-    indicesToBeats: function (input) {
-        var res = [];
+    /**
+     * @function module:transform#indicesToBeats
+     * @param input
+     * @param [seqLen] The length of the returned beat sequence. If not present, it will be the minimum power of two number to represent the beat sequence.
+     */
+    indicesToBeats: function (input, seqLen) {
+        input = dtm.transform.sort(input);
+
+        if (typeof(seqLen) === 'undefined') {
+            var f = 0, len = 1;
+            while (input[input.length-1] >= len) {
+                len = Math.pow(2, ++f);
+            }
+        } else {
+            len = seqLen;
+        }
+
+        var res = res = dtm.transform.generate('zeros', len);
 
         for (var i = 0; i < input.length; i++) {
+            if (input[i] >= seqLen) {
+                break;
+            }
 
+            res[input[i]] = 1;
         }
+
+        return res;
     },
 
     calcBeatsOffset: function (src, tgt) {

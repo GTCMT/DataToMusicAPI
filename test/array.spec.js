@@ -214,6 +214,13 @@ describe('array object', function () {
         });
     });
 
+    describe('arithmetic', function () {
+        describe('diff', function () {
+            var a = dtm.a([0, -3, 3]);
+            //console.log(a.diff().get());
+        });
+    });
+
     
     describe('getBlock', function () {
         var a = dtm.a().fill('seq', 16, 0).block(2, 3);

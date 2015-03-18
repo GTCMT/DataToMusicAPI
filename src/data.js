@@ -336,12 +336,28 @@ dtm.data = function (arg, cb, type) {
     };
 
     data.init = function (arg) {
-        if (typeof(arg) === 'number') {
-            for (var i = 0; i < arg; i++) {
-                params.arrays[i] = dtm.array();
+        if (arguments.length === 1) {
+            if (typeof(arg) === 'number') {
+                for (var i = 0; i < arg; i++) {
+                    params.arrays[i] = dtm.array();
+                    params.keys[i] = i.toString();
+                    params.size.col = arg;
+                    params.size.row = 0;
+                }
+            } else if (typeof(arg) === 'object') {
+                for (var i = 0; i < arg.num; i++) {
+                    params.arrays[i] = dtm.array().fill('zeros', arg.len);
+                    params.keys[i] = i.toString();
+                    params.size.col = arg.num;
+                    params.size.row = arg.len;
+                }
+            }
+        } else if (arguments.length === 2) {
+            for (var i = 0; i < arguments[0]; i++) {
+                params.arrays[i] = dtm.array().fill('zeros', arguments[1]);
                 params.keys[i] = i.toString();
-                params.size.col = arg;
-                params.size.row = 0;
+                params.size.col = arguments[0];
+                params.size.row = arguments[1];
             }
         }
         return data;
@@ -355,6 +371,17 @@ dtm.data = function (arg, cb, type) {
                 }
             }
             params.size.row++;
+        }
+        return data;
+    };
+
+    data.queue = function (arg) {
+        if (arg instanceof Array) {
+            for (var i = 0; i < arg.length; i++) {
+                if (typeof(params.arrays[i]) !== 'undefined') {
+                    params.arrays[i].queue(arg[i]);
+                }
+            }
         }
         return data;
     };

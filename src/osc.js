@@ -173,6 +173,14 @@ dtm.osc = {
     },
 
     send: function (addr, args) {
+        if (addr[0] !== '/') {
+            addr.unshift('/');
+        }
+
+        if (!(args instanceof Array)) {
+            args = [args];
+        }
+
         dtm.osc.oscPort.send({
             address: addr,
             args: args

@@ -36,14 +36,6 @@ var dtm = {
 
     // TODO: a function to list currently loaded objects, such as data, arrays, models... - for console livecoding situation
 
-    //ajaxGet: ajaxGet,
-    //jsonp: jsonp,
-    //clone: clone,
-
-    start: function () {
-
-    },
-
     get: function (param) {
         switch (param) {
             case 'models':

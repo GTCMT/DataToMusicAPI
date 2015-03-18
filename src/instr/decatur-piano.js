@@ -1,16 +1,16 @@
 (function () {
-    var m = dtm.model('decatur', 'instr').register();
+    var m = dtm.model('decatur-piano', 'instr').register();
 
     var params = {
-        name: 'Flute',
-        voice: 'mono',
+        name: 'Piano',
+        voice: 'poly',
         callbacks: [],
 
         measures: 4,
         time: '4/4',
 
-        staves: 1,
-        clef: 'g',
+        staves: 2,
+        //clef: 'g',
 
         updateFreq: 1/4,
 
@@ -29,25 +29,22 @@
         repeats: null,
         step: null,
 
-        div: dtm.array(8),
+        subdiv: dtm.array(8),
         pos: dtm.array(0),
 
         note: dtm.array().fill('consts', 8, 8),
         dur: dtm.array().fill('ones', 8),
-        dyn: dtm.array().fill('zeros', 8),
-
-        density: dtm.array(8),
-        repeat: dtm.array(2)
+        dyn: dtm.array().fill('zeros', 8)
     };
 
     var g = dtm.guido;
     var osc = dtm.osc;
 
     m.output = function (c) {
-        c.div(params.div);
-        var rep = mods.repeat.get(0);
+        //var time = params.time.split('/');
+        //var len = time[0] / time[1] *  params.measures;
 
-        var numNotes = Math.round(mods.density.get('mean'));
+        var numNotes = 8;
         var seq = [];
         var pc = [];
         var oct = [];
@@ -57,13 +54,12 @@
         var fixImaginaryLines = false;
         var pre, post;
 
-        var div = mods.div.get();
+        var div = mods.subdiv.get();
         var p = mods.pitch.clone().fit(numNotes, 'step').get();
-        var len = mods.note.clone().scale(0.1, 1).fit(numNotes, 'step').fitSum(params.measures * div[0], true).get();
+        var len = mods.note.clone().fit(numNotes, 'step').fitSum(params.measures * mods.subdiv.get(0), true).get();
 
         var dur = mods.dur.clone().fit(numNotes, 'step').scale(0, 5).round().get();
         var dyn = mods.dyn.clone().fit(numNotes, 'step').get();
-
 
         for (var i = 0; i < numNotes; i++) {
             seq[i] = '';
@@ -76,10 +72,6 @@
                     post = 4;
                 }
                 pre = len[i] - post;
-                //console.log('bad: ' + i);
-                //console.log('accum: ' + accum);
-                //console.log('pre: ' + pre);
-                //console.log('post: ' + post);
             }
             accum += len[i];
 
@@ -159,19 +151,19 @@
             fixImaginaryLines = false;
         }
 
-        //================ formatting ================
         seq = seq.join(' ');
 
-        var barLine = '\\barFormat<style="staff">';
-        var name = '\\instr<"' + params.name + '", dx=-1.65cm, dy=-0.5cm>';
-        var clef = '\\clef<"' + params.clef + '">';
+        var name = '\\instr<"' + params.name + '", dx=-1.65cm, dy=-2.0cm>';
+        var gClef = '\\clef<"g">';
+        var fClef = '\\clef<"f">';
         var time = '\\meter<"' + params.time + '">';
 
         //var autoBreak = '\\autoBreak<system="off",page="off">'; not working
         var autoBreak = '\\set<autoSystemBreak="off">';
+        console.log('[' + autoBreak + name + gClef + time + seq + ' \\repeatEnd],' + '[' + autoBreak + fClef + time + seq + ' \\repeatEnd]');
 
         // MEMO: \repeatBegin at the beginning breaks the score (bug)
-        osc.send('/guido/score', [params.name, '[' + autoBreak + barLine + name + time + seq + ' \\repeatEnd]']);
+        osc.send('/guido/score', [params.name, '[' + autoBreak + name + gClef + time + seq + ' \\repeatEnd],' + '[' + autoBreak + fClef + time + seq + ' \\repeatEnd]']);
 
         return m.parent;
     };
@@ -195,13 +187,7 @@
         if (literal) {
             mods.pitch.round();
         } else {
-            mods.pitch.normalize();
-
-            if (params.name === 'Flute') {
-                mods.pitch.rescale(60, 96).round();
-            } else if (params.name === 'Cello') {
-                mods.pitch.rescale(36, 81).round();
-            }
+            mods.pitch.normalize().rescale(60, 90).round();
         }
 
         return m.parent;
@@ -211,9 +197,9 @@
         mapper(src, 'subdiv');
 
         if (literal) {
-            mods.div.round();
+            mods.subdiv.round();
         } else {
-            mods.div.normalize().scale(1, 5).round().powof(2);
+            mods.subdiv.normalize().scale(1, 5).round().powof(2);
         }
         return m.parent;
     };
@@ -225,10 +211,9 @@
 
         if (literal) {
             mods.note.round();
+        } else {
+            mods.note.fitSum(params.measures * mods.subdiv.get(0), true);
         }
-        //else {
-        //    mods.note.fitSum(params.measures * mods.div.get(0), true);
-        //}
 
         return m.parent;
     };
@@ -243,19 +228,11 @@
         return m.parent;
     };
 
-    m.setter.density = function (src, literal) {
-        mapper(src, 'density');
-
-        if (!literal) {
-            mods.density.scale(1, 32).exp(5);
-        }
-
+    m.setter.magic = function (src, literal) {
         return m.parent;
     };
 
-    m.setter.repeat = function (src, literal) {
-        mapper(src, 'repeat');
-
+    m.setter.test = function (src1, src2, literal) {
         if (!literal) {
 
         }

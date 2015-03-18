@@ -92,7 +92,7 @@
     m.setter.syn = m.setter.synth = m.setter.voice;
 
     m.setter.wt = function (src, literal) {
-        mapper('wavetable', src);
+        mapper(src, 'wavetable');
 
         if (!literal) {
             params.modules.wavetable.normalize();
@@ -103,8 +103,14 @@
 
     m.setter.wavetable = m.setter.wt;
 
+    m.setter.at = function (src, literal) {
+        mapper(src, 'at');
+
+        return m.parent;
+    };
+
     m.setter.rhythm = function (src, literal) {
-        mapper('rhythm', src);
+        mapper(src, 'rhythm');
 
         if (!literal) {
             params.modules.rhythm.normalize().round();
@@ -116,7 +122,7 @@
     m.setter.beats = m.setter.rhythm;
 
     m.setter.volume = function (src, literal) {
-        mapper('volume', src);
+        mapper(src, 'volume');
 
         if (!literal) {
             params.modules.volume.logCurve(5).rescale(0.1, 1);
@@ -128,7 +134,7 @@
     m.setter.amp = m.setter.level = m.setter.vol = m.setter.volume;
 
     m.setter.pitch = function (src, literal, round) {
-        mapper('pitch', src);
+        mapper(src, 'pitch');
 
         if (!literal) {
             params.modules.pitch.normalize().rescale(60, 90);
@@ -144,7 +150,7 @@
     m.setter.nn = m.setter.noteNum = m.setter.pitch;
 
     m.setter.transpose = function (src, literal, round) {
-        mapper('transp', src);
+        mapper(src, 'transp');
 
         if (!literal) {
             params.modules.transp.normalize().scale(-12, 12);
@@ -166,7 +172,7 @@
             params.pqRound = round;
         }
 
-        mapper('scale', src);
+        mapper(src, 'scale');
 
         if (!literal) {
             params.modules.scale.normalize().scale(0,11).round().unique().sort()
@@ -178,7 +184,7 @@
     m.setter.pq = m.setter.scale;
 
     m.setter.chord = function (src, literal) {
-        mapper('chord', src);
+        mapper(src, 'chord');
 
         if (!literal) {
             params.modules.chord.normalize().scale(0, 12).round().unique().sort();
@@ -200,7 +206,7 @@
     m.setter.bpm = function (src, literal) {
         params.sync = false;
 
-        mapper('bpm', src);
+        mapper(src, 'bpm');
 
         if (!literal) {
             params.modules.bpm.normalize().scale(60, 180);
@@ -213,7 +219,7 @@
 
     // CHECK: not working
     m.setter.subDiv = function (src, literal) {
-        mapper('subdiv', src);
+        mapper(src, 'subdiv');
 
         if (!literal) {
             params.modules.subdiv.normalize().scale(1, 5).round().powof(2);
@@ -233,7 +239,7 @@
     };
 
     m.setter.lpf = function (src, literal) {
-        mapper('lpf', src);
+        mapper(src, 'lpf');
 
         if (!literal) {
             params.modules.lpf.normalize().log(10).scale(500, 5000);
@@ -243,7 +249,7 @@
     };
 
     m.setter.res = function (src, literal) {
-        mapper('res', src);
+        mapper(src, 'res');
 
         if (!literal) {
             params.modules.res.normalize().scale(0, 50);
@@ -263,7 +269,7 @@
     };
 
     m.setter.delay = function (src, literal) {
-        mapper('delay', src);
+        mapper(src, 'delay');
 
         if (!literal) {
             params.modules.delay.normalize();
@@ -273,7 +279,7 @@
     };
 
     m.setter.dur = function (src, literal) {
-        mapper('dur', src);
+        mapper(src, 'dur');
 
         if (!literal) {
             params.modules.dur.normalize().exp(10).scale(0.01, 0.5);
@@ -313,7 +319,7 @@
 
     m.setter.when = m.setter.on;
 
-    function mapper(dest, src) {
+    function mapper(src, dest) {
         if (typeof(src) === 'number') {
             params.modules[dest] = dtm.array(src);
         } else if (typeof(src) === 'string') {

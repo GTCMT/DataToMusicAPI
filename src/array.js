@@ -860,10 +860,22 @@ dtm.array = function (val, name) {
         return array;
     };
 
+    /**
+     * @function module:array#diff
+     * @returns {dtm.array}
+     */
     array.diff = function () {
-        return array;
+        return array.set(dtm.transform.diff(params.value));
     };
 
+    /**
+     * Removes zeros from the sequence.
+     * @function module:array#removeZeros
+     * @returns {dtm.array}
+     */
+    array.removeZeros = function () {
+        return array.set(dtm.transform.removeZeros(params.value));
+    };
 
     /* NOMINAL */
 
@@ -1041,6 +1053,15 @@ dtm.array = function (val, name) {
         params.value = dtm.transform.beatsToIndices(params.value);
         array.set(params.value);
         return array;
+    };
+
+    /**
+     * function module:array#indicesToBeats
+     * @param [len]
+     * @returns {dtm.array}
+     */
+    array.indicesToBeats = function (len) {
+        return array.set(dtm.transform.indicesToBeats(params.value, len));
     };
 
     return array;

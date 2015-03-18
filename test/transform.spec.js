@@ -74,17 +74,42 @@ describe('array helper functions', function () {
         });
 
         describe('fitSum', function () {
-            var input = [3, 5, 2, 4.5, 1, 7, 9];
-
             it('should return the sum of 32', function () {
+                var input = [3, 5, 2, 4.5, 1, 7, 9];
                 var tgt = 30;
                 var fracOut = dtm.transform.fitSum(input, tgt, false);
                 expect(dtm.analyzer.sum(fracOut)).toBe(tgt);
 
                 var roundedOut = dtm.transform.fitSum(input, tgt, true);
                 expect(dtm.analyzer.sum(roundedOut)).toBe(Math.round(tgt));
-            })
+            });
+
+            it('should return 32', function () {
+                var input = [2, 2, 0, 0, 1, 1, 2, 2];
+                var out = dtm.transform.fitSum(input, 32, true);
+                expect(dtm.analyzer.sum(out)).toBe(32);
+            });
         })
+    });
+
+    describe('arithmetic', function () {
+        describe('remove zeros', function () {
+            var input = [2, 0, 1, 0, 3, -2, 0, 5];
+            var out = dtm.transform.removeZeros(input);
+
+            it('shoud return [2, 1, 3, -2, 5]', function () {
+                expect(out).toEqual([2, 1, 3, -2, 5]);
+            });
+        });
+
+        describe('diff', function () {
+            var input = [0, 3, -2, 0, 5, 2, 4];
+            var out = dtm.transform.diff(input);
+
+            it('should return [3, -5, 2, 5, -3, 2]', function () {
+                expect(out).toEqual([3, -5, 2, 5, -3, 2]);
+            });
+        });
     });
 
     describe('mean', function () {
@@ -232,36 +257,78 @@ describe('array helper functions', function () {
     //    var res = dtm.transform.morphVarLen(arr1, arr2, morphIdx);
     //});
 
-    describe('notes to beats', function () {
-        var input = [4, 8, 8, 16, 16, 16, 16];
-        var output = dtm.transform.notesToBeats(input, 16);
+    describe('unit converters', function () {
+        describe('notes to beats', function () {
+            var input = [4, 8, 8, 16, 16, 16, 16];
+            var output = dtm.transform.notesToBeats(input, 16);
 //        console.log(output);
-    });
+        });
 
-    describe('beats to notes', function () {
-        var input = [1, 0, 0, 0, 1, 0, 1, 0, 1, 1, 1, 1];
-        var output = dtm.transform.beatsToNotes(input, 16);
+        describe('beats to notes', function () {
+            var input = [1, 0, 0, 0, 1, 0, 1, 0, 1, 1, 1, 1];
+            var output = dtm.transform.beatsToNotes(input, 16);
 //        console.log(output);
-    });
+        });
 
-    describe('intervals to beats', function () {
-        var input = [3, 3, 4, 2, 4];
-        var output = dtm.transform.intervalsToBeats(input);
+        describe('intervals to beats', function () {
+            var input = [3, 3, 4, 2, 4];
+            var output = dtm.transform.intervalsToBeats(input);
 //        console.log(output);
-    });
+        });
 
-    describe('beats to intervals', function () {
-        var input = [1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0];
-        var output = dtm.transform.beatsToIntervals(input);
+        describe('beats to intervals', function () {
+            var input = [1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0];
+            var output = dtm.transform.beatsToIntervals(input);
 //        console.log(output);
-    });
+        });
 
-    describe('beats to indices', function () {
-        var input = [1, 0, 1, 1, 0, 0, 1, 1];
-        var output = dtm.transform.beatsToIndices(input);
+        describe('beats to indices', function () {
+            var input = [1, 0, 1, 1, 0, 0, 1, 1];
+            var output = dtm.transform.beatsToIndices(input);
 
-        it('should have 5 values', function () {
-            expect(output.length).toBe(5);
+            it('should have 5 values', function () {
+                expect(output.length).toBe(5);
+            });
+        });
+
+        describe('indices to beats', function () {
+            it('should give beat seq liek this...', function () {
+                var input = [0, 3, 4, 6, 7];
+                var len = 8;
+                var out = dtm.transform.indicesToBeats(input, len);
+
+                expect(out).toEqual([1, 0, 0, 1, 1, 0, 1, 1]);
+            });
+
+            it('should work w/ unsorted indices too', function () {
+                var input = [3, 0, 7, 6, 4];
+                var len = 8;
+                var out = dtm.transform.indicesToBeats(input, len);
+
+                expect(out).toEqual([1, 0, 0, 1, 1, 0, 1, 1]);
+            });
+
+            it('should terminate if the length is smaller', function () {
+                var input = [3, 0, 7, 6, 4];
+                var len = 6;
+                var out = dtm.transform.indicesToBeats(input, len);
+
+                expect(out).toEqual([1, 0, 0, 1, 1, 0]);
+            });
+
+            it('should automatically set the length', function () {
+                var input = [3, 0, 7, 6, 4];
+                var out = dtm.transform.indicesToBeats(input);
+
+                expect(out).toEqual([1, 0, 0, 1, 1, 0, 1, 1]);
+            });
+
+            it('should have length of 16', function () {
+                var input = [0, 10];
+                var out = dtm.transform.indicesToBeats(input);
+
+                expect(out.length).toBe(16);
+            })
         });
     });
 
