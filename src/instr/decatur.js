@@ -9,32 +9,50 @@
         measures: 4,
         time: '4/4',
         div: 8,
+        update: 1,
+        repeat: 2,
+        repMap: [1, 2, 3, 3, 3, 4, 5, 5, 6, 6, 6, 7, 7, 8, 9],
 
         staves: 1,
         clef: 'g',
 
         updateFreq: 1/4,
 
+        divMap: [16, 8, 4, 8, 16, 8, 16],
+        range: {
+            'Flute': [60, 75, 93],
+            'Piano': [60, 72, 84],
+            'PianoL': [36, 48, 60],
+            'Cello': [36, 48, 72]
+        },
         durFx: ['rest', 'stacc', 'half', 'normal', 'tenuto', 'slur'],
-        dynFx: ['pp', 'p', 'mp', 'mf', 'f', 'ff']
+        dynFx: ['pp', 'p', 'mp', 'mf', 'f', 'ff'],
+        scale: [[0, 2, 7, 9], [2, 5, 7], [0, 2, 5, 7, 10], [0, 2, 5, 7], [0, 2, 4, 7, 9], [0, 2, 4, 6, 7], [2, 4, 6, 7, 9]],
+
+        celloFx: ['arc', 'pizz']
     };
 
     var mods = {
         volume: dtm.array(1),
-        scale: dtm.array().fill('seq', 12),
-        pitch: dtm.array().fill('line', 8, 60, 72).round(),
+        pitch: dtm.array().fill('normal', 8, 60, 72).round(),
+        range: dtm.array(0.3),
+        scale: dtm.array(params.scale[params.scale.length-1]),
+        scaleSel: dtm.array(2),
+
         //transp: dtm.array(0),
         //chord: dtm.array(0),
 
         //div: dtm.array(8),
         pos: dtm.array(0),
 
-        note: dtm.array().fill('consts', 8, 8),
-        dur: dtm.array().fill('ones', 8),
+        div: dtm.a(Math.round(params.divMap.length/2)),
+        repeat: dtm.array(2),
+        note: dtm.array().fill('line', 8),
+        dur: dtm.array().fill('zeros', 8),
         dyn: dtm.array().fill('zeros', 8),
 
         //density: dtm.array(8),
-        repeat: dtm.array(1)
+        activity: dtm.array(1)
     };
 
     var g = dtm.guido;
@@ -42,7 +60,7 @@
 
     m.output = function (c) {
         c.div(params.div);
-        var rep = mods.repeat.get(0);
+        var rep = params.repeat;
 
         //var numNotes = Math.round(mods.density.get('mean'));
         var numNotes = params.div * params.measures;
@@ -57,11 +75,19 @@
         var fixImaginaryLines = false;
         var pre, post;
 
-        var pArr = mods.pitch.clone().fit(pLen, 'linear').round().pq(mods.scale.get(), true);
+        var pArr = mods.pitch.clone().fit(pLen, 'linear');
 
-        var nArr = mods.note.clone().scale(0.1, 1).fit(pLen, 'step').fitSum(pLen, true);
+        var range = mods.range.clone().fit(pLen, 'step');
+        var low = Math.round((params.range[params.name][0] - params.range[params.name][1]) * range.get('mean') + params.range[params.name][1]);
+        var high = Math.round((params.range[params.name][2] - params.range[params.name][1]) * range.get('mean') + params.range[params.name][1]);
 
-        var durArr = mods.dur.clone().fit(pLen, 'linear').scale(0, 5).round();
+        pArr.rescale(low, high).round().pq(mods.scale.get(), true);
+
+        var nArr = mods.note.clone().scale(0.1, 1).fit(pLen, 'linear').fitSum(pLen, true);
+
+        var acArr = mods.activity.clone().fit(pLen, 'linear').round();
+
+        var durArr = mods.dur.clone().fit(pLen, 'step').scale(0, 5).round();
         var dynArr = mods.dyn.clone().fit(pLen, 'step');
 
 
@@ -79,6 +105,7 @@
             var dur = durArr.get('next');
             var prevDyn = dynArr.get('current');
             var dyn = dynArr.get('next');
+            var ac = acArr.get('next');
 
             //===== imaginary line stuff =====
             if (len > 1 && len + (accum % 4) > 4) {
@@ -104,7 +131,7 @@
             var pitch = pc[i] + oct[i].toString();
 
             // note len & duration
-            if (params.durFx[dur] == 'rest') {
+            if (params.durFx[dur] == 'rest' || ac === 0) {
                 pitch = '_';
 
                 if (slurOn) {
@@ -113,14 +140,14 @@
                 }
             }
 
-            if (params.durFx[dur] == 'slur') {
+            if (params.durFx[dur] == 'slur' && ac !== 0) {
                 if (!slurOn && i !== numNotes-1) {
                     seq[i] += '\\slur(';
                     slurOn = true;
                 }
             }
 
-            if (params.durFx[dur] == 'half') {
+            if (params.durFx[dur] == 'half' && ac !== 0) {
                 //if (len === 3) {
                 //    seq[i] += pitch + '*' + len-1 + '/' + params.div + '_*' + len-2 + '/' + params.div;
                 //} else {
@@ -133,7 +160,7 @@
                     seq[i] += pitch + '*' + len + '/' + params.div*2 + '_*' + len + '/' + params.div*2;
                 }
 
-            } else if (params.durFx[dur] == 'rest') {
+            } else if (params.durFx[dur] == 'rest' || ac === 0) {
                 if (fixImaginaryLines) {
                     seq[i] += pitch + '*' + pre + '/' + params.div;
                     seq[i] += pitch + '*' + post + '/' + params.div;
@@ -149,7 +176,7 @@
                 }
             }
 
-            if (params.durFx[dur] == 'stacc') {
+            if (params.durFx[dur] == 'stacc' && ac !== 0) {
                 seq[i] = '\\stacc(' + seq[i] + ')';
             } else if (params.durFx[dur] == 'tenuto') {
                 seq[i] = '\\ten(' + seq[i] + ')';
@@ -160,24 +187,46 @@
                 slurOn = false;
             }
 
-            if (i > 0) {
-                if (dyn != prevDyn && params.durFx[dur] != 'rest') {
-                    seq[i] = '\\intens<"' + params.dynFx[dyn] + '", dx=-0.3, dy=-4> ' + seq[i];
-                }
-            } else {
-                if (params.durFx[dur] != 'rest') {
-                    seq[i] = '\\intens<"' + params.dynFx[dyn] + '", dx=-0.3, dy=-4> ' + seq[i];
-                }
-            }
+            //if (i > 0) {
+            //    if (dyn != prevDyn && (params.durFx[dur] != 'rest' || ac === 0)) {
+            //        seq[i] = '\\intens<"' + params.dynFx[dyn] + '", dx=-0.3, dy=-4> ' + seq[i];
+            //    }
+            //} else {
+            //    if (params.durFx[dur] != 'rest' || ac === 0) {
+            //        seq[i] = '\\intens<"' + params.dynFx[dyn] + '", dx=-0.3, dy=-4> ' + seq[i];
+            //    }
+            //}
 
             fixImaginaryLines = false;
         }
 
         //================ formatting ================
+        var divFix = params.div;
+
+        while (divFix > 1) {
+            var step = numNotes/(divFix*4);
+            for (var i = 0; i < numNotes; i += step) {
+                if (i % (2*step) !== 0 && i-step >= 0) {
+                    if ((seq[i] === '_*1/'+divFix) && (seq[i-step] === '_*1/'+divFix)) {
+                        seq[i] = '';
+                        seq[i-step] = '_*1/'+divFix/2;
+                    }
+                }
+            }
+
+            divFix = divFix / 2;
+        }
+
         seq = seq.join(' ');
 
         var barLine = '\\barFormat<style="staff">';
-        var name = '\\instr<"' + params.name + '", dx=-1.65cm, dy=-0.5cm>';
+
+        var name = '';
+        if (params.name === 'Flute' || params.name === 'Cello') {
+            name += '\\instr<"' + params.name + '", dx=-1.65cm, dy=-0.5cm>';
+        } else if (params.name === 'Piano') {
+            name += '\\instr<"' + params.name + '", dx=-1.65cm, dy=-1.4cm>';
+        }
         var clef = '\\clef<"' + params.clef + '">';
         var time = '\\meter<"' + params.time + '">';
 
@@ -185,13 +234,20 @@
         var autoBreak = '\\set<autoSystemBreak="off">';
 
         // MEMO: \repeatBegin at the beginning breaks the score (bug)
-        osc.send('/guido/score', [params.name, '[' + autoBreak + barLine + name + time + seq + ' \\repeatEnd]']);
+        if (c.get('beat') % (numNotes * params.update) === 0) {
+            osc.send('/decatur/score', [params.name, '[' + autoBreak + barLine + name + time + seq + ' \\repeatEnd]']);
+        }
 
         return m.parent;
     };
 
     m.param.measures = function (val) {
         params.measures = val;
+        return m.parent;
+    };
+
+    m.param.update = function (val) {
+        params.update = val;
         return m.parent;
     };
 
@@ -209,23 +265,48 @@
         if (literal) {
             mods.pitch.round();
         } else {
-            mods.pitch.normalize();
-
             if (params.name === 'Flute') {
                 mods.pitch.rescale(60, 96).round();
+            } else if (params.name === 'Piano') {
+                mods.pitch.rescale(36, 60).round();
             } else if (params.name === 'Cello') {
-                mods.pitch.rescale(36, 81).round();
+                //mods.pitch.rescale(36, 81).round();
+                mods.pitch.rescale(36, 72).round();
             }
         }
 
         return m.parent;
     };
 
-    m.mod.scale = function (src, literal) {
-        mapper(src, 'scale');
+    m.mod.range = function (src, literal) {
+        mapper(src, 'range');
+        if (literal) {
+
+        } else {
+            mods.range.exp(2).scale(0.2, 0.8);
+        }
+
+        return m.parent;
+    };
+
+    m.mod.transpose = function (src, literal) {
+        mapper(src, 'transp');
 
         if (!literal) {
-            mods.scale.normalize().scale(0,11).round().unique().sort()
+
+        }
+        return m.parent;
+    };
+
+    m.mod.transp = m.mod.transpose;
+
+    m.mod.scale = function (src, literal) {
+        if (literal) {
+            mapper(src, 'scale');
+        } else {
+            mapper(src, 'scaleSel');
+            mods.scaleSel.rescale(0, params.scale.length-1).round();
+            mods.scale.set(params.scale[mods.scaleSel.get('mode')])
         }
 
         return m.parent;
@@ -233,23 +314,29 @@
 
     m.mod.pq = m.mod.scale;
 
-    //m.mod.subDiv = function (src, literal) {
-    //    mapper(src, 'div');
-    //
-    //    if (literal) {
-    //        mods.div.round();
-    //    } else {
-    //        mods.div.normalize().scale(1, 5).round().powof(2);
-    //    }
-    //    return m.parent;
-    //};
-    //
-    //m.mod.len = m.mod.div = m.mod.subdiv = m.mod.subDiv;
+    m.mod.div = function (src, literal) {
+        mapper(src, 'div');
 
-    m.param.div = function (val) {
-        params.div = val;
+        if (literal) {
+            params.div = mods.div.round().get('mode');
+        } else {
+            mods.div.range(0, params.divMap.length-1).round();
+            params.div = params.divMap[mods.div.get('mode')];
+        }
         return m.parent;
     };
+
+    m.mod.activity = function (src, literal) {
+        mapper(src, 'activity');
+
+        if (!literal) {
+            mods.activity.normalize().log(10);
+        }
+
+        return m.parent;
+    };
+
+    m.mod.ac = m.mod.activity;
 
     m.mod.note = function (src, literal) {
         mapper(src, 'note');
@@ -287,12 +374,17 @@
     m.mod.repeat = function (src, literal) {
         mapper(src, 'repeat');
 
-        if (!literal) {
-
+        if (literal) {
+            params.repeat = src;
+        } else {
+            mods.repeat.rescale(0, params.repMap.length-1).round();
+            params.repeat = params.repMap[mods.repeat.get('mode')];
         }
 
         return m.parent;
     };
+
+    m.mod.rep = m.mod.repeat;
 
     m.param.name = function (src) {
         params.name = src;
