@@ -11,7 +11,7 @@
         div: 8,
         update: 1,
         repeat: 2,
-        repMap: [1, 2, 3, 3, 3, 4, 5, 5, 6, 6, 6, 7, 7, 8, 9],
+        repMap: [2, 3, 3, 3, 4, 5, 5, 6, 6, 6, 7, 7, 8, 9],
 
         staves: 1,
         clef: 'g',
@@ -124,11 +124,42 @@
             accum += len;
             //==================================
 
+            var pitch = '';
+
+            //if (params.name === 'PianoL') {
+            //    pitch += '{';
+            //    var pMod = 0;
+            //
+            //    for (var i = 0; i < 3; i++) {
+            //        switch (i) {
+            //            case 0:
+            //                pMod = p + 0;
+            //                break;
+            //            case 1:
+            //                pMod = p + 7;
+            //                break;
+            //            case 2:
+            //                pMod = p + 10;
+            //                break;
+            //            default:
+            //                break;
+            //        }
+            //        pc[i] = g.pitchClass[dtm.val.mod(pMod, 12)];
+            //        oct[i] = (pMod - dtm.val.mod(pMod, 12)) / 12 - 4;
+            //        pitch += pc[i] + oct[i].toString();
+            //
+            //        if (i < 2) {
+            //            pitch += ',';
+            //        } else {
+            //            pitch += '}';
+            //        }
+            //    }
+            //
+            //} else {
+            //}
             pc[i] = g.pitchClass[dtm.val.mod(p, 12)];
             oct[i] = (p - dtm.val.mod(p, 12)) / 12 - 4;
-
-            // pitch
-            var pitch = pc[i] + oct[i].toString();
+            pitch += pc[i] + oct[i].toString();
 
             // note len & duration
             if (params.durFx[dur] == 'rest' || ac === 0) {
@@ -268,6 +299,8 @@
             if (params.name === 'Flute') {
                 mods.pitch.rescale(60, 96).round();
             } else if (params.name === 'Piano') {
+                mods.pitch.rescale(60, 84).round();
+            } else if (params.name === 'PianoL') {
                 mods.pitch.rescale(36, 60).round();
             } else if (params.name === 'Cello') {
                 //mods.pitch.rescale(36, 81).round();

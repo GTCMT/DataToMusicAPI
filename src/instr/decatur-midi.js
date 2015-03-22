@@ -12,7 +12,7 @@
         div: 16,
         update: 1,
         repeat: 2,
-        repMap: [1, 2, 3, 3, 3, 4, 5, 5, 6, 6, 6, 7, 7, 8, 9],
+        repMap: [2, 3, 3, 3, 4, 5, 5, 6, 6, 6, 7, 7, 8, 9],
 
         divMap: [16, 8, 4, 8, 16, 8, 16],
         range: {
@@ -119,7 +119,9 @@
             if (params.name === 'Flute') {
                 mods.pitch.rescale(60, 96).round();
             } else if (params.name === 'Piano') {
-                mods.pitch.rescale(36, 96).round();
+                mods.pitch.rescale(60, 84).round();
+            } else if (params.name === 'PianoL') {
+                mods.pitch.rescale(36, 60).round();
             } else if (params.name === 'Cello') {
                 //mods.pitch.rescale(36, 81).round();
                 mods.pitch.rescale(36, 72).round();
