@@ -3,7 +3,6 @@
 
     var params = {
         name: 'Flute',
-        callbacks: [],
 
         measures: 4,
         time: '4/4',
