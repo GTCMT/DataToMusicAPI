@@ -51,7 +51,7 @@ module.exports = function (grunt) {
                     'src/instr/testNotation.js',
                     'src/instr/decatur.js',
                     'src/instr/decatur-piano.js',
-                    'src/instr/decatur-midi.js',
+                    //'src/instr/decatur-midi.js',
                     'src/instr/csd.js',
                     'src/instr/csd-osc.js',
                     'misc/end.js'
