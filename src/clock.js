@@ -36,6 +36,8 @@ dtm.clock = function (bpm, subDiv, autoStart) {
         resolution: 480,
         beat: 0,
 
+        offset: 0,
+        requestId: null,
         autoStart: true
     };
 
@@ -245,29 +247,6 @@ dtm.clock = function (bpm, subDiv, autoStart) {
 
     clock.register = clock.reg = clock.add;
 
-    ///**
-    // * Registers a callback function to selected or all ticks of the clock.
-    // * @function module:clock#add
-    // * @param cb {function} Callback function.
-    // * @param [beats] {array} Sequence of beat numbers (int) on which the callback function should be called. The default is the every beat.
-    // * @returns {dtm.clock} self
-    // */
-    //clock.addToBeats = function (cb, iArr) {
-    //    if (arguments.length == 1) {
-    //        // CHECK: broken - changing the subdiv later should change this too?
-    //        // maybe disable the registration for certain beats
-    //        beats = _.range((params.subDiv * clock.time[0] / clock.time[1]));
-    //    }
-    ////        if (_.findKey(cb, 'modelName')) {
-    ////            cb.addParentClock(clock); // CHECK: risky
-    ////        }
-    ////
-    ////        console.log(_.findKey(cb, 'modelName'));
-    //
-    //    clock.callbacks.push([cb, beats]);
-    //    return clock;
-    //};
-
     /**
      * @function module:clock#remove
      * @param id {function|string}
@@ -464,7 +443,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
 
                     if (params.reported !== params.current) {
                         if ((params.current % params.resolution) > (params.reported % params.resolution)) {
-                            params.beat = Math.round(params.current / params.resolution);
+                            params.beat = Math.round((params.current-params.offset) / params.resolution);
                             //console.log(params.beat);
                         }
 
@@ -475,7 +454,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
                         params.current = params.reported;
                     }
 
-                    window.requestAnimationFrame(clock.tick);
+                    params.requestId = window.requestAnimationFrame(clock.tick);
                 }
             }
         }
@@ -562,8 +541,15 @@ dtm.clock = function (bpm, subDiv, autoStart) {
     clock.random = clock.randomize;
     clock.rand = clock.randomize;
 
-    clock.resetNextBeat = function () {
-        clock.beat = 0;
+    clock.reset = function () {
+        if (params.source === 'animationFrame') {
+            window.cancelAnimationFrame(params.requestId);
+        }
+
+        params.offset = params.current;
+        params.beat = 0;
+
+        clock.start();
         return clock;
     };
 

@@ -24,12 +24,12 @@
         repeat: 2,
         repMap: [2, 3, 3, 3, 4, 5, 5, 6, 6, 6, 7, 7, 8, 9],
 
-        divMap: [16, 8, 4, 8, 16, 8, 16],
+        divMap: [16, 8, 16, 8, 16],
         range: {
             'Flute': [60, 75, 93],
+            'Cello': [36, 48, 72],
             'Piano': [60, 72, 84],
             'PianoL': [36, 48, 60],
-            'Cello': [36, 48, 72],
             'Pad': [36, 54, 72],
             'Pulse': [60, 75, 93]
         },
@@ -52,7 +52,7 @@
         div: dtm.a(Math.round(params.divMap.length/2)),
         repeat: dtm.array(2),
         note: dtm.array().fill('line', 8),
-        dur: dtm.array().fill('zeros', 8),
+        dur: dtm.array().fill('ones', 8),
         dyn: dtm.array().fill('zeros', 8),
 
         //density: dtm.array(8),
@@ -199,40 +199,25 @@
                     }
 
                     if (params.durFx[dur] == 'half' && ac !== 0) {
-                        //if (len === 3) {
-                        //    seq[i] += pitch + '*' + len-1 + '/' + params.div + '_*' + len-2 + '/' + params.div;
-                        //} else {
-                        //    seq[i] += pitch + '*' + len + '/' + params.div*2 + '_*' + len + '/' + params.div*2;
-                        //}
                         if (fixImaginaryLines) {
                             seq[i] += pitch + '*' + pre + '/' + params.div*2 + '_*' + pre + '/' + params.div*2;
-                            seq[i] += ' ';
+                            seq[i] += ',';
                             seq[i] += pitch + '*' + post + '/' + params.div*2 + '_*' + post + '/' + params.div*2;
                         } else if (len !== 0) {
                             seq[i] += pitch + '*' + len + '/' + params.div*2 + '_*' + len + '/' + params.div*2;
                         }
 
-                    }
-                    //else if (params.durFx[dur] == 'rest' || ac === 0) {
-                    //    if (fixImaginaryLines) {
-                    //        seq[i] += pitch + '*' + pre + '/' + params.div;
-                    //        seq[i] += ' ';
-                    //        seq[i] += pitch + '*' + post + '/' + params.div;
-                    //    } else if (len !== 0) {
-                    //        seq[i] += pitch + '*' + len + '/' + params.div;
-                    //    }
-                    //
-                    //}
-                    else {
+                    } else {
                         if (fixImaginaryLines && !(params.durFx[dur] == 'rest' || ac === 0)) {
                             seq[i] += '\\tie(' + pitch + '*' + pre + '/' + params.div;
+                            seq[i] += ',';
                             seq[i] += pitch + '*' + post + '/' + params.div + ')';
                         } else if (len !== 0) {
                             seq[i] += pitch + '*' + len + '/' + params.div;
                         }
                     }
 
-                    if (ac !== 0 && !slurOn) {
+                    if (ac !== 0 && !slurOn && params.div > 16) {
                         if (params.durFx[dur] == 'stacc') {
                             seq[i] = '\\stacc(' + seq[i] + ')';
                         } else if (params.durFx[dur] == 'tenuto') {
@@ -258,9 +243,6 @@
                     fixImaginaryLines = false;
                 }
 
-                //console.log(numNotes);
-                //console.log(accum);
-
                 //================ formatting ================
 
                 for (var i = seq.length-1; i >= 0; i--) {
@@ -278,50 +260,111 @@
                     }
                 }
 
-
-
-                //var divFix = params.div;
-                //while (divFix > 1) {
-                //    var step = numNotes/(divFix*4);
-                //    for (var i = 0; i < seq.length; i += step) {
-                //        if (i % (2*step) !== 0 && i-step >= 0) {
-                //            if ((seq[i] === '_*1/'+divFix) && (seq[i-step] === '_*1/'+divFix)) {
-                //                seq[i] = '';
-                //                seq[i-step] = '_*1/'+divFix/2;
-                //            }
-                //        }
-                //    }
-                //
-                //    divFix = divFix / 2;
-                //}
-
                 for (var i = seq.length-1; i > 0; i--) {
                     if (seq[i] === '') {
                         seq.splice(i, 1);
                     }
                 }
 
-                console.log(seq);
+                for (var i = 0; i < seq.length; i++) {
+                    if (seq[i].indexOf(',') > -1) {
+                        var sliced = seq[i].split(',');
+                        seq[i] = sliced[0];
+                        seq.splice(i+1, 0, sliced[1]);
+                    }
+                }
+
+                var accum = 0;
+                var space = ' \\space<4>';
+                for (var i = 0; i < seq.length; i++) {
+                    accum += parseInt(seq[i].substr(seq[i].indexOf('*')+1, (seq[i].indexOf('/')-seq[i].indexOf('*')-1)));
+
+                    if (seq[i].indexOf('_') > -1) {
+                        seq[i] = '\\space<4> ' + seq[i] + ' \\space<4>';
+                    }
 
 
+                    if (accum >= 16) {
+                        seq[i] += space;
+                        if (accum % 16 === 0 && i !== seq.length-1) {
+                            seq[i+1] = '\\bar' + space + seq[i+1];
+                        } else if (i === seq.length-1) {
+                            seq[i] += ' \\space<3>';
+                        }
+                        accum -= 16;
+                    }
+                }
+
+                var staffFormat = '\\staffFormat<"5-line",';
+                if (seq.length === 1) {
+                    staffFormat += 'size=1.3pt>';
+                } else if (seq.length < 50) {
+                    staffFormat += 'size=1.3pt>';
+                } else if (seq.length < 100) {
+                    staffFormat += 'size=2pt>';
+                } else {
+                    staffFormat += 'size=3pt>';
+                }
+
+                var staff = '\\staff<';
+
+                switch (params.name) {
+                    case 'Flute':
+                        staff += '1';
+                        break;
+                    case 'Cello':
+                        staff += '2';
+                        break;
+                    case 'Piano':
+                        staff+= '3';
+                        break;
+                    case 'PianoL':
+                        staff+= '4';
+                        break;
+                    default:
+                        break;
+                }
+
+                if (seq.length === 1) {
+                    staff += ',5mm>';
+                } else {
+                    switch (params.name) {
+                        case 'Flute':
+                            staff += ',14mm>';
+                            break;
+                        case 'Cello':
+                            staff += ',14mm>';
+                            break;
+                        case 'Piano':
+                            staff+= ',10mm>';
+                            break;
+                        case 'PianoL':
+                            staff+= ',10mm>';
+                            break;
+                        default:
+                            break;
+                    }
+                }
+
+                //console.log(params.name, seq.length);
 
                 seq = seq.join(' ');
 
-                var barLine = '\\barFormat<style="staff">';
 
                 var name = '';
                 if (params.name === 'Flute' || params.name === 'Cello') {
                     name += '\\instr<"' + params.name + '", dx=-1.65cm, dy=-0.5cm>';
                 } else if (params.name === 'Piano') {
-                    name += '\\instr<"' + params.name + '", dx=-1.65cm, dy=-1.4cm>';
+                    name += '\\instr<"' + params.name + '", dx=-1.65cm, dy=-1.3cm>';
                 }
                 var clef = '\\clef<"' + params.clef + '">';
                 var time = '\\meter<"' + params.time + '">';
 
-                //var autoBreak = '\\autoBreak<system="off",page="off">'; not working
                 var autoBreak = '\\set<autoSystemBreak="off">';
+                var barLine = '\\barFormat<style="staff">';
 
-                osc.send('/decatur/score', [params.name, '[' + autoBreak + barLine + name + time + seq + ' \\repeatEnd]']);
+                //+ staff + staffFormat
+                osc.send('/decatur/score', [params.name, '[' + autoBreak + barLine + name + clef + time + seq + ' \\repeatEnd]']);
             }
         }
 
@@ -387,6 +430,23 @@
 
     m.param.name = function (src) {
         params.name = src;
+
+        switch (params.name) {
+            case 'Flute':
+                params.clef = 'g';
+                break;
+            case 'Cello':
+                params.clef = 'f';
+                break;
+            case 'Piano':
+                params.clef = 'g';
+                break;
+            case 'PianoL':
+                params.clef = 'f';
+                break;
+            default:
+                break;
+        }
         return m.parent;
     };
 
