@@ -29,7 +29,13 @@ dtm.model = function (name, categ) {
         param: {},
 
         params: {},
-        models: {}
+        models: {},
+
+        modes: {
+            'literal': ['literal', 'lit', 'l'],
+            'adapt': ['adapt', 'adapted', 'adaptive', 'a'],
+            'preserve': ['preserve', 'preserved', 'p']
+        }
     };
 
     model.get = function (param) {

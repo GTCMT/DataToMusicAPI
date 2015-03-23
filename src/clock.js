@@ -477,7 +477,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
             else if (dtm.master.clock.get('source') === 'animationFrame') {
                 if ((dtm.master.clock.get('cur') % (params.resolution/params.subDiv*4)) < params.prev) {
 
-                    params.beat = Math.round(dtm.master.clock.get('cur') / params.resolution * params.subDiv / 4);
+                    params.beat = Math.round((dtm.master.clock.get('cur')-params.offset) / params.resolution * params.subDiv / 4);
 
                     _.forEach(clock.callbacks, function (cb) {
                         cb(clock);
@@ -542,14 +542,18 @@ dtm.clock = function (bpm, subDiv, autoStart) {
     clock.rand = clock.randomize;
 
     clock.reset = function () {
-        if (params.source === 'animationFrame') {
-            window.cancelAnimationFrame(params.requestId);
-        }
+        //if (params.source === 'animationFrame') {
+        //    window.cancelAnimationFrame(params.requestId);
+        //}
 
-        params.offset = params.current;
+        if (params.isMaster) {
+            params.offset = params.current;
+        } else {
+            params.offset = dtm.master.clock.get('cur');
+        }
         params.beat = 0;
 
-        clock.start();
+        //clock.start();
         return clock;
     };
 

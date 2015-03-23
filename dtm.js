@@ -4262,7 +4262,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
             else if (dtm.master.clock.get('source') === 'animationFrame') {
                 if ((dtm.master.clock.get('cur') % (params.resolution/params.subDiv*4)) < params.prev) {
 
-                    params.beat = Math.round(dtm.master.clock.get('cur') / params.resolution * params.subDiv / 4);
+                    params.beat = Math.round((dtm.master.clock.get('cur')-params.offset) / params.resolution * params.subDiv / 4);
 
                     _.forEach(clock.callbacks, function (cb) {
                         cb(clock);
@@ -4327,14 +4327,18 @@ dtm.clock = function (bpm, subDiv, autoStart) {
     clock.rand = clock.randomize;
 
     clock.reset = function () {
-        if (params.source === 'animationFrame') {
-            window.cancelAnimationFrame(params.requestId);
-        }
+        //if (params.source === 'animationFrame') {
+        //    window.cancelAnimationFrame(params.requestId);
+        //}
 
-        params.offset = params.current;
+        if (params.isMaster) {
+            params.offset = params.current;
+        } else {
+            params.offset = dtm.master.clock.get('cur');
+        }
         params.beat = 0;
 
-        clock.start();
+        //clock.start();
         return clock;
     };
 
@@ -4842,7 +4846,13 @@ dtm.model = function (name, categ) {
         param: {},
 
         params: {},
-        models: {}
+        models: {},
+
+        modes: {
+            'literal': ['literal', 'lit', 'l'],
+            'adapt': ['adapt', 'adapted', 'adaptive', 'a'],
+            'preserve': ['preserve', 'preserved', 'p']
+        }
     };
 
     model.get = function (param) {
@@ -6079,10 +6089,13 @@ dtm.inscore = function () {
 
     m.mod.syn = m.mod.synth = m.mod.voice;
 
-    m.mod.wt = function (src, literal) {
+    m.mod.wt = function (src, mode) {
         mapper(src, 'wavetable');
 
-        if (!literal) {
+        if (m.modes.literal.indexOf(mode) > -1) {
+        } else if (m.modes.preserve.indexOf(mode) > -1) {
+            params.modules.wavetable.range(0, 1, 0, 1)
+        } else {
             params.modules.wavetable.normalize();
         }
 
@@ -6091,16 +6104,18 @@ dtm.inscore = function () {
 
     m.mod.wavetable = m.mod.wt;
 
-    m.mod.at = function (src, literal) {
+    m.mod.at = function (src, mode) {
         mapper(src, 'at');
 
         return m.parent;
     };
 
-    m.mod.rhythm = function (src, literal) {
+    m.mod.rhythm = function (src, mode) {
         mapper(src, 'rhythm');
 
-        if (!literal) {
+        if (m.modes.literal.indexOf(mode) > -1) {
+        } else if (m.modes.preserve.indexOf(mode) > -1) {
+        } else {
             params.modules.rhythm.normalize().round();
         }
 
@@ -6109,10 +6124,12 @@ dtm.inscore = function () {
 
     m.mod.beats = m.mod.rhythm;
 
-    m.mod.volume = function (src, literal) {
+    m.mod.volume = function (src, mode) {
         mapper(src, 'volume');
 
-        if (!literal) {
+        if (m.modes.literal.indexOf(mode) > -1) {
+        } else if (m.modes.preserve.indexOf(mode) > -1) {
+        } else {
             params.modules.volume.logCurve(5).rescale(0.1, 1);
         }
 
@@ -6121,11 +6138,15 @@ dtm.inscore = function () {
 
     m.mod.amp = m.mod.level = m.mod.vol = m.mod.volume;
 
-    m.mod.pitch = function (src, literal, round) {
+    m.mod.pitch = function (src, mode, round) {
         mapper(src, 'pitch');
 
-        if (!literal) {
-            params.modules.pitch.normalize().rescale(60, 90);
+        if (m.modes.literal.indexOf(mode) > -1) {
+
+        } else if (m.modes.preserve.indexOf(mode) > -1) {
+            params.modules.pitch.rescale(60, 90, 0, 1);
+        } else {
+            params.modules.pitch.rescale(60, 90);
         }
 
         if (round) {
@@ -6137,10 +6158,12 @@ dtm.inscore = function () {
 
     m.mod.nn = m.mod.noteNum = m.mod.pitch;
 
-    m.mod.transpose = function (src, literal, round) {
+    m.mod.transpose = function (src, mode, round) {
         mapper(src, 'transp');
 
-        if (!literal) {
+        if (m.modes.literal.indexOf(mode) > -1) {
+        } else if (m.modes.preserve.indexOf(mode) > -1) {
+        } else {
             params.modules.transp.normalize().scale(-12, 12);
         }
 
@@ -6153,7 +6176,7 @@ dtm.inscore = function () {
 
     m.mod.tr = m.mod.transp = m.mod.transpose;
 
-    m.mod.scale = function (src, literal, round) {
+    m.mod.scale = function (src, mode, round) {
         if (typeof(round) === 'undefined') {
             params.pqRound = false;
         } else {
@@ -6162,19 +6185,24 @@ dtm.inscore = function () {
 
         mapper(src, 'scale');
 
-        if (!literal) {
+        if (m.modes.literal.indexOf(mode) > -1) {
+        } else if (m.modes.preserve.indexOf(mode) > -1) {
+        } else {
             params.modules.scale.normalize().scale(0,11).round().unique().sort()
         }
+
 
         return m.parent;
     };
 
     m.mod.pq = m.mod.scale;
 
-    m.mod.chord = function (src, literal) {
+    m.mod.chord = function (src, mode) {
         mapper(src, 'chord');
 
-        if (!literal) {
+        if (m.modes.literal.indexOf(mode) > -1) {
+        } else if (m.modes.preserve.indexOf(mode) > -1) {
+        } else {
             params.modules.chord.normalize().scale(0, 12).round().unique().sort();
 
             if (params.modules.chord.get('len') > 4) {
@@ -6191,12 +6219,14 @@ dtm.inscore = function () {
         return m.parent;
     };
 
-    m.mod.bpm = function (src, literal) {
+    m.mod.bpm = function (src, mode) {
         params.sync = false;
 
         mapper(src, 'bpm');
 
-        if (!literal) {
+        if (m.modes.literal.indexOf(mode) > -1) {
+        } else if (m.modes.preserve.indexOf(mode) > -1) {
+        } else {
             params.modules.bpm.normalize().scale(60, 180);
         }
 
@@ -6206,12 +6236,15 @@ dtm.inscore = function () {
     m.mod.tempo = m.mod.bpm;
 
     // CHECK: not working
-    m.mod.subDiv = function (src, literal) {
+    m.mod.subDiv = function (src, mode) {
         mapper(src, 'subdiv');
 
-        if (!literal) {
+        if (m.modes.literal.indexOf(mode) > -1) {
+        } else if (m.modes.preserve.indexOf(mode) > -1) {
+        } else {
             params.modules.subdiv.normalize().scale(1, 5).round().powof(2);
         }
+
         return m.parent;
     };
 
@@ -6226,50 +6259,60 @@ dtm.inscore = function () {
         return m.parent;
     };
 
-    m.mod.lpf = function (src, literal) {
+    m.mod.lpf = function (src, mode) {
         mapper(src, 'lpf');
 
-        if (!literal) {
+        if (m.modes.literal.indexOf(mode) > -1) {
+        } else if (m.modes.preserve.indexOf(mode) > -1) {
+        } else {
             params.modules.lpf.normalize().log(10).scale(500, 5000);
         }
 
         return m.parent;
     };
 
-    m.mod.res = function (src, literal) {
+    m.mod.res = function (src, mode) {
         mapper(src, 'res');
 
-        if (!literal) {
+        if (m.modes.literal.indexOf(mode) > -1) {
+        } else if (m.modes.preserve.indexOf(mode) > -1) {
+        } else {
             params.modules.res.normalize().scale(0, 50);
         }
 
         return m.parent;
     };
 
-    m.mod.comb = function (src, literal) {
+    m.mod.comb = function (src, mode) {
         mapper('comb', src);
 
-        if (!literal) {
+        if (m.modes.literal.indexOf(mode) > -1) {
+        } else if (m.modes.preserve.indexOf(mode) > -1) {
+        } else {
             params.modules.comb.normalize().rescale(60, 90);
         }
 
         return m.parent;
     };
 
-    m.mod.delay = function (src, literal) {
+    m.mod.delay = function (src, mode) {
         mapper(src, 'delay');
 
-        if (!literal) {
+        if (m.modes.literal.indexOf(mode) > -1) {
+        } else if (m.modes.preserve.indexOf(mode) > -1) {
+        } else {
             params.modules.delay.normalize();
         }
 
         return m.parent;
     };
 
-    m.mod.dur = function (src, literal) {
+    m.mod.dur = function (src, mode) {
         mapper(src, 'dur');
 
-        if (!literal) {
+        if (m.modes.literal.indexOf(mode) > -1) {
+        } else if (m.modes.preserve.indexOf(mode) > -1) {
+        } else {
             params.modules.dur.normalize().exp(10).scale(0.01, 0.5);
         }
 
