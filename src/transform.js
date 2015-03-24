@@ -276,6 +276,12 @@ dtm.transform = {
         // interp: step, linear, cubic, etc.
         interp = interp || 'linear';
 
+        if (len < 1) {
+            len = 1;
+        } else {
+            len = Math.round(len);
+        }
+
         var res = [];
         res.length = len;
         var mult = len / arr.length;

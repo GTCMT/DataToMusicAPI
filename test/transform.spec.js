@@ -89,7 +89,32 @@ describe('array helper functions', function () {
                 var out = dtm.transform.fitSum(input, 32, true);
                 expect(dtm.analyzer.sum(out)).toBe(32);
             });
-        })
+        });
+
+        describe('size manipulation sutff', function () {
+            var input = [];
+            for (var i = 0; i < 4; i++) {
+                input[i] = _.random(-10, 10);
+            }
+
+            // TODO: write proper test cases
+            describe('fit', function () {
+                var len = 8;
+                var output = dtm.transform.fit(input, len, 'linear');
+
+                it('should have the same first and last values', function () {
+                    expect(input[0]).toBe(output[0]);
+                    expect(input[input.length - 1]).toBe(output[output.length - 1]);
+                });
+
+//            console.log(input);
+//            console.log(output);
+            });
+//
+//        describe('stretch', function () {
+//            var output = dtm.transform.stretch(input, 2.5);
+//        });
+        });
     });
 
     describe('arithmetic', function () {
@@ -198,31 +223,7 @@ describe('array helper functions', function () {
         });
     });
 
-    describe('size manipulation sutff', function () {
-        var input = [];
-        for (var i = 0; i < 4; i++) {
-            input[i] = _.random(-10, 10);
-        }
 
-        // TODO: write proper test cases
-        describe('fit', function () {
-            var len = 8;
-            var output = dtm.transform.fit(input, len, 'linear');
-
-            it('should have the same first and last values', function () {
-                expect(input[0]).toBe(output[0]);
-                expect(input[input.length - 1]).toBe(output[output.length - 1]);
-            });
-
-
-//            console.log(input);
-//            console.log(output);
-        });
-//
-//        describe('stretch', function () {
-//            var output = dtm.transform.stretch(input, 2.5);
-//        });
-    });
 
     //describe('morph', function () {
     //    var arr1 = [];

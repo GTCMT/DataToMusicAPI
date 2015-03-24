@@ -19,14 +19,14 @@
         voice: 'mono',
         measures: 4,
         time: '4/4',
-        div: 8,
+        div: 16,
         update: 1,
         repeat: 2,
         repMap: [2, 3, 3, 3, 4, 5, 5, 6, 6, 6, 7, 7, 8, 9],
 
         divMap: [16, 8, 16, 8, 16],
         range: {
-            'Flute': [60, 75, 93],
+            'Flute': [60, 75, 91],
             'Cello': [36, 48, 72],
             'Piano': [60, 72, 84],
             'PianoL': [36, 48, 60],
@@ -41,7 +41,7 @@
     };
 
     var mods = {
-        pitch: dtm.array().fill('normal', 8, 60, 72).round(),
+        pitch: dtm.array().fill('random', 8, 60, 72).round(),
         range: dtm.array(0.3),
         scale: dtm.array(params.scale[params.scale.length-1]),
         scaleSel: dtm.array(2),
@@ -52,12 +52,11 @@
         pos: dtm.array(0),
 
         div: dtm.a(Math.round(params.divMap.length/2)),
-        repeat: dtm.array(2),
+        repeat: dtm.array(1),
         note: dtm.array().fill('line', 8),
         dur: dtm.array().fill('ones', 8),
         dyn: dtm.array().fill('zeros', 8),
 
-        //density: dtm.array(8),
         activity: dtm.array(1)
     };
 
@@ -76,7 +75,11 @@
             });
         }
 
+        var sc = mods.scale.get();
+        var chord = mods.chord.get();
+
         var pLen = Math.round(numNotes/rep);
+        var pArr = mods.pitch.clone().fit(pLen, 'linear').log(10).round();
 
         //var range = mods.range.clone().fit(pLen, 'step');
         //var low = Math.round((params.range[params.name][0] - params.range[params.name][1]) * range.get('mean') + params.range[params.name][1]);
@@ -91,17 +94,11 @@
             // MEMO: \repeatBegin at the beginning breaks the score (bug)
             if (c.get('beat') % (numNotes * params.update) === 0) {
                 var seq = [];
-                var pc = [];
-                var oct = [];
 
                 var slurOn = false;
                 var accum = 0, accErr = 0;
                 var fixImaginaryLines = false;
                 var pre, post;
-
-                var pArr = mods.pitch.clone().fit(pLen, 'linear');
-                //pArr.rescale(low, high).round().pq(mods.scale.get(), true);
-                pArr.round().pq(mods.scale.get(), true).round();
 
                 var durArr = mods.dur.clone().fit(pLen, 'step').scale(0, 5).round();
                 var dynArr = mods.dyn.clone().fit(pLen, 'step');
@@ -158,52 +155,21 @@
 
                     var pitch = '';
 
-                    //if (params.name === 'PianoL') {
-                    //    pitch += '{';
-                    //    var pMod = 0;
-                    //
-                    //    for (var i = 0; i < 3; i++) {
-                    //        switch (i) {
-                    //            case 0:
-                    //                pMod = p + 0;
-                    //                break;
-                    //            case 1:
-                    //                pMod = p + 7;
-                    //                break;
-                    //            case 2:
-                    //                pMod = p + 10;
-                    //                break;
-                    //            default:
-                    //                break;
-                    //        }
-                    //        pc[i] = g.pitchClass[dtm.val.mod(pMod, 12)];
-                    //        oct[i] = (pMod - dtm.val.mod(pMod, 12)) / 12 - 4;
-                    //        pitch += pc[i] + oct[i].toString();
-                    //
-                    //        if (i < 2) {
-                    //            pitch += ',';
-                    //        } else {
-                    //            pitch += '}';
-                    //        }
-                    //    }
-                    //
-                    //} else {
-                    //}
-                    pitch += dtm.guido.nnToPitch(p+tr);
+                    pitch += dtm.guido.nnToPitch(dtm.val.pq(p+tr, sc, true));
 
                     // note len & duration
                     if (params.durFx[dur] == 'rest' || ac === 0) {
                         pitch = '_';
 
                         if (slurOn) {
-                            seq[i-1] += ' )';
+                            seq[i-1] += ' \\slurEnd';
                             slurOn = false;
                         }
                     }
 
                     if (params.durFx[dur] == 'slur' && ac !== 0) {
                         if (!slurOn && i !== numNotes-1) {
-                            seq[i] += '\\slur( ';
+                            seq[i] += '\\slurBegin ';
                             slurOn = true;
                         }
                     }
@@ -219,15 +185,15 @@
 
                     } else {
                         if (fixImaginaryLines && !(params.durFx[dur] == 'rest' || ac === 0)) {
-                            seq[i] += '\\tie( ' + pitch + '*' + pre + '/' + params.div;
+                            seq[i] += '\\tieBegin \\space<4>' + pitch + '*' + pre + '/' + params.div;
                             seq[i] += ',';
-                            seq[i] += pitch + '*' + post + '/' + params.div + ' )';
+                            seq[i] += pitch + '*' + post + '/' + params.div + ' \\tieEnd';
                         } else if (len !== 0) {
                             seq[i] += pitch + '*' + len + '/' + params.div;
                         }
                     }
 
-                    if (ac !== 0 && !slurOn && params.div > 16) {
+                    if (ac !== 0 && !slurOn && params.div >= 4) {
                         if (params.durFx[dur] == 'stacc') {
                             seq[i] = '\\stacc( ' + seq[i] + ' )';
                         } else if (params.durFx[dur] == 'tenuto') {
@@ -235,8 +201,15 @@
                         }
                     }
 
+                    if (params.durFx[dur] !== 'rest' &&
+                        params.durFx[dur] !== 'stacc' &&
+                        params.durFx[dur] !== 'tenuto' &&
+                        ac === 2 && chord.length === 1) {
+                        seq[i] = '\\accent( ' + seq[i] + ' )';
+                    }
+
                     if ((params.durFx[dur] != 'slur' && slurOn) || i == numNotes-1 && slurOn) {
-                        seq[i] += ' )';
+                        seq[i] += ' \\slurEnd';
                         slurOn = false;
                     }
 
@@ -295,7 +268,7 @@
                 }
 
                 if (mods.chord.get('len') > 1) {
-                    seq = harmonizeGuido(seq, mods.chord.get(), mods.scale.get());
+                    seq = harmonizeGuido(seq, chord, sc);
                 }
 
                 var accum = 0;
@@ -313,7 +286,7 @@
                         if (accum % 16 === 0 && i !== seq.length-1) {
                             seq[i+1] = '\\bar' + space + seq[i+1];
                         } else if (i === seq.length-1) {
-                            seq[i] += ' \\space<3>';
+                            seq[i] += ' \\space<4>';
                         }
                         accum -= 16;
                     }
@@ -384,8 +357,10 @@
                 var autoBreak = '\\set<autoSystemBreak="off">';
                 var barLine = '\\barFormat<style="staff">';
 
+                var pageFormat = '\\pageFormat<31cm, 12cm, 2cm, 5cm, 2cm, 3cm>';
+
                 //+ staff + staffFormat
-                osc.send('/decatur/score', [params.name, '[' + autoBreak + barLine + name + clef + time + seq + ' \\repeatEnd]']);
+                osc.send('/decatur/score', [params.name, '[' + pageFormat + autoBreak + barLine + name + clef + time + seq + ' \\repeatEnd]']);
             }
         }
 
@@ -395,22 +370,14 @@
                 var evList = [];
                 var unit = 60 / params.bpm * 4 / params.div;
 
-                var sc = mods.scale.get();
-
-                var p = mods.pitch.clone().fit(pLen, 'linear');
-                //p.rescale(low, high).round().pq(sc, true);
-                p.round().pq(sc, true).round();
-
                 var dur = mods.dur.clone().fit(pLen, 'step').scale(0, 5).round().normalize();
 
-
                 var del = 0;
-                //var tr = mods.transp.get('next');
 
                 for (var j = 0; j < params.update; j++) {
                     // TODO: array get-next should be fixed
+                    pArr.index(pLen-1);
                     nArr.index(pLen-1);
-                    p.index(pLen-1);
                     dur.index(pLen-1);
                     acArr.index(pLen-1);
 
@@ -418,7 +385,7 @@
 
                     for (var i = 0; i < numNotes; i++) {
                         var noteLen = nArr.get('next');
-                        var pitch = p.get('next');
+                        var p = pArr.get('next');
                         var durMod = dur.get('next');
                         var ac = acArr.get('next');
                         var tr = trArr.get('next');
@@ -428,14 +395,12 @@
                                 var delInSec = del * unit + dtm.val.rand(0, 0.01);
                                 var durInSec = noteLen * durMod * unit * 0.95;
                                 if (mods.chord.get('len') > 1) {
-                                    var chord = mods.chord.get();
                                     for (var j = 0; j < chord.length; j++) {
-                                        var cv = dtm.val.pq(pitch + chord[j] + tr, sc, true);
-
-                                        evList.push([delInSec, durInSec, cv]);
+                                        var trv = dtm.val.pq(p + tr, sc, true);
+                                        evList.push([delInSec, durInSec, dtm.val.pq(trv + chord[j], sc, true)]);
                                     }
                                 } else {
-                                    evList.push([delInSec, durInSec, pitch]);
+                                    evList.push([delInSec, durInSec, dtm.val.pq(p + tr, sc, true)]);
                                 }
                             }
                             del += noteLen;
@@ -630,9 +595,9 @@
 
         if (m.modes.literal.indexOf(mode) > -1) {
         } else if (m.modes.preserve.indexOf(mode) > -1) {
-            mods.activity.normalize(0, 1).log(10);
+            mods.activity.scale(0, 2, 0, 1).round();
         } else {
-            mods.activity.normalize().log(10);
+            mods.activity.scale(0, 2).round();
         }
 
         if (!mode) {
