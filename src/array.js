@@ -462,8 +462,8 @@ dtm.array = function (val, name) {
     /**
      * Rescales the range of the numerical values to 0-1.
      * @function module:array#normalize
-     * @param [min] {number}
-     * @param [max] {number}
+     * @param [min] {number} Prefered domain minimum value. If not present, the minimum of the input array is used.
+     * @param [max] {number} Prefered domain maximum value. If not present, the maximum of the input array is used.
      * @returns {dtm.array}
      */
     array.normalize = function (min, max) {

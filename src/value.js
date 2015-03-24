@@ -102,13 +102,18 @@ dtm.value = {
 
     },
 
+    // TODO: min / max / single-value defaults
     randi: function (min, max) {
         return _.random(min, max);
     },
 
     random: function (min, max) {
+        if (typeof(min) === 'undefined' && typeof(max) === 'undefined') {
+            min = 0;
+            max = 1;
+        }
         return _.random(min, max, true);
-    },
+    }
 };
 
 dtm.value.rand = dtm.value.random;

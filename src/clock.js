@@ -35,6 +35,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
         reported: 0,
         resolution: 480,
         beat: 0,
+        prevBeat: -1,
 
         offset: 0,
         requestId: null,
@@ -479,10 +480,13 @@ dtm.clock = function (bpm, subDiv, autoStart) {
 
                     params.beat = Math.round((dtm.master.clock.get('cur')-params.offset) / params.resolution * params.subDiv / 4);
 
-                    _.forEach(clock.callbacks, function (cb) {
-                        cb(clock);
-                    });
+                    //if (params.beat > params.prevBeat) {
+                        _.forEach(clock.callbacks, function (cb) {
+                            cb(clock);
+                        });
+                    //}
 
+                    params.prevBeat = params.beat;
                 }
                 params.prev = dtm.master.clock.get('cur') % (params.resolution / params.subDiv * 4);
             }

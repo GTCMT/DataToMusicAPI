@@ -2325,8 +2325,8 @@ dtm.array = function (val, name) {
     /**
      * Rescales the range of the numerical values to 0-1.
      * @function module:array#normalize
-     * @param [min] {number}
-     * @param [max] {number}
+     * @param [min] {number} Prefered domain minimum value. If not present, the minimum of the input array is used.
+     * @param [max] {number} Prefered domain maximum value. If not present, the maximum of the input array is used.
      * @returns {dtm.array}
      */
     array.normalize = function (min, max) {
@@ -3079,13 +3079,18 @@ dtm.value = {
 
     },
 
+    // TODO: min / max / single-value defaults
     randi: function (min, max) {
         return _.random(min, max);
     },
 
     random: function (min, max) {
+        if (typeof(min) === 'undefined' && typeof(max) === 'undefined') {
+            min = 0;
+            max = 1;
+        }
         return _.random(min, max, true);
-    },
+    }
 };
 
 dtm.value.rand = dtm.value.random;
@@ -3820,6 +3825,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
         reported: 0,
         resolution: 480,
         beat: 0,
+        prevBeat: -1,
 
         offset: 0,
         requestId: null,
@@ -4264,10 +4270,13 @@ dtm.clock = function (bpm, subDiv, autoStart) {
 
                     params.beat = Math.round((dtm.master.clock.get('cur')-params.offset) / params.resolution * params.subDiv / 4);
 
-                    _.forEach(clock.callbacks, function (cb) {
-                        cb(clock);
-                    });
+                    //if (params.beat > params.prevBeat) {
+                        _.forEach(clock.callbacks, function (cb) {
+                            cb(clock);
+                        });
+                    //}
 
+                    params.prevBeat = params.beat;
                 }
                 params.prev = dtm.master.clock.get('cur') % (params.resolution / params.subDiv * 4);
             }
@@ -5869,6 +5878,54 @@ dtm.guido = {
         9: 'a',
         10: 'b&',
         11: 'b'
+    },
+
+    diatonic: {
+        'c': 0,
+        'd': 2,
+        'e': 4,
+        'f': 5,
+        'g': 7,
+        'a': 9,
+        'b': 11,
+        '_': null
+    },
+
+    nnToPitch: function (nn) {
+        var pc = dtm.guido.pitchClass[dtm.val.mod(nn, 12)];
+        var oct = (nn - dtm.val.mod(nn, 12)) / 12 - 4;
+        return pc + oct.toString();
+    },
+
+    pitchToNn: function (sym) {
+        var elems = sym.split('');
+
+        var acc = 0;
+        var oct = 0;
+
+        var pc = dtm.guido.diatonic[elems[0]];
+
+        if (elems.length === 2) {
+            oct = (parseInt(elems[1]) + 4) * 12;
+        } else if (elems.length > 2) {
+            if (elems[1] == '#') {
+                acc = 1;
+            } else if (elems[1] == '&') {
+                acc = -1;
+            }
+
+            if (elems.length === 3) {
+                if (elems[1] == '-') {
+                    oct = (parseInt(elems[1]+elems[2]) + 4) * 12;
+                } else {
+                    oct = (parseInt(elems[2]) + 4) * 12;
+                }
+            } else if (elems.length === 4) {
+                oct = (parseInt(elems[2] + elems[3]) + 4) * 12;
+            }
+        }
+
+        return pc + acc + oct;
     }
 
     //guido.dur = {
@@ -6572,7 +6629,9 @@ dtm.inscore = function () {
         },
         scale: [[0, 2, 7, 9], [2, 5, 7], [0, 2, 5, 7, 10], [0, 2, 5, 7], [0, 2, 4, 7, 9], [0, 2, 4, 6, 7], [2, 4, 6, 7, 9]],
 
-        celloFx: ['arc', 'pizz']
+        celloFx: ['arc', 'pizz'],
+
+        callbacks: []
     };
 
     var mods = {
@@ -6582,7 +6641,7 @@ dtm.inscore = function () {
         scaleSel: dtm.array(2),
 
         transp: dtm.array(0),
-        //chord: dtm.array(0),
+        chord: dtm.array(0),
 
         pos: dtm.array(0),
 
@@ -6601,18 +6660,26 @@ dtm.inscore = function () {
 
     m.output = function (c) {
         c.div(params.div);
+
         var rep = params.repeat;
         var numNotes = params.div * params.measures;
+
+        if (c.get('beat') % (numNotes * params.update) === 0) {
+            _.forEach(params.callbacks, function (cb) {
+                cb(c);
+            });
+        }
+
         var pLen = Math.round(numNotes/rep);
 
-        var range = mods.range.clone().fit(pLen, 'step');
-        var low = Math.round((params.range[params.name][0] - params.range[params.name][1]) * range.get('mean') + params.range[params.name][1]);
-        var high = Math.round((params.range[params.name][2] - params.range[params.name][1]) * range.get('mean') + params.range[params.name][1]);
+        //var range = mods.range.clone().fit(pLen, 'step');
+        //var low = Math.round((params.range[params.name][0] - params.range[params.name][1]) * range.get('mean') + params.range[params.name][1]);
+        //var high = Math.round((params.range[params.name][2] - params.range[params.name][1]) * range.get('mean') + params.range[params.name][1]);
         var nArr = mods.note.clone().scale(0.1, 1).fit(pLen, 'linear').fitSum(pLen, true);
         var acArr = mods.activity.clone().fit(pLen, 'linear').round();
+        var trArr = mods.transp.clone().fit(pLen, 'linear').round();
 
         if (params.score && (params.name === 'Flute' || params.name === 'Piano' || params.name === 'PianoL' || params.name === 'Cello')) {
-
 
 
             // MEMO: \repeatBegin at the beginning breaks the score (bug)
@@ -6627,7 +6694,8 @@ dtm.inscore = function () {
                 var pre, post;
 
                 var pArr = mods.pitch.clone().fit(pLen, 'linear');
-                pArr.rescale(low, high).round().pq(mods.scale.get(), true);
+                //pArr.rescale(low, high).round().pq(mods.scale.get(), true);
+                pArr.round().pq(mods.scale.get(), true).round();
 
                 var durArr = mods.dur.clone().fit(pLen, 'step').scale(0, 5).round();
                 var dynArr = mods.dyn.clone().fit(pLen, 'step');
@@ -6648,6 +6716,7 @@ dtm.inscore = function () {
                     var prevDyn = dynArr.get('current');
                     var dyn = dynArr.get('next');
                     var ac = acArr.get('next');
+                    var tr = trArr.get('next');
 
                     //===== imaginary line stuff =====
                     if (len > 1 && len + (accum % 4) > 4) {
@@ -6714,23 +6783,21 @@ dtm.inscore = function () {
                     //
                     //} else {
                     //}
-                    pc[i] = g.pitchClass[dtm.val.mod(p, 12)];
-                    oct[i] = (p - dtm.val.mod(p, 12)) / 12 - 4;
-                    pitch += pc[i] + oct[i].toString();
+                    pitch += dtm.guido.nnToPitch(p+tr);
 
                     // note len & duration
                     if (params.durFx[dur] == 'rest' || ac === 0) {
                         pitch = '_';
 
                         if (slurOn) {
-                            seq[i-1] += ')';
+                            seq[i-1] += ' )';
                             slurOn = false;
                         }
                     }
 
                     if (params.durFx[dur] == 'slur' && ac !== 0) {
                         if (!slurOn && i !== numNotes-1) {
-                            seq[i] += '\\slur(';
+                            seq[i] += '\\slur( ';
                             slurOn = true;
                         }
                     }
@@ -6746,9 +6813,9 @@ dtm.inscore = function () {
 
                     } else {
                         if (fixImaginaryLines && !(params.durFx[dur] == 'rest' || ac === 0)) {
-                            seq[i] += '\\tie(' + pitch + '*' + pre + '/' + params.div;
+                            seq[i] += '\\tie( ' + pitch + '*' + pre + '/' + params.div;
                             seq[i] += ',';
-                            seq[i] += pitch + '*' + post + '/' + params.div + ')';
+                            seq[i] += pitch + '*' + post + '/' + params.div + ' )';
                         } else if (len !== 0) {
                             seq[i] += pitch + '*' + len + '/' + params.div;
                         }
@@ -6756,14 +6823,14 @@ dtm.inscore = function () {
 
                     if (ac !== 0 && !slurOn && params.div > 16) {
                         if (params.durFx[dur] == 'stacc') {
-                            seq[i] = '\\stacc(' + seq[i] + ')';
+                            seq[i] = '\\stacc( ' + seq[i] + ' )';
                         } else if (params.durFx[dur] == 'tenuto') {
-                            seq[i] = '\\ten(' + seq[i] + ')';
+                            seq[i] = '\\ten( ' + seq[i] + ' )';
                         }
                     }
 
                     if ((params.durFx[dur] != 'slur' && slurOn) || i == numNotes-1 && slurOn) {
-                        seq[i] += ')';
+                        seq[i] += ' )';
                         slurOn = false;
                     }
 
@@ -6797,6 +6864,14 @@ dtm.inscore = function () {
                     }
                 }
 
+                for (var i = 0; i < seq.length; i++) {
+                    if (seq[i].indexOf(',') > -1) {
+                        var sliced = seq[i].split(',');
+                        seq[i] = sliced[0];
+                        seq.splice(i+1, 0, sliced[1]);
+                    }
+                }
+
                 for (var i = seq.length-1; i > 0; i--) {
                     if (seq[i] === '') {
                         seq.splice(i, 1);
@@ -6804,11 +6879,17 @@ dtm.inscore = function () {
                 }
 
                 for (var i = 0; i < seq.length; i++) {
-                    if (seq[i].indexOf(',') > -1) {
-                        var sliced = seq[i].split(',');
-                        seq[i] = sliced[0];
-                        seq.splice(i+1, 0, sliced[1]);
+                    if (seq[i].indexOf(' ') > -1) {
+                        var sliced = seq[i].split(' ');
+                        for (var j = 0; j < sliced.length-1; j++) {
+                            seq[i+j] = sliced[j];
+                            seq.splice(i+1+j, 0, sliced[j+1]);
+                        }
                     }
+                }
+
+                if (mods.chord.get('len') > 1) {
+                    seq = harmonizeGuido(seq, mods.chord.get(), mods.scale.get());
                 }
 
                 var accum = 0;
@@ -6883,10 +6964,7 @@ dtm.inscore = function () {
                     }
                 }
 
-                //console.log(params.name, seq.length);
-
                 seq = seq.join(' ');
-
 
                 var name = '';
                 if (params.name === 'Flute' || params.name === 'Cello') {
@@ -6914,32 +6992,47 @@ dtm.inscore = function () {
                 var sc = mods.scale.get();
 
                 var p = mods.pitch.clone().fit(pLen, 'linear');
-                p.rescale(low, high).round().pq(sc, true);
+                //p.rescale(low, high).round().pq(sc, true);
+                p.round().pq(sc, true).round();
 
                 var dur = mods.dur.clone().fit(pLen, 'step').scale(0, 5).round().normalize();
 
+
                 var del = 0;
-                var tr = mods.transp.get('next');
+                //var tr = mods.transp.get('next');
 
                 for (var j = 0; j < params.update; j++) {
-                    nArr.index(0);
-                    p.index(0);
-                    dur.index(0);
-                    acArr.index(0);
+                    // TODO: array get-next should be fixed
+                    nArr.index(pLen-1);
+                    p.index(pLen-1);
+                    dur.index(pLen-1);
+                    acArr.index(pLen-1);
 
                     del = numNotes * j;
 
                     for (var i = 0; i < numNotes; i++) {
-                        var note = nArr.get('next');
+                        var noteLen = nArr.get('next');
                         var pitch = p.get('next');
                         var durMod = dur.get('next');
                         var ac = acArr.get('next');
+                        var tr = trArr.get('next');
 
-                        if (note !== 0) {
+                        if (noteLen !== 0) {
                             if (durMod !== 0 && ac !== 0) {
-                                evList.push([del * unit + dtm.val.rand(0, 0.01), note * durMod * unit * 0.95, pitch + tr]);
+                                var delInSec = del * unit + dtm.val.rand(0, 0.01);
+                                var durInSec = noteLen * durMod * unit * 0.95;
+                                if (mods.chord.get('len') > 1) {
+                                    var chord = mods.chord.get();
+                                    for (var j = 0; j < chord.length; j++) {
+                                        var cv = dtm.val.pq(pitch + chord[j] + tr, sc, true);
+
+                                        evList.push([delInSec, durInSec, cv]);
+                                    }
+                                } else {
+                                    evList.push([delInSec, durInSec, pitch]);
+                                }
                             }
-                            del += note;
+                            del += noteLen;
                         }
                     }
                 }
@@ -6955,12 +7048,24 @@ dtm.inscore = function () {
         return m.parent;
     };
 
+    m.param.get = function (param) {
+        switch (param) {
+            case 'score':
+                break;
+            case 'midi':
+                break;
+            default:
+                break;
+        }
+        return m.parent;
+    };
+
     m.param.score = function (bool) {
         params.score = bool;
         return m.parent;
     };
 
-    m.params.midi = function (bool) {
+    m.param.midi = function (bool) {
         params.midi = bool;
         return m.parent;
     };
@@ -7007,11 +7112,29 @@ dtm.inscore = function () {
         return m.parent;
     };
 
-    m.mod.pitch = function (src, literal) {
+    m.param.onUpdate = function (cb) {
+        params.callbacks.push(cb);
+        return m.parent;
+    };
+
+    m.mod.pitch = function (src, mode) {
         mapper(src, 'pitch');
 
-        if (literal) {
+        if (m.modes.literal.indexOf(mode) > -1) {
             mods.pitch.round();
+        } else if (m.modes.preserve.indexOf(mode) > -1) {
+            if (params.name === 'Flute') {
+                mods.pitch.rescale(60, 96, 0, 1).round();
+            } else if (params.name === 'Piano') {
+                mods.pitch.rescale(60, 84, 0, 1).round();
+            } else if (params.name === 'PianoL') {
+                mods.pitch.rescale(36, 60, 0, 1).round();
+            } else if (params.name === 'Cello') {
+                //mods.pitch.rescale(36, 81, 0, 1).round();
+                mods.pitch.rescale(36, 72, 0, 1).round();
+            } else {
+                mods.pitch.rescale(60, 96, 0, 1).round();
+            }
         } else {
             if (params.name === 'Flute') {
                 mods.pitch.rescale(60, 96).round();
@@ -7030,10 +7153,11 @@ dtm.inscore = function () {
         return m.parent;
     };
 
-    m.mod.range = function (src, literal) {
+    m.mod.range = function (src, mode) {
         mapper(src, 'range');
-        if (literal) {
 
+        if (m.modes.literal.indexOf(mode) > -1) {
+        } else if (m.modes.preserve.indexOf(mode) > -1) {
         } else {
             mods.range.exp(2).scale(0.2, 0.8);
         }
@@ -7041,20 +7165,26 @@ dtm.inscore = function () {
         return m.parent;
     };
 
-    m.mod.transpose = function (src, literal) {
+    m.mod.transpose = function (src, mode) {
         mapper(src, 'transp');
 
-        if (!literal) {
-
+        if (m.modes.literal.indexOf(mode) > -1) {
+        } else if (m.modes.preserve.indexOf(mode) > -1) {
+        } else {
         }
+
         return m.parent;
     };
 
-    m.mod.transp = m.mod.transpose;
+    m.mod.tr = m.mod.transp = m.mod.transpose;
 
-    m.mod.scale = function (src, literal) {
-        if (literal) {
+    m.mod.scale = function (src, mode) {
+        if (m.modes.literal.indexOf(mode) > -1) {
             mapper(src, 'scale');
+        } else if (m.modes.preserve.indexOf(mode) > -1) {
+            mapper(src, 'scaleSel');
+            mods.scaleSel.rescale(0, params.scale.length-1, 0, 1).round();
+            mods.scale.set(params.scale[mods.scaleSel.get('mode')])
         } else {
             mapper(src, 'scaleSel');
             mods.scaleSel.rescale(0, params.scale.length-1).round();
@@ -7064,25 +7194,42 @@ dtm.inscore = function () {
         return m.parent;
     };
 
-    m.mod.pq = m.mod.scale;
-
-    m.mod.div = function (src, literal) {
-        mapper(src, 'div');
-
-        if (literal) {
-            params.div = mods.div.round().get('mode');
+    m.mod.chord = function (src, mode) {
+        mapper(src, 'chord');
+        if (m.modes.literal.indexOf(mode) > -1) {
+        } else if (m.modes.preserve.indexOf(mode) > -1) {
         } else {
-            mods.div.range(0, params.divMap.length-1).round();
-            params.div = params.divMap[mods.div.get('mode')];
         }
         return m.parent;
     };
 
-    m.mod.activity = function (src, literal) {
+    m.mod.pq = m.mod.scale;
+
+    m.mod.div = function (src, mode) {
+        mapper(src, 'div');
+
+        if (m.modes.literal.indexOf(mode) > -1) {
+            params.div = mods.div.round().get('mode');
+        } else if (m.modes.preserve.indexOf(mode) > -1) {
+        } else {
+            mods.div.range(0, params.divMap.length-1).round();
+            params.div = params.divMap[mods.div.get('mode')];
+        }
+
+        return m.parent;
+    };
+
+    m.mod.activity = function (src, mode) {
         mapper(src, 'activity');
 
-        if (!literal) {
+        if (m.modes.literal.indexOf(mode) > -1) {
+        } else if (m.modes.preserve.indexOf(mode) > -1) {
+            mods.activity.normalize(0, 1).log(10);
+        } else {
             mods.activity.normalize().log(10);
+        }
+
+        if (!mode) {
         }
 
         return m.parent;
@@ -7090,12 +7237,15 @@ dtm.inscore = function () {
 
     m.mod.ac = m.mod.activity;
 
-    m.mod.note = function (src, literal) {
+    m.mod.note = function (src, mode) {
         mapper(src, 'note');
 
-        if (literal) {
+        if (m.modes.literal.indexOf(mode) > -1) {
             mods.note.round();
+        } else if (m.modes.preserve.indexOf(mode) > -1) {
+        } else {
         }
+
         //else {
         //    mods.note.fitSum(params.measures * mods.div.get(0), true);
         //}
@@ -7103,39 +7253,52 @@ dtm.inscore = function () {
         return m.parent;
     };
 
-    m.mod.dur = function (src, literal) {
+    m.mod.dur = function (src, mode) {
         mapper(src, 'dur');
-        if (!literal) {
+
+        if (m.modes.literal.indexOf(mode) > -1) {
+        } else if (m.modes.preserve.indexOf(mode) > -1) {
+            mods.dur.normalize(0, 1);
+        } else {
             mods.dur.normalize();
         }
+
         return m.parent;
     };
 
-    m.mod.dyn = function (src, literal) {
+    m.mod.dyn = function (src, mode) {
         mapper(src, 'dyn');
 
-        if (!literal) {
+        if (m.modes.literal.indexOf(mode) > -1) {
+        } else if (m.modes.preserve.indexOf(mode) > -1) {
+            mods.dyn.scale(0, 5, 0, 1).round();
+        } else {
             mods.dyn.scale(0, 5).round();
         }
 
         return m.parent;
     };
 
-    m.mod.density = function (src, literal) {
+    m.mod.density = function (src, mode) {
         mapper(src, 'density');
 
-        if (!literal) {
+        if (m.modes.literal.indexOf(mode) > -1) {
+        } else if (m.modes.preserve.indexOf(mode) > -1) {
+        } else {
             mods.density.scale(1, 32).exp(5);
         }
 
         return m.parent;
     };
 
-    m.mod.repeat = function (src, literal) {
+    m.mod.repeat = function (src, mode) {
         mapper(src, 'repeat');
 
-        if (literal) {
+        if (m.modes.literal.indexOf(mode) > -1) {
             params.repeat = src;
+        } else if (m.modes.preserve.indexOf(mode) > -1) {
+            mods.repeat.rescale(0, params.repMap.length-1, 0, 1).round();
+            params.repeat = params.repMap[mods.repeat.get('mode')];
         } else {
             mods.repeat.rescale(0, params.repMap.length-1).round();
             params.repeat = params.repMap[mods.repeat.get('mode')];
@@ -7166,6 +7329,30 @@ dtm.inscore = function () {
                 mods[dest] = src;
             }
         }
+    }
+
+    function harmonizeGuido(seq, chord, scale) {
+        for (var i = 0; i < seq.length; i++) {
+            if (seq[i].indexOf('*') > -1 && seq[i].indexOf('_') === -1) {
+                var nn = dtm.guido.pitchToNn(seq[i].split('*')[0]);
+
+                seq[i] = '{' + seq[i];
+
+                for (var j = 0; j < chord.length; j++) {
+                    if (chord[j] !== 0) {
+                        var cv = nn + chord[j];
+                        if (scale) {
+                            cv = dtm.val.pq(cv, scale, true);
+                        }
+                        seq[i] += ', ';
+                        seq[i] += dtm.guido.nnToPitch(cv);
+                    }
+                }
+                seq[i] += '}';
+            }
+        }
+
+        return seq;
     }
 
     return m;

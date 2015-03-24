@@ -155,6 +155,15 @@ describe('array object', function () {
                 expect(a.get('max')).toBe(max);
             });
         });
+
+        describe('queue', function () {
+            var a = dtm.array([1, 2, 3]);
+            a.queue([4, 5, 6, 7, 8]);
+
+            it('should return [6,7,8]', function () {
+                expect(a.get()).toEqual([6, 7, 8]);
+            });
+        });
     });
 
     describe('scalers', function () {
