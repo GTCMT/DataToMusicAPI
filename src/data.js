@@ -359,15 +359,22 @@ dtm.data = function (arg, cb, type) {
                 params.size.col = arguments[0];
                 params.size.row = arguments[1];
             }
+        } else if (arguments.length === 3) {
+        for (var i = 0; i < arguments[0]; i++) {
+            params.arrays[arguments[2][i]] = dtm.array().fill('zeros', arguments[1]).setName(arguments[2][i]);
+            params.keys[i] = arguments[2][i];
+            params.size.col = arguments[0];
+            params.size.row = arguments[1];
         }
+    }
         return data;
     };
 
     data.append = function (arg) {
         if (arg instanceof Array) {
             for (var i = 0; i < arg.length; i++) {
-                if (typeof(params.arrays[i]) !== 'undefined') {
-                    params.arrays[i].append(arg[i]);
+                if (typeof(params.arrays[params.keys[i]]) !== 'undefined') {
+                    params.arrays[params.keys[i]].append(arg[i]);
                 }
             }
             params.size.row++;
@@ -378,8 +385,8 @@ dtm.data = function (arg, cb, type) {
     data.queue = function (arg) {
         if (arg instanceof Array) {
             for (var i = 0; i < arg.length; i++) {
-                if (typeof(params.arrays[i]) !== 'undefined') {
-                    params.arrays[i].queue(arg[i]);
+                if (typeof(params.arrays[params.keys[i]]) !== 'undefined') {
+                    params.arrays[params.keys[i]].queue(arg[i]);
                 }
             }
         }

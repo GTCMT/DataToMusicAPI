@@ -76,6 +76,10 @@ dtm.array = function (val, name) {
                 case 'max':
                     return dtm.analyzer.max(params.value);
 
+                case 'minmax':
+                case 'range':
+                    return [dtm.analyzer.min(params.value), dtm.analyzer.max(params.value)];
+
                 case 'mean':
                 case 'average':
                 case 'avg':
@@ -273,6 +277,9 @@ dtm.array = function (val, name) {
      * @returns {dtm.array}
      */
     array.setName = function (name) {
+        if (!name) {
+            name = '';
+        }
         params.name = name.toString();
         return array;
     };
@@ -616,7 +623,7 @@ dtm.array = function (val, name) {
         if (arr instanceof Array || typeof(arr) === 'number') {
             temp = temp.concat(arr);
         } else if (arr.type === 'dtm.array') {
-            temp = temp.concat(arr.value);
+            temp = temp.concat(arr.get());
         }
         array.set(temp);
         return array;

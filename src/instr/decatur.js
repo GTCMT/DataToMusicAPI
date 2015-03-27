@@ -31,7 +31,7 @@
             'Piano': [60, 72, 84],
             'PianoL': [36, 48, 60],
             'Pad': [36, 54, 72],
-            'Pulse': [60, 75, 93]
+            'Bass': [48, 54, 60]
         },
         scale: [[0, 2, 7, 9], [2, 5, 7], [0, 2, 5, 7, 10], [0, 2, 5, 7], [0, 2, 4, 7, 9], [0, 2, 4, 6, 7], [2, 4, 6, 7, 9]],
 
@@ -53,11 +53,11 @@
 
         div: dtm.a(Math.round(params.divMap.length/2)),
         repeat: dtm.array(1),
-        note: dtm.array().fill('line', 8),
+        note: dtm.array().fill('ones', 8),
         dur: dtm.array().fill('ones', 8),
         dyn: dtm.array().fill('zeros', 8),
 
-        activity: dtm.array(1)
+        activity: dtm.array(0)
     };
 
     var g = dtm.guido;
@@ -185,15 +185,15 @@
 
                     } else {
                         if (fixImaginaryLines && !(params.durFx[dur] == 'rest' || ac === 0)) {
-                            seq[i] += '\\tieBegin \\space<4>' + pitch + '*' + pre + '/' + params.div;
-                            seq[i] += ',';
+                            seq[i] += '\\tieBegin \\space<4> ' + pitch + '*' + pre + '/' + params.div;
+                            seq[i] += ' , ';
                             seq[i] += pitch + '*' + post + '/' + params.div + ' \\tieEnd';
                         } else if (len !== 0) {
                             seq[i] += pitch + '*' + len + '/' + params.div;
                         }
                     }
 
-                    if (ac !== 0 && !slurOn && params.div >= 4) {
+                    if (ac !== 0 && !slurOn && params.div >= 4 && seq[i] != '' && params.name !== 'PianoL') {
                         if (params.durFx[dur] == 'stacc') {
                             seq[i] = '\\stacc( ' + seq[i] + ' )';
                         } else if (params.durFx[dur] == 'tenuto') {
@@ -204,7 +204,9 @@
                     if (params.durFx[dur] !== 'rest' &&
                         params.durFx[dur] !== 'stacc' &&
                         params.durFx[dur] !== 'tenuto' &&
-                        ac === 2 && chord.length === 1) {
+                        ac === 2 && chord.length === 1 &&
+                        seq[i] != '' &&
+                        params.name !== 'PianoL') {
                         seq[i] = '\\accent( ' + seq[i] + ' )';
                     }
 
@@ -271,26 +273,26 @@
                     seq = harmonizeGuido(seq, chord, sc);
                 }
 
-                var accum = 0;
-                var space = ' \\space<4>';
-                for (var i = 0; i < seq.length; i++) {
-                    accum += parseInt(seq[i].substr(seq[i].indexOf('*')+1, (seq[i].indexOf('/')-seq[i].indexOf('*')-1)));
-
-                    if (seq[i].indexOf('_') > -1) {
-                        seq[i] = '\\space<4> ' + seq[i] + ' \\space<4>';
-                    }
-
-
-                    if (accum >= 16) {
-                        seq[i] += space;
-                        if (accum % 16 === 0 && i !== seq.length-1) {
-                            seq[i+1] = '\\bar' + space + seq[i+1];
-                        } else if (i === seq.length-1) {
-                            seq[i] += ' \\space<4>';
-                        }
-                        accum -= 16;
-                    }
-                }
+                //var accum = 0;
+                //var space = ' \\space<4> ';
+                //for (var i = 0; i < seq.length; i++) {
+                //    accum += parseInt(seq[i].substr(seq[i].indexOf('*')+1, (seq[i].indexOf('/')-seq[i].indexOf('*')-1)));
+                //
+                //    if (seq[i].indexOf('_') > -1) {
+                //        seq[i] = seq[i] + ' \\space<4> ';
+                //    }
+                //
+                //
+                //    if (accum >= 16) {
+                //        seq[i] += space;
+                //        if (accum % 16 === 0 && i !== seq.length-1) {
+                //            seq[i+1] = '\\bar ' + space + seq[i+1];
+                //        } else if (i === seq.length-1) {
+                //            seq[i] += ' \\space<4> ';
+                //        }
+                //        accum -= 16;
+                //    }
+                //}
 
                 var staffFormat = '\\staffFormat<"5-line",';
                 if (seq.length === 1) {
@@ -352,15 +354,27 @@
                     name += '\\instr<"' + params.name + '", dx=-1.65cm, dy=-1.3cm>';
                 }
                 var clef = '\\clef<"' + params.clef + '">';
+
+                if (params.name === 'PianoL') {
+                    clef = '';
+                }
+
                 var time = '\\meter<"' + params.time + '">';
 
-                var autoBreak = '\\set<autoSystemBreak="off">';
+                var autoBreak = '';
+                var pageFormat = '';
+
                 var barLine = '\\barFormat<style="staff">';
 
-                var pageFormat = '\\pageFormat<31cm, 12cm, 2cm, 5cm, 2cm, 3cm>';
+                if (params.name === 'Flute') {
+                    autoBreak = '\\set<autoSystemBreak="off">';
+                    pageFormat = '\\pageFormat<30cm, 10cm, 2cm, 5cm, 2cm, 5cm>';
+                }
+
+                //console.log('[' + pageFormat + autoBreak + name + clef + time + seq + ' \\space<6> \\repeatEnd]');
 
                 //+ staff + staffFormat
-                osc.send('/decatur/score', [params.name, '[' + pageFormat + autoBreak + barLine + name + clef + time + seq + ' \\repeatEnd]']);
+                osc.send('/decatur/score', [params.name, '[' + pageFormat + autoBreak + name + clef + time + seq + ' \\space<6> \\repeatEnd]']);
             }
         }
 
@@ -395,9 +409,9 @@
                                 var delInSec = del * unit + dtm.val.rand(0, 0.01);
                                 var durInSec = noteLen * durMod * unit * 0.95;
                                 if (mods.chord.get('len') > 1) {
-                                    for (var j = 0; j < chord.length; j++) {
+                                    for (var k = 0; k < chord.length; k++) {
                                         var trv = dtm.val.pq(p + tr, sc, true);
-                                        evList.push([delInSec, durInSec, dtm.val.pq(trv + chord[j], sc, true)]);
+                                        evList.push([delInSec, durInSec, dtm.val.pq(trv + chord[k], sc, true)]);
                                     }
                                 } else {
                                     evList.push([delInSec, durInSec, dtm.val.pq(p + tr, sc, true)]);
@@ -407,6 +421,10 @@
                         }
                     }
                 }
+
+                //if (params.name === 'PianoL') {
+                //    console.log(evList);
+                //}
 
                 for (var i = 0; i < evList.length; i++) {
                     if (typeof(evList[i]) !== 'undefined') {
@@ -424,6 +442,11 @@
             case 'score':
                 break;
             case 'midi':
+                break;
+
+            case 'a':
+            case 'array':
+                return mods[arguments[1]];
                 break;
             default:
                 break;
@@ -496,26 +519,30 @@
         } else if (m.modes.preserve.indexOf(mode) > -1) {
             if (params.name === 'Flute') {
                 mods.pitch.rescale(60, 96, 0, 1).round();
+            } else if (params.name === 'Cello') {
+                //mods.pitch.rescale(36, 81, 0, 1).round();
+                mods.pitch.rescale(36, 72, 0, 1).round();
             } else if (params.name === 'Piano') {
                 mods.pitch.rescale(60, 84, 0, 1).round();
             } else if (params.name === 'PianoL') {
                 mods.pitch.rescale(36, 60, 0, 1).round();
-            } else if (params.name === 'Cello') {
-                //mods.pitch.rescale(36, 81, 0, 1).round();
-                mods.pitch.rescale(36, 72, 0, 1).round();
+            } else if (params.name === 'Bass') {
+                mods.pitch.rescale(48, 65, 0, 1).round();
             } else {
                 mods.pitch.rescale(60, 96, 0, 1).round();
             }
         } else {
             if (params.name === 'Flute') {
                 mods.pitch.rescale(60, 96).round();
+            } else if (params.name === 'Cello') {
+                //mods.pitch.rescale(36, 81).round();
+                mods.pitch.rescale(36, 72).round();
             } else if (params.name === 'Piano') {
                 mods.pitch.rescale(60, 84).round();
             } else if (params.name === 'PianoL') {
                 mods.pitch.rescale(36, 60).round();
-            } else if (params.name === 'Cello') {
-                //mods.pitch.rescale(36, 81).round();
-                mods.pitch.rescale(36, 72).round();
+            } else if (params.name === 'Bass') {
+                mods.pitch.rescale(48, 65).round();
             } else {
                 mods.pitch.rescale(60, 96).round();
             }

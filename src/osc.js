@@ -108,6 +108,7 @@ dtm.osc = {
     oscPort: null,
     isOn: false,
     isOpen: false,
+    callbacks: [],
 
     start: function () {
         if (typeof(osc) !== 'undefined' && !dtm.osc.isOpen) {
@@ -187,6 +188,10 @@ dtm.osc = {
         });
 
         return dtm.osc;
+    },
+
+    clear: function () {
+        dtm.osc.callbacks = [];
     }
 };
 

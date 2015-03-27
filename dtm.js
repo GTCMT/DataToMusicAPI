@@ -445,6 +445,7 @@ dtm.osc = {
     oscPort: null,
     isOn: false,
     isOpen: false,
+    callbacks: [],
 
     start: function () {
         if (typeof(osc) !== 'undefined' && !dtm.osc.isOpen) {
@@ -524,6 +525,10 @@ dtm.osc = {
         });
 
         return dtm.osc;
+    },
+
+    clear: function () {
+        dtm.osc.callbacks = [];
     }
 };
 
@@ -1945,6 +1950,10 @@ dtm.array = function (val, name) {
                 case 'max':
                     return dtm.analyzer.max(params.value);
 
+                case 'minmax':
+                case 'range':
+                    return [dtm.analyzer.min(params.value), dtm.analyzer.max(params.value)];
+
                 case 'mean':
                 case 'average':
                 case 'avg':
@@ -2142,6 +2151,9 @@ dtm.array = function (val, name) {
      * @returns {dtm.array}
      */
     array.setName = function (name) {
+        if (!name) {
+            name = '';
+        }
         params.name = name.toString();
         return array;
     };
@@ -2485,7 +2497,7 @@ dtm.array = function (val, name) {
         if (arr instanceof Array || typeof(arr) === 'number') {
             temp = temp.concat(arr);
         } else if (arr.type === 'dtm.array') {
-            temp = temp.concat(arr.value);
+            temp = temp.concat(arr.get());
         }
         array.set(temp);
         return array;
@@ -3748,15 +3760,22 @@ dtm.data = function (arg, cb, type) {
                 params.size.col = arguments[0];
                 params.size.row = arguments[1];
             }
+        } else if (arguments.length === 3) {
+        for (var i = 0; i < arguments[0]; i++) {
+            params.arrays[arguments[2][i]] = dtm.array().fill('zeros', arguments[1]).setName(arguments[2][i]);
+            params.keys[i] = arguments[2][i];
+            params.size.col = arguments[0];
+            params.size.row = arguments[1];
         }
+    }
         return data;
     };
 
     data.append = function (arg) {
         if (arg instanceof Array) {
             for (var i = 0; i < arg.length; i++) {
-                if (typeof(params.arrays[i]) !== 'undefined') {
-                    params.arrays[i].append(arg[i]);
+                if (typeof(params.arrays[params.keys[i]]) !== 'undefined') {
+                    params.arrays[params.keys[i]].append(arg[i]);
                 }
             }
             params.size.row++;
@@ -3767,8 +3786,8 @@ dtm.data = function (arg, cb, type) {
     data.queue = function (arg) {
         if (arg instanceof Array) {
             for (var i = 0; i < arg.length; i++) {
-                if (typeof(params.arrays[i]) !== 'undefined') {
-                    params.arrays[i].queue(arg[i]);
+                if (typeof(params.arrays[params.keys[i]]) !== 'undefined') {
+                    params.arrays[params.keys[i]].queue(arg[i]);
                 }
             }
         }
@@ -6631,7 +6650,7 @@ dtm.inscore = function () {
             'Piano': [60, 72, 84],
             'PianoL': [36, 48, 60],
             'Pad': [36, 54, 72],
-            'Pulse': [60, 75, 93]
+            'Bass': [48, 54, 60]
         },
         scale: [[0, 2, 7, 9], [2, 5, 7], [0, 2, 5, 7, 10], [0, 2, 5, 7], [0, 2, 4, 7, 9], [0, 2, 4, 6, 7], [2, 4, 6, 7, 9]],
 
@@ -6653,11 +6672,11 @@ dtm.inscore = function () {
 
         div: dtm.a(Math.round(params.divMap.length/2)),
         repeat: dtm.array(1),
-        note: dtm.array().fill('line', 8),
+        note: dtm.array().fill('ones', 8),
         dur: dtm.array().fill('ones', 8),
         dyn: dtm.array().fill('zeros', 8),
 
-        activity: dtm.array(1)
+        activity: dtm.array(0)
     };
 
     var g = dtm.guido;
@@ -6785,15 +6804,15 @@ dtm.inscore = function () {
 
                     } else {
                         if (fixImaginaryLines && !(params.durFx[dur] == 'rest' || ac === 0)) {
-                            seq[i] += '\\tieBegin \\space<4>' + pitch + '*' + pre + '/' + params.div;
-                            seq[i] += ',';
+                            seq[i] += '\\tieBegin \\space<4> ' + pitch + '*' + pre + '/' + params.div;
+                            seq[i] += ' , ';
                             seq[i] += pitch + '*' + post + '/' + params.div + ' \\tieEnd';
                         } else if (len !== 0) {
                             seq[i] += pitch + '*' + len + '/' + params.div;
                         }
                     }
 
-                    if (ac !== 0 && !slurOn && params.div >= 4) {
+                    if (ac !== 0 && !slurOn && params.div >= 4 && seq[i] != '' && params.name !== 'PianoL') {
                         if (params.durFx[dur] == 'stacc') {
                             seq[i] = '\\stacc( ' + seq[i] + ' )';
                         } else if (params.durFx[dur] == 'tenuto') {
@@ -6804,7 +6823,9 @@ dtm.inscore = function () {
                     if (params.durFx[dur] !== 'rest' &&
                         params.durFx[dur] !== 'stacc' &&
                         params.durFx[dur] !== 'tenuto' &&
-                        ac === 2 && chord.length === 1) {
+                        ac === 2 && chord.length === 1 &&
+                        seq[i] != '' &&
+                        params.name !== 'PianoL') {
                         seq[i] = '\\accent( ' + seq[i] + ' )';
                     }
 
@@ -6871,26 +6892,26 @@ dtm.inscore = function () {
                     seq = harmonizeGuido(seq, chord, sc);
                 }
 
-                var accum = 0;
-                var space = ' \\space<4>';
-                for (var i = 0; i < seq.length; i++) {
-                    accum += parseInt(seq[i].substr(seq[i].indexOf('*')+1, (seq[i].indexOf('/')-seq[i].indexOf('*')-1)));
-
-                    if (seq[i].indexOf('_') > -1) {
-                        seq[i] = '\\space<4> ' + seq[i] + ' \\space<4>';
-                    }
-
-
-                    if (accum >= 16) {
-                        seq[i] += space;
-                        if (accum % 16 === 0 && i !== seq.length-1) {
-                            seq[i+1] = '\\bar' + space + seq[i+1];
-                        } else if (i === seq.length-1) {
-                            seq[i] += ' \\space<4>';
-                        }
-                        accum -= 16;
-                    }
-                }
+                //var accum = 0;
+                //var space = ' \\space<4> ';
+                //for (var i = 0; i < seq.length; i++) {
+                //    accum += parseInt(seq[i].substr(seq[i].indexOf('*')+1, (seq[i].indexOf('/')-seq[i].indexOf('*')-1)));
+                //
+                //    if (seq[i].indexOf('_') > -1) {
+                //        seq[i] = seq[i] + ' \\space<4> ';
+                //    }
+                //
+                //
+                //    if (accum >= 16) {
+                //        seq[i] += space;
+                //        if (accum % 16 === 0 && i !== seq.length-1) {
+                //            seq[i+1] = '\\bar ' + space + seq[i+1];
+                //        } else if (i === seq.length-1) {
+                //            seq[i] += ' \\space<4> ';
+                //        }
+                //        accum -= 16;
+                //    }
+                //}
 
                 var staffFormat = '\\staffFormat<"5-line",';
                 if (seq.length === 1) {
@@ -6952,15 +6973,27 @@ dtm.inscore = function () {
                     name += '\\instr<"' + params.name + '", dx=-1.65cm, dy=-1.3cm>';
                 }
                 var clef = '\\clef<"' + params.clef + '">';
+
+                if (params.name === 'PianoL') {
+                    clef = '';
+                }
+
                 var time = '\\meter<"' + params.time + '">';
 
-                var autoBreak = '\\set<autoSystemBreak="off">';
+                var autoBreak = '';
+                var pageFormat = '';
+
                 var barLine = '\\barFormat<style="staff">';
 
-                var pageFormat = '\\pageFormat<31cm, 12cm, 2cm, 5cm, 2cm, 3cm>';
+                if (params.name === 'Flute') {
+                    autoBreak = '\\set<autoSystemBreak="off">';
+                    pageFormat = '\\pageFormat<30cm, 10cm, 2cm, 5cm, 2cm, 5cm>';
+                }
+
+                //console.log('[' + pageFormat + autoBreak + name + clef + time + seq + ' \\space<6> \\repeatEnd]');
 
                 //+ staff + staffFormat
-                osc.send('/decatur/score', [params.name, '[' + pageFormat + autoBreak + barLine + name + clef + time + seq + ' \\repeatEnd]']);
+                osc.send('/decatur/score', [params.name, '[' + pageFormat + autoBreak + name + clef + time + seq + ' \\space<6> \\repeatEnd]']);
             }
         }
 
@@ -6995,9 +7028,9 @@ dtm.inscore = function () {
                                 var delInSec = del * unit + dtm.val.rand(0, 0.01);
                                 var durInSec = noteLen * durMod * unit * 0.95;
                                 if (mods.chord.get('len') > 1) {
-                                    for (var j = 0; j < chord.length; j++) {
+                                    for (var k = 0; k < chord.length; k++) {
                                         var trv = dtm.val.pq(p + tr, sc, true);
-                                        evList.push([delInSec, durInSec, dtm.val.pq(trv + chord[j], sc, true)]);
+                                        evList.push([delInSec, durInSec, dtm.val.pq(trv + chord[k], sc, true)]);
                                     }
                                 } else {
                                     evList.push([delInSec, durInSec, dtm.val.pq(p + tr, sc, true)]);
@@ -7007,6 +7040,10 @@ dtm.inscore = function () {
                         }
                     }
                 }
+
+                //if (params.name === 'PianoL') {
+                //    console.log(evList);
+                //}
 
                 for (var i = 0; i < evList.length; i++) {
                     if (typeof(evList[i]) !== 'undefined') {
@@ -7024,6 +7061,11 @@ dtm.inscore = function () {
             case 'score':
                 break;
             case 'midi':
+                break;
+
+            case 'a':
+            case 'array':
+                return mods[arguments[1]];
                 break;
             default:
                 break;
@@ -7096,26 +7138,30 @@ dtm.inscore = function () {
         } else if (m.modes.preserve.indexOf(mode) > -1) {
             if (params.name === 'Flute') {
                 mods.pitch.rescale(60, 96, 0, 1).round();
+            } else if (params.name === 'Cello') {
+                //mods.pitch.rescale(36, 81, 0, 1).round();
+                mods.pitch.rescale(36, 72, 0, 1).round();
             } else if (params.name === 'Piano') {
                 mods.pitch.rescale(60, 84, 0, 1).round();
             } else if (params.name === 'PianoL') {
                 mods.pitch.rescale(36, 60, 0, 1).round();
-            } else if (params.name === 'Cello') {
-                //mods.pitch.rescale(36, 81, 0, 1).round();
-                mods.pitch.rescale(36, 72, 0, 1).round();
+            } else if (params.name === 'Bass') {
+                mods.pitch.rescale(48, 65, 0, 1).round();
             } else {
                 mods.pitch.rescale(60, 96, 0, 1).round();
             }
         } else {
             if (params.name === 'Flute') {
                 mods.pitch.rescale(60, 96).round();
+            } else if (params.name === 'Cello') {
+                //mods.pitch.rescale(36, 81).round();
+                mods.pitch.rescale(36, 72).round();
             } else if (params.name === 'Piano') {
                 mods.pitch.rescale(60, 84).round();
             } else if (params.name === 'PianoL') {
                 mods.pitch.rescale(36, 60).round();
-            } else if (params.name === 'Cello') {
-                //mods.pitch.rescale(36, 81).round();
-                mods.pitch.rescale(36, 72).round();
+            } else if (params.name === 'Bass') {
+                mods.pitch.rescale(48, 65).round();
             } else {
                 mods.pitch.rescale(60, 96).round();
             }
