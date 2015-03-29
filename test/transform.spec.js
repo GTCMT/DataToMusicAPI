@@ -5,6 +5,11 @@ describe('array helper functions', function () {
             expect(dtm.analyzer.sum(output)).toBeCloseTo(0, 10);
         });
 
+        it('should give chara arrays of t, e, s, t', function () {
+            var out = dtm.transform.generate('char', 'test');
+            expect(out).toEqual(['t', 'e', 's', 't']);
+        });
+
         //var output = dtm.transform.generate('gauss', 128, 0, 1);
         //console.log(output);
         //it('should ...')

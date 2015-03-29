@@ -210,7 +210,7 @@ dtm.data = function (arg, cb, type) {
                             dtm.wa.actx.decodeAudioData(xhr.response, function (buf) {
                                 for (var c = 0; c < buf.numberOfChannels; c++) {
                                     var floatArr = buf.getChannelData(c);
-                                    params.arrays['ch_' + c] = dtm.array(Array.prototype.slice.call(floatArr), 'ch_' + c);
+                                    params.arrays['ch_' + c] = dtm.array(Array.prototype.slice.call(floatArr)).name('ch_' + c);
                                 }
 
                                 //setArrays();
@@ -295,7 +295,7 @@ dtm.data = function (arg, cb, type) {
 
     function setArrays() {
         _.forEach(params.keys, function (key) {
-            var a = dtm.array(_.pluck(params.coll, key), key);
+            var a = dtm.array(_.pluck(params.coll, key)).name(key);
             params.arrays[key] = a;
         })
     }

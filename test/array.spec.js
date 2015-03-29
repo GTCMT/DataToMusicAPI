@@ -2,12 +2,12 @@ describe('array object', function () {
     describe('get', function () {
         it('should return the array value', function () {
             var a = dtm.array([1,2,3]);
-            expect(a.get().toString()).toBe([1,2,3].toString());
+            expect(a.get()).toEqual([1,2,3]);
         });
 
         describe('name', function () {
             var name = 'hello';
-            var a = dtm.array([1, 2, 3], name);
+            var a = dtm.array([1, 2, 3]).name(name);
             it('should return the given name', function () {
                 expect(a.get('name')).toBe(name);
             });
@@ -53,7 +53,7 @@ describe('array object', function () {
                 expect(a.get('sorted').toString()).toBe([1, 2, 3].toString());
             });
 
-            var b = dtm.array('hey');
+            var b = dtm.array('s', 'hey');
             it('should return e h y', function () {
                 expect(b.get('sorted').toString()).toBe(['e', 'h', 'y'].toString());
             });
@@ -67,14 +67,14 @@ describe('array object', function () {
         });
 
         describe('mode', function () {
-            var a = dtm.array('hello world!');
+            var a = dtm.array('s', 'hello world!');
             it('should return l', function () {
                 expect(a.get('mode')).toBe('l');
             });
         });
 
         describe('histo', function () {
-            var a = dtm.array('hello world!');
+            var a = dtm.array('s', 'hello world!');
             it('should return 3 ls', function () {
                 expect(a.get('histo')[2]).toBe(3);
             });
@@ -84,14 +84,14 @@ describe('array object', function () {
         });
 
         describe('classes', function () {
-            var a = dtm.array('hello world!');
+            var a = dtm.array('s', 'hello world!');
             it('should return unique classes', function () {
                 expect(a.get('classes').length).toBe(9);
             });
         });
 
         describe('numClasses', function () {
-            var a = dtm.array('hello world!');
+            var a = dtm.array('s', 'hello world!');
             it('should return 9', function () {
                 expect(a.get('numClasses')).toBe(9);
             });
@@ -130,7 +130,7 @@ describe('array object', function () {
 
     describe('nominal operations', function () {
         describe('histogram', function () {
-            var a = dtm.array('hello world!').histo();
+            var a = dtm.array('s', 'hello world!').histo();
             it('should return 3 ls', function () {
                 expect(a.get()[2]).toBe(3);
             });

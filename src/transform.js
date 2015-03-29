@@ -144,6 +144,17 @@ dtm.transform = {
                 }
                 break;
 
+            case 'string':
+            case 'str':
+            case 's':
+            case 'characters':
+            case 'character':
+            case 'chars':
+            case 'char':
+            case 'c':
+                res = arguments[1].split('');
+                break;
+
             default:
                 break;
         }

@@ -7,11 +7,10 @@
  * Creates a new single dimensional array object with various transformation functions. The same helper functions from dtm.array can be used - but make sure to skip the first argument (the input array) and start from the second argument.
  *
  * @function module:array.array
- * @param arr {array}
- * @param [name] {string}
+ * @param args
  * @returns array object {{value: null, normalized: null, length: null, min: null, max: null, mean: null}}
  */
-dtm.array = function (val, name) {
+dtm.array = function () {
     // private
     var params = {
         name: '',
@@ -158,7 +157,7 @@ dtm.array = function (val, name) {
                 case 'block':
                 case 'window':
                     var start, size;
-                    if (arguments[1] instanceof Array) {
+                    if (arguments[1].constructor === Array) {
                         start = arguments[1][0];
                         size = arguments[1][1];
                         return dtm.transform.getBlock(params.value, start, size)
@@ -229,14 +228,21 @@ dtm.array = function (val, name) {
      * Sets or overwrites the contents of the array object.
      * @function module:array#set
      * @param input {array}
-     * @param [name] {string}
      * @returns {dtm.array}
      */
-    array.set = function (input, name) {
-        if (input instanceof Array) {
+    array.set = function (input) {
+        if (typeof(input) === 'undefined') {
+            input = [];
+        }
+
+        if (typeof(input) === 'number') {
+            params.value = [input];
+        } else if (input.constructor === Array) {
             params.value = input;
         } else if (input.type === 'dtm.array') {
             params.value = input.get();
+        } else if (typeof(input) === 'string') {
+            params.value = dtm.transform.fill.apply(this, arguments);
         }
 
         if (params.original === null) {
@@ -262,10 +268,6 @@ dtm.array = function (val, name) {
         params.length = params.value.length;
 
         params.index = params.length - 1;
-
-        if (typeof(name) !== 'undefined') {
-            array.setName(name);
-        }
 
         return array;
     };
@@ -303,16 +305,19 @@ dtm.array = function (val, name) {
     };
 
     // TODO: do this in array.set()
-    if (typeof(val) !== 'undefined') {
-        if (typeof(val) === 'string') {
-            val = val.split('');
-        } else if (typeof(val) === 'number') {
-            val = [val];
-        }
+    //if (typeof(val) !== 'undefined') {
+    //    if (typeof(val) === 'string') {
+    //        val = val.split('');
+    //    } else if (typeof(val) === 'number') {
+    //        val = [val];
+    //    }
+    //
+    //    checkType(val);
+    //    array.set(val);
+    //}
 
-        checkType(val);
-        array.set(val, name);
-    }
+    array.set.apply(this, arguments);
+    checkType(params.value);
 
     function checkType(arr) {
         //var summed = dtm.analyzer.sum(arr);
@@ -388,7 +393,8 @@ dtm.array = function (val, name) {
      * @returns {dtm.array}
      */
     array.fill = function (type, len, min, max) {
-        params.value = dtm.transform.generate(type, len, min, max);
+        //params.value = dtm.transform.generate(type, len, min, max);
+        params.value = dtm.transform.generate.apply(this, arguments);
         array.set(params.value);
         return array;
     };
@@ -413,7 +419,7 @@ dtm.array = function (val, name) {
         // this doesn't work
         //return dtm.clone(array);
 
-        var newArr = dtm.array(params.value, params.name);
+        var newArr = dtm.array(params.value).name(params.name);
 
         // CHECK: this may cause troubles!
         newArr.index(params.index);
@@ -620,7 +626,7 @@ dtm.array = function (val, name) {
             arr = [];
         }
         var temp = params.value;
-        if (arr instanceof Array || typeof(arr) === 'number') {
+        if (arr.constructor === Array || typeof(arr) === 'number') {
             temp = temp.concat(arr);
         } else if (arr.type === 'dtm.array') {
             temp = temp.concat(arr.get());
@@ -757,7 +763,7 @@ dtm.array = function (val, name) {
         if (typeof(input) === 'number') {
             params.value.push(input);
             params.value.shift();
-        } else if (input instanceof Array) {
+        } else if (input.constructor === Array) {
             params.value = params.value.concat(input);
             params.value = params.value.splice(input.length);
         } else if (input.type === 'dtm.array') {
@@ -955,7 +961,7 @@ dtm.array = function (val, name) {
     array.pq = function (scale, round) {
         if (arguments.length === 0) {
             scale = _.range(12);
-        } else if (scale instanceof Array) {
+        } else if (scale.constructor === Array) {
 
         } else if (typeof(scale) === 'string') {
             scale = dtm.scales[scale.toLowerCase()];
