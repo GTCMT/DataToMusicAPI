@@ -387,7 +387,7 @@ dtm.array = function () {
      * Fills the contents of the array with
      * @function module:array#fill
      * @param type {string} Choices: 'line', 'noise'/'random', 'gaussian'/'gauss'/'normal', 'sin'/'sine', 'cos'/'cosine', 'zeroes', 'ones'
-     * @param [len=8] {integer}
+     * @param [len=8] {number}
      * @param [min=0] {number}
      * @param [max=1] {number}
      * @returns {dtm.array}
@@ -439,15 +439,21 @@ dtm.array = function () {
      * @function module:array#morph
      * @param tgtArr {array | dtm.array}
      * @param morphIdx {number} between 0-1
+     * @param [interp='linear'] {string}
      * @returns {dtm.array}
      */
-    array.morph = function (tgtArr, morphIdx) {
+    array.morph = function (tgtArr, morphIdx, interp) {
         if (typeof(tgtArr) !== 'array') {
             if (tgtArr.type === 'dtm.array') {
-                tgtArr = tgtArr.value;
+                tgtArr = tgtArr.get();
             }
         }
-        params.value = dtm.transform.morph(params.value, tgtArr, morphIdx);
+
+        if (typeof(morphIdx) === 'undefined') {
+            morphIdx = 0.5;
+        }
+
+        params.value = dtm.transform.morph(params.value, tgtArr, morphIdx, interp);
         array.set(params.value);
         return array;
     };
@@ -470,7 +476,7 @@ dtm.array = function () {
 
     array.clear = array.flush;
 
-    /* SCALERS */
+    /* SCALARS */
 
     /**
      * Rescales the range of the numerical values to 0-1.
@@ -601,6 +607,65 @@ dtm.array = function () {
     };
 
     array.fitsum = array.fitSum;
+
+    /**
+     * Adds a value to all the array elements.
+     * @function module:array#add
+     * @param factor {number|array|dtm.array}
+     * @param [interp='linear'] {string}
+     * @returns {dtm.array}
+     */
+    array.add = function (factor, interp) {
+        if (factor.type === 'dtm.array') {
+            factor = factor.get();
+        }
+        array.set(dtm.transform.add(params.value, factor, interp));
+        return array;
+    };
+
+    /**
+     * Scales the numerical array contents.
+     * @function module:array#mult
+     * @param factor {number|array|dtm.array}
+     * @param [interp='linear'] {string}
+     * @returns {dtm.array}
+     */
+    array.mult = function (factor, interp) {
+        if (factor.type === 'dtm.array') {
+            factor = factor.get();
+        }
+        array.set(dtm.transform.mult(params.value, factor, interp));
+        return array;
+    };
+
+    /**
+     * @function module:array#pow
+     * @param factor {number|array|dtm.array}
+     * @param [interp='linear'] {string}
+
+     */
+    array.pow = function (factor, interp) {
+        if (factor.type === 'dtm.array') {
+            factor = factor.get();
+        }
+        array.set(dtm.transform.pow(params.value, factor, interp));
+        return array;
+    };
+
+    /**
+     * Applys the array contents as the power to the argument as the base
+     * @function module:array#powof
+     * @param factor {number|array|dtm.array}
+     * @param [interp='linear'] {string}
+     * @returns {dtm.array}
+     */
+    array.powof = function (factor, interp) {
+        if (factor.type === 'dtm.array') {
+            factor = factor.get();
+        }
+        return array.set(dtm.transform.powof(params.value, factor, interp));
+    };
+
 
     /* LIST OPERATIONS*/
 
@@ -781,37 +846,6 @@ dtm.array = function () {
     array.fifo = array.queue;
 
     /* ARITHMETIC */
-
-    /**
-     * Adds a value to all the array elements.
-     * @function module:array#add
-     * @param val {number}
-     * @returns {dtm.array}
-     */
-    array.add = function (val) {
-        array.set(dtm.transform.add(params.value, val));
-        return array;
-    };
-
-    /**
-     * Scales the numerical array contents.
-     * @function module:array#mult
-     * @param val {number}
-     * @returns {dtm.array}
-     */
-    array.mult = function (val) {
-        array.set(dtm.transform.mult(params.value, val));
-        return array;
-    };
-
-    /**
-     * Applys the array contents as the power to the argument as the base
-     * @param val
-     * @returns {dtm.array}
-     */
-    array.powof = function (val) {
-        return array.set(dtm.transform.powof(params.value, val));
-    };
 
     /**
      * Rounds float values of the array to integer values.

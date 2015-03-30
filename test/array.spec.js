@@ -221,6 +221,20 @@ describe('array object', function () {
                 })
             })
         });
+
+        describe('add', function () {
+            it('should do element-wise operation', function () {
+                var a = dtm.a([1, 2, 3]).add([2, 3, 4]);
+                expect(a.get()).toEqual([3, 5, 7]);
+            });
+
+            it('should do element-wise operation between array objs', function () {
+                var a = dtm.a([1, 2, 3]);
+                var b = dtm.a([2, 3, 4]);
+                a.add(b);
+                expect(a.get()).toEqual([3, 5, 7]);
+            });
+        });
     });
 
     describe('arithmetic', function () {

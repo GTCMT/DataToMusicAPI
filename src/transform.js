@@ -776,9 +776,10 @@ dtm.transform = {
      * @function module:transform#morph
      * @param srcArr {array}
      * @param tgtArr {array}
+     * @param [interp='linear'] {string}
      * @param [morphIdx=0.5] {float}
      */
-    morph: function (srcArr, tgtArr, morphIdx) {
+    morph: function (srcArr, tgtArr, morphIdx, interp) {
         if (typeof(morphIdx) === 'undefined') {
             morphIdx = 0.5;
         }
@@ -787,7 +788,7 @@ dtm.transform = {
         var tgtLen = tgtArr.length;
         var resLen = Math.round((tgtLen - srcLen) * morphIdx + srcLen);
 
-        return morphFixed(dtm.transform.fit(srcArr, resLen), dtm.transform.fit(tgtArr, resLen), morphIdx);
+        return morphFixed(dtm.transform.fit(srcArr, resLen, interp), dtm.transform.fit(tgtArr, resLen), morphIdx);
     },
 
     interleave: function (srcArr, tgtArr) {
