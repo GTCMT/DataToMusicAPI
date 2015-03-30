@@ -178,7 +178,7 @@ dtm.osc = {
             addr.unshift('/');
         }
 
-        if (!(args instanceof Array)) {
+        if (args.constructor !== Array) {
             args = [args];
         }
 

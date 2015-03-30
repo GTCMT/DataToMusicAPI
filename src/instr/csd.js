@@ -49,7 +49,7 @@
         } else if (typeof(src) === 'string') {
             mods[dest] = dtm.array(src).classify();
         } else {
-            if (src instanceof Array) {
+            if (src.constructor === Array) {
                 mods[dest] = dtm.array(src);
             } else if (src.type === 'dtm.array') {
                 if (src.get('type') === 'string') {

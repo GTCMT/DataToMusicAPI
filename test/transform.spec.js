@@ -120,6 +120,92 @@ describe('array helper functions', function () {
 //            var output = dtm.transform.stretch(input, 2.5);
 //        });
         });
+
+        describe('mult', function () {
+            it('should do element-wise multiplication', function () {
+                var input = [1, 2, 3];
+                var right = [2, 3, 4];
+                var expected = [2, 6, 12];
+
+                var out = dtm.transform.mult(input, right);
+                expect(out).toEqual(expected);
+            });
+
+            it('should stretch and multiply', function () {
+                var input = [1, 2, 3, 4];
+                var right = [2, 5];
+                var interp = 'linear';
+                var expected = [2, 6, 12, 20];
+                var out = dtm.transform.mult(input, right, interp);
+                expect(out).toEqual(expected);
+            });
+
+            it('should stretch w/ step interpolation and multiply', function () {
+                var input = [1, 2, 3, 4];
+                var right = [2, 5];
+                var interp = 'step';
+                var expected = [2, 4, 15, 20];
+                var out = dtm.transform.mult(input, right, interp);
+                expect(out).toEqual(expected);
+            });
+        });
+
+        describe('add', function () {
+            it('should do element-wise addition', function () {
+                var input = [1, 2, 3];
+                var right = [2, 3, 4];
+                var expected = [3, 5, 7];
+
+                var out = dtm.transform.add(input, right);
+                expect(out).toEqual(expected);
+            });
+
+            it('should stretch and add', function () {
+                var input = [1, 2, 3, 4];
+                var right = [2, 5];
+                var interp = 'linear';
+                var expected = [3, 5, 7, 9];
+                var out = dtm.transform.add(input, right, interp);
+                expect(out).toEqual(expected);
+            });
+
+            it('should stretch w/ step interpolation and add', function () {
+                var input = [1, 2, 3, 4];
+                var right = [2, 5];
+                var interp = 'step';
+                var expected = [3, 4, 8, 9];
+                var out = dtm.transform.add(input, right, interp);
+                expect(out).toEqual(expected);
+            });
+        });
+
+        describe('pow', function () {
+            it('should do element-wise power operation', function () {
+                var input = [1, 2, 3];
+                var right = [2, 3, 4];
+                var expected = [1, 8, 81];
+                var out = dtm.transform.pow(input, right);
+                expect(out).toEqual(expected);
+            });
+        });
+
+        describe('powof', function () {
+            it('should have values of 1, 4, 16, 64', function () {
+                var arr = [0, 1, 2, 3];
+                var res = dtm.transform.powof(arr, 4);
+                for (var i = 0; i < arr.length; i++) {
+                    expect(res[i]).toBe(Math.pow(4, arr[i])); // stupid
+                }
+            });
+
+            it('should do element-wise operation', function () {
+                var input = [1, 2, 3];
+                var right = [2, 3, 4];
+                var out = dtm.transform.powof(input, right);
+                var expected = [2, 9, 64];
+                expect(out).toEqual(expected);
+            });
+        });
     });
 
     describe('arithmetic', function () {
@@ -366,16 +452,6 @@ describe('array helper functions', function () {
         var res = dtm.transform.stringify(arr);
         it('should be converted to string type', function () {
             expect(typeof(res[2])).toBe('string');
-        });
-    });
-
-    describe('powof', function () {
-        var arr = [0, 1, 2, 3];
-        var res = dtm.transform.powof(arr, 4);
-        it('should have values of 1, 4, 16, 64', function () {
-            for (var i = 0; i < arr.length; i++) {
-                expect(res[i]).toBe(Math.pow(4, arr[i])); // stupid
-            }
         });
     });
 });

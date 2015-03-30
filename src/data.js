@@ -371,7 +371,7 @@ dtm.data = function (arg, cb, type) {
     };
 
     data.append = function (arg) {
-        if (arg instanceof Array) {
+        if (arg.constructor === Array) {
             for (var i = 0; i < arg.length; i++) {
                 if (typeof(params.arrays[params.keys[i]]) !== 'undefined') {
                     params.arrays[params.keys[i]].append(arg[i]);
@@ -383,7 +383,7 @@ dtm.data = function (arg, cb, type) {
     };
 
     data.queue = function (arg) {
-        if (arg instanceof Array) {
+        if (arg.constructor === Array) {
             for (var i = 0; i < arg.length; i++) {
                 if (typeof(params.arrays[params.keys[i]]) !== 'undefined') {
                     params.arrays[params.keys[i]].queue(arg[i]);

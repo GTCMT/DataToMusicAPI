@@ -127,7 +127,7 @@ dtm.instr = function (arg) {
         if (typeof(src) === 'number') {
             params.models[dest] = dtm.array(src);
         } else {
-            if (src instanceof Array) {
+            if (src.constructor === Array) {
                 params.models[dest] = dtm.array(src);
             } else if (src.type === 'dtm.array') {
                 //if (src.get('type') === 'string') {
@@ -179,7 +179,7 @@ dtm.instr = function (arg) {
         }
 
         // TODO: refactor...
-        if (arg instanceof Array) {
+        if (arg.constructor === Array) {
             if (categ) {
                 params.models[categ] = dtm.array(arg);
             } else {
@@ -225,7 +225,7 @@ dtm.instr = function (arg) {
     };
 
     instr.map = function (src, dest) {
-        if (src instanceof Array) {
+        if (src.constructor === Array) {
             params.models[dest] = dtm.array(src).normalize();
         } else if (src.type === 'dtm.array') {
             // CHECK: assigning an array here is maybe not so smart...
@@ -326,7 +326,7 @@ dtm.instr = function (arg) {
         } else if (typeof(src) === 'string') {
             params.models[dest] = dtm.array(src).classify();
         } else {
-            if (src instanceof Array) {
+            if (src.constructor === Array) {
                 params.models[dest] = dtm.array(src);
             } else if (src.type === 'dtm.array') {
                 if (src.get('type') === 'string') {

@@ -515,7 +515,7 @@ dtm.osc = {
             addr.unshift('/');
         }
 
-        if (!(args instanceof Array)) {
+        if (args.constructor !== Array) {
             args = [args];
         }
 
@@ -1251,51 +1251,119 @@ dtm.transform = {
         return res;
     },
 
-    /* ARITHMETIC */
-
     /**
-     * Adds a value to the array contents.
+     * Adds a value to the array contents. If the second argument is a number, it acts as a scalar value. If it is an array, it is first stretched with linear or specified interpolation method, then element-wise addition is performed.
      * @function module:transform#add
-     * @param arr
-     * @param factor
-     * @returns {Array}
+     * @param input {array}
+     * @param factor {number|array}
+     * @param [interp='linear] {string}
+     * @returns {array}
      */
-    add: function (arr, factor) {
+    add: function (input, factor, interp) {
         var res = [];
 
-        _.forEach(arr, function (val, idx) {
-            res[idx] = val + factor;
-        });
+        if (typeof(factor) === 'number') {
+            _.forEach(input, function (val, idx) {
+                res[idx] = val + factor;
+            });
+        } else if (factor.constructor === Array) {
+            if (input.length !== factor.length) {
+                factor = dtm.transform.fit(factor, input.length, interp);
+            }
+
+            for (var i = 0; i < input.length; i++) {
+                res[i] = input[i] + factor[i];
+            }
+        }
 
         return res;
     },
 
     /**
-     * Multiplies the array contents.
+     * Multiplies the array contents. If the second argument is a number, it acts as a scalar value. If it is an array, it is first stretched with linear or specified interpolation method, then element-wise multiplication is performed.
      * @function module:transform#mult
-     * @param arr
-     * @param factor
+     * @param input {array}
+     * @param factor {number|array}
+     * @param [interp='linear] {string}
+     * @returns {array}
+     */
+    mult: function (input, factor, interp) {
+        var res = [];
+
+        if (typeof(factor) === 'number') {
+            _.forEach(input, function (val, idx) {
+                res[idx] = val * factor;
+            });
+        } else if (factor.constructor === Array) {
+            if (input.length !== factor.length) {
+                factor = dtm.transform.fit(factor, input.length, interp);
+            }
+
+            for (var i = 0; i < input.length; i++) {
+                res[i] = input[i] * factor[i];
+            }
+        }
+
+        return res;
+    },
+
+    /**
+     * Power operation on the array contents. If the second argument is a number, it acts as a scalar value. If it is an array, it is first stretched with linear or specified interpolation method, then element-wise power operation is performed.
+     * @function module:transform#pow
+     * @param input {array} Base values.
+     * @param factor {number|array} Exponent value or array.
+     * @param [interp='linear'] {string}
      * @returns {Array}
      */
-    mult: function (arr, factor) {
+    pow: function (input, factor, interp) {
         var res = [];
 
-        _.forEach(arr, function (val, idx) {
-            res[idx] = val * factor;
-        });
+        if (typeof(factor) === 'number') {
+            _.forEach(input, function (val, idx) {
+                res[idx] = Math.pow(val, factor);
+            });
+        } else if (factor.constructor === Array) {
+            if (input.length !== factor.length) {
+                factor = dtm.transform.fit(factor, input.length, interp);
+            }
+
+            for (var i = 0; i < input.length; i++) {
+                res[i] = Math.pow(input[i], factor[i]);
+            }
+        }
 
         return res;
     },
 
-    powof: function (arr, factor) {
+    /**
+     * @function module:transform#powof
+     * @param input {array} Exponent values.
+     * @param factor {number|array} Base value or array.
+     * @param [interp='linear'] {string}
+     * @returns {Array}
+     */
+    powof: function (input, factor, interp) {
         var res = [];
 
-        _.forEach(arr, function (val, idx) {
-            res[idx] = Math.pow(factor, val);
-        });
+        if (typeof(factor) === 'number') {
+            _.forEach(input, function (val, idx) {
+                res[idx] = Math.pow(factor, val);
+            });
+        } else if (factor.constructor === Array) {
+            if (input.length !== factor.length) {
+                factor = dtm.transform.fit(factor, input.length, interp);
+            }
+
+            for (var i = 0; i < input.length; i++) {
+                res[i] = Math.pow(factor[i], input[i]);
+            }
+        }
 
         return res;
     },
+
+
+    /* ARITHMETIC */
 
     /**
      * Rounds the float values to the nearest integer values.
@@ -2636,7 +2704,7 @@ dtm.array = function () {
      * @function module:array#randomize
      * @type {Function}
      */
-    array.rand = array.randomize = array.shuffle;
+    array.rand = array.random = array.randomize = array.shuffle;
 
     /**
      * Adds new value(s) at the end of the array, and removes the oldest value(s) at the beginning of the array. The size of the array is unchanged.
@@ -3789,7 +3857,7 @@ dtm.data = function (arg, cb, type) {
     };
 
     data.append = function (arg) {
-        if (arg instanceof Array) {
+        if (arg.constructor === Array) {
             for (var i = 0; i < arg.length; i++) {
                 if (typeof(params.arrays[params.keys[i]]) !== 'undefined') {
                     params.arrays[params.keys[i]].append(arg[i]);
@@ -3801,7 +3869,7 @@ dtm.data = function (arg, cb, type) {
     };
 
     data.queue = function (arg) {
-        if (arg instanceof Array) {
+        if (arg.constructor === Array) {
             for (var i = 0; i < arg.length; i++) {
                 if (typeof(params.arrays[params.keys[i]]) !== 'undefined') {
                     params.arrays[params.keys[i]].queue(arg[i]);
@@ -4585,7 +4653,7 @@ dtm.instr = function (arg) {
         if (typeof(src) === 'number') {
             params.models[dest] = dtm.array(src);
         } else {
-            if (src instanceof Array) {
+            if (src.constructor === Array) {
                 params.models[dest] = dtm.array(src);
             } else if (src.type === 'dtm.array') {
                 //if (src.get('type') === 'string') {
@@ -4637,7 +4705,7 @@ dtm.instr = function (arg) {
         }
 
         // TODO: refactor...
-        if (arg instanceof Array) {
+        if (arg.constructor === Array) {
             if (categ) {
                 params.models[categ] = dtm.array(arg);
             } else {
@@ -4683,7 +4751,7 @@ dtm.instr = function (arg) {
     };
 
     instr.map = function (src, dest) {
-        if (src instanceof Array) {
+        if (src.constructor === Array) {
             params.models[dest] = dtm.array(src).normalize();
         } else if (src.type === 'dtm.array') {
             // CHECK: assigning an array here is maybe not so smart...
@@ -4784,7 +4852,7 @@ dtm.instr = function (arg) {
         } else if (typeof(src) === 'string') {
             params.models[dest] = dtm.array(src).classify();
         } else {
-            if (src instanceof Array) {
+            if (src.constructor === Array) {
                 params.models[dest] = dtm.array(src);
             } else if (src.type === 'dtm.array') {
                 if (src.get('type') === 'string') {
@@ -5284,7 +5352,7 @@ dtm.synth = function (type, wt) {
                             cb(synth);
                         }
                     });
-                } else if (arg instanceof Array) {
+                } else if (arg.constructor === Array) {
                     var buf = actx.createBuffer(1, arg.length, dtm.wa.actx.sampleRate);
                     var content = buf.getChannelData(0);
                     _.forEach(content, function (val, idx) {
@@ -6453,9 +6521,9 @@ dtm.inscore = function () {
         if (typeof(src) === 'number') {
             params.modules[dest] = dtm.array(src);
         } else if (typeof(src) === 'string') {
-            params.modules[dest] = dtm.array(src).classify();
+            params.modules[dest] = dtm.array('str', src).classify();
         } else {
-            if (src instanceof Array) {
+            if (src.constructor === Array) {
                 params.modules[dest] = dtm.array(src);
             } else if (src.type === 'dtm.array') {
                 if (src.get('type') === 'string') {
@@ -6616,7 +6684,7 @@ dtm.inscore = function () {
         } else if (typeof(src) === 'string') {
             params.modules[dest] = dtm.array(src).classify();
         } else {
-            if (src instanceof Array) {
+            if (src.constructor === Array) {
                 params.modules[dest] = dtm.array(src);
             } else if (src.type === 'dtm.array') {
                 if (src.get('type') === 'string') {
@@ -7347,9 +7415,9 @@ dtm.inscore = function () {
         if (typeof(src) === 'number') {
             mods[dest] = dtm.array(src);
         } else if (typeof(src) === 'string') {
-            mods[dest] = dtm.array(src).classify();
+            mods[dest] = dtm.array('str', src).classify();
         } else {
-            if (src instanceof Array) {
+            if (src.constructor === Array) {
                 mods[dest] = dtm.array(src);
             } else if (src.type === 'dtm.array') {
                 if (src.get('type') === 'string') {
@@ -7442,7 +7510,7 @@ dtm.inscore = function () {
         } else if (typeof(src) === 'string') {
             mods[dest] = dtm.array(src).classify();
         } else {
-            if (src instanceof Array) {
+            if (src.constructor === Array) {
                 mods[dest] = dtm.array(src);
             } else if (src.type === 'dtm.array') {
                 if (src.get('type') === 'string') {
@@ -7519,7 +7587,7 @@ dtm.inscore = function () {
         } else if (typeof(src) === 'string') {
             m.modules[dest] = dtm.array(src).classify();
         } else {
-            if (src instanceof Array) {
+            if (src.constructor === Array) {
                 m.modules[dest] = dtm.array(src);
             } else if (src.type === 'dtm.array') {
                 if (src.get('type') === 'string') {

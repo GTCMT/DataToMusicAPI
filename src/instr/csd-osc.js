@@ -57,7 +57,7 @@
         } else if (typeof(src) === 'string') {
             m.modules[dest] = dtm.array(src).classify();
         } else {
-            if (src instanceof Array) {
+            if (src.constructor === Array) {
                 m.modules[dest] = dtm.array(src);
             } else if (src.type === 'dtm.array') {
                 if (src.get('type') === 'string') {

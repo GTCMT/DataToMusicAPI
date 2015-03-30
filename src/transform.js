@@ -430,51 +430,119 @@ dtm.transform = {
         return res;
     },
 
-    /* ARITHMETIC */
-
     /**
-     * Adds a value to the array contents.
+     * Adds a value to the array contents. If the second argument is a number, it acts as a scalar value. If it is an array, it is first stretched with linear or specified interpolation method, then element-wise addition is performed.
      * @function module:transform#add
-     * @param arr
-     * @param factor
-     * @returns {Array}
+     * @param input {array}
+     * @param factor {number|array}
+     * @param [interp='linear] {string}
+     * @returns {array}
      */
-    add: function (arr, factor) {
+    add: function (input, factor, interp) {
         var res = [];
 
-        _.forEach(arr, function (val, idx) {
-            res[idx] = val + factor;
-        });
+        if (typeof(factor) === 'number') {
+            _.forEach(input, function (val, idx) {
+                res[idx] = val + factor;
+            });
+        } else if (factor.constructor === Array) {
+            if (input.length !== factor.length) {
+                factor = dtm.transform.fit(factor, input.length, interp);
+            }
+
+            for (var i = 0; i < input.length; i++) {
+                res[i] = input[i] + factor[i];
+            }
+        }
 
         return res;
     },
 
     /**
-     * Multiplies the array contents.
+     * Multiplies the array contents. If the second argument is a number, it acts as a scalar value. If it is an array, it is first stretched with linear or specified interpolation method, then element-wise multiplication is performed.
      * @function module:transform#mult
-     * @param arr
-     * @param factor
+     * @param input {array}
+     * @param factor {number|array}
+     * @param [interp='linear] {string}
+     * @returns {array}
+     */
+    mult: function (input, factor, interp) {
+        var res = [];
+
+        if (typeof(factor) === 'number') {
+            _.forEach(input, function (val, idx) {
+                res[idx] = val * factor;
+            });
+        } else if (factor.constructor === Array) {
+            if (input.length !== factor.length) {
+                factor = dtm.transform.fit(factor, input.length, interp);
+            }
+
+            for (var i = 0; i < input.length; i++) {
+                res[i] = input[i] * factor[i];
+            }
+        }
+
+        return res;
+    },
+
+    /**
+     * Power operation on the array contents. If the second argument is a number, it acts as a scalar value. If it is an array, it is first stretched with linear or specified interpolation method, then element-wise power operation is performed.
+     * @function module:transform#pow
+     * @param input {array} Base values.
+     * @param factor {number|array} Exponent value or array.
+     * @param [interp='linear'] {string}
      * @returns {Array}
      */
-    mult: function (arr, factor) {
+    pow: function (input, factor, interp) {
         var res = [];
 
-        _.forEach(arr, function (val, idx) {
-            res[idx] = val * factor;
-        });
+        if (typeof(factor) === 'number') {
+            _.forEach(input, function (val, idx) {
+                res[idx] = Math.pow(val, factor);
+            });
+        } else if (factor.constructor === Array) {
+            if (input.length !== factor.length) {
+                factor = dtm.transform.fit(factor, input.length, interp);
+            }
+
+            for (var i = 0; i < input.length; i++) {
+                res[i] = Math.pow(input[i], factor[i]);
+            }
+        }
 
         return res;
     },
 
-    powof: function (arr, factor) {
+    /**
+     * @function module:transform#powof
+     * @param input {array} Exponent values.
+     * @param factor {number|array} Base value or array.
+     * @param [interp='linear'] {string}
+     * @returns {Array}
+     */
+    powof: function (input, factor, interp) {
         var res = [];
 
-        _.forEach(arr, function (val, idx) {
-            res[idx] = Math.pow(factor, val);
-        });
+        if (typeof(factor) === 'number') {
+            _.forEach(input, function (val, idx) {
+                res[idx] = Math.pow(factor, val);
+            });
+        } else if (factor.constructor === Array) {
+            if (input.length !== factor.length) {
+                factor = dtm.transform.fit(factor, input.length, interp);
+            }
+
+            for (var i = 0; i < input.length; i++) {
+                res[i] = Math.pow(factor[i], input[i]);
+            }
+        }
 
         return res;
     },
+
+
+    /* ARITHMETIC */
 
     /**
      * Rounds the float values to the nearest integer values.
@@ -566,7 +634,7 @@ dtm.transform = {
     /**
      * Creates a horizontal mirror of the input array.
      * @function module:transform#mirror
-     * @param {array} vals One-dimensional array. Could be any type.
+     * @param {array} input One-dimensional array. Could be any type.
      * @returns {array}
      * @example
      *
@@ -575,10 +643,10 @@ dtm.transform = {
      * dtm.transform.mirror(input);
      * -> [3, 6, 0, 5, 7, 2, 1, 4]
      */
-    mirror: function (arr) {
+    mirror: function (input) {
         var res = [];
-        for (var i = arr.length - 1; i >= 0; --i) {
-            res.push(arr[i]);
+        for (var i = input.length - 1; i >= 0; --i) {
+            res.push(input[i]);
         }
         return res;
     },
@@ -586,7 +654,7 @@ dtm.transform = {
     /**
      * Vertical invertion.
      * @function module:transform#invert
-     * @param {array} vals One-dimensional numerical array
+     * @param {array} input One-dimensional numerical array
      * @param {number} [center] If not present, the mean of the input array is used as the center point.
      * @returns {array}
      * @example
@@ -596,13 +664,13 @@ dtm.transform = {
      * dtm.transform.invert(input);
      * -> [3, 7, 4, 6, 5, 0, 2, 1]
      */
-    invert: function (arr, center) {
+    invert: function (input, center) {
         if (typeof(center) === 'undefined') {
-            center = dtm.analyzer.mean(arr);
+            center = dtm.analyzer.mean(input);
         }
 
         var res = [];
-        _.forEach(arr, function (val, idx) {
+        _.forEach(input, function (val, idx) {
             res[idx] = center - (val - center);
         });
         return res;

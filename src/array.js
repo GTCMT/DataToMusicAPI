@@ -751,7 +751,7 @@ dtm.array = function () {
      * @function module:array#randomize
      * @type {Function}
      */
-    array.rand = array.randomize = array.shuffle;
+    array.rand = array.random = array.randomize = array.shuffle;
 
     /**
      * Adds new value(s) at the end of the array, and removes the oldest value(s) at the beginning of the array. The size of the array is unchanged.

@@ -356,9 +356,9 @@
         if (typeof(src) === 'number') {
             params.modules[dest] = dtm.array(src);
         } else if (typeof(src) === 'string') {
-            params.modules[dest] = dtm.array(src).classify();
+            params.modules[dest] = dtm.array('str', src).classify();
         } else {
-            if (src instanceof Array) {
+            if (src.constructor === Array) {
                 params.modules[dest] = dtm.array(src);
             } else if (src.type === 'dtm.array') {
                 if (src.get('type') === 'string') {

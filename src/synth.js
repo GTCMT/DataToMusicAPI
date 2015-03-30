@@ -268,7 +268,7 @@ dtm.synth = function (type, wt) {
                             cb(synth);
                         }
                     });
-                } else if (arg instanceof Array) {
+                } else if (arg.constructor === Array) {
                     var buf = actx.createBuffer(1, arg.length, dtm.wa.actx.sampleRate);
                     var content = buf.getChannelData(0);
                     _.forEach(content, function (val, idx) {

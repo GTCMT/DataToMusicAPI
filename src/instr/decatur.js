@@ -711,9 +711,9 @@
         if (typeof(src) === 'number') {
             mods[dest] = dtm.array(src);
         } else if (typeof(src) === 'string') {
-            mods[dest] = dtm.array(src).classify();
+            mods[dest] = dtm.array('str', src).classify();
         } else {
-            if (src instanceof Array) {
+            if (src.constructor === Array) {
                 mods[dest] = dtm.array(src);
             } else if (src.type === 'dtm.array') {
                 if (src.get('type') === 'string') {
