@@ -61,8 +61,15 @@ describe('array object', function () {
 
         describe('min', function () {
             var a = dtm.array('hello');
-            it('should', function () {
+            it('should return a null', function () {
                 expect(a.get('min')).toBe(null);
+            });
+        });
+
+        describe('rms', function () {
+            var a = dtm.array([1, 2, 3]);
+            it('should return sqrt of 14', function () {
+                expect(a.get('rms')).toBeCloseTo(2.16, 2);
             });
         });
 

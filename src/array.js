@@ -7,7 +7,6 @@
  * Creates a new single dimensional array object with various transformation functions. The same helper functions from dtm.array can be used - but make sure to skip the first argument (the input array) and start from the second argument.
  *
  * @function module:array.array
- * @param args
  * @returns array object {{value: null, normalized: null, length: null, min: null, max: null, mean: null}}
  */
 dtm.array = function () {
@@ -107,6 +106,9 @@ dtm.array = function () {
                 case 'sumAll':
                 case 'sum':
                     return dtm.analyzer.sum(params.value);
+
+                case 'rms':
+                    return dtm.analyzer.rms(params.value);
 
                 case 'pdf':
                     break;
@@ -642,7 +644,7 @@ dtm.array = function () {
      * @function module:array#pow
      * @param factor {number|array|dtm.array}
      * @param [interp='linear'] {string}
-
+     * @returns {dtm.array}
      */
     array.pow = function (factor, interp) {
         if (factor.type === 'dtm.array') {
