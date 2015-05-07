@@ -40,7 +40,7 @@ module.exports = function (grunt) {
                     //'src/instr/nice-chords.js',
                     //'src/instr/models.rhythm-seq.js',
                     //'src/instr/sampler.js',
-                    //'src/instr/clave.js',
+                    'src/instr/clave.js',
                     //'src/instr/tamborim.js',
 
                     //'src/beltline/bl-motif.js',
@@ -62,7 +62,7 @@ module.exports = function (grunt) {
 
         jsdoc: {
             dist: {
-                src: ['src/*.js'],
+                src: ['src/*.js', 'src/instr/*.js'],
                 jsdoc: 'jsdoc',
                 options: {
                     destination: 'doc',

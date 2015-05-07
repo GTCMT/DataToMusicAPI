@@ -11,9 +11,15 @@ function sonify(data) {
 ```
 
 ```
-var a = dtm.array('hello world!');
+data = 'hello';
 
-a.rescale(60, 90).round();
+dtm.instr().pitch(data).volume(data).play();
+```
+
+```
+var a = dtm.array('s', 'hello world!');
+
+a.class().rescale(60, 90).round();
 
 dtm.clock().add(sonify).start();
 

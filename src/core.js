@@ -13,7 +13,7 @@ var params = {
  * @type {object}
  */
 var dtm = {
-    version: '0.0.2',
+    version: '0.0.3',
 
     log: function (arg) {
         if (params.isLogging) {

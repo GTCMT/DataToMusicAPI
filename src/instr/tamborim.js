@@ -1,5 +1,5 @@
 (function () {
-    var m = dtm.model('tamborim').categ('instr');
+    var m = dtm.model('tamborim').categ('instr').register();
 
     var subDiv = 12 * 8;
     var bpm = 400;
@@ -54,6 +54,28 @@
         m.motif.midx = val;
         return m;
     };
+
+    function mapper(src, dest) {
+        if (typeof(src) === 'number') {
+            params.modules[dest] = dtm.array(src);
+        } else if (typeof(src) === 'string') {
+            params.modules[dest] = dtm.array('str', src).classify();
+        } else {
+            if (src.constructor === Array) {
+                params.modules[dest] = dtm.array(src);
+            } else if (src.type === 'dtm.array') {
+                if (src.get('type') === 'string') {
+                    params.modules[dest] = src.clone().classify();
+                } else {
+                    params.modules[dest] = src.clone();
+                }
+            } else if (src.type === 'dtm.model') {
+
+            } else if (src.type === 'dtm.synth') {
+                params.modules[dest] = src;
+            }
+        }
+    }
 
     return m;
 })();

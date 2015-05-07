@@ -6,8 +6,8 @@
 /**
  * Creates a new instance of clock. Don't put "new".
  * @function module:clock.clock
- * @param [bpm=60] {number} Tempo in beats-per-minute. Recommended value range is around 60-140.
- * @param [subDiv=4] {number} Sub division / tick speed. Recommended: 4, 8, 16, etc.
+ * @param [bpm=true] {boolean|number} Synchronization or Tempo setting. If given a boolean, it sets the current sync state of the clock to the master clock. If given a number, it sets the unsynced tempo in beats-per-minute. Default BPM is 120. Recommended value range is around 60-140.
+ * @param [subDiv=16] {number} Sub division / tick speed. Recommended: 4, 8, 16, etc.
  * @param [autoStart=true] {boolean} If true, the clock is started when it is instantiated. Works well with a synced clock.
  * @returns {dtm.clock} a new clock object
  * @example
@@ -65,6 +65,12 @@ dtm.clock = function (bpm, subDiv, autoStart) {
     // member?
     var curTime = 0.0;
 
+    /**
+     * Get the value of a parameter of the clock object.
+     * @function module:clock#get
+     * @param param
+     * @returns {*}
+     */
     clock.get = function (param) {
         switch (param) {
             case 'bpm':
@@ -110,9 +116,9 @@ dtm.clock = function (bpm, subDiv, autoStart) {
     /**
      * Set the main parameters of the clock.
      * @function module:clock#set
-     * @param [bpm] {number}
-     * @param [subDiv] {number}
-     * @param [time] {number}
+     * @param [bpm] {boolean|number} Synchronization or Tempo setting. If given a boolean, it sets the current sync state of the clock to the master clock. If given a number, it sets the unsynced tempo in beats-per-minute. Default BPM is 120. Recommended value range is around 60-140.
+     * @param [subDiv=16] {number} Sub division / tick speed. Recommended: 4, 8, 16, etc.
+     * @param [autoStart=true] {boolean} If true, the clock is started when it is instantiated. Works well with a synced clock.
      * @returns {dtm.clock}
      */
     clock.set = function (bpm, subDiv, autoStart) {

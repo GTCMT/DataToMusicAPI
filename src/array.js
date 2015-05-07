@@ -40,7 +40,7 @@ dtm.array = function () {
     /**
      * Returns the array contents or an analyzed value
      * @function module:array#get
-     * @param [param] {string|number}
+     * @param [param] {string|number} If no argument is given, returns the array content. If given a number, returns the value at the index. If given a valid string, the value / stats / etc. is returned. Possible string keys are as follows: name, key, type, len|length, min|minimum, max|maximum, minmax|range, mean|avg|average, mode, median, midrange, std, pstd, var|variance, pvar, rms, cur|current|now, next, pver|previous, rand|random, idx|index, hop|step|stepSize, loc|location|relative, block|window (with 1|2 following numbers), blockNext, original, normal|normalize|normalized, sort|sorted, uniq|unique|uniques, classes, classID, string|stringify, numClasses|numUniques, unif|uniformity, histo|histogram
      * @returns {number|array|string}
      */
     array.get = function (param) {
@@ -147,6 +147,8 @@ dtm.array = function () {
                 case 'idx':
                     return params.index;
 
+                case 'hop':
+                case 'hopSize':
                 case 'step':
                 case 'stepSize':
                     return params.step;
@@ -276,24 +278,17 @@ dtm.array = function () {
 
     /**
      * Sets the name of the array object.
-     * @function module:array#setName
+     * @function module:array#name
      * @param name {string}
      * @returns {dtm.array}
      */
-    array.setName = function (name) {
+    array.name = function (name) {
         if (!name) {
             name = '';
         }
         params.name = name.toString();
         return array;
     };
-
-    /**
-     * Same as setName.
-     * @funciton module:array#name
-     * @type {Function}
-     */
-    array.name = array.setName;
 
     /**
      * Sets the value type of the array content. Should be either 'number' or 'string'?
@@ -384,7 +379,6 @@ dtm.array = function () {
 
     /* GENERATORS */
 
-    // CHECK: is this only for the array ojbect?
     /**
      * Fills the contents of the array with
      * @function module:array#fill
@@ -404,13 +398,9 @@ dtm.array = function () {
     /**
      * Same as the fill() function.
      * @function module:array#generate
-     * @param type {string} Choices: 'line', 'noise'/'random', 'sin'/'sine', 'cos'/'cosine', 'zeroes', 'ones'
-     * @param [len=2] {integer}
-     * @param [min=0] {number}
-     * @param [max=1] {number}
-     * @returns {dtm.array}
+     * @function module:array#gen
      */
-    array.generate = array.fill;
+    array.gen = array.generate = array.fill;
 
     /**
      * Returns a clone of the array object. It can be used when you don't want to reference the same array object from different places.

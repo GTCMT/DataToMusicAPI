@@ -15,7 +15,7 @@ var params = {
  * @type {object}
  */
 var dtm = {
-    version: '0.0.2',
+    version: '0.0.3',
 
     log: function (arg) {
         if (params.isLogging) {
@@ -1994,7 +1994,7 @@ dtm.array = function () {
     /**
      * Returns the array contents or an analyzed value
      * @function module:array#get
-     * @param [param] {string|number}
+     * @param [param] {string|number} If no argument is given, returns the array content. If given a number, returns the value at the index. If given a valid string, the value / stats / etc. is returned. Possible string keys are as follows: name, key, type, len|length, min|minimum, max|maximum, minmax|range, mean|avg|average, mode, median, midrange, std, pstd, var|variance, pvar, rms, cur|current|now, next, pver|previous, rand|random, idx|index, hop|step|stepSize, loc|location|relative, block|window (with 1|2 following numbers), blockNext, original, normal|normalize|normalized, sort|sorted, uniq|unique|uniques, classes, classID, string|stringify, numClasses|numUniques, unif|uniformity, histo|histogram
      * @returns {number|array|string}
      */
     array.get = function (param) {
@@ -2101,6 +2101,8 @@ dtm.array = function () {
                 case 'idx':
                     return params.index;
 
+                case 'hop':
+                case 'hopSize':
                 case 'step':
                 case 'stepSize':
                     return params.step;
@@ -2230,24 +2232,17 @@ dtm.array = function () {
 
     /**
      * Sets the name of the array object.
-     * @function module:array#setName
+     * @function module:array#name
      * @param name {string}
      * @returns {dtm.array}
      */
-    array.setName = function (name) {
+    array.name = function (name) {
         if (!name) {
             name = '';
         }
         params.name = name.toString();
         return array;
     };
-
-    /**
-     * Same as setName.
-     * @funciton module:array#name
-     * @type {Function}
-     */
-    array.name = array.setName;
 
     /**
      * Sets the value type of the array content. Should be either 'number' or 'string'?
@@ -2338,7 +2333,6 @@ dtm.array = function () {
 
     /* GENERATORS */
 
-    // CHECK: is this only for the array ojbect?
     /**
      * Fills the contents of the array with
      * @function module:array#fill
@@ -2358,13 +2352,9 @@ dtm.array = function () {
     /**
      * Same as the fill() function.
      * @function module:array#generate
-     * @param type {string} Choices: 'line', 'noise'/'random', 'sin'/'sine', 'cos'/'cosine', 'zeroes', 'ones'
-     * @param [len=2] {integer}
-     * @param [min=0] {number}
-     * @param [max=1] {number}
-     * @returns {dtm.array}
+     * @function module:array#gen
      */
-    array.generate = array.fill;
+    array.gen = array.generate = array.fill;
 
     /**
      * Returns a clone of the array object. It can be used when you don't want to reference the same array object from different places.
@@ -3884,7 +3874,7 @@ dtm.data = function (arg, cb, type) {
             }
         } else if (arguments.length === 3) {
         for (var i = 0; i < arguments[0]; i++) {
-            params.arrays[arguments[2][i]] = dtm.array().fill('zeros', arguments[1]).setName(arguments[2][i]);
+            params.arrays[arguments[2][i]] = dtm.array().fill('zeros', arguments[1]).name(arguments[2][i]);
             params.keys[i] = arguments[2][i];
             params.size.col = arguments[0];
             params.size.row = arguments[1];
@@ -3943,8 +3933,8 @@ dtm.load = dtm.d = dtm.data;
 /**
  * Creates a new instance of clock. Don't put "new".
  * @function module:clock.clock
- * @param [bpm=60] {number} Tempo in beats-per-minute. Recommended value range is around 60-140.
- * @param [subDiv=4] {number} Sub division / tick speed. Recommended: 4, 8, 16, etc.
+ * @param [bpm=true] {boolean|number} Synchronization or Tempo setting. If given a boolean, it sets the current sync state of the clock to the master clock. If given a number, it sets the unsynced tempo in beats-per-minute. Default BPM is 120. Recommended value range is around 60-140.
+ * @param [subDiv=16] {number} Sub division / tick speed. Recommended: 4, 8, 16, etc.
  * @param [autoStart=true] {boolean} If true, the clock is started when it is instantiated. Works well with a synced clock.
  * @returns {dtm.clock} a new clock object
  * @example
@@ -4002,6 +3992,12 @@ dtm.clock = function (bpm, subDiv, autoStart) {
     // member?
     var curTime = 0.0;
 
+    /**
+     * Get the value of a parameter of the clock object.
+     * @function module:clock#get
+     * @param param
+     * @returns {*}
+     */
     clock.get = function (param) {
         switch (param) {
             case 'bpm':
@@ -4047,9 +4043,9 @@ dtm.clock = function (bpm, subDiv, autoStart) {
     /**
      * Set the main parameters of the clock.
      * @function module:clock#set
-     * @param [bpm] {number}
-     * @param [subDiv] {number}
-     * @param [time] {number}
+     * @param [bpm] {boolean|number} Synchronization or Tempo setting. If given a boolean, it sets the current sync state of the clock to the master clock. If given a number, it sets the unsynced tempo in beats-per-minute. Default BPM is 120. Recommended value range is around 60-140.
+     * @param [subDiv=16] {number} Sub division / tick speed. Recommended: 4, 8, 16, etc.
+     * @param [autoStart=true] {boolean} If true, the clock is started when it is instantiated. Works well with a synced clock.
      * @returns {dtm.clock}
      */
     clock.set = function (bpm, subDiv, autoStart) {
@@ -6200,6 +6196,125 @@ dtm.inscore = function () {
 
     return inscore;
 };
+(function () {
+    var m = dtm.model('clave', 'instr').register();
+
+    //var darr = dtm.transform;
+    //m.motif = {};
+    //m.motif.beats = darr.itob([3, 3, 4, 2, 4]);
+    //m.motif.target = darr.itob([2, 1, 2, 1]);
+    //m.motif.midx = 0;
+
+    //var cl = dtm.clock(80);
+    //cl.subDiv(16);
+    //cl.setTime('2/4');
+
+    var params = {
+        modules: {
+            voice: dtm.synth(),
+            base: dtm.array([3,3,4,2,4]).itob(),
+            target: dtm.array([2,1,2,1]).itob(),
+            res: dtm.array([3,3,4,2,4]).itob(),
+            morph: dtm.array(0)
+        }
+    };
+
+    m.output = function (c) {
+        c.div(16);
+
+        var v = params.modules.voice;
+
+        var m = params.modules.morph.get('next');
+        var r = params.modules.res.get('next');
+
+        if (r) {
+            v.play();
+        }
+    };
+
+    m.mod.morph = function (src, mode) {
+        mapper(src, 'morph');
+
+        if (m.modes.literal.indexOf(mode) > -1) {
+        } else if (m.modes.preserve.indexOf(mode) > -1) {
+            params.modules.morph.normalize(0, 1);
+        } else {
+            params.modules.morph.normalize();
+        }
+    };
+
+    m.mod.target = function (src, mode) {
+        mapper(src, 'target');
+
+        if (m.modes.literal.indexOf(mode) > -1) {
+        } else if (m.modes.preserve.indexOf(mode) > -1) {
+            //params.modules.target.normalize(0, 1);
+        } else {
+            //params.modules.target.normalize();
+        }
+    };
+
+    //m.play = function () {
+    //    var idx = 0;
+    //
+    //    cl.add(function () {
+    //        var src = actx.createBufferSource();
+    //        var amp = actx.createGain();
+    //        src.connect(amp);
+    //        amp.connect(out());
+    //        src.buffer = noise;
+    //        src.loop = true;
+    //
+    //        m.motif.morphed = darr.morph(m.motif.beats, m.motif.target, m.motif.midx);
+    //
+    //        if (idx >= m.motif.morphed.length) {
+    //            idx = 0;
+    //        }
+    //
+    //        amp.gain.setValueAtTime(0.5 * dtm.value.expCurve(m.motif.morphed[idx], 20), now());
+    //        amp.gain.linearRampToValueAtTime(0, now() + 0.02);
+    //
+    //        src.start(now());
+    //
+    //        idx = (idx + 1) % m.motif.morphed.length;
+    //    });
+    //
+    //    cl.start();
+    //};
+
+    //m.mod = function (val) {
+    //    m.motif.midx = val;
+    //};
+
+    function mapper(src, dest) {
+        if (typeof(src) === 'number') {
+            params.modules[dest] = dtm.array(src);
+        } else if (typeof(src) === 'string') {
+            params.modules[dest] = dtm.array('str', src).classify();
+        } else {
+            if (src.constructor === Array) {
+                params.modules[dest] = dtm.array(src);
+            } else if (src.type === 'dtm.array') {
+                if (src.get('type') === 'string') {
+                    params.modules[dest] = src.clone().classify();
+                } else {
+                    params.modules[dest] = src.clone();
+                }
+            } else if (src.type === 'dtm.model') {
+
+            } else if (src.type === 'dtm.synth') {
+                params.modules[dest] = src;
+            }
+        }
+    }
+
+    return m;
+})();
+/**
+ * @fileOverview Instrument model "default"
+ * @module instr-default
+ */
+
 (function (){
     var m = dtm.model('default', 'instr').register();
 
@@ -6282,6 +6397,12 @@ dtm.inscore = function () {
         }
     };
 
+    /**
+     * Sets the synthesis voice for the instrument. Alternatively: .syn(), .synth()
+     * @function module:instr-default#voice
+     * @param arg {string|dtm.synth}
+     * @returns {dtm.instr}
+     */
     m.param.voice = function (arg) {
         if (typeof(arg) === 'string') {
             params.modules.voice.set(arg);
@@ -6293,6 +6414,13 @@ dtm.inscore = function () {
 
     m.mod.syn = m.mod.synth = m.mod.voice;
 
+    /**
+     * Sets the wavetable using the input. Alternatively: .wavetable()
+     * @function module:instr-default#wt
+     * @param src {number|string|array|dtm.array}
+     * @param [mode='adaptive'] {string}
+     * @returns {dtm.instr}
+     */
     m.mod.wt = function (src, mode) {
         mapper(src, 'wavetable');
 
@@ -6739,6 +6867,11 @@ dtm.inscore = function () {
 
     return m;
 })();
+/**
+ * @fileOverview Instrument model "default"
+ * @module instr-decatur
+ */
+
 (function () {
     var m = dtm.model('decatur', 'instr').register();
 
@@ -7195,15 +7328,35 @@ dtm.inscore = function () {
         return m.parent;
     };
 
+    /**
+     * Switches output for Guido notation.
+     * @function module:instr-decatur#score
+     * @param bool {boolean}
+     * @returns {dtm.instr}
+     */
     m.param.score = function (bool) {
         params.score = bool;
         return m.parent;
     };
 
+
+    /**
+     * Switches output for MIDI message via OSC.
+     * @function module:instr-decatur#midi
+     * @param bool {boolean}
+     * @returns {dtm.instr}
+     */
     m.param.midi = function (bool) {
         params.midi = bool;
         return m.parent;
     };
+
+    /**
+     * Sets the instrument name.
+     * @function module:instr-decatur#name
+     * @param src {string}
+     * @returns {dtm.instr}
+     */
 
     m.param.name = function (src) {
         params.name = src;

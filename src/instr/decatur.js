@@ -1,3 +1,8 @@
+/**
+ * @fileOverview Instrument model "default"
+ * @module instr-decatur
+ */
+
 (function () {
     var m = dtm.model('decatur', 'instr').register();
 
@@ -454,16 +459,35 @@
         return m.parent;
     };
 
+    /**
+     * Switches output for Guido notation.
+     * @function module:instr-decatur#score
+     * @param bool {boolean}
+     * @returns {dtm.instr}
+     */
     m.param.score = function (bool) {
         params.score = bool;
         return m.parent;
     };
 
+
+    /**
+     * Switches output for MIDI message via OSC.
+     * @function module:instr-decatur#midi
+     * @param bool {boolean}
+     * @returns {dtm.instr}
+     */
     m.param.midi = function (bool) {
         params.midi = bool;
         return m.parent;
     };
 
+    /**
+     * Sets the instrument name.
+     * @function module:instr-decatur#name
+     * @param src {string}
+     * @returns {dtm.instr}
+     */
     m.param.name = function (src) {
         params.name = src;
 
@@ -486,6 +510,12 @@
         return m.parent;
     };
 
+    /**
+     * Sets the number of measures.
+     * @function module:instr-decatur#measures
+     * @param val {number}
+     * @returns {dtm.instr}
+     */
     m.param.measures = function (val) {
         params.measures = val;
         return m.parent;
@@ -496,21 +526,46 @@
         return m.parent;
     };
 
+    /**
+     * Sets the system clef.
+     * @function module:instr-decatur#clef
+     * @param src {string}
+     * @returns {dtm.instr}
+     */
     m.param.clef = function (src) {
         params.clef = src;
         return m.parent;
     };
 
+    /**
+     * Sets the number of staves.
+     * @function module:instr-decatur#staves
+     * @param num {number}
+     * @returns {dtm.instr}
+     */
     m.param.staves = function (num) {
         params.staves = num;
         return m.parent;
     };
 
+    /**
+     * Sets a callback function to be called at an update.
+     * @function module:instr-decatur#staves
+     * @param cb {function}
+     * @returns {dtm.instr}
+     */
     m.param.onUpdate = function (cb) {
         params.callbacks.push(cb);
         return m.parent;
     };
 
+    /**
+     * Sets the pitch value or sequence.
+     * @function module:instr-decatur#staves
+     * @param src {number|string|array|dtm.array}
+     * @param [mode='adaptive'] {string}
+     * @returns {dtm.instr}
+     */
     m.mod.pitch = function (src, mode) {
         mapper(src, 'pitch');
 

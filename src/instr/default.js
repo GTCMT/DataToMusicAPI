@@ -1,3 +1,8 @@
+/**
+ * @fileOverview Instrument model "default"
+ * @module instr-default
+ */
+
 (function (){
     var m = dtm.model('default', 'instr').register();
 
@@ -80,6 +85,12 @@
         }
     };
 
+    /**
+     * Sets the synthesis voice for the instrument. Alternatively: .syn(), .synth()
+     * @function module:instr-default#voice
+     * @param arg {string|dtm.synth}
+     * @returns {dtm.instr}
+     */
     m.param.voice = function (arg) {
         if (typeof(arg) === 'string') {
             params.modules.voice.set(arg);
@@ -91,6 +102,13 @@
 
     m.mod.syn = m.mod.synth = m.mod.voice;
 
+    /**
+     * Sets the wavetable using the input. Alternatively: .wavetable()
+     * @function module:instr-default#wt
+     * @param src {number|string|array|dtm.array}
+     * @param [mode='adaptive'] {string}
+     * @returns {dtm.instr}
+     */
     m.mod.wt = function (src, mode) {
         mapper(src, 'wavetable');
 

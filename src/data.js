@@ -361,7 +361,7 @@ dtm.data = function (arg, cb, type) {
             }
         } else if (arguments.length === 3) {
         for (var i = 0; i < arguments[0]; i++) {
-            params.arrays[arguments[2][i]] = dtm.array().fill('zeros', arguments[1]).setName(arguments[2][i]);
+            params.arrays[arguments[2][i]] = dtm.array().fill('zeros', arguments[1]).name(arguments[2][i]);
             params.keys[i] = arguments[2][i];
             params.size.col = arguments[0];
             params.size.row = arguments[1];
