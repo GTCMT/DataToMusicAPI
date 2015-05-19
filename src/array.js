@@ -927,6 +927,17 @@ dtm.array = function () {
         return array.set(dtm.transform.stringify(params.value));
     };
 
+    /**
+     * Converts stringified values to numerical values.
+     * @function module:array#tonumber|toNumber
+     * @returns {dtm.array}
+     */
+    array.tonumber = function () {
+        return array.set(dtm.transform.tonumber(params.value));
+    };
+
+    array.toNumber = array.tonumber;
+
     // CHECK: occurrence or value??
     array.morethan = function () {
         return array;

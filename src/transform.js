@@ -1080,6 +1080,14 @@ dtm.transform = {
         });
 
         return res;
+    },
+
+    tonumber: function (input) {
+        var res = [];
+        input.forEach(function (val, idx) {
+            res[idx] = Number.parseFloat(val);
+        });
+        return res;
     }
 
     //getClasses: function (input) {

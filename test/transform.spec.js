@@ -454,4 +454,12 @@ describe('array helper functions', function () {
             expect(typeof(res[2])).toBe('string');
         });
     });
+
+    describe('tonumber', function () {
+        var a = ['1', '2', '3'];
+        var res = dtm.transform.tonumber(a);
+        it('should be converted to number type', function () {
+            expect(res).toEqual([1, 2, 3]);
+        });
+    });
 });

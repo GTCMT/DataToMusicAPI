@@ -1901,6 +1901,14 @@ dtm.transform = {
         });
 
         return res;
+    },
+
+    tonumber: function (input) {
+        var res = [];
+        input.forEach(function (val, idx) {
+            res[idx] = Number.parseFloat(val);
+        });
+        return res;
     }
 
     //getClasses: function (input) {
@@ -2880,6 +2888,12 @@ dtm.array = function () {
     array.stringify = function () {
         return array.set(dtm.transform.stringify(params.value));
     };
+
+    array.tonumber = function () {
+        return array.set(dtm.transform.tonumber(params.value));
+    };
+
+    array.toNumber = array.tonumber;
 
     // CHECK: occurrence or value??
     array.morethan = function () {
