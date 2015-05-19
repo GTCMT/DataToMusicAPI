@@ -132,17 +132,17 @@ dtm.master = {
     },
 
     get: function (param) {
-        var out;
-
         switch (param) {
             case 'index':
-                out = dtm.master.params.index;
+                return dtm.master.params.index;
                 break;
+
+            case 'clock':
+                return dtm.master.clock;
+
             default:
-                out = null;
-                break;
+                return null;
         }
-        return out;
     },
 
     set: function (key, val) {

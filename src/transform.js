@@ -3,7 +3,7 @@
  * @module transform
  */
 
-// this is singleton helper functions
+// singleton helper functions
 dtm.transform = {
     type: 'dtm.transform',
 

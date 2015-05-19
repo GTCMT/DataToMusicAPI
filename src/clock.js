@@ -6,7 +6,7 @@
 /**
  * Creates a new instance of clock. Don't put "new".
  * @function module:clock.clock
- * @param [bpm=true] {boolean|number} Synchronization or Tempo setting. If given a boolean, it sets the current sync state of the clock to the master clock. If given a number, it sets the unsynced tempo in beats-per-minute. Default BPM is 120. Recommended value range is around 60-140.
+ * @param [bpm=true] {boolean|number} Synchronization or Tempo setting. If given a boolean, or string "sync", it sets the current sync state of the clock as a slave to the master clock. If given a number, it sets the unsynced tempo in beats-per-minute. Default BPM for unsynced clock is 120. Recommended value range is around 60-140.
  * @param [subDiv=16] {number} Sub division / tick speed. Recommended: 4, 8, 16, etc.
  * @param [autoStart=true] {boolean} If true, the clock is started when it is instantiated. Works well with a synced clock.
  * @returns {dtm.clock} a new clock object
@@ -127,6 +127,8 @@ dtm.clock = function (bpm, subDiv, autoStart) {
             params.sync = false;
         } else if (typeof(bpm) === 'boolean') {
             params.sync = bpm;
+        } else if (bpm == 'sync') {
+            params.sync = true;
         }
 
         if (typeof(subDiv) !== 'undefined') {
@@ -252,7 +254,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
         return clock;
     };
 
-    clock.register = clock.reg = clock.add;
+    clock.call = clock.register = clock.reg = clock.add;
 
     /**
      * @function module:clock#remove

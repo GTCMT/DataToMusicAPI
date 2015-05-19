@@ -96,6 +96,7 @@ dtm.instr = function (arg) {
             case 'name':
                 return params.name;
 
+            case 'isplaying':
             case 'isPlaying':
                 return params.isPlaying;
 
@@ -103,20 +104,19 @@ dtm.instr = function (arg) {
             case 'clock':
                 return params.clock;
 
-            case 'm':
-            case 'model':
-                if (!arguments[1]) {
-                    return params.models;
-                } else {
-                    return params.models[arguments[1]];
-                }
-
             case 'beat':
                 return params.clock.get('beat');
 
+            case 'm':
+            case 'mod':
+            case 'model':
+            case 'models':
             case 'modList':
-            case 'params':
                 return instr.params;
+
+            case 'param':
+            case 'params':
+                break;
 
             default:
                 break;
@@ -300,11 +300,12 @@ dtm.instr = function (arg) {
     /**
      * Modulates a parameter of the instrument by the index or the name.
      * @function module:instr#mod
-     * @param tgt {number|string}
-     * @param src
+     * @param tgt {number|string} Modulation target.
+     * @param src {number|string|array|dtm.array} Modulation source.
+     * @param [mode='adapt'] {string} Scaling mode.
      * @returns {dtm.instr}
      */
-    instr.mod = function (tgt, src, literal) {
+    instr.mod = function (tgt, src, mode) {
         var dest = '';
 
         if (typeof(tgt) === 'string') {
@@ -314,11 +315,13 @@ dtm.instr = function (arg) {
             dest = instr.params[tgt];
         }
 
-        instr[dest](src, literal);
+        instr[dest](src, mode);
         // maybe feed arguments[1-];
 
         return instr;
     };
+
+    instr.modulate = instr.mod;
 
     function mapper(dest, src) {
         if (typeof(src) === 'number') {
@@ -341,8 +344,6 @@ dtm.instr = function (arg) {
             }
         }
     }
-
-    instr.modulate = instr.mod;
 
     //instr.load = function (arg) {
     //    if (typeof(arg) === 'string') {

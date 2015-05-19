@@ -1,8 +1,10 @@
 describe('array object', function () {
     describe('get', function () {
-        it('should return the array value', function () {
-            var a = dtm.array([1,2,3]);
-            expect(a.get()).toEqual([1,2,3]);
+        describe('default', function () {
+            it('should return the array value', function () {
+                var a = dtm.array([1,2,3]);
+                expect(a.get()).toEqual([1,2,3]);
+            });
         });
 
         describe('name', function () {
@@ -117,6 +119,10 @@ describe('array object', function () {
                 expect(a.get('block', [3, 3]).length).toBe(3);
             });
         });
+    });
+
+    describe('set', function () {
+
     });
 
     describe('generater', function () {

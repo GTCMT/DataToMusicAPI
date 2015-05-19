@@ -33,7 +33,8 @@ dtm.data = function (arg, cb, type) {
 
     /**
      * Returns a clone of dtm.array object from the data.
-     * @param id {string|integer} Key (string) or index (integer)
+     * @function module:data#get
+     * @param id {string|number} Parameter name (string) or index (integer). Param name (string) can be: a|arr|array|arrays|column (2nd arg: name or index), c|col|coll|collection, r|row (2nd arg: row number), dim|dimension|size, len|length, k|key|keys|name|names|list, t|type|types, (empty returns the data object itself). If given an integer in the first argument, it returns an array object. Returned array object is a cloned version, and modifying it will not affect the original array object stored in the data object.
      * @returns {dtm.array}
      */
     data.get = function (param, id) {
@@ -41,11 +42,11 @@ dtm.data = function (arg, cb, type) {
 
         if (typeof(param) === 'string') {
             switch (param) {
-                case 'column':
-                case 'arrays':
-                case 'array':
-                case 'arr':
                 case 'a':
+                case 'arr':
+                case 'array':
+                case 'arrays':
+                case 'column':
                     if (typeof(id) === 'number') {
                         if (id >= 0 && id < params.size['col']) {
                             return params.arrays[params.keys[id]].clone();
@@ -66,9 +67,9 @@ dtm.data = function (arg, cb, type) {
                     }
 
                 case 'c':
-                case 'collection':
                 case 'col':
                 case 'coll':
+                case 'collection':
                     return params.coll;
 
                 case 'row':
@@ -87,8 +88,9 @@ dtm.data = function (arg, cb, type) {
                 case 'k':
                 case 'key':
                 case 'keys':
-                case 'list':
+                case 'name':
                 case 'names':
+                case 'list':
                     return params.keys;
 
                 case 't':
