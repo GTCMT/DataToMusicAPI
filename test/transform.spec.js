@@ -206,6 +206,12 @@ describe('array helper functions', function () {
                 expect(out).toEqual(expected);
             });
         });
+
+        describe('expCurve', function () {
+            it('should return smaller values', function () {
+                expect(dtm.transform.expCurve([0.5], 10)[0]).toBeLessThan(0.5);
+            });
+        });
     });
 
     describe('arithmetic', function () {

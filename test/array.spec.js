@@ -248,6 +248,12 @@ describe('array object', function () {
                 expect(a.get()).toEqual([3, 5, 7]);
             });
         });
+
+        describe('expCurve', function () {
+            it('should be less than the original value(s)', function () {
+                expect(dtm.a([0.5]).exp(10, 0, 1).get()[0]).toBeLessThan(0.5);
+            });
+        });
     });
 
     describe('arithmetic', function () {

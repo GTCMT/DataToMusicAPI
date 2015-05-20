@@ -612,7 +612,7 @@
         if (m.modes.literal.indexOf(mode) > -1) {
         } else if (m.modes.preserve.indexOf(mode) > -1) {
         } else {
-            mods.range.exp(2).scale(0.2, 0.8);
+            mods.range.exp(2, 0, 1).scale(0.2, 0.8);
         }
 
         return m.parent;
@@ -738,7 +738,7 @@
         if (m.modes.literal.indexOf(mode) > -1) {
         } else if (m.modes.preserve.indexOf(mode) > -1) {
         } else {
-            mods.density.scale(1, 32).exp(5);
+            mods.density.scale(1, 32).exp(5, 0, 1);
         }
 
         return m.parent;

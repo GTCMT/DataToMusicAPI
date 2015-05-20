@@ -507,12 +507,19 @@ dtm.array = function () {
      * Scales the array with an exponential curve.
      * @function module:array#expCurve|exp
      * @param factor {number}
+     * @param [min=array.get('min')] {number}
+     * @param [max=array.get('max')] {number}
      * @returns {dtm.array}
      */
-    array.expCurve = function (factor) {
-        var min = params.min;
-        var max = params.max;
-        var arr = dtm.transform.expCurve(params.normalized, factor);
+    array.expCurve = function (factor, min, max) {
+        if (typeof(min) === 'undefined') {
+            min = array.get('min');
+        }
+        if (typeof(max) === 'undefined') {
+            max = array.get('max');
+        }
+
+        var arr = dtm.transform.expCurve(array.get('normalized'), factor);
         array.set(dtm.transform.rescale(arr, min, max));
         return array;
     };
@@ -523,12 +530,19 @@ dtm.array = function () {
      * Applies a logarithmic scaling to the array.
      * @function module:array#logCurve
      * @param factor {number}
+     * @param [min=array.get('min')] {number}
+     * @param [max=array.get('max')] {number}
      * @returns {dtm.array}
      */
-    array.logCurve = function (factor) {
-        var min = params.min;
-        var max = params.max;
-        var arr = dtm.transform.logCurve(params.normalized, factor);
+    array.logCurve = function (factor, min, max) {
+        if (typeof(min) === 'undefined') {
+            min = array.get('min');
+        }
+        if (typeof(max) === 'undefined') {
+            max = array.get('max');
+        }
+
+        var arr = dtm.transform.logCurve(array.get('normalized'), factor);
         array.set(dtm.transform.rescale(arr, min, max));
         return array;
     };
@@ -920,12 +934,14 @@ dtm.array = function () {
 
     /**
      * Converts the array values (such as numbers) into string format.
-     * @function module:array#stringify
+     * @function module:array#stringify|tostring
      * @returns {dtm.array}
      */
     array.stringify = function () {
         return array.set(dtm.transform.stringify(params.value));
     };
+
+    array.tostring = array.stringify;
 
     /**
      * Converts stringified values to numerical values.

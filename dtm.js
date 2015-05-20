@@ -2469,12 +2469,19 @@ dtm.array = function () {
      * Scales the array with an exponential curve.
      * @function module:array#expCurve|exp
      * @param factor {number}
+     * @param [min=array.get('min')] {number}
+     * @param [max=array.get('max')] {number}
      * @returns {dtm.array}
      */
-    array.expCurve = function (factor) {
-        var min = params.min;
-        var max = params.max;
-        var arr = dtm.transform.expCurve(params.normalized, factor);
+    array.expCurve = function (factor, min, max) {
+        if (typeof(min) === 'undefined') {
+            min = array.get('min');
+        }
+        if (typeof(max) === 'undefined') {
+            max = array.get('max');
+        }
+
+        var arr = dtm.transform.expCurve(array.get('normalized'), factor);
         array.set(dtm.transform.rescale(arr, min, max));
         return array;
     };
@@ -2485,12 +2492,19 @@ dtm.array = function () {
      * Applies a logarithmic scaling to the array.
      * @function module:array#logCurve
      * @param factor {number}
+     * @param [min=array.get('min')] {number}
+     * @param [max=array.get('max')] {number}
      * @returns {dtm.array}
      */
-    array.logCurve = function (factor) {
-        var min = params.min;
-        var max = params.max;
-        var arr = dtm.transform.logCurve(params.normalized, factor);
+    array.logCurve = function (factor, min, max) {
+        if (typeof(min) === 'undefined') {
+            min = array.get('min');
+        }
+        if (typeof(max) === 'undefined') {
+            max = array.get('max');
+        }
+
+        var arr = dtm.transform.logCurve(array.get('normalized'), factor);
         array.set(dtm.transform.rescale(arr, min, max));
         return array;
     };
@@ -2882,13 +2896,20 @@ dtm.array = function () {
 
     /**
      * Converts the array values (such as numbers) into string format.
-     * @function module:array#stringify
+     * @function module:array#stringify|tostring
      * @returns {dtm.array}
      */
     array.stringify = function () {
         return array.set(dtm.transform.stringify(params.value));
     };
 
+    array.tostring = array.stringify;
+
+    /**
+     * Converts stringified values to numerical values.
+     * @function module:array#tonumber|toNumber
+     * @returns {dtm.array}
+     */
     array.tonumber = function () {
         return array.set(dtm.transform.tonumber(params.value));
     };
@@ -3504,13 +3525,15 @@ dtm.data = function (arg, cb, type) {
 
     var data = {
         type: 'dtm.data',
+        name: 'dtm.data',
 
         /**
          * This can be used for promise callback upon loading data.
          * @name module:data#promise
          * @type {object}
          */
-        promise: null
+        promise: null,
+        callback: null
     };
 
     /**
@@ -3632,6 +3655,10 @@ dtm.data = function (arg, cb, type) {
      * @returns promise {promise}
      */
     data.load = function (url, cb) {
+        if (typeof(cb) !== 'undefined') {
+            data.callback = cb;
+        }
+
         data.promise = new Promise(function (resolve, reject) {
             var ext = url.split('.').pop(); // checks the extension
 
@@ -3653,12 +3680,13 @@ dtm.data = function (arg, cb, type) {
                             setSize();
 
                             resolve(data);
-                            if (typeof(cb) !== 'undefined') {
-                                cb(data);
-                            }
+
                         }
                     });
-                    //cb(data);
+
+                    if (typeof(cb) !== 'undefined') {
+                        cb(data);
+                    }
                 };
 
                 var script = document.createElement('script');
@@ -3700,12 +3728,11 @@ dtm.data = function (arg, cb, type) {
                                 //setArrays();
                                 //setTypes();
                                 //setSize();
-
-                                resolve(data);
-
                                 if (typeof(cb) !== 'undefined') {
                                     cb(data);
                                 }
+
+                                resolve(data);
                             });
                         } else {
                             if (ext === 'csv') {
@@ -3719,11 +3746,11 @@ dtm.data = function (arg, cb, type) {
                             setTypes();
                             setSize();
 
-                            resolve(data);
-
                             if (typeof(cb) !== 'undefined') {
                                 cb(data);
                             }
+
+                            resolve(data);
                         }
                     }
                 };
@@ -3741,8 +3768,13 @@ dtm.data = function (arg, cb, type) {
             //return data.promise;
         };
 
-        return data.promise;
+        if (data.name === 'dtm.data') {
+            return data;
+        } else if (data.name === 'dtm.load') {
+            return data.promise;
+        }
     };
+
 
     //data.jsonp = function (url, cb) {
     //    data.promise = new Promise(function (resolve, reject) {
@@ -3887,7 +3919,7 @@ dtm.data = function (arg, cb, type) {
 
     if (typeof(arg) !== 'undefined') {
         if (typeof(arg) === 'string') {
-            return data.load(arg);
+            return data.load(arg, cb);
         }
     } else {
         return data;
@@ -3895,7 +3927,7 @@ dtm.data = function (arg, cb, type) {
 };
 
 dtm.load = dtm.d = dtm.data;
-
+dtm.load.name = 'dtm.load';
 /**
  * @fileOverview WebAudio buffer-based clock. Somewhat precise. But buggy.
  * @module clock
@@ -6328,7 +6360,7 @@ dtm.inscore = function () {
         return m.parent;
     };
 
-    m.mod.wavetable = m.mod.wt;
+    m.mod.wf = m.mod.wavetable = m.mod.wt;
 
     m.mod.at = function (src, mode) {
         mapper(src, 'at');
@@ -6356,7 +6388,7 @@ dtm.inscore = function () {
         if (m.modes.literal.indexOf(mode) > -1) {
         } else if (m.modes.preserve.indexOf(mode) > -1) {
         } else {
-            params.modules.volume.logCurve(5).rescale(0.1, 1);
+            params.modules.volume.logCurve(5, 0, 1).rescale(0.1, 1);
         }
 
         return m.parent;
@@ -6491,7 +6523,7 @@ dtm.inscore = function () {
         if (m.modes.literal.indexOf(mode) > -1) {
         } else if (m.modes.preserve.indexOf(mode) > -1) {
         } else {
-            params.modules.lpf.normalize().log(10).scale(500, 5000);
+            params.modules.lpf.normalize().exp(3, 0, 1).scale(500, 5000);
         }
 
         return m.parent;
@@ -6539,7 +6571,7 @@ dtm.inscore = function () {
         if (m.modes.literal.indexOf(mode) > -1) {
         } else if (m.modes.preserve.indexOf(mode) > -1) {
         } else {
-            params.modules.dur.normalize().exp(10).scale(0.01, 0.5);
+            params.modules.dur.normalize().exp(10, 0, 1).scale(0.01, 0.5);
         }
 
         return m.parent;
@@ -7375,7 +7407,7 @@ dtm.inscore = function () {
         if (m.modes.literal.indexOf(mode) > -1) {
         } else if (m.modes.preserve.indexOf(mode) > -1) {
         } else {
-            mods.range.exp(2).scale(0.2, 0.8);
+            mods.range.exp(2, 0, 1).scale(0.2, 0.8);
         }
 
         return m.parent;
@@ -7501,7 +7533,7 @@ dtm.inscore = function () {
         if (m.modes.literal.indexOf(mode) > -1) {
         } else if (m.modes.preserve.indexOf(mode) > -1) {
         } else {
-            mods.density.scale(1, 32).exp(5);
+            mods.density.scale(1, 32).exp(5, 0, 1);
         }
 
         return m.parent;

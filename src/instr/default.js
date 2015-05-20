@@ -122,7 +122,7 @@
         return m.parent;
     };
 
-    m.mod.wavetable = m.mod.wt;
+    m.mod.wf = m.mod.wavetable = m.mod.wt;
 
     m.mod.at = function (src, mode) {
         mapper(src, 'at');
@@ -150,7 +150,7 @@
         if (m.modes.literal.indexOf(mode) > -1) {
         } else if (m.modes.preserve.indexOf(mode) > -1) {
         } else {
-            params.modules.volume.logCurve(5).rescale(0.1, 1);
+            params.modules.volume.logCurve(5, 0, 1).rescale(0.1, 1);
         }
 
         return m.parent;
@@ -285,7 +285,7 @@
         if (m.modes.literal.indexOf(mode) > -1) {
         } else if (m.modes.preserve.indexOf(mode) > -1) {
         } else {
-            params.modules.lpf.normalize().log(10).scale(500, 5000);
+            params.modules.lpf.normalize().exp(3, 0, 1).scale(500, 5000);
         }
 
         return m.parent;
@@ -333,7 +333,7 @@
         if (m.modes.literal.indexOf(mode) > -1) {
         } else if (m.modes.preserve.indexOf(mode) > -1) {
         } else {
-            params.modules.dur.normalize().exp(10).scale(0.01, 0.5);
+            params.modules.dur.normalize().exp(10, 0, 1).scale(0.01, 0.5);
         }
 
         return m.parent;

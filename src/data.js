@@ -22,13 +22,15 @@ dtm.data = function (arg, cb, type) {
 
     var data = {
         type: 'dtm.data',
+        name: 'dtm.data',
 
         /**
          * This can be used for promise callback upon loading data.
          * @name module:data#promise
          * @type {object}
          */
-        promise: null
+        promise: null,
+        callback: null
     };
 
     /**
@@ -150,6 +152,10 @@ dtm.data = function (arg, cb, type) {
      * @returns promise {promise}
      */
     data.load = function (url, cb) {
+        if (typeof(cb) !== 'undefined') {
+            data.callback = cb;
+        }
+
         data.promise = new Promise(function (resolve, reject) {
             var ext = url.split('.').pop(); // checks the extension
 
@@ -171,12 +177,13 @@ dtm.data = function (arg, cb, type) {
                             setSize();
 
                             resolve(data);
-                            if (typeof(cb) !== 'undefined') {
-                                cb(data);
-                            }
+
                         }
                     });
-                    //cb(data);
+
+                    if (typeof(cb) !== 'undefined') {
+                        cb(data);
+                    }
                 };
 
                 var script = document.createElement('script');
@@ -218,12 +225,11 @@ dtm.data = function (arg, cb, type) {
                                 //setArrays();
                                 //setTypes();
                                 //setSize();
-
-                                resolve(data);
-
                                 if (typeof(cb) !== 'undefined') {
                                     cb(data);
                                 }
+
+                                resolve(data);
                             });
                         } else {
                             if (ext === 'csv') {
@@ -237,11 +243,11 @@ dtm.data = function (arg, cb, type) {
                             setTypes();
                             setSize();
 
-                            resolve(data);
-
                             if (typeof(cb) !== 'undefined') {
                                 cb(data);
                             }
+
+                            resolve(data);
                         }
                     }
                 };
@@ -259,8 +265,13 @@ dtm.data = function (arg, cb, type) {
             //return data.promise;
         };
 
-        return data.promise;
+        if (data.name === 'dtm.data') {
+            return data;
+        } else if (data.name === 'dtm.load') {
+            return data.promise;
+        }
     };
+
 
     //data.jsonp = function (url, cb) {
     //    data.promise = new Promise(function (resolve, reject) {
@@ -405,7 +416,7 @@ dtm.data = function (arg, cb, type) {
 
     if (typeof(arg) !== 'undefined') {
         if (typeof(arg) === 'string') {
-            return data.load(arg);
+            return data.load(arg, cb);
         }
     } else {
         return data;
@@ -413,3 +424,4 @@ dtm.data = function (arg, cb, type) {
 };
 
 dtm.load = dtm.d = dtm.data;
+dtm.load.name = 'dtm.load';
