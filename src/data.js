@@ -93,7 +93,7 @@ dtm.data = function (arg, cb, type) {
                 case 'name':
                 case 'names':
                 case 'list':
-                    return params.keys;
+                    return params.keys.slice(); // quick cloning of array
 
                 case 't':
                 case 'type':
