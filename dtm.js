@@ -3662,7 +3662,7 @@ dtm.data = function (arg, cb, type) {
         data.promise = new Promise(function (resolve, reject) {
             var ext = url.split('.').pop(); // checks the extension
 
-            if (ext === 'json') {
+            if (ext === 'jsonp') {
                 var cbName = 'jsonp_callback_' + Math.round(100000 * Math.random());
                 window[cbName] = function (res) {
                     delete window[cbName];
@@ -3696,14 +3696,17 @@ dtm.data = function (arg, cb, type) {
             } else {
                 var xhr = new XMLHttpRequest();
                 xhr.open('GET', url, true);
+                xhr.withCredentials = 'true';
+
+                console.log(xhr.withCredentials);
 
                 switch (ext) {
                     case 'txt':
                     case 'csv':
                         break;
-                    //case 'json':
-                    //    xhr.responseType = 'json';
-                    //    break;
+                    case 'json':
+                        //xhr.responseType = 'json';
+                        break;
                     case 'wav':
                     case 'aif':
                     case 'aiff':
@@ -3735,13 +3738,43 @@ dtm.data = function (arg, cb, type) {
                                 resolve(data);
                             });
                         } else {
+                            var keys = [];
+
                             if (ext === 'csv') {
                                 params.coll = dtm.parser.csvToJson(xhr.response);
+                                keys = _.keys(params.coll[0]);
+                            } else if (ext === 'json') {
+                                var res = xhr.responseText;
+
+                                try {
+                                    res = JSON.parse(res);
+                                } catch (e) {
+                                    try {
+                                        res = eval(res);
+                                    } catch (e) {
+                                        console.log('Could not parse the JSON file. Maybe the format is not right.');
+                                    }
+                                }
+
+                                var second = res[Object.keys(res)[0]];
+
+                                if (second.constructor === Array) {
+                                    keys = Object.keys(second[0]);
+                                } else {
+                                    keys = Object.keys(second);
+                                }
+
+                                //params.coll = xhr.response[Object.keys(xhr.response)[0]];
+                                // TODO: may not work with non-array JSON formats
+                                params.coll = res;
                             } else {
                                 // TODO: this only works for shodan
-                                params.coll = JSON.parse(xhr.response)['matches'];
+                                //params.coll = JSON.parse(xhr.response)['matches'];
+
+                                params.coll = second;
                             }
-                            params.keys = _.keys(params.coll[0]);
+                            //params.keys = _.keys(params.coll[0]);
+                            params.keys = keys;
                             setArrays();
                             setTypes();
                             setSize();
