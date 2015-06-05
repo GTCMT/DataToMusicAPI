@@ -75,7 +75,7 @@ module.exports = function (grunt) {
         uglify: {
             my_target: {
                 files: {
-                    'dtm_min.js': ['bower_components/lodash/dist/lodash.underscore.js', 'dtm.js']
+                    'dtm_min.js': ['bower_components/lodash/dist/lodash.min.js', 'dtm.js']
                 }
             }
         }
