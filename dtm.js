@@ -5228,7 +5228,7 @@ dtm.synth = function (type, wt) {
             isOn: false,
             amount: 0,
             nn: 69
-        }
+        },
     };
 
     var noise = null;
@@ -5239,14 +5239,9 @@ dtm.synth = function (type, wt) {
 
     var synth = {
         type: 'dtm.synth',
-
-        /**
-         * A JavaScript promise object with play() function extended. Used for the audio sample loading.
-         * @name module:synth#promise
-         * @type {object}
-         */
-        promise: null
     };
+
+    var promise = null;
 
     synth.get = function (param) {
         var out = null;
@@ -5396,7 +5391,7 @@ dtm.synth = function (type, wt) {
             params.buffer = arg;
             return synth;
         } else {
-            var promise = new Promise(function (resolve, reject) {
+            promise = new Promise(function (resolve, reject) {
                 if (typeof(arg) === 'string') {
                     var xhr = new XMLHttpRequest();
                     xhr.open('GET', arg, true);
@@ -5440,15 +5435,16 @@ dtm.synth = function (type, wt) {
                 }
             });
 
-            promise.play = function () {
-                promise.then(function (s) {
-                    s.play();
-                });
-            };
+            // TODO: this will break all other setter functions
+            //promise.play = function () {
+            //    promise.then(function (s) {
+            //        s.play();
+            //    });
+            //};
 
-            synth.promise = promise;
-            return promise;
+            //return promise;
         }
+        return synth;
     };
 
     /**
@@ -5459,146 +5455,164 @@ dtm.synth = function (type, wt) {
      * @returns {dtm.synth}
      */
     synth.play = function (del, dur) {
-        var actx = dtm.wa.actx;
-        var now = dtm.wa.now;
-        var out = dtm.wa.out;
+        if (promise) {
+            promise.then(play);
+        } else {
+            play();
+        }
 
-        del = del || 0;
-        dur = dur || params.note.duration;
+        function play() {
+            var actx = dtm.wa.actx;
+            var now = dtm.wa.now;
+            var out = dtm.wa.out;
 
-        var startT = now() + del;
-        var src;
+            del = del || 0;
+            dur = dur || params.note.duration;
 
-        //var noise = makeNoise();
-
-        if (params.type === 'noise') {
-            src = actx.createBufferSource();
-            if (!noise) {
-                noise = dtm.wa.makeNoise(8192);
+            var startT = now() + del;
+            var src;
+            
+            if (params.type === 'noise') {
+                src = actx.createBufferSource();
+                if (!noise) {
+                    noise = dtm.wa.makeNoise(8192);
+                }
+                src.buffer = noise;
+                src.loop = true;
+            } else if (params.type === 'sampler') {
+                src = actx.createBufferSource();
+                src.buffer = params.buffer;
+                src.playbackRate = 1;
+                src.loop = false;
+            } else if (params.type === 'click') {
+                src = actx.createBufferSource();
+                var buf = actx.createBuffer(1, 2, dtm.sr);
+                var contents = buf.getChannelData(0);
+                contents[1] = 1;
+                src.buffer = buf;
+                src.playbackRate = 1;
+                src.loop = false;
+            } else {
+                src = actx.createOscillator();
+                src.frequency.setValueAtTime(params.pitch.freq, startT);
             }
-            src.buffer = noise;
-            src.loop = true;
-        } else if (params.type === 'sampler') {
-            src = actx.createBufferSource();
-            src.buffer = params.buffer;
-            src.playbackRate = 1;
-            src.loop = false;
-        } else if (params.type === 'click') {
-            src = actx.createBufferSource();
-            var buf = actx.createBuffer(1, 2, dtm.sr);
-            var contents = buf.getChannelData(0);
-            contents[1] = 1;
-            src.buffer = buf;
-            src.playbackRate = 1;
-            src.loop = false;
-        } else {
-            src = actx.createOscillator();
-            src.frequency.setValueAtTime(params.pitch.freq, startT);
+
+            switch (params.type) {
+                case 'sine':
+                    src.type = 'sine';
+                    break;
+                case 'saw':
+                    src.type = 'sawtooth';
+                    break;
+                case 'square':
+                    src.type = 'square';
+                    break;
+                case 'triange':
+                    src.type = 'triangle';
+                    break;
+
+                default:
+                    break;
+            }
+
+            if (params.wt.isOn) {
+                src.setPeriodicWave(params.wt.wt);
+            }
+
+
+
+            var amp = actx.createGain();
+            // ATTACK
+            // amp.gain.setValueAtTime(0, startT); // not working!
+            // setTargetAtTime w/ small value not working as intended (Jun 6, 2015)
+            if (params.amp.adsr[0] < 0.01) {
+                amp.gain.value = params.amp.gain;
+
+            } else {
+                amp.gain.value = 0;
+                amp.gain.setTargetAtTime(params.amp.gain, startT, params.amp.adsr[0]); // attack
+            }
+
+            // DECAY - SUSTAIN
+            var susLevel = params.amp.adsr[2] * params.amp.gain;
+            amp.gain.setTargetAtTime(susLevel, startT+params.amp.adsr[0], params.amp.adsr[1]);
+
+            // RELEASE
+            var relStart = startT + params.amp.adsr[0] + params.amp.adsr[1] + dur; // CHECK: questionable
+            amp.gain.setTargetAtTime(0, relStart, params.amp.adsr[3]);
+
+
+            if (params.lpf.isOn) {
+                var lpf = actx.createBiquadFilter();
+                lpf.type = 'lowpass';
+                lpf.frequency.setValueAtTime(params.lpf.cof, startT);
+                lpf.Q.setValueAtTime(params.lpf.res, startT);
+                src.connect(lpf);
+                lpf.connect(amp);
+            } else {
+                src.connect(amp);
+            }
+
+            if (params.comb.isOn) {
+                var comb = actx.createDelay();
+                comb.delayTime.setValueAtTime(1/dtm.val.mtof(params.comb.nn), startT);
+
+                var combAmp = actx.createGain();
+                combAmp.gain.setValueAtTime(params.comb.amount, startT);
+
+                var combFb = actx.createGain();
+                combFb.gain.setValueAtTime(0.95, startT);
+
+                amp.connect(comb);
+                comb.connect(combAmp);
+                comb.connect(combFb);
+                combFb.connect(comb);
+                combAmp.connect(out());
+            }
+
+            if (params.delay.isOn) {
+                var delay = actx.createDelay();
+                delay.delayTime.setValueAtTime(params.delay.time, startT);
+
+                var delAmp = actx.createGain();
+                delAmp.gain.setValueAtTime(params.delay.amount, startT);
+
+                var delFb = actx.createGain();
+                delFb.gain.setValueAtTime(params.delay.feedback, startT);
+
+                amp.connect(delay);
+                delay.connect(delAmp);
+                delay.connect(delFb);
+                delFb.connect(delay);
+                delAmp.connect(out());
+            }
+
+            // TODO: not chaning the effects...
+            if (params.verb.isOn) {
+                var verb = actx.createConvolver();
+                verb.buffer = dtm.wa.buffs.verbIr;
+
+                var verbAmp = actx.createGain();
+                verbAmp.gain.setValueAtTime(params.verb.amount, startT);
+
+                amp.connect(verb);
+                verb.connect(verbAmp);
+                verbAmp.connect(out());
+            }
+
+
+            var gain = actx.createGain();
+            gain.gain.setValueAtTime(params.output.gain, startT);
+
+            amp.connect(gain);
+            gain.connect(out());
+
+            src.start(startT);
+            src.stop(relStart + params.amp.adsr[3] + 0.3);
+
+            return synth;
         }
 
-        switch (params.type) {
-            case 'sine':
-                src.type = 'sine';
-                break;
-            case 'saw':
-                src.type = 'sawtooth';
-                break;
-            case 'square':
-                src.type = 'square';
-                break;
-            case 'triange':
-                src.type = 'triangle';
-                break;
-
-            default:
-                break;
-        }
-
-        if (params.wt.isOn) {
-            src.setPeriodicWave(params.wt.wt);
-        }
-
-        var amp = actx.createGain();
-
-        if (params.lpf.isOn) {
-            var lpf = actx.createBiquadFilter();
-            lpf.type = 'lowpass';
-            lpf.frequency.setValueAtTime(params.lpf.cof, startT);
-            lpf.Q.setValueAtTime(params.lpf.res, startT);
-            src.connect(lpf);
-            lpf.connect(amp);
-        } else {
-            src.connect(amp);
-        }
-
-        if (params.comb.isOn) {
-            var comb = actx.createDelay();
-            comb.delayTime.setValueAtTime(1/dtm.val.mtof(params.comb.nn), startT);
-
-            var combAmp = actx.createGain();
-            combAmp.gain.setValueAtTime(params.comb.amount, startT);
-
-            var combFb = actx.createGain();
-            combFb.gain.setValueAtTime(0.95, startT);
-
-            amp.connect(comb);
-            comb.connect(combAmp);
-            comb.connect(combFb);
-            combFb.connect(comb);
-            combAmp.connect(out());
-        }
-
-        if (params.delay.isOn) {
-            var delay = actx.createDelay();
-            delay.delayTime.setValueAtTime(params.delay.time, startT);
-
-            var delAmp = actx.createGain();
-            delAmp.gain.setValueAtTime(params.delay.amount, startT);
-
-            var delFb = actx.createGain();
-            delFb.gain.setValueAtTime(params.delay.feedback, startT);
-
-            amp.connect(delay);
-            delay.connect(delAmp);
-            delay.connect(delFb);
-            delFb.connect(delay);
-            delAmp.connect(out());
-        }
-
-        // TODO: not chaning the effects...
-        if (params.verb.isOn) {
-            var verb = actx.createConvolver();
-            verb.buffer = dtm.wa.buffs.verbIr;
-
-            var verbAmp = actx.createGain();
-            verbAmp.gain.setValueAtTime(params.verb.amount, startT);
-
-            amp.connect(verb);
-            verb.connect(verbAmp);
-            verbAmp.connect(out());
-        }
-
-        var gain = actx.createGain();
-        gain.gain.setValueAtTime(params.output.gain, startT);
-
-        amp.connect(gain);
-        gain.connect(out());
-
-        var susLevel = params.amp.adsr[2] * params.amp.gain;
-        amp.gain.setValueAtTime(0, now());
-        amp.gain.setTargetAtTime(params.amp.gain, startT, params.amp.adsr[0]);
-        amp.gain.setTargetAtTime(susLevel, startT+params.amp.adsr[0], params.amp.adsr[1]);
-
-        var relStart = startT + params.amp.adsr[0] + params.amp.adsr[1] + dur;
-        amp.gain.setTargetAtTime(0, relStart, params.amp.adsr[3]);
-
-        src.start(startT);
-        src.stop(relStart + params.amp.adsr[3] + 0.3);
-
-        return synth;
-    };
-
-    synth.run = function () {
         return synth;
     };
 
@@ -5610,7 +5624,7 @@ dtm.synth = function (type, wt) {
     /**
      * Sets the MIDI note number to be played.
      * @function module:synth#nn
-     * @param nn {integer}
+     * @param nn {number}
      * @returns {dtm.synth}
      */
     synth.nn = function (nn) {
@@ -5646,7 +5660,7 @@ dtm.synth = function (type, wt) {
 
     /**
      * Sets the duration for the each note.
-     * @function module:synth#dur
+     * @function module:synth#dur | duration | len | length
      * @param val {number} Duration in seconds.
      * @returns {dtm.synth}
      */
@@ -5654,6 +5668,7 @@ dtm.synth = function (type, wt) {
         params.note.duration = val;
         return synth;
     };
+    synth.len = synth.length = synth.duration = synth.dur;
 
     synth.attr = function (obj) {
         var keys = _.keys(obj);
@@ -5667,33 +5682,68 @@ dtm.synth = function (type, wt) {
         return synth;
     };
 
+    /**
+     * Sets the attack time of the amplitude envelope
+     * @function module:synth#attack | atk
+     * @param val {number} Attack time in seconds
+     * @returns {dtm.synth}
+     */
     synth.attack = function (val) {
         params.amp.adsr[0] = val;
         return synth;
     };
+    synth.atk = synth.attack;
 
+    /**
+     * Sets the decay time of the amplitude envelope
+     * @function module:synth#decay | dcy
+     * @param val {number} Decay time in seconds
+     * @returns {dtm.synth}
+     */
     synth.decay = function (val) {
         params.amp.adsr[1] = val;
         return synth;
     };
+    synth.dcy = synth.decay;
 
+    /**
+     * Sets the sustain level of the amplitude envelope
+     * @function module:synth#sustain | sus
+     * @param val {number} Normalized sustain level between 0 and 1
+     * @returns {{type: string, promise: null}}
+     */
     synth.sustain = function (val) {
         params.amp.adsr[2] = val;
         return synth;
     };
+    synth.sus = synth.sustain;
 
+    /**
+     * Sets the release time of the amplitude envelope
+     * @function module:synth#release | rel
+     * @param val {number} Release time in seconds
+     * @returns {{type: string, promise: null}}
+     */
     synth.release = function (val) {
         params.amp.adsr[3] = val;
         return synth;
     };
-
-    synth.atk = synth.attack;
-    synth.dcy = synth.decay;
-    synth.sus = synth.sustain;
     synth.rel = synth.release;
 
     /**
+     * Sets the output gain level
+     * @function module:synth#gain
+     * @param val {number} Normalized gain value between 0 and 1
+     * @returns {{type: string, promise: null}}
+     */
+    synth.gain = function (val) {
+        params.output.gain = val;
+        return synth;
+    };
+
+    /**
      * Applies a Low Pass Filter.
+     * @function module:synth#lpf
      * @param cof {number} Cutoff Frequency in Hz.
      * @param res {number} Q or resonance level.
      * @returns {dtm.synth}
