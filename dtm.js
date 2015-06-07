@@ -4558,14 +4558,28 @@ dtm.clock = function (bpm, subDiv, autoStart) {
         return clock;
     };
 
-    clock.on = function (condition) {
+    /**
+     * Executes an event at certain tick(s) of the clock.
+     * @function module:clock#on
+     * @param condition {string} Right now, it only supports "every".
+     * @param length {number}
+     * @param callback {function}
+     * @returns {dtm.clock}
+     * @example
+     * dtm.clock().on('every', 4, callbackFunction);
+     */
+    clock.on = function (condition, length, callback) {
         switch (condition) {
             case 'every':
-                clock.callbacks.push(function (c) {
-                    if (c.get('beat') % arguments[1] === 0) {
-                        arguments[2](c);
-                    }
-                });
+                var cb = (function (len, cb) {
+                    return function (c) {
+                        if (c.get('beat') % len === 0) {
+                            cb(c);
+                        }
+                    };
+                })(arguments[1], arguments[2]);
+
+                clock.callbacks.push(cb);
                 break;
             default:
                 break;
@@ -5228,7 +5242,7 @@ dtm.synth = function (type, wt) {
             isOn: false,
             amount: 0,
             nn: 69
-        },
+        }
     };
 
     var noise = null;
@@ -5238,46 +5252,40 @@ dtm.synth = function (type, wt) {
     }
 
     var synth = {
-        type: 'dtm.synth',
+        type: 'dtm.synth'
     };
 
     var promise = null;
 
     synth.get = function (param) {
-        var out = null;
-
         switch (param) {
+            case 'params':
+                return null;
+
             case 'amp':
-                out = params.amp.gain;
-                break;
+                return params.amp.gain;
 
             case 'volume':
             case 'gain':
-                out = params.output.gain;
-                break;
+                return params.output.gain;
 
             case 'frequency':
             case 'freq':
             case 'cps':
-                out = params.pitch.freq;
-                break;
+                return params.pitch.freq;
 
             case 'noteNum':
             case 'notenum':
             case 'note':
             case 'nn':
-                out = params.pitch.noteNum;
-                break;
+                return params.pitch.noteNum;
 
             case 'buffer':
-                out = params.buffer;
-                break;
+                return params.buffer;
 
             default:
-                break;
+                return null;
         }
-
-        return out;
     };
 
     /**
@@ -5287,6 +5295,13 @@ dtm.synth = function (type, wt) {
      * @returns {dtm.synth}
      */
     synth.set = function (type) {
+        if (typeof(type) === 'string') {
+            if (type.indexOf('.wav') > -1 || type.indexOf('.mp3') > -1) {
+                synth.load(type);
+                return synth;
+            }
+        }
+
         switch (type) {
             case 'sin':
             case 'sine':
@@ -5471,7 +5486,7 @@ dtm.synth = function (type, wt) {
 
             var startT = now() + del;
             var src;
-            
+
             if (params.type === 'noise') {
                 src = actx.createBufferSource();
                 if (!noise) {

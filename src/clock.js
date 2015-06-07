@@ -595,14 +595,28 @@ dtm.clock = function (bpm, subDiv, autoStart) {
         return clock;
     };
 
-    clock.on = function (condition) {
+    /**
+     * Executes an event at certain tick(s) of the clock.
+     * @function module:clock#on
+     * @param condition {string} Right now, it only supports "every".
+     * @param length {number}
+     * @param callback {function}
+     * @returns {dtm.clock}
+     * @example
+     * dtm.clock().on('every', 4, callbackFunction);
+     */
+    clock.on = function (condition, length, callback) {
         switch (condition) {
             case 'every':
-                clock.callbacks.push(function (c) {
-                    if (c.get('beat') % arguments[1] === 0) {
-                        arguments[2](c);
-                    }
-                });
+                var cb = (function (len, cb) {
+                    return function (c) {
+                        if (c.get('beat') % len === 0) {
+                            cb(c);
+                        }
+                    };
+                })(arguments[1], arguments[2]);
+
+                clock.callbacks.push(cb);
                 break;
             default:
                 break;
