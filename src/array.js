@@ -334,7 +334,7 @@ dtm.array = function () {
 
     /**
      * Sets the size of the iteration step.
-     * @function module:array#step|stepSize
+     * @function module:array#step | stepSize
      * @param val {number}
      * @returns {dtm.array}
      */
@@ -347,7 +347,7 @@ dtm.array = function () {
 
     /**
      * Sets the current index within the array for the iterator. Value exceeding the max or min value will be wrapped around.
-     * @function module:array#index|setIndex
+     * @function module:array#index | setIndex
      * @param val {number}
      * @returns {dtm.array}
      */
@@ -364,8 +364,8 @@ dtm.array = function () {
 
     /**
      * Fills the contents of the array with
-     * @function module:array#fill|gen|generate
-     * @param type {string} Choices: 'line', 'noise'/'random', 'gaussian'/'gauss'/'normal', 'sin'/'sine', 'cos'/'cosine', 'zeroes', 'ones'
+     * @function module:array#fill | gen | generate
+     * @param type {string} Choices: line, noise | random, gaussian | gauss | normal, sin | sine, cos | cosine, zeroes, ones
      * @param [len=8] {number}
      * @param [min=0] {number}
      * @param [max=1] {number}
@@ -408,7 +408,7 @@ dtm.array = function () {
      * Morphs the array values with a target array / dtm.array values. The lengths can be mismatched.
      * @function module:array#morph
      * @param tgtArr {array | dtm.array}
-     * @param morphIdx {number} between 0-1
+     * @param [morphIdx=0.5] {number} between 0-1
      * @param [interp='linear'] {string}
      * @returns {dtm.array}
      */
@@ -430,7 +430,7 @@ dtm.array = function () {
 
     /**
      * Retrieves the original values from when the array object was first created.
-     * @function module:array#reset|original
+     * @function module:array#reset | original
      * @returns {dtm.array}
      */
     array.reset = function () {
@@ -442,7 +442,7 @@ dtm.array = function () {
 
     /**
      * Clears all the contents of the array object.
-     * @function module:array#flush|clear
+     * @function module:array#flush | clear
      * @returns {dtm.array}
      */
     array.flush = function () {
@@ -455,7 +455,7 @@ dtm.array = function () {
 
     /**
      * Rescales the range of the numerical values to 0-1.
-     * @function module:array#normalize|normal|nml
+     * @function module:array#normalize | normal | nml
      * @param [min] {number} Prefered domain minimum value. If not present, the minimum of the input array is used.
      * @param [max] {number} Prefered domain maximum value. If not present, the maximum of the input array is used.
      * @returns {dtm.array}
@@ -470,7 +470,7 @@ dtm.array = function () {
 
     /**
      * Modifies the range of the array.
-     * @function module:array#rescale|scale|range
+     * @function module:array#rescale | scale | range
      * @param min {number} The target minimum value of the scaled range.
      * @param max {number} The target maximum value of the scaled range.
      * @param [dmin] {number} The minimum of the domain (original) value range.
@@ -486,10 +486,10 @@ dtm.array = function () {
 
     /**
      * Caps the array value range at the min and max values. Only works with a numerical array.
-     * @function module:array#limit|clip
+     * @function module:array#limit | clip
      * @param [min=0]
      * @param [max=1]
-     * @returns {*}
+     * @returns {dtm.array}
      */
     array.limit = function (min, max) {
         if (params.type === 'number') {
@@ -505,7 +505,7 @@ dtm.array = function () {
 
     /**
      * Scales the array with an exponential curve.
-     * @function module:array#expCurve|exp
+     * @function module:array#exp | expCurve
      * @param factor {number}
      * @param [min=array.get('min')] {number}
      * @param [max=array.get('max')] {number}
@@ -528,7 +528,7 @@ dtm.array = function () {
 
     /**
      * Applies a logarithmic scaling to the array.
-     * @function module:array#logCurve
+     * @function module:array#log | logCurve
      * @param factor {number}
      * @param [min=array.get('min')] {number}
      * @param [max=array.get('max')] {number}
@@ -552,7 +552,7 @@ dtm.array = function () {
     // TODO: there might be a memory leak / some inefficiency
     /**
      * Stretches or shrinks the length of the array into the specified length.
-     * @function module:array#fit|fitLen
+     * @function module:array#fit | fitLen
      * @param len {number} Integer
      * @param [interp='linear'] {string}
      * @returns {dtm.array}
@@ -583,7 +583,7 @@ dtm.array = function () {
 
     /**
      * Scales the values so that the sum fits the target value. Useful, for example, for fitting intervallic values to a specific measure length.
-     * @function module:array#fitSum|fitsum
+     * @function module:array#fitSum | fitsum
      * @param tgt {number} If the round argument is true, the target value is also rounded.
      * @param [round=false] {boolean}
      * @returns {dtm.array}
@@ -668,7 +668,7 @@ dtm.array = function () {
 
     /**
      * Concatenates new values to the contents.
-     * @function module:array#concat|append
+     * @function module:array#concat | append
      * @param arr {array | dtm.array} A regular array or a dtm.array object.
      * @returns {dtm.array}
      */
@@ -690,7 +690,7 @@ dtm.array = function () {
 
     /**
      * Repeats the contents of the current array.
-     * @function module:array#repeat|rep
+     * @function module:array#repeat | rep
      * @param count {number} Integer
      * @returns {dtm.array}
      */
@@ -709,7 +709,7 @@ dtm.array = function () {
 
     /**
      * Truncates some values either at the end or both at the beginning and the end.
-     * @function module:array#truncate|slice
+     * @function module:array#truncate | slice
      * @param arg1 {number} Start bits to truncate. If the arg2 is not present, it will be the End bits to truncate.
      * @param [arg2] {number} End bits to truncate.
      * @returns {dtm.array}
@@ -724,7 +724,7 @@ dtm.array = function () {
 
     /**
      * Extracts a blocked portion of the array.
-     * @function module:array#getBlock|block
+     * @function module:array#getBlock | block
      * @param start {number} Starting index of the array.
      * @param size {number}
      * @returns {dtm.array}
@@ -751,7 +751,7 @@ dtm.array = function () {
 
     /**
      * Flips the array contents horizontally.
-     * @function module:array#mirror|reverse|rev
+     * @function module:array#mirror | reverse | rev
      * @returns {dtm.array}
      */
     array.mirror = function () {
@@ -764,7 +764,7 @@ dtm.array = function () {
 
     /**
      * Flips the numerical values vertically at the given center point.
-     * @function module:array#invert|inv|flip
+     * @function module:array#invert | inv | flip
      * @param [center=meanVal] {number}
      * @returns {dtm.array}
      */
@@ -783,7 +783,7 @@ dtm.array = function () {
 
     /**
      * Randomizes the order of the array.
-     * @function module:array#shuffle|random|randomize|rand
+     * @function module:array#shuffle | random | randomize | rand
      * @returns {dtm.array}
      */
     array.shuffle = function () {
@@ -796,7 +796,7 @@ dtm.array = function () {
 
     /**
      * Adds new value(s) at the end of the array, and removes the oldest value(s) at the beginning of the array. The size of the array is unchanged.
-     * @function module:array#queue|fifo
+     * @function module:array#queue | fifo
      * @param input {number|array}
      * @returns {dtm.array}
      */
@@ -859,7 +859,7 @@ dtm.array = function () {
 
     /**
      * Full-wave rectify the values, returning absolute values.
-     * @function module:array#fwr|abs
+     * @function module:array#fwr | abs
      * @returns {dtm.array}
      */
     array.fwr = function () {
@@ -894,7 +894,7 @@ dtm.array = function () {
 
     /**
      * Generates a histogram from a nominal array, such as the string type.
-     * @function module:array#histo|hist|histogram
+     * @function module:array#histo | hist | histogram
      * @returns {dtm.array}
      */
     array.histo = function () {
@@ -910,7 +910,7 @@ dtm.array = function () {
 
     /**
      * Overwrites the contents with unsorted unique values of the array.
-     * @function module:array#uniq|unique
+     * @function module:array#uniq | unique
      * @returns {dtm.array}
      */
     array.unique = function () {
@@ -922,7 +922,7 @@ dtm.array = function () {
 
     // TODO: id by occurrence / rarity, etc.
     /**
-     * @function module:array#classId|class|classify
+     * @function module:array#classId | class | classify
      * @param by
      * @returns {dtm.array}
      */
@@ -934,7 +934,7 @@ dtm.array = function () {
 
     /**
      * Converts the array values (such as numbers) into string format.
-     * @function module:array#stringify|tostring
+     * @function module:array#stringify | tostring
      * @returns {dtm.array}
      */
     array.stringify = function () {
@@ -945,7 +945,7 @@ dtm.array = function () {
 
     /**
      * Converts stringified values to numerical values.
-     * @function module:array#tonumber|toNumber
+     * @function module:array#tonumber | toNumber
      * @returns {dtm.array}
      */
     array.tonumber = function () {
@@ -972,7 +972,7 @@ dtm.array = function () {
     // CHECK: this is different from the trnsf function
     /**
      * Pitch quantize the array values.
-     * @function module:array#pq|pitchQuantize|pitchScale
+     * @function module:array#pq | pitchQuantize | pitchScale
      * @param scale {array|string}
      * @param [round=false] {boolean}
      * @returns {dtm.array}
@@ -1001,8 +1001,8 @@ dtm.array = function () {
 
     /**
      * Converts note values into a beat sequence.
-     * @function module:array#notesToBeats
-     * @param [resolution=4] {integer}
+     * @function module:array#notesToBeats | ntob
+     * @param [resolution=4] {number}
      * @returns {dtm.array}
      */
     array.notesToBeats = function (resolution) {
@@ -1012,17 +1012,11 @@ dtm.array = function () {
         return array;
     };
 
-    /**
-     * Shorthand for notesToBeats() function.
-     * @function module:array#ntob|notesToBeats
-     * @param resolution {number}
-     * @returns {dtm.array}
-     */
     array.ntob = array.notesToBeats;
 
     /**
      * Converts beat sequence into note values.
-     * @function module:array#beatsToNotes|bton
+     * @function module:array#beatsToNotes | bton
      * @param [resolution=4] {number}
      * @returns {dtm.array}
      */
@@ -1037,7 +1031,7 @@ dtm.array = function () {
 
     /**
      * Converts intervalic values into a beat sequence.
-     * @function module:array#intervalsToBeats|itob
+     * @function module:array#intervalsToBeats | itob
      * @returns {dtm.array}
      */
     array.intervalsToBeats = function () {
@@ -1050,7 +1044,7 @@ dtm.array = function () {
 
     /**
      * Converts beat sequence into intervalic values.
-     * @function module:array#beatsToIntervals|btoi
+     * @function module:array#beatsToIntervals | btoi
      * @returns {dtm.array}
      */
     array.beatsToIntervals = function () {
@@ -1063,7 +1057,7 @@ dtm.array = function () {
 
     /**
      * Converts beat sequence into an array of indices (or delays or onset-coordinate vectors.) Useful for creating time delay-based events.
-     * @function module:array#beatsToIndices|btoid
+     * @function module:array#beatsToIndices | btoid
      * @returns {dtm.array}
      */
     array.beatsToIndices = function () {
@@ -1075,7 +1069,7 @@ dtm.array = function () {
     array.btoid = array.beatsToIndices;
 
     /**
-     * function module:array#indicesToBeats|idtob
+     * function module:array#indicesToBeats | idtob
      * @param [len]
      * @returns {dtm.array}
      */

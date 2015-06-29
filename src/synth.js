@@ -87,6 +87,12 @@ dtm.synth = function (type, wt) {
 
     var promise = null;
 
+    /**
+     * Returns the value of a parameter.
+     * @function module:synth#get
+     * @param param {string} amp, volume | gain, frequency | freq | cps, noteNum | notenum | note | nn, buffer
+     * @returns {*}
+     */
     synth.get = function (param) {
         switch (param) {
             case 'params':
@@ -314,7 +320,7 @@ dtm.synth = function (type, wt) {
             del = del || 0;
             dur = dur || params.note.duration;
 
-            var startT = now() + del;
+            var startT = now() + del + 0.0001;
             var src;
 
             if (params.type === 'noise') {
@@ -649,6 +655,21 @@ dtm.synth = function (type, wt) {
         params.comb.isOn = true;
         params.comb.amount = amt || 0;
         params.comb.nn = nn || 69;
+        return synth;
+    };
+
+    // TODO: implement FM
+    /**
+     * Applies Frequency Modulation
+     * @function module:synth#fm
+     * @param amp
+     * @param base
+     * @param freq
+     * @param wt
+     * @returns {dtm.synth}
+     */
+    synth.fm = function (amp, base, freq, wt) {
+
         return synth;
     };
 

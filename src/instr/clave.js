@@ -13,25 +13,32 @@
 
     var params = {
         modules: {
-            voice: dtm.synth(),
+            voice: dtm.synth('noise').decay(0.05),
             base: dtm.array([3,3,4,2,4]).itob(),
             target: dtm.array([2,1,2,1]).itob(),
             res: dtm.array([3,3,4,2,4]).itob(),
+            emphasis: dtm.a(50),
             morph: dtm.array(0)
-        }
+        },
+
+        index: 0
     };
 
     m.output = function (c) {
         c.div(16);
 
-        var v = params.modules.voice;
+        //var v = params.modules.voice;
+        var v = dtm.synth('noise').decay(0.05); // new timbre every voice
 
         var m = params.modules.morph.get('next');
-        var r = params.modules.res.get('next');
 
-        if (r) {
-            v.play();
-        }
+        var e = params.modules.emphasis.get('next');
+        var res = params.modules.base.clone().morph(params.modules.target, m).exp(e);
+
+        params.index = (params.index + 1) % res.get('length');
+        var r = res.get(params.index);
+
+        v.amp(r).play();
     };
 
     m.mod.morph = function (src, mode) {
@@ -43,17 +50,35 @@
         } else {
             params.modules.morph.normalize();
         }
+
+        return m.parent;
+    };
+
+    m.mod.emphasis = function (src, mode) {
+        mapper(src, 'emphasis');
+
+        if (m.modes.literal.indexOf(mode) > -1) {
+        } else if (m.modes.preserve.indexOf(mode) > -1) {
+            params.modules.emphasis.normalize(0, 1).scale(1, 100);
+        } else {
+            params.modules.emphasis.normalize().scale(1, 100);
+        }
+
+        return m.parent;
     };
 
     m.mod.target = function (src, mode) {
         mapper(src, 'target');
 
         if (m.modes.literal.indexOf(mode) > -1) {
+            params.modules.target.itob();
         } else if (m.modes.preserve.indexOf(mode) > -1) {
             //params.modules.target.normalize(0, 1);
         } else {
             //params.modules.target.normalize();
         }
+
+        return m.parent;
     };
 
     //m.play = function () {
