@@ -100,7 +100,7 @@
         return m.parent;
     };
 
-    m.mod.syn = m.mod.synth = m.mod.voice;
+    m.param.syn = m.param.synth = m.param.voice;
 
     /**
      * Sets the wavetable using the input. Alternatively: .wavetable()

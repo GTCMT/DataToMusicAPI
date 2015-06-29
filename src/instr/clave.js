@@ -1,15 +1,10 @@
+/**
+ * @fileOverview Instrument model "clave"
+ * @module instr-clave
+ */
+
 (function () {
     var m = dtm.model('clave', 'instr').register();
-
-    //var darr = dtm.transform;
-    //m.motif = {};
-    //m.motif.beats = darr.itob([3, 3, 4, 2, 4]);
-    //m.motif.target = darr.itob([2, 1, 2, 1]);
-    //m.motif.midx = 0;
-
-    //var cl = dtm.clock(80);
-    //cl.subDiv(16);
-    //cl.setTime('2/4');
 
     var params = {
         modules: {
@@ -21,7 +16,8 @@
             morph: dtm.array(0)
         },
 
-        index: 0
+        index: 0,
+        print: false
     };
 
     m.output = function (c) {
@@ -38,9 +34,20 @@
         params.index = (params.index + 1) % res.get('length');
         var r = res.get(params.index);
 
+        if (params.print) {
+            console.log(res.get());
+        }
+
         v.amp(r).play();
     };
 
+    /**
+     * Sets the morphing index between the base (clave) and target rhythm.
+     * @function module:instr-clave#morph
+     * @param src {number|array|string|dtm.array}
+     * @param [mode='adaptive'] {string}
+     * @returns {dtm.instr}
+     */
     m.mod.morph = function (src, mode) {
         mapper(src, 'morph');
 
@@ -54,6 +61,13 @@
         return m.parent;
     };
 
+    /**
+     * Sets the amount of amplitude modulation to be scaled exponentially. With 'adaptive' and 'pre-normalized' mapping, the normalized factor will be scaled to 1-100.
+     * @function module:instr-clave#emphasis
+     * @param src {number|array|string|dtm.array}
+     * @param [mode='adaptive'] {string}
+     * @returns {dtm.instr}
+     */
     m.mod.emphasis = function (src, mode) {
         mapper(src, 'emphasis');
 
@@ -67,51 +81,43 @@
         return m.parent;
     };
 
+    // TODO: different mode of rhythm input?
+    /**
+     * Sets the target rhythm.
+     * @function module:instr-clave#target
+     * @param src {number|array|string|dtm.array}
+     * @param [mode='adaptive'] {string}
+     * @returns {dtm.instr}
+     */
     m.mod.target = function (src, mode) {
         mapper(src, 'target');
 
         if (m.modes.literal.indexOf(mode) > -1) {
             params.modules.target.itob();
         } else if (m.modes.preserve.indexOf(mode) > -1) {
-            //params.modules.target.normalize(0, 1);
+            params.modules.target.scale(1, 4, 0, 1).round().itob();
         } else {
-            //params.modules.target.normalize();
+            params.modules.target.scale(1, 4).round().itob();
         }
 
         return m.parent;
     };
 
-    //m.play = function () {
-    //    var idx = 0;
-    //
-    //    cl.add(function () {
-    //        var src = actx.createBufferSource();
-    //        var amp = actx.createGain();
-    //        src.connect(amp);
-    //        amp.connect(out());
-    //        src.buffer = noise;
-    //        src.loop = true;
-    //
-    //        m.motif.morphed = darr.morph(m.motif.beats, m.motif.target, m.motif.midx);
-    //
-    //        if (idx >= m.motif.morphed.length) {
-    //            idx = 0;
-    //        }
-    //
-    //        amp.gain.setValueAtTime(0.5 * dtm.value.expCurve(m.motif.morphed[idx], 20), now());
-    //        amp.gain.linearRampToValueAtTime(0, now() + 0.02);
-    //
-    //        src.start(now());
-    //
-    //        idx = (idx + 1) % m.motif.morphed.length;
-    //    });
-    //
-    //    cl.start();
-    //};
+    /**
+     * Prints out the current rhythm / amplitude sequence into the console.
+     * @function module:instr-clave:print
+     * @param [bool=true] {boolean}
+     * @returns {dtm.instr}
+     */
+    m.param.print = function (bool) {
+        if (typeof(bool) === 'undefined') {
+            bool = true;
+        }
 
-    //m.mod = function (val) {
-    //    m.motif.midx = val;
-    //};
+        params.print = bool;
+        return m.parent;
+    };
+
 
     function mapper(src, dest) {
         if (typeof(src) === 'number') {
