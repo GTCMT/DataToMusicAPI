@@ -2528,7 +2528,7 @@ dtm.array = function () {
 
     /**
      * Multiplies the length of the array by the given factor.
-     * @function module:array#stretch
+     * @function module:array#stretch | str
      * @param factor {number}
      * @param [interp='linear'] {string}
      * @returns {dtm.array}
@@ -2538,6 +2538,8 @@ dtm.array = function () {
         array.set(params.value);
         return array;
     };
+
+    array.str = array.stretch;
 
     array.summarize = function () {
         return array;
@@ -3691,8 +3693,6 @@ dtm.data = function (arg, cb, type) {
                 var xhr = new XMLHttpRequest();
                 xhr.open('GET', url, true);
                 xhr.withCredentials = 'true';
-
-                console.log(xhr.withCredentials);
 
                 switch (ext) {
                     case 'txt':
@@ -5537,6 +5537,7 @@ dtm.synth = function (type, wt) {
 
 
             var amp = actx.createGain();
+
             // ATTACK
             // amp.gain.setValueAtTime(0, startT); // not working!
             // setTargetAtTime w/ small value not working as intended (Jun 6, 2015)
@@ -5550,12 +5551,12 @@ dtm.synth = function (type, wt) {
 
             // DECAY - SUSTAIN
             var susLevel = params.amp.adsr[2] * params.amp.gain;
-            amp.gain.setTargetAtTime(susLevel, startT+params.amp.adsr[0], params.amp.adsr[1]);
+            var decayTime = params.amp.adsr[1] < dur ? params.amp.adsr[1] : dur; // CHECK: maybe should include attack time in the total duration
+            amp.gain.setTargetAtTime(susLevel, startT+params.amp.adsr[0], decayTime);
 
             // RELEASE
-            var relStart = startT + params.amp.adsr[0] + params.amp.adsr[1] + dur; // CHECK: questionable
+            var relStart = startT + params.amp.adsr[0] + decayTime + dur;
             amp.gain.setTargetAtTime(0, relStart, params.amp.adsr[3]);
-
 
             if (params.lpf.isOn) {
                 var lpf = actx.createBiquadFilter();
@@ -6249,7 +6250,7 @@ dtm.inscore = function () {
             base: dtm.array([3,3,4,2,4]).itob(),
             target: dtm.array([2,1,2,1]).itob(),
             res: dtm.array([3,3,4,2,4]).itob(),
-            emphasis: dtm.a(50),
+            emphasis: dtm.a(100),
             morph: dtm.array(0)
         },
 
@@ -6308,11 +6309,13 @@ dtm.inscore = function () {
     m.mod.emphasis = function (src, mode) {
         mapper(src, 'emphasis');
 
+        var max = 200;
+
         if (m.modes.literal.indexOf(mode) > -1) {
         } else if (m.modes.preserve.indexOf(mode) > -1) {
-            params.modules.emphasis.normalize(0, 1).scale(1, 100);
+            params.modules.emphasis.normalize(0, 1).scale(1, max);
         } else {
-            params.modules.emphasis.normalize().scale(1, 100);
+            params.modules.emphasis.normalize().scale(1, max);
         }
 
         return m.parent;
@@ -6355,6 +6358,10 @@ dtm.inscore = function () {
         return m.parent;
     };
 
+    m.param.voice = function (arg) {
+        params.modules.voice = arg;
+        return m.parent;
+    };
 
     function mapper(src, dest) {
         if (typeof(src) === 'number') {

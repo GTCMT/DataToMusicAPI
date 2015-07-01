@@ -566,7 +566,7 @@ dtm.array = function () {
 
     /**
      * Multiplies the length of the array by the given factor.
-     * @function module:array#stretch
+     * @function module:array#stretch | str
      * @param factor {number}
      * @param [interp='linear'] {string}
      * @returns {dtm.array}
@@ -576,6 +576,8 @@ dtm.array = function () {
         array.set(params.value);
         return array;
     };
+
+    array.str = array.stretch;
 
     array.summarize = function () {
         return array;

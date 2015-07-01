@@ -195,8 +195,6 @@ dtm.data = function (arg, cb, type) {
                 xhr.open('GET', url, true);
                 xhr.withCredentials = 'true';
 
-                console.log(xhr.withCredentials);
-
                 switch (ext) {
                     case 'txt':
                     case 'csv':

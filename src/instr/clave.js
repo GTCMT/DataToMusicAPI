@@ -12,7 +12,7 @@
             base: dtm.array([3,3,4,2,4]).itob(),
             target: dtm.array([2,1,2,1]).itob(),
             res: dtm.array([3,3,4,2,4]).itob(),
-            emphasis: dtm.a(50),
+            emphasis: dtm.a(100),
             morph: dtm.array(0)
         },
 
@@ -71,11 +71,13 @@
     m.mod.emphasis = function (src, mode) {
         mapper(src, 'emphasis');
 
+        var max = 200;
+
         if (m.modes.literal.indexOf(mode) > -1) {
         } else if (m.modes.preserve.indexOf(mode) > -1) {
-            params.modules.emphasis.normalize(0, 1).scale(1, 100);
+            params.modules.emphasis.normalize(0, 1).scale(1, max);
         } else {
-            params.modules.emphasis.normalize().scale(1, 100);
+            params.modules.emphasis.normalize().scale(1, max);
         }
 
         return m.parent;
@@ -118,6 +120,10 @@
         return m.parent;
     };
 
+    m.param.voice = function (arg) {
+        params.modules.voice = arg;
+        return m.parent;
+    };
 
     function mapper(src, dest) {
         if (typeof(src) === 'number') {

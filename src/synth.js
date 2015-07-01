@@ -373,6 +373,7 @@ dtm.synth = function (type, wt) {
 
 
             var amp = actx.createGain();
+
             // ATTACK
             // amp.gain.setValueAtTime(0, startT); // not working!
             // setTargetAtTime w/ small value not working as intended (Jun 6, 2015)
@@ -386,12 +387,12 @@ dtm.synth = function (type, wt) {
 
             // DECAY - SUSTAIN
             var susLevel = params.amp.adsr[2] * params.amp.gain;
-            amp.gain.setTargetAtTime(susLevel, startT+params.amp.adsr[0], params.amp.adsr[1]);
+            var decayTime = params.amp.adsr[1] < dur ? params.amp.adsr[1] : dur; // CHECK: maybe should include attack time in the total duration
+            amp.gain.setTargetAtTime(susLevel, startT+params.amp.adsr[0], decayTime);
 
             // RELEASE
-            var relStart = startT + params.amp.adsr[0] + params.amp.adsr[1] + dur; // CHECK: questionable
+            var relStart = startT + params.amp.adsr[0] + decayTime + dur;
             amp.gain.setTargetAtTime(0, relStart, params.amp.adsr[3]);
-
 
             if (params.lpf.isOn) {
                 var lpf = actx.createBiquadFilter();
