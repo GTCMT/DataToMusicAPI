@@ -34,7 +34,7 @@ dtm.model = function (name, categ) {
         modes: {
             'literal': ['literal', 'lit', 'l'],
             'adapt': ['adapt', 'adapted', 'adaptive', 'a'],
-            'preserve': ['preserve', 'preserved', 'p']
+            'preserve': ['preserve', 'preserved', 'p', 'n']
         }
     };
 
@@ -132,7 +132,7 @@ dtm.model = function (name, categ) {
     model.map = model.assignMethods;
 
     /**
-     * Call this when creating a new model, which you may want to reuse with new instanciation.
+     * Call this when creating a new model, which you want to reuse later by newly instantiating.
      * @function module:model#register
      * @returns {dtm.model}
      */

@@ -3506,7 +3506,8 @@ dtm.parser = {
  * Creates a new dtm.data object, if the argument is empty, or a promise object, if the argument is a URL.
  * @function module:data.data
  * @param [arg] {string} URL to load or query the data
- * @param callback {function}
+ * @param cb {function}
+ * @param type
  * @returns {dtm.data | promise}
  */
 dtm.data = function (arg, cb, type) {
@@ -3692,7 +3693,7 @@ dtm.data = function (arg, cb, type) {
             } else {
                 var xhr = new XMLHttpRequest();
                 xhr.open('GET', url, true);
-                xhr.withCredentials = 'true';
+                //xhr.withCredentials = 'true';
 
                 switch (ext) {
                     case 'txt':
@@ -3708,6 +3709,11 @@ dtm.data = function (arg, cb, type) {
                     case 'mp3':
                         xhr.responseType = 'arraybuffer';
                         break;
+                    case 'png':
+                    case 'jpg':
+                    case 'jpeg':
+                        xhr.responseType = 'blob';
+                        break;
                     default:
                         //xhr.responseType = 'blob';
                         break;
@@ -3716,21 +3722,43 @@ dtm.data = function (arg, cb, type) {
                 xhr.onreadystatechange = function () {
                     if (xhr.readyState == 4 && xhr.status == 200) {
                         if (xhr.responseType === 'arraybuffer') {
-                            dtm.wa.actx.decodeAudioData(xhr.response, function (buf) {
-                                for (var c = 0; c < buf.numberOfChannels; c++) {
-                                    var floatArr = buf.getChannelData(c);
-                                    params.arrays['ch_' + c] = dtm.array(Array.prototype.slice.call(floatArr)).name('ch_' + c);
-                                }
 
-                                //setArrays();
-                                //setTypes();
-                                //setSize();
-                                if (typeof(cb) !== 'undefined') {
-                                    cb(data);
-                                }
+                            if (dtm.wa.isOn) {
+                                dtm.wa.actx.decodeAudioData(xhr.response, function (buf) {
+                                    for (var c = 0; c < buf.numberOfChannels; c++) {
+                                        var floatArr = buf.getChannelData(c);
+                                        params.arrays['ch_' + c] = dtm.array(Array.prototype.slice.call(floatArr)).name('ch_' + c);
+                                        params.keys.push('ch_' + c);
+                                    }
 
-                                resolve(data);
-                            });
+                                    //setArrays();
+                                    //setTypes();
+                                    //setSize();
+                                    params.size.col = buf.numberOfChannels;
+                                    params.size.row = params.arrays['ch_0'].get('length');
+                                    // CHECK: ugly as hell
+
+                                    if (typeof(cb) !== 'undefined') {
+                                        cb(data);
+                                    }
+
+                                    resolve(data);
+                                });
+                            }
+                        } else if (xhr.responseType === 'blob') {
+                            var img = new Image();
+                            img.onload = function () {
+                                params.size.col = img.width;
+                                params.size.row = img.height;
+
+                                for (var i = 0; i < img.width; i++) {
+                                    for (var j = 0; j < img.height; j++) {
+                                        // TODO: WIP
+                                    }
+                                }
+                            };
+                            img.src = window.URL.createObjectURL(xhr.response);
+
                         } else {
                             var keys = [];
 
@@ -3750,17 +3778,31 @@ dtm.data = function (arg, cb, type) {
                                     }
                                 }
 
-                                var second = res[Object.keys(res)[0]];
 
-                                if (second.constructor === Array) {
-                                    keys = Object.keys(second[0]);
+                                if (url.indexOf('wunderground') > -1) {
+                                    var obj = JSON.parse(xhr.response);
+                                    params.coll = obj[Object.keys(obj)[1]];
+
+                                    if (params.coll.constructor === Array) {
+                                        // for hourly forecast
+                                        keys = Object.keys(params.coll[0]);
+                                    } else {
+                                        // for current weather
+                                        keys = Object.keys(params.coll);
+                                        params.coll = [params.coll];
+                                    }
                                 } else {
-                                    keys = Object.keys(second);
-                                }
+                                    var second = res[Object.keys(res)[0]];
 
-                                //params.coll = xhr.response[Object.keys(xhr.response)[0]];
-                                // TODO: may not work with non-array JSON formats
-                                params.coll = res;
+                                    if (second.constructor === Array) {
+                                        keys = Object.keys(second[0]);
+                                    } else {
+                                        keys = Object.keys(second);
+                                    }
+
+                                    // TODO: may not work with non-array JSON formats
+                                    params.coll = res;
+                                }
                             } else {
                                 // TODO: this only works for shodan
                                 //params.coll = JSON.parse(xhr.response)['matches'];
@@ -4992,7 +5034,7 @@ dtm.instr = function (arg) {
             //model = _.find(dtm.modelColl, function (m) {
             //    return m.get('name') == arg;
             //});
-            model = dtm.modelCallers[arg]();
+            model = dtm.modelCallers[arg](); // requires the IIFE to manually return the created model... bad design?
         } else if (arg.type === 'dtm.model') {
             model = arg;
         }
@@ -5050,7 +5092,7 @@ dtm.model = function (name, categ) {
         modes: {
             'literal': ['literal', 'lit', 'l'],
             'adapt': ['adapt', 'adapted', 'adaptive', 'a'],
-            'preserve': ['preserve', 'preserved', 'p']
+            'preserve': ['preserve', 'preserved', 'p', 'n']
         }
     };
 
@@ -5148,7 +5190,7 @@ dtm.model = function (name, categ) {
     model.map = model.assignMethods;
 
     /**
-     * Call this when creating a new model, which you may want to reuse with new instanciation.
+     * Call this when creating a new model, which you want to reuse later by newly instantiating.
      * @function module:model#register
      * @returns {dtm.model}
      */
@@ -6236,6 +6278,23 @@ dtm.inscore = function () {
 
     return inscore;
 };
+(function () {
+    var m  = dtm.model('melody', 'instr').register();
+
+    var params = {
+        m: {
+            pitches: dtm.a([72, 74, 76])
+        }
+    };
+
+    m.output = function (c) {
+        c.div(16);
+
+        dtm.syn().nn(params.m.pitches.get('next')).play();
+    };
+
+    return m; // this returns itself when the instrument reinstantiates the model from dtm.modelCallers[]
+})();
 /**
  * @fileOverview Instrument model "clave"
  * @module instr-clave
@@ -6361,6 +6420,87 @@ dtm.inscore = function () {
     m.param.voice = function (arg) {
         params.modules.voice = arg;
         return m.parent;
+    };
+
+    function mapper(src, dest) {
+        if (typeof(src) === 'number') {
+            params.modules[dest] = dtm.array(src);
+        } else if (typeof(src) === 'string') {
+            params.modules[dest] = dtm.array('str', src).classify();
+        } else {
+            if (src.constructor === Array) {
+                params.modules[dest] = dtm.array(src);
+            } else if (src.type === 'dtm.array') {
+                if (src.get('type') === 'string') {
+                    params.modules[dest] = src.clone().classify();
+                } else {
+                    params.modules[dest] = src.clone();
+                }
+            } else if (src.type === 'dtm.model') {
+
+            } else if (src.type === 'dtm.synth') {
+                params.modules[dest] = src;
+            }
+        }
+    }
+
+    return m;
+})();
+(function () {
+    var m = dtm.model('tamborim', 'instr').register();
+
+    var subDiv = 4 * 8;
+    var bpm = 800;
+    //var c = dtm.clock(bpm, subDiv).sync(false);
+
+    m.motif = {
+        original: dtm.array([1, 1, 1, 1]).fit(subDiv, 'zeros'),
+        target: dtm.array([1, 0, 1, 1, 1, 0]).fit(subDiv, 'zeros'),
+        midx: 0
+    };
+
+    //m.morphed = dtm.transform.morph(m.motif.original, m.motif.target, m.motif.midx);
+
+    var idx = 0;
+    var offset = dtm.tr.calcBeatsOffset(m.motif.original.get(), m.motif.target.get());
+    var noOffset = dtm.array().fill('zeroes', offset.length).get();
+
+    var curNote = 0;
+
+    m.output = function (c) {
+        c.bpm(bpm).div(subDiv).start(); // CHECK: needs start for some reason
+        m.curOffset = dtm.transform.morph(noOffset, offset, m.motif.midx);
+        m.curOffset = dtm.transform.round(m.curOffset);
+
+        var morphed = dtm.tr.applyOffsetToBeats(m.motif.original.get(), m.curOffset);
+        //c.bpm(bpm + m.motif.midx * 60);
+        //c.bpm(bpm + m.motif.midx * 60);
+        //var delay = (1 - m.morphed[idx]) * 1 / c.params.bpm / m.morphed.length;
+
+        if (morphed[idx] === 1) {
+            if (curNote === 2) {
+                dtm.syn('noise').decay(0.02).lpf(4000).amp(1.2).play();
+            } else {
+                dtm.syn('noise').decay(0.02).lpf(1000).amp(1.2).play();
+            }
+
+            curNote = dtm.value.mod(curNote + 1, 4);
+        }
+
+        idx = dtm.value.mod(idx + 1, subDiv);
+
+        return m;
+    };
+
+    //m.stop = function () {
+    //    c.stop();
+    //    return m;
+    //};
+    //
+
+    m.mod.mod = function (val) {
+        m.motif.midx = val;
+        return m;
     };
 
     function mapper(src, dest) {

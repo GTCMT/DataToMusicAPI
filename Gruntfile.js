@@ -40,11 +40,9 @@ module.exports = function (grunt) {
                     //'src/instr/nice-chords.js',
                     //'src/instr/models.rhythm-seq.js',
                     //'src/instr/sampler.js',
+                    'src/instr/melody.js',
                     'src/instr/clave.js',
-                    //'src/instr/tamborim.js',
-
-                    //'src/beltline/bl-motif.js',
-                    //'src/beltline/bl-piano.js',
+                    'src/instr/tamborim.js',
 
                     'src/instr/default.js',
                     'src/instr/testInstr.js',

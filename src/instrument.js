@@ -387,7 +387,7 @@ dtm.instr = function (arg) {
             //model = _.find(dtm.modelColl, function (m) {
             //    return m.get('name') == arg;
             //});
-            model = dtm.modelCallers[arg]();
+            model = dtm.modelCallers[arg](); // requires the IIFE to manually return the created model... bad design?
         } else if (arg.type === 'dtm.model') {
             model = arg;
         }

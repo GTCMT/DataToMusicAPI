@@ -7,7 +7,8 @@
  * Creates a new dtm.data object, if the argument is empty, or a promise object, if the argument is a URL.
  * @function module:data.data
  * @param [arg] {string} URL to load or query the data
- * @param callback {function}
+ * @param cb {function}
+ * @param type
  * @returns {dtm.data | promise}
  */
 dtm.data = function (arg, cb, type) {
@@ -193,7 +194,7 @@ dtm.data = function (arg, cb, type) {
             } else {
                 var xhr = new XMLHttpRequest();
                 xhr.open('GET', url, true);
-                xhr.withCredentials = 'true';
+                //xhr.withCredentials = 'true';
 
                 switch (ext) {
                     case 'txt':
@@ -209,6 +210,11 @@ dtm.data = function (arg, cb, type) {
                     case 'mp3':
                         xhr.responseType = 'arraybuffer';
                         break;
+                    case 'png':
+                    case 'jpg':
+                    case 'jpeg':
+                        xhr.responseType = 'blob';
+                        break;
                     default:
                         //xhr.responseType = 'blob';
                         break;
@@ -217,21 +223,43 @@ dtm.data = function (arg, cb, type) {
                 xhr.onreadystatechange = function () {
                     if (xhr.readyState == 4 && xhr.status == 200) {
                         if (xhr.responseType === 'arraybuffer') {
-                            dtm.wa.actx.decodeAudioData(xhr.response, function (buf) {
-                                for (var c = 0; c < buf.numberOfChannels; c++) {
-                                    var floatArr = buf.getChannelData(c);
-                                    params.arrays['ch_' + c] = dtm.array(Array.prototype.slice.call(floatArr)).name('ch_' + c);
-                                }
 
-                                //setArrays();
-                                //setTypes();
-                                //setSize();
-                                if (typeof(cb) !== 'undefined') {
-                                    cb(data);
-                                }
+                            if (dtm.wa.isOn) {
+                                dtm.wa.actx.decodeAudioData(xhr.response, function (buf) {
+                                    for (var c = 0; c < buf.numberOfChannels; c++) {
+                                        var floatArr = buf.getChannelData(c);
+                                        params.arrays['ch_' + c] = dtm.array(Array.prototype.slice.call(floatArr)).name('ch_' + c);
+                                        params.keys.push('ch_' + c);
+                                    }
 
-                                resolve(data);
-                            });
+                                    //setArrays();
+                                    //setTypes();
+                                    //setSize();
+                                    params.size.col = buf.numberOfChannels;
+                                    params.size.row = params.arrays['ch_0'].get('length');
+                                    // CHECK: ugly as hell
+
+                                    if (typeof(cb) !== 'undefined') {
+                                        cb(data);
+                                    }
+
+                                    resolve(data);
+                                });
+                            }
+                        } else if (xhr.responseType === 'blob') {
+                            var img = new Image();
+                            img.onload = function () {
+                                params.size.col = img.width;
+                                params.size.row = img.height;
+
+                                for (var i = 0; i < img.width; i++) {
+                                    for (var j = 0; j < img.height; j++) {
+                                        // TODO: WIP
+                                    }
+                                }
+                            };
+                            img.src = window.URL.createObjectURL(xhr.response);
+
                         } else {
                             var keys = [];
 
@@ -251,17 +279,31 @@ dtm.data = function (arg, cb, type) {
                                     }
                                 }
 
-                                var second = res[Object.keys(res)[0]];
 
-                                if (second.constructor === Array) {
-                                    keys = Object.keys(second[0]);
+                                if (url.indexOf('wunderground') > -1) {
+                                    var obj = JSON.parse(xhr.response);
+                                    params.coll = obj[Object.keys(obj)[1]];
+
+                                    if (params.coll.constructor === Array) {
+                                        // for hourly forecast
+                                        keys = Object.keys(params.coll[0]);
+                                    } else {
+                                        // for current weather
+                                        keys = Object.keys(params.coll);
+                                        params.coll = [params.coll];
+                                    }
                                 } else {
-                                    keys = Object.keys(second);
-                                }
+                                    var second = res[Object.keys(res)[0]];
 
-                                //params.coll = xhr.response[Object.keys(xhr.response)[0]];
-                                // TODO: may not work with non-array JSON formats
-                                params.coll = res;
+                                    if (second.constructor === Array) {
+                                        keys = Object.keys(second[0]);
+                                    } else {
+                                        keys = Object.keys(second);
+                                    }
+
+                                    // TODO: may not work with non-array JSON formats
+                                    params.coll = res;
+                                }
                             } else {
                                 // TODO: this only works for shodan
                                 //params.coll = JSON.parse(xhr.response)['matches'];
