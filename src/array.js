@@ -53,6 +53,15 @@ dtm.array = function () {
             }
         } else {
             switch (param) {
+                case 'getters':
+                case 'help':
+                case '?':
+                    return 'name|key, type, len|length, min|minimum, max|maximum, minmax|range, mean|avg|average, mode, median, midrange, std, pstd, var|variance, pvar, rms, cur|current|now, next, pver|previous, rand|random, idx|index, hop|step|stepSize, loc|location|relative, block|window (with 1|2 following numbers), blockNext, original, normal|normalize|normalized, sort|sorted, uniq|unique|uniques, classes, classID, string|stringify, numClasses|numUniques, unif|uniformity, histo|histogram'.split(', ');
+
+                case 'methods':
+                case 'functions':
+                    return Object.keys(array);
+
                 case 'name':
                 case 'key':
                     return params.name;
@@ -505,7 +514,7 @@ dtm.array = function () {
 
     /**
      * Scales the array with an exponential curve.
-     * @function module:array#exp | expCurve
+     * @function module:array#exp | expon | expCurve
      * @param factor {number}
      * @param [min=array.get('min')] {number}
      * @param [max=array.get('max')] {number}
@@ -524,7 +533,7 @@ dtm.array = function () {
         return array;
     };
 
-    array.exp = array.expCurve;
+    array.exp = array.expon = array.expCurve;
 
     /**
      * Applies a logarithmic scaling to the array.
