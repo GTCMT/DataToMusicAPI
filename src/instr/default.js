@@ -15,6 +15,7 @@
             voice: dtm.synth(),
             wavetable: null,
             volume: dtm.array(1),
+            pan: dtm.array(0.5),
             scale: dtm.array().fill('seq', 12),
             rhythm: dtm.array(1),
             pitch: dtm.array(69),
@@ -39,6 +40,7 @@
     m.output = function (c) {
         var v = params.modules.voice;
         var vol = params.modules.volume.get('next');
+        var pan = params.modules.pan.get('next');
         var dur = params.modules.dur.get('next');
         var r = params.modules.rhythm.get('next');
         var p = params.modules.pitch.get('next');
@@ -80,7 +82,7 @@
                 }
 
                 v.dur(dur).decay(dur);
-                v.nn(dtm.val.pq(p + val, sc, params.pqRound) + tr).amp(vol).play();
+                v.nn(dtm.val.pq(p + val, sc, params.pqRound) + tr).amp(vol).pan(pan).play();
             });
         }
     };
@@ -157,6 +159,26 @@
     };
 
     m.mod.amp = m.mod.level = m.mod.vol = m.mod.volume;
+
+    /**
+     * Sets the stereo panning.
+     * @function module:instr-default#pan
+     * @param src {number|array|dtm.array|string}
+     * @param mode {string}
+     * @returns {dtm.instr}
+     */
+    m.mod.pan = function (src, mode) {
+        mapper(src, 'pan');
+
+        if (m.modes.literal.indexOf(mode) > -1) {
+        } else if (m.modes.preserve.indexOf(mode) > -1) {
+            params.modules.pan.normalize(0, 1);
+        } else {
+            params.modules.pan.normalize();
+        }
+
+        return m.parent;
+    };
 
     m.mod.pitch = function (src, mode, round) {
         mapper(src, 'pitch');

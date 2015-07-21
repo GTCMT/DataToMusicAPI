@@ -19,7 +19,8 @@ dtm.synth = function (type, wt) {
         },
 
         output: {
-            gain: 0.5
+            gain: 0.5,
+            pan: 0.5
         },
 
         //isPlaying: false,
@@ -104,6 +105,9 @@ dtm.synth = function (type, wt) {
             case 'volume':
             case 'gain':
                 return params.output.gain;
+
+            case 'pan':
+                return params.output.pan;
 
             case 'frequency':
             case 'freq':
@@ -457,7 +461,14 @@ dtm.synth = function (type, wt) {
             gain.gain.setValueAtTime(params.output.gain, startT);
 
             amp.connect(gain);
-            gain.connect(out());
+
+            var pan = actx.createPanner();
+            var x = params.output.pan * 4 - 2;
+            var y = (1-params.output.pan) * 4 - 2;
+            pan.setPosition(x, y, -0.5);
+
+            gain.connect(pan);
+            pan.connect(out());
 
             src.start(startT);
             src.stop(relStart + params.amp.adsr[3] + 0.3);
@@ -590,6 +601,17 @@ dtm.synth = function (type, wt) {
      */
     synth.gain = function (val) {
         params.output.gain = val;
+        return synth;
+    };
+
+    /**
+     * Sets the output stereo panning
+     * @function module:synth#pan
+     * @param val {number} Stereo pan value between 0 and 1. The center = 0.5.
+     * @returns {{type: string}}
+     */
+    synth.pan = function (val) {
+        params.output.pan = val;
         return synth;
     };
 
