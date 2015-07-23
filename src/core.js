@@ -324,12 +324,3 @@ function append() {
 function appendNoDupes() {
 
 }
-
-dtm.scales = {
-    "Major": [0, 4, 7],
-    "minor": [0, 3, 7],
-    "Maj7": [0, 4, 7, 11],
-    "-7": [0, 3, 7, 10],
-    "7": [0, 4, 7, 10],
-    "7sus4": [0, 5, 7, 10]
-};

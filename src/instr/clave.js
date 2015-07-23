@@ -61,6 +61,7 @@
         return m.parent;
     };
 
+    m.mod.mod = m.mod.modulate = m.mod.morph;
     /**
      * Sets the amount of amplitude modulation to be scaled exponentially. With 'adaptive' and 'pre-normalized' mapping, the normalized factor will be scaled to 1-100.
      * @function module:instr-clave#emphasis

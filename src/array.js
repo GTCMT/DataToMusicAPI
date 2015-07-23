@@ -989,12 +989,21 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.pq = function (scale, round) {
+        var scales = {
+            "major": [0, 4, 7],
+            "minor": [0, 3, 7],
+            "maj7": [0, 4, 7, 11],
+            "-7": [0, 3, 7, 10],
+            "7": [0, 4, 7, 10],
+            "7sus4": [0, 5, 7, 10]
+        };
+
         if (arguments.length === 0) {
             scale = _.range(12);
         } else if (scale.constructor === Array) {
 
         } else if (typeof(scale) === 'string') {
-            scale = dtm.scales[scale.toLowerCase()];
+            scale = scales[scale.toLowerCase()];
         }
 
         return array.set(dtm.transform.pq(params.value, scale, round));

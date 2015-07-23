@@ -52,7 +52,7 @@
 
     m.mod.mod = function (val) {
         m.motif.midx = val;
-        return m;
+        return m.parent;
     };
 
     function mapper(src, dest) {

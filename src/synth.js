@@ -350,30 +350,29 @@ dtm.synth = function (type, wt) {
             } else {
                 src = actx.createOscillator();
                 src.frequency.setValueAtTime(params.pitch.freq, startT);
+
+                switch (params.type) {
+                    case 'sine':
+                        src.type = 'sine';
+                        break;
+                    case 'saw':
+                        src.type = 'sawtooth';
+                        break;
+                    case 'square':
+                        src.type = 'square';
+                        break;
+                    case 'triange':
+                        src.type = 'triangle';
+                        break;
+
+                    default:
+                        break;
+                }
+                
+                if (params.wt.isOn) {
+                    src.setPeriodicWave(params.wt.wt);
+                }
             }
-
-            switch (params.type) {
-                case 'sine':
-                    src.type = 'sine';
-                    break;
-                case 'saw':
-                    src.type = 'sawtooth';
-                    break;
-                case 'square':
-                    src.type = 'square';
-                    break;
-                case 'triange':
-                    src.type = 'triangle';
-                    break;
-
-                default:
-                    break;
-            }
-
-            if (params.wt.isOn) {
-                src.setPeriodicWave(params.wt.wt);
-            }
-
 
 
             var amp = actx.createGain();

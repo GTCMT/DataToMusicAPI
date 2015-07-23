@@ -326,15 +326,6 @@ function append() {
 function appendNoDupes() {
 
 }
-
-dtm.scales = {
-    "Major": [0, 4, 7],
-    "minor": [0, 3, 7],
-    "Maj7": [0, 4, 7, 11],
-    "-7": [0, 3, 7, 10],
-    "7": [0, 4, 7, 10],
-    "7sus4": [0, 5, 7, 10]
-};
 //dtm.osc = function () {
 //    var params = {};
 //
@@ -2015,6 +2006,15 @@ dtm.array = function () {
             }
         } else {
             switch (param) {
+                case 'getters':
+                case 'help':
+                case '?':
+                    return 'name|key, type, len|length, min|minimum, max|maximum, minmax|range, mean|avg|average, mode, median, midrange, std, pstd, var|variance, pvar, rms, cur|current|now, next, pver|previous, rand|random, idx|index, hop|step|stepSize, loc|location|relative, block|window (with 1|2 following numbers), blockNext, original, normal|normalize|normalized, sort|sorted, uniq|unique|uniques, classes, classID, string|stringify, numClasses|numUniques, unif|uniformity, histo|histogram'.split(', ');
+
+                case 'methods':
+                case 'functions':
+                    return Object.keys(array);
+
                 case 'name':
                 case 'key':
                     return params.name;
@@ -2467,7 +2467,7 @@ dtm.array = function () {
 
     /**
      * Scales the array with an exponential curve.
-     * @function module:array#exp | expCurve
+     * @function module:array#exp | expon | expCurve
      * @param factor {number}
      * @param [min=array.get('min')] {number}
      * @param [max=array.get('max')] {number}
@@ -2486,7 +2486,7 @@ dtm.array = function () {
         return array;
     };
 
-    array.exp = array.expCurve;
+    array.exp = array.expon = array.expCurve;
 
     /**
      * Applies a logarithmic scaling to the array.
@@ -2942,12 +2942,21 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.pq = function (scale, round) {
+        var scales = {
+            "major": [0, 4, 7],
+            "minor": [0, 3, 7],
+            "maj7": [0, 4, 7, 11],
+            "-7": [0, 3, 7, 10],
+            "7": [0, 4, 7, 10],
+            "7sus4": [0, 5, 7, 10]
+        };
+
         if (arguments.length === 0) {
             scale = _.range(12);
         } else if (scale.constructor === Array) {
 
         } else if (typeof(scale) === 'string') {
-            scale = dtm.scales[scale.toLowerCase()];
+            scale = scales[scale.toLowerCase()];
         }
 
         return array.set(dtm.transform.pq(params.value, scale, round));
@@ -3548,7 +3557,10 @@ dtm.data = function (arg, cb, type) {
                 case 'arr':
                 case 'array':
                 case 'arrays':
+                case 'c':
                 case 'column':
+                case 'ch':
+                case 'channel':
                     if (typeof(id) === 'number') {
                         if (id >= 0 && id < params.size['col']) {
                             return params.arrays[params.keys[id]].clone();
@@ -3568,7 +3580,7 @@ dtm.data = function (arg, cb, type) {
                         return params.arrays;
                     }
 
-                case 'c':
+                //case 'c':
                 case 'col':
                 case 'coll':
                 case 'collection':
@@ -5225,7 +5237,8 @@ dtm.synth = function (type, wt) {
         },
 
         output: {
-            gain: 0.5
+            gain: 0.5,
+            pan: 0.5
         },
 
         //isPlaying: false,
@@ -5310,6 +5323,9 @@ dtm.synth = function (type, wt) {
             case 'volume':
             case 'gain':
                 return params.output.gain;
+
+            case 'pan':
+                return params.output.pan;
 
             case 'frequency':
             case 'freq':
@@ -5552,30 +5568,29 @@ dtm.synth = function (type, wt) {
             } else {
                 src = actx.createOscillator();
                 src.frequency.setValueAtTime(params.pitch.freq, startT);
+
+                switch (params.type) {
+                    case 'sine':
+                        src.type = 'sine';
+                        break;
+                    case 'saw':
+                        src.type = 'sawtooth';
+                        break;
+                    case 'square':
+                        src.type = 'square';
+                        break;
+                    case 'triange':
+                        src.type = 'triangle';
+                        break;
+
+                    default:
+                        break;
+                }
+                
+                if (params.wt.isOn) {
+                    src.setPeriodicWave(params.wt.wt);
+                }
             }
-
-            switch (params.type) {
-                case 'sine':
-                    src.type = 'sine';
-                    break;
-                case 'saw':
-                    src.type = 'sawtooth';
-                    break;
-                case 'square':
-                    src.type = 'square';
-                    break;
-                case 'triange':
-                    src.type = 'triangle';
-                    break;
-
-                default:
-                    break;
-            }
-
-            if (params.wt.isOn) {
-                src.setPeriodicWave(params.wt.wt);
-            }
-
 
 
             var amp = actx.createGain();
@@ -5663,7 +5678,14 @@ dtm.synth = function (type, wt) {
             gain.gain.setValueAtTime(params.output.gain, startT);
 
             amp.connect(gain);
-            gain.connect(out());
+
+            var pan = actx.createPanner();
+            var x = params.output.pan * 4 - 2;
+            var y = (1-params.output.pan) * 4 - 2;
+            pan.setPosition(x, y, -0.5);
+
+            gain.connect(pan);
+            pan.connect(out());
 
             src.start(startT);
             src.stop(relStart + params.amp.adsr[3] + 0.3);
@@ -5796,6 +5818,17 @@ dtm.synth = function (type, wt) {
      */
     synth.gain = function (val) {
         params.output.gain = val;
+        return synth;
+    };
+
+    /**
+     * Sets the output stereo panning
+     * @function module:synth#pan
+     * @param val {number} Stereo pan value between 0 and 1. The center = 0.5.
+     * @returns {{type: string}}
+     */
+    synth.pan = function (val) {
+        params.output.pan = val;
         return synth;
     };
 
@@ -6358,6 +6391,7 @@ dtm.inscore = function () {
         return m.parent;
     };
 
+    m.mod.mod = m.mod.modulate = m.mod.morph;
     /**
      * Sets the amount of amplitude modulation to be scaled exponentially. With 'adaptive' and 'pre-normalized' mapping, the normalized factor will be scaled to 1-100.
      * @function module:instr-clave#emphasis
@@ -6500,7 +6534,7 @@ dtm.inscore = function () {
 
     m.mod.mod = function (val) {
         m.motif.midx = val;
-        return m;
+        return m.parent;
     };
 
     function mapper(src, dest) {
@@ -6544,6 +6578,7 @@ dtm.inscore = function () {
             voice: dtm.synth(),
             wavetable: null,
             volume: dtm.array(1),
+            pan: dtm.array(0.5),
             scale: dtm.array().fill('seq', 12),
             rhythm: dtm.array(1),
             pitch: dtm.array(69),
@@ -6568,6 +6603,7 @@ dtm.inscore = function () {
     m.output = function (c) {
         var v = params.modules.voice;
         var vol = params.modules.volume.get('next');
+        var pan = params.modules.pan.get('next');
         var dur = params.modules.dur.get('next');
         var r = params.modules.rhythm.get('next');
         var p = params.modules.pitch.get('next');
@@ -6609,7 +6645,7 @@ dtm.inscore = function () {
                 }
 
                 v.dur(dur).decay(dur);
-                v.nn(dtm.val.pq(p + val, sc, params.pqRound) + tr).amp(vol).play();
+                v.nn(dtm.val.pq(p + val, sc, params.pqRound) + tr).amp(vol).pan(pan).play();
             });
         }
     };
@@ -6686,6 +6722,26 @@ dtm.inscore = function () {
     };
 
     m.mod.amp = m.mod.level = m.mod.vol = m.mod.volume;
+
+    /**
+     * Sets the stereo panning.
+     * @function module:instr-default#pan
+     * @param src {number|array|dtm.array|string}
+     * @param mode {string}
+     * @returns {dtm.instr}
+     */
+    m.mod.pan = function (src, mode) {
+        mapper(src, 'pan');
+
+        if (m.modes.literal.indexOf(mode) > -1) {
+        } else if (m.modes.preserve.indexOf(mode) > -1) {
+            params.modules.pan.normalize(0, 1);
+        } else {
+            params.modules.pan.normalize();
+        }
+
+        return m.parent;
+    };
 
     m.mod.pitch = function (src, mode, round) {
         mapper(src, 'pitch');

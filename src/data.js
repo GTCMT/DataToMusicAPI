@@ -49,7 +49,10 @@ dtm.data = function (arg, cb, type) {
                 case 'arr':
                 case 'array':
                 case 'arrays':
+                case 'c':
                 case 'column':
+                case 'ch':
+                case 'channel':
                     if (typeof(id) === 'number') {
                         if (id >= 0 && id < params.size['col']) {
                             return params.arrays[params.keys[id]].clone();
@@ -69,7 +72,7 @@ dtm.data = function (arg, cb, type) {
                         return params.arrays;
                     }
 
-                case 'c':
+                //case 'c':
                 case 'col':
                 case 'coll':
                 case 'collection':
