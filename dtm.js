@@ -1565,6 +1565,31 @@ dtm.transform = {
         return res;
     },
 
+    window: function (arr, type) {
+        var phase = 0;
+        var res = [];
+
+        for (var i = 0; i < arr.length; i++) {
+            phase = i/(arr.length-1);
+
+            switch (type) {
+                case 'triangular':
+                    res[i] = arr[i] * (1 - Math.abs(phase * 2 - 1));
+                    break;
+                case 'hamming':
+                    var alpha = 0.54;
+                    var beta = 0.46;
+                    res[i] = arr[i] * (alpha - beta * Math.cos(2 * Math.PI * phase));
+                    break;
+                default:
+                    res[i] = arr[i];
+                    break;
+            }
+        }
+
+        return res;
+    },
+
     /**
      * Shifts the positions of array contents.
      * @function module:transform#shift
@@ -1990,6 +2015,7 @@ dtm.array = function () {
         type: 'dtm.array'
     };
 
+    // TODO: list different query params in detail in the documentation
     /**
      * Returns the array contents or an analyzed value
      * @function module:array#get
@@ -2009,7 +2035,7 @@ dtm.array = function () {
                 case 'getters':
                 case 'help':
                 case '?':
-                    return 'name|key, type, len|length, min|minimum, max|maximum, minmax|range, mean|avg|average, mode, median, midrange, std, pstd, var|variance, pvar, rms, cur|current|now, next, pver|previous, rand|random, idx|index, hop|step|stepSize, loc|location|relative, block|window (with 1|2 following numbers), blockNext, original, normal|normalize|normalized, sort|sorted, uniq|unique|uniques, classes, classID, string|stringify, numClasses|numUniques, unif|uniformity, histo|histogram'.split(', ');
+                    return 'name|key, type, len|length, min|minimum, max|maximum, minmax|range, mean|avg|average, mode, median, midrange, std, pstd, var|variance, pvar, rms, cur|current|now, next, pver|previous, rand|random, idx|index, hop|step|stepSize, loc|location|relative, block (with 1|2 following numbers), blockNext, original, normal|normalize|normalized, sort|sorted, uniq|unique|uniques, classes, classID, string|stringify, numClasses|numUniques, unif|uniformity, histo|histogram'.split(', ');
 
                 case 'methods':
                 case 'functions':
@@ -2121,17 +2147,19 @@ dtm.array = function () {
                     break;
 
                 case 'block':
-                case 'window':
-                    var start, size;
+                    var start, size, blockArray;
                     if (arguments[1].constructor === Array) {
                         start = arguments[1][0];
                         size = arguments[1][1];
-                        return dtm.transform.getBlock(params.value, start, size)
+                        blockArray = dtm.transform.getBlock(params.value, start, size);
+                        return dtm.array(blockArray);
                     } else if (typeof(arguments[1]) === 'number' && typeof(arguments[2]) === 'number') {
                         start = arguments[1];
                         size = arguments[2];
-                        return dtm.transform.getBlock(params.value, start, size);
+                        blockArray = dtm.transform.getBlock(params.value, start, size);
+                        return dtm.array(blockArray);
                     } else {
+                        // CHECK: ???
                         return params.value;
                     }
 
@@ -2139,7 +2167,8 @@ dtm.array = function () {
                 case 'blockNext':
                     // TODO: incr w/ the size of block after return
                     params.index = dtm.value.mod(params.index + params.step, params.length);
-                    return dtm.transform.getBlock(params.value, params.index, arguments[1]);
+                    blockArray = dtm.transform.getBlock(params.value, params.index, arguments[1]);
+                    return dtm.array(blockArray);
 
                 /* TRANSFORMED LIST */
                 case 'original':
@@ -2364,7 +2393,7 @@ dtm.array = function () {
         }
         return newArr;
     };
-    array.d = array.dup = array.duplicate = array.c = array.copy = array.clone;
+    array.d = array.dup = array.dupe = array.duplicate = array.c = array.copy = array.clone;
 
     /**
      * Morphs the array values with a target array / dtm.array values. The lengths can be mismatched.
@@ -2400,7 +2429,7 @@ dtm.array = function () {
         return array;
     };
 
-    array.original = array.reset;
+    array.original = array.r = array.reset;
 
     /**
      * Clears all the contents of the array object.
@@ -2687,19 +2716,38 @@ dtm.array = function () {
     array.slice = array.truncate;
 
     /**
-     * Extracts a blocked portion of the array.
-     * @function module:array#getBlock | block
-     * @param start {number} Starting index of the array.
-     * @param size {number}
+     * Returns a smaller segment of the array. Similar to get('block', ...), but more destructive.
+     * @function module:array#block
+     * @param start {number|array} The starting index of the block.
+     * @param size {number=1} The size of the block.
      * @returns {dtm.array}
      */
-    array.getBlock = function (start, size) {
-        start = start || 0;
-        size = size || params.length;
-        return array.set(dtm.transform.getBlock(params.value, start, size))
+    array.block = function (start, size) {
+        var blockArray;
+        if (start.constructor === Array) {
+            start = start[0];
+            size = start[1];
+            blockArray = dtm.transform.getBlock(params.value, start, size);
+            return array.set(blockArray);
+        } else if (typeof(start) === 'number' && typeof(size) === 'number') {
+            blockArray = dtm.transform.getBlock(params.value, start, size);
+            return array.set(blockArray);
+        } else {
+            // CHECK: ???
+            return array;
+        }
     };
 
-    array.block = array.getBlock;
+    /**
+     * Applies a window function to the array. May be combined with array.block() operation.
+     * @function module:array#window
+     * @param type
+     */
+    array.window = function (type) {
+        params.value = dtm.transform.window(params.value, type);
+        array.set(params.value);
+        return array;
+    };
 
     /**
      * Shifts the indexing position of the array by the amount.
@@ -4362,120 +4410,123 @@ dtm.clock = function (bpm, subDiv, autoStart) {
     // TODO: also implement swing / random to the af-based clock
     /**
      * Makes the clock tick once.
-     * @param [timeErr=0] {float}
+     * @param [timestamp=0] {float}
      * @returns clock {dtm.clock}
      */
     clock.tick = function (timestamp) {
-        if (params.isOn) {
-            if (!params.sync && !params.isMaster) {
-                if (params.source === 'webAudio') {
-                    clockSrc = actx.createBufferSource();
-                    clockSrc.buffer = clockBuf;
-                    clockSrc.connect(out());
+        if (!params.isOn) {
+            // do nothing
+            return clock;
+        }
 
-                    var freq = params.bpm / 60.0 * (params.subDiv / 4.0);
-                    //var pbRate = 1/(1/freq - Math.abs(timeErr));
+        if (!params.sync && !params.isMaster) {
+            if (params.source === 'webAudio') {
+                clockSrc = actx.createBufferSource();
+                clockSrc.buffer = clockBuf;
+                clockSrc.connect(out());
 
-                    clockSrc.playbackRate.value = freq * clMult;
-                    clockSrc.playbackRate.value += clockSrc.playbackRate.value * params.random * _.sample([1, -1]);
+                var freq = params.bpm / 60.0 * (params.subDiv / 4.0);
+                //var pbRate = 1/(1/freq - Math.abs(timeErr));
 
-                    if (clock.beat % 2 == 0) {
-                        clockSrc.playbackRate.value *= (1.0 - params.swing) / 0.5;
-                    } else {
-                        clockSrc.playbackRate.value *= params.swing / 0.5;
-                    }
+                clockSrc.playbackRate.value = freq * clMult;
+                clockSrc.playbackRate.value += clockSrc.playbackRate.value * params.random * _.sample([1, -1]);
 
-                    clockSrc.start(now() + 0.0000001);
-
-                    clockSrc.onended = function () {
-                        curTime += 1/freq;
-                        var error = now() - curTime;
-                        //clock.tick(error);
-                        clock.tick();
-//                curTime = now();
-                    };
-
-                    _.forEach(clock.callbacks, function (cb) {
-                        cb(clock);
-                    });
-
-                    clock.beat = (clock.beat + 1) % (params.subDiv * clock.time[0] / clock.time[1]);
-
-                } else if (params.source === 'animationFrame') {
-                    params.reported = Math.round(timestamp / 1000. * params.bpm / 60. * params.resolution * params.subDiv / 4);
-
-                    if (params.reported !== params.current) {
-                        if ((params.current % params.resolution) > (params.reported % params.resolution)) {
-                            params.beat = Math.round(params.current / params.resolution);
-                            //console.log(params.beat);
-
-                            _.forEach(clock.callbacks, function (cb) {
-                                cb(clock);
-                            });
-                        }
-
-                        params.current = params.reported;
-                    }
-
-                    window.requestAnimationFrame(clock.tick);
+                if (clock.beat % 2 == 0) {
+                    clockSrc.playbackRate.value *= (1.0 - params.swing) / 0.5;
+                } else {
+                    clockSrc.playbackRate.value *= params.swing / 0.5;
                 }
 
-            } else if (params.sync && !params.isMaster) {
+                clockSrc.start(now() + 0.0000001);
 
-            } else if (params.isMaster) {
-                if (params.source === 'webAudio') {
-                    clockSrc = actx.createBufferSource();
-                    clockSrc.buffer = clockBuf;
-                    clockSrc.connect(out());
+                clockSrc.onended = function () {
+                    curTime += 1/freq;
+                    var error = now() - curTime;
+                    //clock.tick(error);
+                    clock.tick();
+//                curTime = now();
+                };
 
-                    var freq = params.bpm / 60.0 * (params.subDiv / 4.0);
+                _.forEach(clock.callbacks, function (cb) {
+                    cb(clock);
+                });
 
-                    clockSrc.playbackRate.value = freq * clMult;
-                    clockSrc.playbackRate.value += clockSrc.playbackRate.value * params.random * _.sample([1, -1]);
+                clock.beat = (clock.beat + 1) % (params.subDiv * clock.time[0] / clock.time[1]);
 
-                    if (clock.beat % 2 == 0) {
-                        clockSrc.playbackRate.value *= (1.0 - params.swing) / 0.5;
-                    } else {
-                        clockSrc.playbackRate.value *= params.swing / 0.5;
-                    }
+            } else if (params.source === 'animationFrame') {
+                params.reported = Math.round(timestamp / 1000. * params.bpm / 60. * params.resolution * params.subDiv / 4);
 
-                    clockSrc.start(now() + 0.0000001);
-
-                    clockSrc.onended = function () {
-                        curTime += 1/freq;
-                        var error = now() - curTime;
-
-                        clock.tick(error);
-
-                        //return function (cb) {
-                        //    cb();
-                        //};
-                    };
-
-                    _.forEach(clock.callbacks, function (cb) {
-                        cb(clock);
-                    });
-
-                    clock.beat = (clock.beat + 1) % (params.subDiv * clock.time[0] / clock.time[1]);
-
-                } else if (params.source === 'animationFrame') {
-                    params.reported = Math.round(timestamp / 1000. * params.bpm / 60. * params.resolution);
-
-                    if (params.reported !== params.current) {
-                        if ((params.current % params.resolution) > (params.reported % params.resolution)) {
-                            params.beat = Math.round((params.current-params.offset) / params.resolution);
-                            //console.log(params.beat);
-                        }
+                if (params.reported !== params.current) {
+                    if ((params.current % params.resolution) > (params.reported % params.resolution)) {
+                        params.beat = Math.round(params.current / params.resolution);
+                        //console.log(params.beat);
 
                         _.forEach(clock.callbacks, function (cb) {
                             cb(clock);
                         });
-
-                        params.current = params.reported;
                     }
 
-                    params.requestId = window.requestAnimationFrame(clock.tick);
+                    params.current = params.reported;
                 }
+
+                window.requestAnimationFrame(clock.tick);
+            }
+
+        } else if (params.sync && !params.isMaster) {
+
+        } else if (params.isMaster) {
+            if (params.source === 'webAudio') {
+                clockSrc = actx.createBufferSource();
+                clockSrc.buffer = clockBuf;
+                clockSrc.connect(out());
+
+                var freq = params.bpm / 60.0 * (params.subDiv / 4.0);
+
+                clockSrc.playbackRate.value = freq * clMult;
+                clockSrc.playbackRate.value += clockSrc.playbackRate.value * params.random * _.sample([1, -1]);
+
+                if (clock.beat % 2 == 0) {
+                    clockSrc.playbackRate.value *= (1.0 - params.swing) / 0.5;
+                } else {
+                    clockSrc.playbackRate.value *= params.swing / 0.5;
+                }
+
+                clockSrc.start(now() + 0.0000001);
+
+                clockSrc.onended = function () {
+                    curTime += 1/freq;
+                    var error = now() - curTime;
+
+                    clock.tick(error);
+
+                    //return function (cb) {
+                    //    cb();
+                    //};
+                };
+
+                _.forEach(clock.callbacks, function (cb) {
+                    cb(clock);
+                });
+
+                clock.beat = (clock.beat + 1) % (params.subDiv * clock.time[0] / clock.time[1]);
+
+            } else if (params.source === 'animationFrame') {
+                params.reported = Math.round(timestamp / 1000. * params.bpm / 60. * params.resolution);
+
+                if (params.reported !== params.current) {
+                    if ((params.current % params.resolution) > (params.reported % params.resolution)) {
+                        params.beat = Math.round((params.current-params.offset) / params.resolution);
+                        console.log(params.reported);
+                    }
+
+                    _.forEach(clock.callbacks, function (cb) {
+                        cb(clock);
+                    });
+
+                    params.current = params.reported;
+                }
+
+                params.requestId = window.requestAnimationFrame(clock.tick);
             }
         }
 
@@ -4485,31 +4536,34 @@ dtm.clock = function (bpm, subDiv, autoStart) {
     // TODO: stopping system should remove these callbacks?
     // TODO: implement shuffle and randomize
     clock.tickSynced = function () {
-        if (params.sync && params.isOn) {
-            if (dtm.master.clock.get('source') === 'webAudio') {
-                if (dtm.master.clock.beat % Math.round(params.resolution/params.subDiv) === 0) {
-                    _.forEach(clock.callbacks, function (cb) {
-                        cb(clock);
-                    });
-                }
-            }
+        if (!params.isOn || !params.sync) {
+            return clock;
+        }
 
-            else if (dtm.master.clock.get('source') === 'animationFrame') {
-                if ((dtm.master.clock.get('cur') % (params.resolution/params.subDiv*4)) < params.prev) {
-
-                    params.beat = Math.round((dtm.master.clock.get('cur')-params.offset) / params.resolution * params.subDiv / 4);
-
-                    //if (params.beat > params.prevBeat) {
-                        _.forEach(clock.callbacks, function (cb) {
-                            cb(clock);
-                        });
-                    //}
-
-                    params.prevBeat = params.beat;
-                }
-                params.prev = dtm.master.clock.get('cur') % (params.resolution / params.subDiv * 4);
+        if (dtm.master.clock.get('source') === 'webAudio') {
+            if (dtm.master.clock.beat % Math.round(params.resolution/params.subDiv) === 0) {
+                _.forEach(clock.callbacks, function (cb) {
+                    cb(clock);
+                });
             }
         }
+
+        else if (dtm.master.clock.get('source') === 'animationFrame') {
+            if ((dtm.master.clock.get('cur') % (params.resolution/params.subDiv*4)) < params.prev) {
+
+                params.beat = Math.round((dtm.master.clock.get('cur')-params.offset) / params.resolution * params.subDiv / 4);
+
+                //if (params.beat > params.prevBeat) {
+                _.forEach(clock.callbacks, function (cb) {
+                    cb(clock);
+                });
+                //}
+
+                params.prevBeat = params.beat;
+            }
+            params.prev = dtm.master.clock.get('cur') % (params.resolution / params.subDiv * 4);
+        }
+
         return clock;
     };
 
@@ -5586,7 +5640,7 @@ dtm.synth = function (type, wt) {
                     default:
                         break;
                 }
-                
+
                 if (params.wt.isOn) {
                     src.setPeriodicWave(params.wt.wt);
                 }
@@ -6853,7 +6907,7 @@ dtm.inscore = function () {
         return m.parent;
     };
 
-    m.mod.len = m.mod.note = m.mod.div = m.mod.subdiv = m.mod.subDiv;
+    m.mod.speed = m.mod.len = m.mod.note = m.mod.div = m.mod.subdiv = m.mod.subDiv;
 
     m.param.sync = function (bool) {
         if (typeof(bool) === 'undefined') {

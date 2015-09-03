@@ -766,6 +766,8 @@ dtm.array = function () {
      * @param type
      */
     array.window = function (type) {
+        params.value = dtm.transform.window(params.value, type);
+        array.set(params.value);
         return array;
     };
 

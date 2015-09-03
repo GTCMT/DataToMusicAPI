@@ -116,7 +116,7 @@ describe('array object', function () {
         describe('block', function () {
             var a = dtm.array().fill('seq', 10);
             it('should return the first 3 items', function () {
-                expect(a.get('block', [3, 3]).length).toBe(3);
+                expect(a.get('block', [3, 3]).get('length')).toBe(3);
             });
         });
     });

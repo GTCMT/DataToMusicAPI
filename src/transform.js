@@ -753,6 +753,31 @@ dtm.transform = {
         return res;
     },
 
+    window: function (arr, type) {
+        var phase = 0;
+        var res = [];
+
+        for (var i = 0; i < arr.length; i++) {
+            phase = i/(arr.length-1);
+
+            switch (type) {
+                case 'triangular':
+                    res[i] = arr[i] * (1 - Math.abs(phase * 2 - 1));
+                    break;
+                case 'hamming':
+                    var alpha = 0.54;
+                    var beta = 0.46;
+                    res[i] = arr[i] * (alpha - beta * Math.cos(2 * Math.PI * phase));
+                    break;
+                default:
+                    res[i] = arr[i];
+                    break;
+            }
+        }
+
+        return res;
+    },
+
     /**
      * Shifts the positions of array contents.
      * @function module:transform#shift

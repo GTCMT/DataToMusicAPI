@@ -320,7 +320,14 @@ describe('array helper functions', function () {
         });
     });
 
+    describe('window', function () {
+        var input = [1, 1, 1, 1, 1];
 
+        var out = dtm.transform.window(input, 'triangular');
+        it('should have a triangle shape output', function () {
+            expect(out).toEqual([0, 0.5, 1.0, 0.5, 0]);
+        });
+    });
 
     //describe('morph', function () {
     //    var arr1 = [];
