@@ -43,13 +43,13 @@ dtm.transform = {
             max = 1;
         }
 
-        var res = [];
+        var res = [], incr = 0, val = 0, i = 0;
 
         switch (type) {
             case 'line':
-                var incr = (max - min) / (len-1);
+                incr = (max - min) / (len-1);
 
-                for (var i = 0; i < len; i++) {
+                for (i = 0; i < len; i++) {
                     res[i] = min + incr * i;
                 }
                 break;
@@ -62,7 +62,7 @@ dtm.transform = {
 
                 max = max || 1;
 
-                for (var i = 0; i < len; i++) {
+                for (i = 0; i < len; i++) {
                     res[i] = i * max + min;
                 }
                 break;
@@ -73,7 +73,7 @@ dtm.transform = {
                 }
                 min = Math.round(min);
                 max = Math.round(max);
-                for (var i = 0; i < max-min; i++) {
+                for (i = 0; i < max-min; i++) {
                     res[i] = i + min;
                 }
                 break;
@@ -81,13 +81,13 @@ dtm.transform = {
             case 'noise':
             case 'random':
             case 'rand':
-                for (var i = 0; i < len; i++) {
+                for (i = 0; i < len; i++) {
                     res[i] = _.random(min, max, true);
                 }
                 break;
 
             case 'randi':
-                for (var i = 0; i < len; i++) {
+                for (i = 0; i < len; i++) {
                     res[i] = _.random(min, max);
                 }
                 break;
@@ -95,7 +95,7 @@ dtm.transform = {
             case 'gaussian':
             case 'gauss':
             case 'normal':
-                for (var i = 0; i < len; i++) {
+                for (i = 0; i < len; i++) {
                     var x = -Math.PI + (Math.PI * 2 / len) * i;
                     res[i] = Math.pow(Math.E, -0.5 * Math.pow(x, 2)) / Math.sqrt(2 * Math.PI) / 0.4 * (max-min) + min;
                 }
@@ -103,9 +103,9 @@ dtm.transform = {
 
             case 'sin':
             case 'sine':
-                for (var i = 0; i < len; i++) {
-                    var incr = Math.PI * 2 / (len-1);
-                    var val = Math.sin(incr * i);
+                for (i = 0; i < len; i++) {
+                    incr = Math.PI * 2 / (len-1);
+                    val = Math.sin(incr * i);
                     val = (val+1)/2 * (max-min) + min;
                     res[i] = val;
                 }
@@ -113,9 +113,9 @@ dtm.transform = {
 
             case 'cos':
             case 'cosine':
-                for (var i = 0; i < len; i++) {
-                    var incr = Math.PI * 2 / (len-1);
-                    var val = Math.cos(incr * i);
+                for (i = 0; i < len; i++) {
+                    incr = Math.PI * 2 / (len-1);
+                    val = Math.cos(incr * i);
                     val = (val+1)/2 * (max-min) + min;
                     res[i] = val;
                 }
@@ -123,13 +123,13 @@ dtm.transform = {
 
             case 'zeros':
             case 'zeroes':
-                for (var i = 0; i < len; i++) {
+                for (i = 0; i < len; i++) {
                     res[i] = 0;
                 }
                 break;
 
             case 'ones':
-                for (var i = 0; i < len; i++) {
+                for (i = 0; i < len; i++) {
                     res[i] = 1;
                 }
                 break;
@@ -139,7 +139,7 @@ dtm.transform = {
             case 'const':
             case 'consts':
                 min = min || 0;
-                for (var i = 0; i < len; i++) {
+                for (i = 0; i < len; i++) {
                     res[i] = min;
                 }
                 break;
@@ -168,7 +168,7 @@ dtm.transform = {
     /**
      * Normalizes an numerical array into 0-1 range.
      * @function module:transform#normalize
-     * @param vals {array} One-dimensional numerical array.
+     * @param arr {array} One-dimensional numerical array.
      * @param [min] {number} Prefered domain minimum value. If not present, the minimum of the input array is used.
      * @param [max] {number} Prefered domain maximum value. If not present, the maximum of the input array is used.
      * @returns {array} Normalized numerical array.
@@ -200,19 +200,19 @@ dtm.transform = {
             denom = max - min;
         }
 
-        var newArr = _.map(arr, function (val) {
+        return _.map(arr, function (val) {
             return (val - min) / denom;
         });
-
-        return newArr;
     },
 
     /**
      * Modifies the range of an array.
      * @function module:transform#rescale
-     * @param array {array}
+     * @param arr {array}
      * @param min {number}
      * @param max {number}
+     * @param [dmin] {number}
+     * @param [dmax] {number}
      * @returns array {array}
      * @example
      *
@@ -231,7 +231,7 @@ dtm.transform = {
     },
 
     /**
-     * Applys an exponential curve to a normalized (0-1) array.
+     * Applies an exponential curve to a normalized (0-1) array.
      * @function module:transform#expCurve
      * @param arr
      * @param [factor=1] {number}
@@ -248,7 +248,7 @@ dtm.transform = {
     },
 
     /**
-     * Applys a logarithmic curve to a normalized (0-1) array.
+     * Applies a logarithmic curve to a normalized (0-1) array.
      * @function module:transform#logCurve
      * @param arr
      * @param [factor=1] {number}
@@ -268,7 +268,7 @@ dtm.transform = {
      * Stretches or shrinks the input numerical array to a target length.
      * @function module:transform#fit
      * @param arr {array} Input numerical array.
-     * @param len {integer} Target length.
+     * @param len {number} Target length.
      * @param [interp='linear'] {string} Interpolation mode. Choices: 'linear', 'step', 'zeros'
      * @returns {array}
      * @example
@@ -293,7 +293,7 @@ dtm.transform = {
             len = Math.round(len);
         }
 
-        var res = [];
+        var res = [], i = 0;
         res.length = len;
         var mult = len / arr.length;
 
@@ -307,7 +307,7 @@ dtm.transform = {
 
             var c = 0;
             for (var j = 0; j < inNumItv; j++) {
-                for (var i = 0; i < outNumItv; i++) {
+                for (i = 0; i < outNumItv; i++) {
                     intermArr[c] = arr[j] + (arr[j + 1] - arr[j]) * (i / outNumItv);
                     c++;
                 }
@@ -319,14 +319,14 @@ dtm.transform = {
             }
             res[k] = intermArr[intermLen - 1];
         } else if (interp === 'step') {
-            for (var i = 0; i < len; i++) {
+            for (i = 0; i < len; i++) {
                 res[i] = arr[Math.floor(i / mult)];
             }
 
         } else if (interp === 'zeros') {
             var prevIdx = -1;
 
-            for (var i = 0; i < len; i++) {
+            for (i = 0; i < len; i++) {
                 if (prevIdx !== Math.floor(i / mult)) {
                     prevIdx = Math.floor(i / mult);
                     res[i] = arr[prevIdx];
@@ -782,7 +782,7 @@ dtm.transform = {
      * Shifts the positions of array contents.
      * @function module:transform#shift
      * @param arr
-     * @param amount {integer}
+     * @param amount {number}
      * @returns {Array}
      */
     shift: function (arr, amount) {
@@ -887,8 +887,7 @@ dtm.transform = {
         var res = [];
         var idx = 0;
 
-        _.forEach(input, function (val) {
-            var note = val;
+        _.forEach(input, function (note) {
             for (var i = 0; i < note; i++) {
                 if (i === 0) {
                     res[idx] = 1;
