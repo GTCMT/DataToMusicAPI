@@ -37,6 +37,7 @@ dtm.array = function () {
         type: 'dtm.array'
     };
 
+    // TODO: list different query params in detail in the documentation
     /**
      * Returns the array contents or an analyzed value
      * @function module:array#get
@@ -56,7 +57,7 @@ dtm.array = function () {
                 case 'getters':
                 case 'help':
                 case '?':
-                    return 'name|key, type, len|length, min|minimum, max|maximum, minmax|range, mean|avg|average, mode, median, midrange, std, pstd, var|variance, pvar, rms, cur|current|now, next, pver|previous, rand|random, idx|index, hop|step|stepSize, loc|location|relative, block|window (with 1|2 following numbers), blockNext, original, normal|normalize|normalized, sort|sorted, uniq|unique|uniques, classes, classID, string|stringify, numClasses|numUniques, unif|uniformity, histo|histogram'.split(', ');
+                    return 'name|key, type, len|length, min|minimum, max|maximum, minmax|range, mean|avg|average, mode, median, midrange, std, pstd, var|variance, pvar, rms, cur|current|now, next, pver|previous, rand|random, idx|index, hop|step|stepSize, loc|location|relative, block (with 1|2 following numbers), blockNext, original, normal|normalize|normalized, sort|sorted, uniq|unique|uniques, classes, classID, string|stringify, numClasses|numUniques, unif|uniformity, histo|histogram'.split(', ');
 
                 case 'methods':
                 case 'functions':
@@ -168,17 +169,19 @@ dtm.array = function () {
                     break;
 
                 case 'block':
-                case 'window':
-                    var start, size;
+                    var start, size, blockArray;
                     if (arguments[1].constructor === Array) {
                         start = arguments[1][0];
                         size = arguments[1][1];
-                        return dtm.transform.getBlock(params.value, start, size)
+                        blockArray = dtm.transform.getBlock(params.value, start, size);
+                        return dtm.array(blockArray);
                     } else if (typeof(arguments[1]) === 'number' && typeof(arguments[2]) === 'number') {
                         start = arguments[1];
                         size = arguments[2];
-                        return dtm.transform.getBlock(params.value, start, size);
+                        blockArray = dtm.transform.getBlock(params.value, start, size);
+                        return dtm.array(blockArray);
                     } else {
+                        // CHECK: ???
                         return params.value;
                     }
 
@@ -186,7 +189,8 @@ dtm.array = function () {
                 case 'blockNext':
                     // TODO: incr w/ the size of block after return
                     params.index = dtm.value.mod(params.index + params.step, params.length);
-                    return dtm.transform.getBlock(params.value, params.index, arguments[1]);
+                    blockArray = dtm.transform.getBlock(params.value, params.index, arguments[1]);
+                    return dtm.array(blockArray);
 
                 /* TRANSFORMED LIST */
                 case 'original':
@@ -411,7 +415,7 @@ dtm.array = function () {
         }
         return newArr;
     };
-    array.d = array.dup = array.duplicate = array.c = array.copy = array.clone;
+    array.d = array.dup = array.dupe = array.duplicate = array.c = array.copy = array.clone;
 
     /**
      * Morphs the array values with a target array / dtm.array values. The lengths can be mismatched.
@@ -447,7 +451,7 @@ dtm.array = function () {
         return array;
     };
 
-    array.original = array.reset;
+    array.original = array.r = array.reset;
 
     /**
      * Clears all the contents of the array object.
@@ -734,19 +738,36 @@ dtm.array = function () {
     array.slice = array.truncate;
 
     /**
-     * Extracts a blocked portion of the array.
-     * @function module:array#getBlock | block
-     * @param start {number} Starting index of the array.
-     * @param size {number}
+     * Returns a smaller segment of the array. Similar to get('block', ...), but more destructive.
+     * @function module:array#block
+     * @param start {number|array} The starting index of the block.
+     * @param size {number=1} The size of the block.
      * @returns {dtm.array}
      */
-    array.getBlock = function (start, size) {
-        start = start || 0;
-        size = size || params.length;
-        return array.set(dtm.transform.getBlock(params.value, start, size))
+    array.block = function (start, size) {
+        var blockArray;
+        if (start.constructor === Array) {
+            start = start[0];
+            size = start[1];
+            blockArray = dtm.transform.getBlock(params.value, start, size);
+            return array.set(blockArray);
+        } else if (typeof(start) === 'number' && typeof(size) === 'number') {
+            blockArray = dtm.transform.getBlock(params.value, start, size);
+            return array.set(blockArray);
+        } else {
+            // CHECK: ???
+            return array;
+        }
     };
 
-    array.block = array.getBlock;
+    /**
+     * Applies a window function to the array. May be combined with array.block() operation.
+     * @function module:array#window
+     * @param type
+     */
+    array.window = function (type) {
+        return array;
+    };
 
     /**
      * Shifts the indexing position of the array by the amount.
