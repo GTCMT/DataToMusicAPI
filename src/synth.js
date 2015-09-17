@@ -31,7 +31,11 @@ dtm.synth = function (type, wt) {
 
         amp: {
             gain: 0.5,
-            adsr: [0.001, 0.2, 0, 0.001]
+            adsr: [0.001, 0.2, 0, 0.001],
+            // TODO: redesign
+            curve: null,
+            dur: null,
+            loop: false
         },
 
         pitch: {
@@ -485,6 +489,26 @@ dtm.synth = function (type, wt) {
 
             nodes.src.start(noteStartTime);
 
+            if (params.amp.curve !== null) {
+                nodes.amp.gain.cancelScheduledValues(noteStartTime);
+                // TODO: ADSR should be applied after this!
+
+                var curveDur = params.amp.dur || params.note.duration;
+
+                if (params.amp.loop) {
+                    var noteDur = params.note.duration;
+                    if (dur > 0) {
+                        noteDur = dur;
+                    }
+                    console.log(noteDur, curveDur, params.amp.dur);
+                    for (var i = 0; i < Math.ceil(noteDur/curveDur); i++) {
+                        nodes.amp.gain.setValueCurveAtTime(params.amp.curve, noteStartTime + curveDur*i, curveDur);
+                    }
+                } else {
+                    nodes.amp.gain.setValueCurveAtTime(params.amp.curve, noteStartTime, curveDur);
+                }
+            }
+
             if (dur >= 0) {
                 nodes.src.stop(relStartTime + params.amp.adsr[3] + 0.3);
                 nodes.amp.gain.setTargetAtTime(0.0, relStartTime, releaseTime);
@@ -502,6 +526,7 @@ dtm.synth = function (type, wt) {
         var now = dtm.wa.now();
 
         var releaseTime = params.amp.adsr[3];
+        nodes.amp.gain.cancelScheduledValues(now + del);
         nodes.amp.gain.setTargetAtTime(0.0, now + del, releaseTime);
         nodes.src.stop(now + del + releaseTime);
 
@@ -541,7 +566,24 @@ dtm.synth = function (type, wt) {
      * @returns {dtm.synth}
      */
     synth.amp = function (val) {
-        params.amp.gain = val;
+        if (typeof(val) === 'number') {
+            params.amp.gain = val;
+        } else if (val.constructor === Array) {
+
+            params.amp.dur = params.note.duration;
+            if (typeof(arguments[1]) === 'number') {
+                params.amp.dur = arguments[1];
+            }
+
+            var kr = 44100;
+            //var arr = dtm.transform.fit(val, Math.round(kr * params.amp.dur));
+            params.amp.curve = new Float32Array(val);
+
+            if (typeof(arguments[2]) === "boolean") {
+                params.amp.loop = arguments[2];
+            }
+        }
+
         return synth;
     };
 
