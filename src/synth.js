@@ -7,6 +7,7 @@
  * Creates a new instance of synthesizer object. Wraps WebAudio functions somehow.
  * @function module:synth.synth
  * @param [type='sine'] {string} Choices: 'sine', 'saw', 'square', 'triange', 'noise', 'click', 'sampler', etc...
+ * @param [wt] {string}
  * @returns {dtm.synth}
  */
 dtm.synth = function (type, wt) {
@@ -23,10 +24,11 @@ dtm.synth = function (type, wt) {
             pan: 0.5
         },
 
-        //isPlaying: false,
+        isPlaying: false,
         buffer: null,
 
-        // TODO: amp gain & out gain
+        mono: false,
+
         amp: {
             gain: 0.5,
             adsr: [0.001, 0.2, 0, 0.001]
@@ -74,6 +76,11 @@ dtm.synth = function (type, wt) {
             amount: 0,
             nn: 69
         }
+    };
+
+    var nodes = {
+        src: null,
+        amp: null
     };
 
     var noise = null;
@@ -202,8 +209,8 @@ dtm.synth = function (type, wt) {
         }
 
         var real = new Float32Array(base);
-        var img = real;
-        params.wt.wt = dtm.wa.actx.createPeriodicWave(real, img);
+        //var img = real;
+        params.wt.wt = dtm.wa.actx.createPeriodicWave(real, real);
 
         return synth;
     };
@@ -311,114 +318,121 @@ dtm.synth = function (type, wt) {
      */
     synth.play = function (del, dur) {
         if (promise) {
-            promise.then(play);
+            promise.then(function () {
+                play(del, dur)
+            });
         } else {
-            play();
+            play(del, dur);
         }
 
-        function play() {
+        function play(del, dur) {
             var actx = dtm.wa.actx;
             var now = dtm.wa.now;
             var out = dtm.wa.out;
 
-            del = del || 0;
-            dur = dur || params.note.duration;
+            if (typeof(del) !== 'number') {
+                del = 0;
+            }
 
-            var startT = now() + del + 0.0001;
-            var src;
+            if (typeof(dur) !== 'number') {
+                dur = params.note.duration;
+            }
+
+            var noteStartTime = now() + del + 0.0001;
 
             if (params.type === 'noise') {
-                src = actx.createBufferSource();
+                nodes.src = actx.createBufferSource();
                 if (!noise) {
                     noise = dtm.wa.makeNoise(8192);
                 }
-                src.buffer = noise;
-                src.loop = true;
+                nodes.src.buffer = noise;
+                nodes.src.loop = true;
             } else if (params.type === 'sampler') {
-                src = actx.createBufferSource();
-                src.buffer = params.buffer;
-                src.playbackRate = 1;
-                src.loop = false;
+                nodes.src = actx.createBufferSource();
+                nodes.src.buffer = params.buffer;
+                nodes.src.playbackRate = 1;
+                nodes.src.loop = false;
             } else if (params.type === 'click') {
-                src = actx.createBufferSource();
+                nodes.src = actx.createBufferSource();
                 var buf = actx.createBuffer(1, 2, dtm.sr);
                 var contents = buf.getChannelData(0);
                 contents[1] = 1;
-                src.buffer = buf;
-                src.playbackRate = 1;
-                src.loop = false;
+                nodes.src.buffer = buf;
+                nodes.src.playbackRate = 1;
+                nodes.src.loop = false;
             } else {
-                src = actx.createOscillator();
-                src.frequency.setValueAtTime(params.pitch.freq, startT);
+                nodes.src = actx.createOscillator();
+                nodes.src.frequency.setValueAtTime(params.pitch.freq, noteStartTime);
 
                 switch (params.type) {
                     case 'sine':
-                        src.type = 'sine';
+                        nodes.src.type = 'sine';
                         break;
                     case 'saw':
-                        src.type = 'sawtooth';
+                        nodes.src.type = 'sawtooth';
                         break;
                     case 'square':
-                        src.type = 'square';
+                        nodes.src.type = 'square';
                         break;
                     case 'triange':
-                        src.type = 'triangle';
+                        nodes.src.type = 'triangle';
                         break;
 
                     default:
                         break;
                 }
-                
+
                 if (params.wt.isOn) {
-                    src.setPeriodicWave(params.wt.wt);
+                    nodes.src.setPeriodicWave(params.wt.wt);
                 }
             }
 
-
-            var amp = actx.createGain();
+            nodes.amp = actx.createGain();
 
             // ATTACK
             // amp.gain.setValueAtTime(0, startT); // not working!
             // setTargetAtTime w/ small value not working as intended (Jun 6, 2015)
+            var atkTime = params.amp.adsr[0];
             if (params.amp.adsr[0] < 0.01) {
-                amp.gain.value = params.amp.gain;
+                nodes.amp.gain.value = params.amp.gain;
 
             } else {
-                amp.gain.value = 0;
-                amp.gain.setTargetAtTime(params.amp.gain, startT, params.amp.adsr[0]); // attack
+                nodes.amp.gain.value = 0;
+                nodes.amp.gain.setTargetAtTime(params.amp.gain, noteStartTime, atkTime); // attack
             }
 
             // DECAY - SUSTAIN
+            var decayTime = params.amp.adsr[1];
             var susLevel = params.amp.adsr[2] * params.amp.gain;
-            var decayTime = params.amp.adsr[1] < dur ? params.amp.adsr[1] : dur; // CHECK: maybe should include attack time in the total duration
-            amp.gain.setTargetAtTime(susLevel, startT+params.amp.adsr[0], decayTime);
+
+            nodes.amp.gain.setTargetAtTime(susLevel, noteStartTime+atkTime, decayTime);
 
             // RELEASE
-            var relStart = startT + params.amp.adsr[0] + decayTime + dur;
-            amp.gain.setTargetAtTime(0, relStart, params.amp.adsr[3]);
+            var relStartTime = (dur > atkTime + decayTime) ? noteStartTime + dur : noteStartTime + atkTime + decayTime;
+            var releaseTime = params.amp.adsr[3];
 
             if (params.lpf.isOn) {
                 var lpf = actx.createBiquadFilter();
                 lpf.type = 'lowpass';
-                lpf.frequency.setValueAtTime(params.lpf.cof, startT);
-                lpf.Q.setValueAtTime(params.lpf.res, startT);
-                src.connect(lpf);
-                lpf.connect(amp);
+                lpf.frequency.setValueAtTime(params.lpf.cof, noteStartTime);
+                lpf.Q.setValueAtTime(params.lpf.res, noteStartTime);
+                nodes.src.connect(lpf);
+                lpf.connect(nodes.amp);
             } else {
-                src.connect(amp);
+                nodes.src.connect(nodes.amp);
             }
 
             if (params.comb.isOn) {
                 var comb = actx.createDelay();
-                comb.delayTime.setValueAtTime(1/dtm.val.mtof(params.comb.nn), startT);
+                comb.delayTime.setValueAtTime(1/dtm.val.mtof(params.comb.nn), noteStartTime);
 
                 var combAmp = actx.createGain();
-                combAmp.gain.setValueAtTime(params.comb.amount, startT);
+                combAmp.gain.setValueAtTime(params.comb.amount, noteStartTime);
 
                 var combFb = actx.createGain();
-                combFb.gain.setValueAtTime(0.95, startT);
+                combFb.gain.setValueAtTime(0.95, noteStartTime);
 
-                amp.connect(comb);
+                nodes.amp.connect(comb);
                 comb.connect(combAmp);
                 comb.connect(combFb);
                 combFb.connect(comb);
@@ -427,15 +441,15 @@ dtm.synth = function (type, wt) {
 
             if (params.delay.isOn) {
                 var delay = actx.createDelay();
-                delay.delayTime.setValueAtTime(params.delay.time, startT);
+                delay.delayTime.setValueAtTime(params.delay.time, noteStartTime);
 
                 var delAmp = actx.createGain();
-                delAmp.gain.setValueAtTime(params.delay.amount, startT);
+                delAmp.gain.setValueAtTime(params.delay.amount, noteStartTime);
 
                 var delFb = actx.createGain();
-                delFb.gain.setValueAtTime(params.delay.feedback, startT);
+                delFb.gain.setValueAtTime(params.delay.feedback, noteStartTime);
 
-                amp.connect(delay);
+                nodes.amp.connect(delay);
                 delay.connect(delAmp);
                 delay.connect(delFb);
                 delFb.connect(delay);
@@ -448,18 +462,18 @@ dtm.synth = function (type, wt) {
                 verb.buffer = dtm.wa.buffs.verbIr;
 
                 var verbAmp = actx.createGain();
-                verbAmp.gain.setValueAtTime(params.verb.amount, startT);
+                verbAmp.gain.setValueAtTime(params.verb.amount, noteStartTime);
 
-                amp.connect(verb);
+                nodes.amp.connect(verb);
                 verb.connect(verbAmp);
                 verbAmp.connect(out());
             }
 
 
             var gain = actx.createGain();
-            gain.gain.setValueAtTime(params.output.gain, startT);
+            gain.gain.setValueAtTime(params.output.gain, noteStartTime);
 
-            amp.connect(gain);
+            nodes.amp.connect(gain);
 
             var pan = actx.createPanner();
             var x = params.output.pan * 4 - 2;
@@ -469,17 +483,28 @@ dtm.synth = function (type, wt) {
             gain.connect(pan);
             pan.connect(out());
 
-            src.start(startT);
-            src.stop(relStart + params.amp.adsr[3] + 0.3);
+            nodes.src.start(noteStartTime);
 
-            return synth;
+            if (dur >= 0) {
+                nodes.src.stop(relStartTime + params.amp.adsr[3] + 0.3);
+                nodes.amp.gain.setTargetAtTime(0.0, relStartTime, releaseTime);
+            }
         }
 
         return synth;
     };
 
     synth.stop = function (del) {
-        del = del || 0;
+        if (typeof(del) !== 'number') {
+            del = 0.0;
+        }
+
+        var now = dtm.wa.now();
+
+        var releaseTime = params.amp.adsr[3];
+        nodes.amp.gain.setTargetAtTime(0.0, now + del, releaseTime);
+        nodes.src.stop(now + del + releaseTime);
+
         return synth;
     };
 
@@ -692,6 +717,15 @@ dtm.synth = function (type, wt) {
      */
     synth.fm = function (amp, base, freq, wt) {
 
+        return synth;
+    };
+
+    synth.mono = function (bool) {
+        if (bool === undefined) {
+            params.mono = true;
+        } else {
+            params.mono = bool;
+        }
         return synth;
     };
 
