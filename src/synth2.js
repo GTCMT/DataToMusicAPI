@@ -1,6 +1,6 @@
-dtm.synth3 = function (source) {
+dtm.synth2 = function (source) {
     var synth = {
-        type: 'synth3',
+        type: 'synth2',
         rendered: null
     };
 
@@ -23,15 +23,18 @@ dtm.synth3 = function (source) {
         params.wt[i] = Math.sin(2 * Math.PI * i / params.tabLen);
     });
 
-    var actx = dtm.wa.actx;
-    var octx = null;
+    var actx = null;
+    if (params.offline) {
+        actx = new OfflineAudioContext(1, params.dur*params.sr, params.sr);
+    } else {
+        actx = dtm.wa.actx;
+    }
 
     var nodes = {
         src: null,
         amp: null,
         out: null,
-        fx: [{}],
-        pFx: [{}]
+        fx: [{}]
     };
 
     function setParamCurve (time, dur, curves) {
@@ -47,22 +50,17 @@ dtm.synth3 = function (source) {
     }
 
     var fx = {
-        LPF: function (post) {
-            if (typeof(post) !== 'boolean') {
-                post = false;
-            }
-
+        LPF: function () {
             this.freq = new Float32Array([20000.0]);
             this.q = new Float32Array([1.0]);
 
-            this.run = function (time, dur) {
-                var ctx = post ? actx : octx;
-                this.in = ctx.createGain();
-                this.lpf = ctx.createBiquadFilter();
-                this.out = ctx.createGain();
-                this.in.connect(this.lpf);
-                this.lpf.connect(this.out);
+            this.in = actx.createGain();
+            this.lpf = actx.createBiquadFilter();
+            this.out = actx.createGain();
+            this.in.connect(this.lpf);
+            this.lpf.connect(this.out);
 
+            this.run = function (time, dur) {
                 var curves = [];
                 curves.push({param: this.lpf.frequency, value: this.freq});
                 curves.push({param: this.lpf.Q, value: this.q});
@@ -70,31 +68,26 @@ dtm.synth3 = function (source) {
             };
         },
 
-        Delay: function (post) {
-            if (typeof(post) !== 'boolean') {
-                post = false;
-            }
-
+        Delay: function () {
             this.mix = new Float32Array([0.5]);
             this.time = new Float32Array([0.3]);
             this.feedback = new Float32Array([0.5]);
 
-            this.run = function (time, dur) {
-                var ctx = post ? actx : octx;
-                this.in = ctx.createGain();
-                this.delay = ctx.createDelay();
-                this.wet = ctx.createGain();
-                this.dry = ctx.createGain();
-                this.fb = ctx.createGain();
-                this.out = ctx.createGain();
-                this.in.connect(this.delay);
-                this.delay.connect(this.fb);
-                this.fb.connect(this.delay);
-                this.delay.connect(this.wet);
-                this.wet.connect(this.out);
-                this.in.connect(this.dry);
-                this.dry.connect(this.out);
+            this.in = actx.createGain();
+            this.delay = actx.createDelay();
+            this.wet = actx.createGain();
+            this.dry = actx.createGain();
+            this.fb = actx.createGain();
+            this.out = actx.createGain();
+            this.in.connect(this.delay);
+            this.delay.connect(this.fb);
+            this.fb.connect(this.delay);
+            this.delay.connect(this.wet);
+            this.wet.connect(this.out);
+            this.in.connect(this.dry);
+            this.dry.connect(this.out);
 
+            this.run = function (time, dur) {
                 var curves = [];
                 curves.push({param: this.wet.gain, value: this.mix});
                 curves.push({param: this.delay.delayTime, value: this.time});
@@ -106,11 +99,11 @@ dtm.synth3 = function (source) {
         BitQuantizer: function () {
             this.bit = new Float32Array([16]);
 
-            this.run = function (time, dur) {
-                this.in = actx.createGain();
-                this.out = actx.createGain();
-                this.in.connect(this.out);
+            this.in = actx.createGain();
+            this.out = actx.createGain();
+            this.in.connect(this.out);
 
+            this.run = function (time, dur) {
                 params.wt.forEach(function (v, i) {
                     params.wt[i] = v;
                 });
@@ -132,32 +125,31 @@ dtm.synth3 = function (source) {
                 dur = params.dur;
             }
 
-            octx = new OfflineAudioContext(1, (time + dur*4) * params.sr, params.sr);
-            time += octx.currentTime;
+            time += actx.currentTime;
 
-            nodes.src = octx.createBufferSource();
-            nodes.amp = octx.createGain();
-            nodes.out = octx.createGain();
-            nodes.fx[0].out = octx.createGain();
+            nodes.src = actx.createBufferSource();
+            nodes.amp = actx.createGain();
+            nodes.out = actx.createGain();
+            nodes.fx[0].out = actx.createGain();
             nodes.src.connect(nodes.amp);
             nodes.amp.connect(nodes.fx[0].out);
-            nodes.out.connect(octx.destination);
+            nodes.out.connect(actx.destination);
 
             for (var n = 1; n < nodes.fx.length; n++) {
-                nodes.fx[n].run(time, dur);
                 nodes.fx[n-1].out.connect(nodes.fx[n].in);
+                nodes.fx[n].run(time, dur);
             }
             nodes.fx[n-1].out.connect(nodes.out);
 
             if (source === 'noise') {
-                nodes.src.buffer = octx.createBuffer(1, params.sr/2, params.sr);
+                nodes.src.buffer = actx.createBuffer(1, params.sr/2, params.sr);
                 var chData = nodes.src.buffer.getChannelData(0);
                 chData.forEach(function (v, i) {
                     chData[i] = Math.random() * 2.0 - 1.0;
                 });
                 nodes.src.loop = true;
             } else {
-                nodes.src.buffer = octx.createBuffer(1, params.tabLen, params.sr);
+                nodes.src.buffer = actx.createBuffer(1, params.tabLen, params.sr);
                 nodes.src.buffer.copyToChannel(params.wt, 0);
                 nodes.src.loop = true;
             }
@@ -173,26 +165,12 @@ dtm.synth3 = function (source) {
             nodes.src.start(time);
             nodes.src.stop(time+dur);
 
-            octx.startRendering();
-            octx.oncomplete = function (e) {
-                var src = actx.createBufferSource();
-                nodes.pFx[0].out = actx.createGain();
-                var out = actx.createGain();
-                src.connect(nodes.pFx[0].out);
-                for (var n = 1; n < nodes.pFx.length; n++) {
-                    nodes.pFx[n].run(time, dur);
-                    nodes.pFx[n-1].out.connect(nodes.pFx[n].in);
-                }
-                nodes.pFx[n-1].out.connect(out);
-                out.connect(actx.destination);
-
-                src.buffer = e.renderedBuffer;
-                src.start(0);
-                src.stop(actx.currentTime + src.buffer.length);
-                out.gain.value = 1.0;
-
-                //synth.rendered = e.renderedBuffer.getChannelData(0).slice(0, dur*params.sr);
-            };
+            if (params.offline) {
+                actx.startRendering();
+                actx.oncomplete = function (e) {
+                    synth.rendered = e.renderedBuffer.getChannelData(0);
+                };
+            }
             return synth;
         }, 0);
 
@@ -284,51 +262,43 @@ dtm.synth3 = function (source) {
         }
         return synth;
     };
-    
-    synth.lpf = function (freq, q, post) {
-        var lpf = new fx.LPF(post);
+
+    synth.lpf = function (freq, q) {
+        var id = nodes.fx.length;
+        nodes.fx[id] = new fx.LPF();
 
         freq = typeCheck(freq);
         if (freq) {
-            lpf.freq = new Float32Array(freq);
+            nodes.fx[id].freq = new Float32Array(freq);
         }
 
         q = typeCheck(q);
         if (q) {
-            lpf.q = new Float32Array(q);
+            nodes.fx[id].q = new Float32Array(q);
         }
 
-        if (post) {
-            nodes.pFx[nodes.pFx.length] = lpf;
-        } else {
-            nodes.fx[nodes.fx.length] = lpf;
-        }
         return synth;
     };
 
-    synth.delay = function (mix, time, feedback, post) {
-        var delay = new fx.Delay(post);
+    synth.delay = function (mix, time, feedback) {
+        var id = nodes.fx.length;
+        nodes.fx[id] = new fx.Delay();
 
         mix = typeCheck(mix);
         if (mix) {
-            delay.mix = new Float32Array(mix);
+            nodes.fx[id].mix = new Float32Array(mix);
         }
 
         time = typeCheck(time);
         if (time) {
-            delay.time = new Float32Array(time);
+            nodes.fx[id].time = new Float32Array(time);
         }
 
         feedback = typeCheck(feedback);
         if (feedback) {
-            delay.feedback = new Float32Array(feedback);
+            nodes.fx[id].feedback = new Float32Array(feedback);
         }
 
-        if (post) {
-            nodes.pFx[nodes.pFx.length] = delay;
-        } else {
-            nodes.fx[nodes.fx.length] = delay;
-        }
         return synth;
     };
 
@@ -357,13 +327,13 @@ dtm.synth3 = function (source) {
     };
 
     synth.bq = function (bit) {
-        var bq = new fx.BitQuantizer();
+        var id = nodes.fx.length;
+        nodes.fx[id] = new fx.BitQuantizer();
 
         bit = typeCheck(bit);
         if (bit) {
-            bq.bit = new Float32Array(bit);
+            nodes.fx[id].bit = new Float32Array(bit);
         }
-        nodes.pFx[nodes.pFx.length] = bq;
         return synth;
     };
 
@@ -383,7 +353,7 @@ dtm.synth3 = function (source) {
                 if (src.type === 'dtm.array') {
                     return src.get();
                 } else if (src.type === 'dtm.synth') {
-                    return src.rendered;
+                    return src.wt;
                 }
             }
         } else {
