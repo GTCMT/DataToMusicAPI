@@ -1,24 +1,26 @@
 dtm.synth3 = function () {
     var synth = {
-        type: 'synth3',
-        rendered: null
+        type: 'dtm.synth',
+        rendered: null,
+        promise: null
     };
 
     var params = {
         sr: 44100,
         kr: 4410,
-        dur: 1,
+        dur: 1.0,
         wavetable: null,
         rendered: null,
         tabLen: 8192,
         source: 'sine',
         amp: null,
         freq: null,
+        pitch: null,
         pan: null,
         curve: false,
         offline: false,
         clock: null,
-        baseTime: 0,
+        baseTime: 0.0,
         lookahead: false,
         autoDur: false
     };
@@ -63,6 +65,7 @@ dtm.synth3 = function () {
     }
 
     var actx = dtm.wa.actx;
+    params.sr = actx.sampleRate;
     var octx = null;
 
     var init = function () {
@@ -79,7 +82,8 @@ dtm.synth3 = function () {
         params.baseTime = actx.currentTime;
 
         params.amp = new Float32Array([1]);
-        params.freq = new Float32Array([440 * params.tabLen / params.sr]);
+        params.freq = new Float32Array([440]);
+        params.pitch = freqToPitch(params.freq);
         params.wavetable = new Float32Array(params.tabLen);
         params.wavetable.forEach(function (v, i) {
             params.wavetable[i] = Math.sin(2 * Math.PI * i / params.tabLen);
@@ -89,10 +93,19 @@ dtm.synth3 = function () {
 
     init.apply(this, arguments);
 
+    function freqToPitch(freqArr) {
+        var res = new Float32Array(freqArr.length);
+        freqArr.forEach(function (v, i) {
+            res[i] = v * params.tabLen / params.sr;
+        });
+        return res;
+    }
+
     function setParamCurve (time, dur, curves) {
         curves.forEach(function (curve) {
-            // if the curve length exceeds the set duration / 2
-            if (params.curve || (curve.value.length / params.sr) > (params.dur / 2.0)) {
+            // if the curve length exceeds the set duration * this
+            var maxDurRatioForSVAT = 0.25;
+            if (params.curve || (curve.value.length / params.sr) > (params.dur * maxDurRatioForSVAT)) {
                 curve.param.setValueCurveAtTime(curve.value, time, dur);
             } else {
                 curve.value.forEach(function (v, i) {
@@ -297,9 +310,7 @@ dtm.synth3 = function () {
         }
         //===== end of type check
 
-        // defer
         var defer = 0;
-
         if (params.lookahead) {
             defer = Math.round(params.clock.get('lookahead') * 500);
         }
@@ -308,9 +319,9 @@ dtm.synth3 = function () {
             octx = new OfflineAudioContext(1, (time + dur*4) * params.sr, params.sr);
             time += octx.currentTime;
 
-            //if (params.lookahead) {
-            //    time += params.clock.get('lookahead');
-            //}
+            if (params.lookahead) {
+                time += params.clock.get('lookahead');
+            }
 
             nodes.src = octx.createBufferSource();
             nodes.amp = octx.createGain();
@@ -340,7 +351,7 @@ dtm.synth3 = function () {
             }
 
             var curves = [];
-            curves.push({param: nodes.src.playbackRate, value: params.freq});
+            curves.push({param: nodes.src.playbackRate, value: params.pitch});
             curves.push({param: nodes.amp.gain, value: params.amp});
             setParamCurve(time, dur, curves);
 
@@ -383,12 +394,97 @@ dtm.synth3 = function () {
                 out.gain.value = 1.0;
 
                 src.onended = function () {
-                    synth = null;
+                    for (var key in params) {
+                        params[key] = undefined;
+                        delete params[key];
+                    }
+                    for (var key in nodes) {
+                        nodes[key] = undefined;
+                        delete nodes[key];
+                    }
+                    octx = undefined;
+                    synth = undefined;
+                    arguments.callee = undefined; // ?
                 };
 
                 //synth.rendered = e.renderedBuffer.getChannelData(0).slice(0, dur*params.sr);
             };
         }, defer);
+
+        return synth;
+    };
+
+    synth.render = function (time, dur) {
+        //===== type check
+        if (typeof(time) !== 'number' || time < 0) {
+            time = 0.0;
+        }
+
+        if (params.autoDur) {
+            params.dur = params.clock.get('dur');
+        }
+
+        if (typeof(dur) !== 'number') {
+            dur = params.dur;
+        } else {
+            if (params.dur > 0) {
+                params.dur = dur;
+            }
+        }
+        //===== end of type check
+
+        synth.promise = new Promise(function (resolve) {
+            // defer
+            setTimeout(function () {
+                octx = new OfflineAudioContext(1, (time + dur * 4) * params.sr, params.sr);
+                time += octx.currentTime;
+
+                nodes.src = octx.createBufferSource();
+                nodes.amp = octx.createGain();
+                nodes.out = octx.createGain();
+                nodes.fx[0].out = octx.createGain();
+                nodes.src.connect(nodes.amp);
+                nodes.amp.connect(nodes.fx[0].out);
+                nodes.out.connect(octx.destination);
+
+                for (var n = 1; n < nodes.fx.length; n++) {
+                    nodes.fx[n].run(time, dur);
+                    nodes.fx[n - 1].out.connect(nodes.fx[n].in);
+                }
+                nodes.fx[n - 1].out.connect(nodes.out);
+
+                if (params.source === 'noise') {
+                    nodes.src.buffer = octx.createBuffer(1, params.sr / 2, params.sr);
+                    var chData = nodes.src.buffer.getChannelData(0);
+                    chData.forEach(function (v, i) {
+                        chData[i] = Math.random() * 2.0 - 1.0;
+                    });
+                    nodes.src.loop = true;
+                } else {
+                    nodes.src.buffer = octx.createBuffer(1, params.tabLen, params.sr);
+                    nodes.src.buffer.copyToChannel(params.wavetable, 0);
+                    nodes.src.loop = true;
+                }
+
+                var curves = [];
+                curves.push({param: nodes.src.playbackRate, value: params.pitch});
+                curves.push({param: nodes.amp.gain, value: params.amp});
+                setParamCurve(time, dur, curves);
+
+                nodes.fx[0].out.gain.value = 1.0;
+                nodes.out.gain.value = 0.3;
+
+                nodes.src.start(time);
+                nodes.src.stop(time + dur);
+
+                octx.startRendering();
+
+                octx.oncomplete = function (e) {
+                    //synth.rendered = e.renderedBuffer.getChannelData(0).slice(0, dur * params.sr);
+                    resolve(e.renderedBuffer.getChannelData(0).slice(0, dur * params.sr));
+                };
+            }, 0);
+        });
 
         return synth;
     };
@@ -412,9 +508,7 @@ dtm.synth3 = function () {
             src = typeCheck(src);
             if (src) {
                 params.freq = src;
-                params.freq.forEach(function (v, i) {
-                    params.freq[i] = v * params.tabLen / params.sr;
-                });
+                params.pitch = freqToPitch(params.freq);
             }
         }
         return synth;
@@ -426,10 +520,11 @@ dtm.synth3 = function () {
         } else {
             src = typeCheck(src);
             if (src) {
-                params.freq = src;
-                params.freq.forEach(function (v, i) {
-                    params.freq[i] = dtm.value.mtof(v) * params.tabLen/params.sr;
+                params.freq = new Float32Array(src.length);
+                src.forEach(function (v, i) {
+                    params.freq[i] = dtm.value.mtof(v);
                 });
+                params.pitch = freqToPitch(params.freq);
             }
         }
         return synth;
@@ -468,13 +563,6 @@ dtm.synth3 = function () {
             }
         } else {
             src = typeCheck(src);
-            //if (src.constructor === Promise) {
-            //    src.then(function (val) {
-            //        console.log(val.length / params.sr);
-            //        console.log(params.dur);
-            //        params.amp = val;
-            //    })
-            //}
             if (src) {
                 params.amp = src;
             }
@@ -501,15 +589,17 @@ dtm.synth3 = function () {
     synth.wt = function (src, mode) {
         src = typeCheck(src);
         if (src) {
-            if (src.length !== params.tabLen) {
-                if (src.length > 1000) {
-                    src = dtm.transform.fit(src, params.tabLen, 'step');
-                } else {
-                    src = dtm.transform.fit(src, params.tabLen, 'linear');
-                }
-            }
+            //if (src.length !== params.tabLen) {
+            //    if (src.length > 1000) {
+            //        src = dtm.transform.fit(src, params.tabLen, 'step');
+            //    } else {
+            //        src = dtm.transform.fit(src, params.tabLen, 'linear');
+            //    }
+            //}
             params.wavetable = src;
-            //params.tabLen = src.length;
+            params.tabLen = src.length;
+            console.log(params.tabLen);
+            params.pitch = freqToPitch(params.freq);
         } else {
             params.wavetable = new Float32Array(params.tabLen);
             params.wavetable.forEach(function (v, i) {
@@ -663,6 +753,11 @@ dtm.synth3 = function () {
                         return src.get();
                     }
                 } else if (src.type === 'dtm.synth') {
+                    //console.log(src.promise);
+                    //src.promise.then(function (val) {
+                    //    console.log(val);
+                    //});
+                    //console.log(src.rendered);
                     return src.rendered;
                 }
             }
