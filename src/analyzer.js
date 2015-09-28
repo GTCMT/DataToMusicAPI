@@ -33,7 +33,7 @@ dtm.analyzer = {
      * Returns the minimum value of numeric array.
      * @function module:analyzer#min
      * @param arr {number}
-     * @returns {T}
+     * @returns {number}
      */
     min: function (arr) {
         if (dtm.analyzer.checkType(arr) === 'string') {
@@ -48,7 +48,7 @@ dtm.analyzer = {
      * Returns the maximum value of numeric array.
      * @function module:analyzer#max
      * @param arr {number}
-     * @returns {T}
+     * @returns {number}
      */
     max: function (arr) {
         if (dtm.analyzer.checkType(arr) === 'string') {
@@ -144,10 +144,10 @@ dtm.analyzer = {
      * Simple summation.
      * @function module:analyzer#sum
      * @param arr
-     * @returns {Mixed|*}
+     * @returns {number}
      */
     sum: function (arr) {
-        var sum = _.reduce(arr, function (num, sum) {
+        return _.reduce(arr, function (num, sum) {
             //if (!isNaN(num) && !isNaN(sum)) {
             //    if (num.toString().indexOf('.') > -1) {
             //        num = Number.parseFloat(num);
@@ -159,8 +159,6 @@ dtm.analyzer = {
             //}
             return num + sum;
         });
-
-        return sum;
     },
 
     /**
@@ -265,6 +263,12 @@ dtm.analyzer = {
         return dtm.analyzer.classes(input).length / input.length;
     },
 
+    intersection: function (arr1, arr2) {
+        return arr1.filter(function (n) {
+            return arr2.indexOf(n) !== -1;
+        });
+    },
+
     ///**
     // * Auto-correlation (WIP)
     // * @function module:analyzer#autoCorr
@@ -276,9 +280,3 @@ dtm.analyzer = {
 
 //dtm.analyzer.pvariance = dtm.analyzer.pvar;
 dtm.anal = dtm.analyzer;
-
-function blockWise(arr, blockSize, hopSize, cb) {
-    // or return promise
-
-    return {};
-}

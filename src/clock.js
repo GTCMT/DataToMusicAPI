@@ -26,7 +26,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
         isMaster: false,
 
         bpm: 120,
-        subDiv: 16,
+        subDiv: 2,
         random: 0,
         swing: 0.5,
 
@@ -37,6 +37,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
         beat: 0,
         prevBeat: -1,
 
+        lookahead: 0.1,
         offset: 0,
         requestId: null,
         autoStart: true
@@ -55,15 +56,14 @@ dtm.clock = function (bpm, subDiv, autoStart) {
         // temp
         prev: 0,
 
-        // CHECK: just for debugging
+        // CHECK: public - just for debugging
         callbacks: []
     };
 
-    // private
-    var callbacks = [];
-
     // member?
     var curTime = 0.0;
+
+    var actx = null, clockBuf = null;
 
     /**
      * Get the value of a parameter of the clock object.
@@ -75,16 +75,31 @@ dtm.clock = function (bpm, subDiv, autoStart) {
         switch (param) {
             case 'bpm':
             case 'tempo':
-                return params.bpm;
+                if (params.sync) {
+                    return dtm.master.get('clock').get('bpm');
+                } else {
+                    return params.bpm;
+                }
 
             case 'subdiv':
             case 'subDiv':
             case 'div':
                 return params.subDiv;
 
+            case 'dur':
+            case 'interval':
+                return getInterval();
+
+            case 'freq':
+                return getFreq();
+
             case 'sync':
             case 'synced':
                 return params.sync;
+
+            case 'lookahead':
+            case 'la':
+                return params.lookahead;
 
             case 'isOn':
             case 'isPlaying':
@@ -122,20 +137,17 @@ dtm.clock = function (bpm, subDiv, autoStart) {
      * @returns {dtm.clock}
      */
     clock.set = function (bpm, subDiv, autoStart) {
-        if (typeof(bpm) === 'number') {
-            params.bpm = bpm;
-            params.sync = false;
-        } else if (typeof(bpm) === 'boolean') {
-            params.sync = bpm;
-        } else if (bpm == 'sync') {
-            params.sync = true;
+        if (typeof(bpm) === 'function') {
+            clock.callback(bpm);
+        } else {
+            clock.bpm(bpm);
         }
 
         if (typeof(subDiv) !== 'undefined') {
-            params.subDiv = subDiv;
+            clock.subDiv(subDiv);
         }
 
-        if (typeof(autoStart) !== 'undefined') {
+        if (typeof(autoStart) === 'boolean') {
             params.autoStart = autoStart;
         }
 
@@ -160,43 +172,69 @@ dtm.clock = function (bpm, subDiv, autoStart) {
     /**
      * Sets the speed of the clock in BPM,
      * @method module:clock#bpm
-     * @param val {number} BPM value
+     * @param bpm {number} BPM value
      * @returns {dtm.clock} self
-     * @chainable
      * @example
      *
      * var cl = dtm.createClock();
-     * cl.setBpm(90);
+     * cl.bpm(90);
      */
-    clock.bpm = function (val) {
-        if (!arguments || !val) {
-            //params.bpm = 60;
-            return clock;
-        } else {
-            params.bpm = val;
+    clock.bpm = function (bpm) {
+        if (typeof(bpm) === 'number') {
+            params.bpm = bpm;
             params.sync = false;
-            return clock;
+        } else if (typeof(bpm) === 'boolean') {
+            params.sync = bpm;
+        } else if (bpm == 'sync') {
+            params.sync = true;
         }
+
+        return clock;
     };
 
     clock.tempo = clock.bpm;
 
     /**
      * Sets the subdivision of the clock.
-     * @param [val=4] {integer} Note quality value. E.g. 4 = quarter note, 8 = eighth note.
+     * @param [val=4] {number|string} Note quality value. E.g. 4 = quarter note, 8 = eighth note.
      * @returns {dtm.clock}
      */
     clock.subDiv = function (val) {
-        val = val || 4;
-        params.subDiv = val;
+        if (typeof(val) === 'number') {
+            params.subDiv = val;
+        } else if (typeof(val) === 'string') {
+            val = val.split('/');
+            try {
+                val = Math.round(parseFloat(val[1])/parseFloat(val[0]));
+            } catch (e) {
+                return clock;
+            }
+            params.subDiv = val;
+        }
         return clock;
     };
 
     clock.div = clock.subdiv = clock.subDiv;
 
-    clock.interval = function (sec) {
-        return clock;
-    };
+    function getInterval() {
+        if (params.sync) {
+            return 1.0/(dtm.master.get('clock').get('bpm')/60.0 * params.subDiv/4.0);
+        } else {
+            return 1.0/(params.bpm/60.0 * params.subDiv/4.0);
+        }
+    }
+
+    function getFreq() {
+        if (params.sync) {
+            return dtm.master.get('clock').get('bpm')/60.0 * params.subDiv/4.0;
+        } else {
+            return params.bpm/60.0 * params.subDiv/4.0;
+        }
+    }
+
+    //clock.interval = function (sec) {
+    //    return clock;
+    //};
 
     clock.setTime = function (input) {
         if (typeof(input) === 'Array') {
@@ -207,10 +245,21 @@ dtm.clock = function (bpm, subDiv, autoStart) {
         return clock;
     };
 
+    clock.meter = clock.setTime;
+
     clock.setMaster = function (bool) {
         params.isMaster = bool;
         return clock;
     };
+
+    clock.lookahead = function (lookahead) {
+        if (typeof(lookahead) === 'number' && lookahead >= 0.0) {
+            params.lookahead = lookahead;
+        }
+        return clock;
+    };
+
+    clock.la = clock.lookahead;
 
     /**
      * Registers a callback function to selected or all ticks of the clock.
@@ -254,7 +303,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
         return clock;
     };
 
-    clock.call = clock.register = clock.reg = clock.add;
+    clock.cb = clock.callback = clock.call = clock.register = clock.reg = clock.add;
 
     /**
      * @function module:clock#remove
@@ -321,7 +370,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
      * @function module:clock#start
      * @returns {dtm.clock} self
      */
-    clock.start = function (timeErr) {
+    clock.start = function () {
         if (params.source === 'animationFrame') {
             window.requestAnimationFrame(clock.tick);
         }
@@ -351,120 +400,132 @@ dtm.clock = function (bpm, subDiv, autoStart) {
     // TODO: also implement swing / random to the af-based clock
     /**
      * Makes the clock tick once.
-     * @param [timeErr=0] {float}
+     * @param [timestamp=0] {float}
      * @returns clock {dtm.clock}
      */
     clock.tick = function (timestamp) {
-        if (params.isOn) {
-            if (!params.sync && !params.isMaster) {
-                if (params.source === 'webAudio') {
-                    clockSrc = actx.createBufferSource();
-                    clockSrc.buffer = clockBuf;
-                    clockSrc.connect(out());
+        if (!params.isOn) {
+            // do nothing
+            return clock;
+        }
 
-                    var freq = params.bpm / 60.0 * (params.subDiv / 4.0);
-                    //var pbRate = 1/(1/freq - Math.abs(timeErr));
+        var freq = 1;
 
-                    clockSrc.playbackRate.value = freq * clMult;
-                    clockSrc.playbackRate.value += clockSrc.playbackRate.value * params.random * _.sample([1, -1]);
+        if (!params.sync && !params.isMaster) {
+            if (params.source === 'webAudio') {
+                actx = dtm.wa.actx;
+                clockSrc = actx.createBufferSource();
+                clockBuf = dtm.wa.clockBuf;
+                clockSrc.buffer = clockBuf;
+                clockSrc.connect(out());
 
-                    if (clock.beat % 2 == 0) {
-                        clockSrc.playbackRate.value *= (1.0 - params.swing) / 0.5;
-                    } else {
-                        clockSrc.playbackRate.value *= params.swing / 0.5;
-                    }
+                freq = params.bpm / 60.0 * (params.subDiv / 4.0);
+                //var pbRate = 1/(1/freq - Math.abs(timeErr));
 
-                    clockSrc.start(now() + 0.0000001);
+                clockSrc.playbackRate.value = freq * clMult;
+                clockSrc.playbackRate.value += clockSrc.playbackRate.value * params.random * _.sample([1, -1]);
 
-                    clockSrc.onended = function () {
-                        curTime += 1/freq;
-                        var error = now() - curTime;
-                        //clock.tick(error);
-                        clock.tick();
-//                curTime = now();
-                    };
-
-                    _.forEach(clock.callbacks, function (cb) {
-                        cb(clock);
-                    });
-
-                    clock.beat = (clock.beat + 1) % (params.subDiv * clock.time[0] / clock.time[1]);
-
-                } else if (params.source === 'animationFrame') {
-                    params.reported = Math.round(timestamp / 1000. * params.bpm / 60. * params.resolution * params.subDiv / 4);
-
-                    if (params.reported !== params.current) {
-                        if ((params.current % params.resolution) > (params.reported % params.resolution)) {
-                            params.beat = Math.round(params.current / params.resolution);
-                            //console.log(params.beat);
-
-                            _.forEach(clock.callbacks, function (cb) {
-                                cb(clock);
-                            });
-                        }
-
-                        params.current = params.reported;
-                    }
-
-                    window.requestAnimationFrame(clock.tick);
+                if (clock.beat % 2 == 0) {
+                    clockSrc.playbackRate.value *= (1.0 - params.swing) / 0.5;
+                } else {
+                    clockSrc.playbackRate.value *= params.swing / 0.5;
                 }
 
-            } else if (params.sync && !params.isMaster) {
+                clockSrc.start(now() + 0.0000001);
 
-            } else if (params.isMaster) {
-                if (params.source === 'webAudio') {
-                    clockSrc = actx.createBufferSource();
-                    clockSrc.buffer = clockBuf;
-                    clockSrc.connect(out());
+                clockSrc.onended = function () {
+                    curTime += 1/freq;
+                    //var error = now() - curTime;
+                    //clock.tick(error);
+                    clock.tick();
+//                curTime = now();
+                };
 
-                    var freq = params.bpm / 60.0 * (params.subDiv / 4.0);
+                _.forEach(clock.callbacks, function (cb) {
+                    cb(clock);
+                });
 
-                    clockSrc.playbackRate.value = freq * clMult;
-                    clockSrc.playbackRate.value += clockSrc.playbackRate.value * params.random * _.sample([1, -1]);
+                clock.beat = (clock.beat + 1) % (params.subDiv * clock.time[0] / clock.time[1]);
 
-                    if (clock.beat % 2 == 0) {
-                        clockSrc.playbackRate.value *= (1.0 - params.swing) / 0.5;
-                    } else {
-                        clockSrc.playbackRate.value *= params.swing / 0.5;
-                    }
+            } else if (params.source === 'animationFrame') {
+                params.reported = Math.round(timestamp / 1000. * params.bpm / 60. * params.resolution * params.subDiv / 4);
 
-                    clockSrc.start(now() + 0.0000001);
-
-                    clockSrc.onended = function () {
-                        curTime += 1/freq;
-                        var error = now() - curTime;
-
-                        clock.tick(error);
-
-                        //return function (cb) {
-                        //    cb();
-                        //};
-                    };
-
-                    _.forEach(clock.callbacks, function (cb) {
-                        cb(clock);
-                    });
-
-                    clock.beat = (clock.beat + 1) % (params.subDiv * clock.time[0] / clock.time[1]);
-
-                } else if (params.source === 'animationFrame') {
-                    params.reported = Math.round(timestamp / 1000. * params.bpm / 60. * params.resolution);
-
-                    if (params.reported !== params.current) {
-                        if ((params.current % params.resolution) > (params.reported % params.resolution)) {
-                            params.beat = Math.round((params.current-params.offset) / params.resolution);
-                            //console.log(params.beat);
-                        }
+                if (params.reported !== params.current) {
+                    if ((params.current % params.resolution) > (params.reported % params.resolution)) {
+                        params.beat = Math.round(params.current / params.resolution);
+                        //console.log(params.beat);
 
                         _.forEach(clock.callbacks, function (cb) {
                             cb(clock);
                         });
-
-                        params.current = params.reported;
                     }
 
-                    params.requestId = window.requestAnimationFrame(clock.tick);
+                    params.current = params.reported;
                 }
+
+                window.requestAnimationFrame(clock.tick);
+            }
+
+        } else if (params.sync && !params.isMaster) {
+
+        } else if (params.isMaster) {
+            if (params.source === 'webAudio') {
+                actx = dtm.wa.actx;
+                clockSrc = actx.createBufferSource();
+                clockBuf = dtm.wa.clockBuf;
+                clockSrc.buffer = clockBuf;
+                clockSrc.connect(out());
+
+                freq = params.bpm / 60.0 * (params.subDiv / 4.0);
+
+                clockSrc.playbackRate.value = freq * clMult;
+                clockSrc.playbackRate.value += clockSrc.playbackRate.value * params.random * _.sample([1, -1]);
+
+                if (clock.beat % 2 == 0) {
+                    clockSrc.playbackRate.value *= (1.0 - params.swing) / 0.5;
+                } else {
+                    clockSrc.playbackRate.value *= params.swing / 0.5;
+                }
+
+                clockSrc.start(now() + 0.0000001);
+
+                clockSrc.onended = function () {
+                    curTime += 1/freq;
+                    var error = now() - curTime;
+
+                    clock.tick(error);
+
+                    //return function (cb) {
+                    //    cb();
+                    //};
+                };
+
+                _.forEach(clock.callbacks, function (cb) {
+                    cb(clock);
+                });
+
+                clock.beat = (clock.beat + 1) % (params.subDiv * clock.time[0] / clock.time[1]);
+
+            } else if (params.source === 'animationFrame') {
+                params.reported = Math.round(timestamp / 1000. * params.bpm / 60. * params.resolution);
+
+                if (params.reported !== params.current) {
+                    if ((params.current % params.resolution) > (params.reported % params.resolution)) {
+                        params.beat = Math.round((params.current-params.offset) / params.resolution);
+
+                        //console.log(dtm.wa.actx.currentTime);
+                        //console.log(params.reported);
+                    }
+
+
+                    _.forEach(clock.callbacks, function (cb) {
+                        cb(clock);
+                    });
+
+                    params.current = params.reported;
+                }
+
+                params.requestId = window.requestAnimationFrame(clock.tick);
             }
         }
 
@@ -474,31 +535,34 @@ dtm.clock = function (bpm, subDiv, autoStart) {
     // TODO: stopping system should remove these callbacks?
     // TODO: implement shuffle and randomize
     clock.tickSynced = function () {
-        if (params.sync && params.isOn) {
-            if (dtm.master.clock.get('source') === 'webAudio') {
-                if (dtm.master.clock.beat % Math.round(params.resolution/params.subDiv) === 0) {
-                    _.forEach(clock.callbacks, function (cb) {
-                        cb(clock);
-                    });
-                }
-            }
+        if (!params.isOn || !params.sync) {
+            return clock;
+        }
 
-            else if (dtm.master.clock.get('source') === 'animationFrame') {
-                if ((dtm.master.clock.get('cur') % (params.resolution/params.subDiv*4)) < params.prev) {
-
-                    params.beat = Math.round((dtm.master.clock.get('cur')-params.offset) / params.resolution * params.subDiv / 4);
-
-                    //if (params.beat > params.prevBeat) {
-                        _.forEach(clock.callbacks, function (cb) {
-                            cb(clock);
-                        });
-                    //}
-
-                    params.prevBeat = params.beat;
-                }
-                params.prev = dtm.master.clock.get('cur') % (params.resolution / params.subDiv * 4);
+        if (dtm.master.clock.get('source') === 'webAudio') {
+            if (dtm.master.clock.beat % Math.round(params.resolution/params.subDiv) === 0) {
+                _.forEach(clock.callbacks, function (cb) {
+                    cb(clock);
+                });
             }
         }
+
+        else if (dtm.master.clock.get('source') === 'animationFrame') {
+            if ((dtm.master.clock.get('cur') % (params.resolution/params.subDiv*4)) < params.prev) {
+
+                params.beat = Math.round((dtm.master.clock.get('cur')-params.offset) / params.resolution * params.subDiv / 4);
+
+                //if (params.beat > params.prevBeat) {
+                _.forEach(clock.callbacks, function (cb) {
+                    cb(clock);
+                });
+                //}
+
+                params.prevBeat = params.beat;
+            }
+            params.prev = dtm.master.clock.get('cur') % (params.resolution / params.subDiv * 4);
+        }
+
         return clock;
     };
 
@@ -625,7 +689,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
         return clock;
     };
 
-    // single-shot schedular
+    // single-shot scheduler
     clock.delayEvent = function () {
         return clock;
     };
