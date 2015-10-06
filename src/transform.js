@@ -13,7 +13,7 @@ dtm.transform = {
      * Generates values for a new array.
      * @function module:transform#generate
      * @param type {string} Choices: 'line', 'noise'/'random', 'gaussian'/'gauss'/'normal', 'sin'/'sine', 'cos'/'cosine', 'zeroes', 'ones'
-     * @param [len=8] {integer}
+     * @param [len=8] {number}
      * @param [min=0] {number}
      * @param [max=1] {number}
      * @returns {Array}
@@ -180,17 +180,17 @@ dtm.transform = {
      * -> [0, 0.55, 0.2, 0.55, 0.05, 1, 0.1, 0.9]
      */
     normalize: function (arr, min, max) {
-        if (typeof(min) === 'undefined') {
+        if (typeof(min) !== 'number') {
             min = _.min(arr);
         }
 
-        if (typeof(max) === 'undefined') {
+        if (typeof(max) !== 'number') {
             max = _.max(arr);
         }
 
         var denom = 1;
 
-        if (max == min) {
+        if (max === min) {
             if (min > 0 && min <= 1) {
                 min = 0;
             } else if (min > 1) {
@@ -293,49 +293,89 @@ dtm.transform = {
             len = Math.round(len);
         }
 
-        var res = [], i = 0;
+        var res = null;
+        if (arr.constructor === Array) {
+            res = new Array(len);
+        } else if (arr.constructor === Float32Array) {
+            res = new Float32Array(len);
+        }
+        var i = 0;
         res.length = len;
         var mult = len / arr.length;
 
-        if (interp === 'linear') {
-            inNumItv = arr.length - 1;
-            outNumItv = len - 1;
+        switch (interp) {
+            default:
+            case 'linear':
+                var inNumItv = arr.length - 1;
+                var outNumItv = len - 1;
 
-            intermLen = inNumItv * outNumItv + 1;
-            intermArr = [];
-            intermArr.length = intermLen;
+                var intermLen = inNumItv * outNumItv + 1;
+                var intermArr = null;
 
-            var c = 0;
-            for (var j = 0; j < inNumItv; j++) {
-                for (i = 0; i < outNumItv; i++) {
-                    intermArr[c] = arr[j] + (arr[j + 1] - arr[j]) * (i / outNumItv);
-                    c++;
+                if (arr.constructor === Array) {
+                    intermArr = new Array(intermLen);
+                } else if (arr.constructor === Float32Array) {
+                    intermArr = new Float32Array(intermLen);
                 }
-            }
-            intermArr[c] = arr[j];
 
-            for (var k = 0; k < outNumItv; k++) {
-                res[k] = intermArr[k * inNumItv];
-            }
-            res[k] = intermArr[intermLen - 1];
-        } else if (interp === 'step') {
-            for (i = 0; i < len; i++) {
-                res[i] = arr[Math.floor(i / mult)];
-            }
+                var c = 0;
+                for (var j = 0; j < inNumItv; j++) {
+                    for (i = 0; i < outNumItv; i++) {
+                        intermArr[c] = arr[j] + (arr[j + 1] - arr[j]) * (i / outNumItv);
+                        c++;
+                    }
+                }
+                intermArr[c] = arr[j];
 
-        } else if (interp === 'zeros') {
-            var prevIdx = -1;
+                for (var k = 0; k < outNumItv; k++) {
+                    res[k] = intermArr[k * inNumItv];
+                }
+                res[k] = intermArr[intermLen - 1];
+                break;
 
-            for (i = 0; i < len; i++) {
-                if (prevIdx !== Math.floor(i / mult)) {
-                    prevIdx = Math.floor(i / mult);
-                    res[i] = arr[prevIdx];
+            case 'step':
+            case 'hold':
+                for (i = 0; i < len; i++) {
+                    res[i] = arr[Math.floor(i / mult)];
+                }
+                break;
+            case 'zeros':
+                var prevIdx = -1;
+
+                for (i = 0; i < len; i++) {
+                    if (prevIdx !== Math.floor(i / mult)) {
+                        prevIdx = Math.floor(i / mult);
+                        res[i] = arr[prevIdx];
+                    } else {
+                        res[i] = 0;
+                    }
+                }
+                break;
+            case 'decay':
+                break;
+
+            case 'cosine':
+                if (arr.length > len) {
+                    res = dtm.transform.fit(arr, len, 'linear');
                 } else {
-                    res[i] = 0;
-                }
-            }
-        }
+                    var ratio = 0, mu2 = 0;
 
+                    // TODO: implement
+                    res = arr;
+                }
+                break;
+            case 'cubic':
+                if (arr.length > len) {
+                    res = dtm.transform.fit(arr, len, 'linear');
+                } else {
+
+                    res = arr;
+                }
+                break;
+
+            case 'pad':
+                break;
+        }
         return res;
     },
 
@@ -362,6 +402,42 @@ dtm.transform = {
         }
 
         return dtm.transform.fit(arr, targetLen, interp);
+    },
+
+    ola: function (arr, stretchFactor, blockSize, hopSize, window) {
+        if (typeof(stretchFactor) !== 'number') {
+            stretchFactor = 1.0;
+        } else {
+            if (stretchFactor < 0.0) {
+                stretchFactor = 1.0;
+            }
+        }
+        if (typeof(blockSize) === 'number') {
+            blockSize = Math.round(blockSize);
+
+            if (blockSize > arr.length) {
+                blockSize = arr.length;
+            } else if (blockSize < 1) {
+                blockSize = 1;
+            }
+        }
+        if (typeof(hopSize) !== 'number') {
+            hopSize = blockSize;
+        } else {
+            hopSize = Math.round(hopSize);
+            if (hopSize < 1) {
+                hopSize = 1;
+            }
+        }
+
+        if (typeof(window) !== 'string') {
+            window = 'hamming'
+        }
+
+        var res = dtm.transform.generate('zeros', Math.round(arr.length * stretchFactor));
+        for (var i = 0; i < (arr.length - blockSize) / hopSize; i++) {
+
+        }
     },
 
     limit: function (arr, min, max) {
@@ -439,7 +515,12 @@ dtm.transform = {
      * @returns {array}
      */
     add: function (input, factor, interp) {
-        var res = [];
+        var res = null;
+        if (input.constructor === Array) {
+            res = new Array(input.length);
+        } else if (input.constructor === Float32Array) {
+            res = new Float32Array(input.length);
+        }
 
         if (typeof(factor) === 'number') {
             _.forEach(input, function (val, idx) {
@@ -459,7 +540,7 @@ dtm.transform = {
     },
 
     /**
-     * Multiplies the array contents. If the second argument is a number, it acts as a scalar value. If it is an array, it is first stretched with linear or specified interpolation method, then element-wise multiplication is performed.
+     * Multiplies the array contents. If the second argument is a number, it acts as a scalar value. If it is an array, it is first stretched with linear or specified interpolation method, then the dot product is returned.
      * @function module:transform#mult
      * @param input {array}
      * @param factor {number|array}
@@ -467,12 +548,18 @@ dtm.transform = {
      * @returns {array}
      */
     mult: function (input, factor, interp) {
-        var res = [];
+        var res = null;
+        if (input.constructor === Array) {
+            res = new Array(input.length);
+        } else if (input.constructor === Float32Array) {
+            res = new Float32Array(input.length);
+        }
 
         if (typeof(factor) === 'number') {
             _.forEach(input, function (val, idx) {
                 res[idx] = val * factor;
             });
+
         } else if (factor.constructor === Array) {
             if (input.length !== factor.length) {
                 factor = dtm.transform.fit(factor, input.length, interp);
@@ -495,7 +582,12 @@ dtm.transform = {
      * @returns {Array}
      */
     pow: function (input, factor, interp) {
-        var res = [];
+        var res = null;
+        if (input.constructor === Array) {
+            res = new Array(input.length);
+        } else if (input.constructor === Float32Array) {
+            res = new Float32Array(input.length);
+        }
 
         if (typeof(factor) === 'number') {
             _.forEach(input, function (val, idx) {
@@ -522,7 +614,12 @@ dtm.transform = {
      * @returns {Array}
      */
     powof: function (input, factor, interp) {
-        var res = [];
+        var res = null;
+        if (input.constructor === Array) {
+            res = new Array(input.length);
+        } else if (input.constructor === Float32Array) {
+            res = new Float32Array(input.length);
+        }
 
         if (typeof(factor) === 'number') {
             _.forEach(input, function (val, idx) {
@@ -545,30 +642,47 @@ dtm.transform = {
     /* ARITHMETIC */
 
     /**
-     * Rounds the float values to the nearest integer values.
+     * Rounds the float values to the nearest integer values or the nearest multiplication of the factor "to".
      * @function module:transform#round
-     * @param arr {array} Numerical array
+     * @param input {array} Numerical array
+     * @param to {number}
      * @returns {Array}
      */
-    round: function (arr) {
-        var res = [];
+    round: function (input, to) {
+        var res = null;
+        if (input.constructor === Array) {
+            res = new Array(input.length);
+        } else if (input.constructor === Float32Array) {
+            res = new Float32Array(input.length);
+        }
 
-        _.forEach(arr, function (val, idx) {
-            res[idx] = Math.round(val);
-        });
+        if (typeof(to) !== 'number') {
+            input.forEach(function (val, idx) {
+                res[idx] = Math.round(val);
+            });
+        } else {
+            input.forEach(function (val, idx) {
+                res[idx] = Math.round(val / to) * to;
+            });
+        }
         return res;
     },
 
     /**
      * Floor quantizes the float values to the nearest integer values.
      * @function module:transform#round
-     * @param arr {array} Numerical array
+     * @param input {array} Numerical array
      * @returns {Array}
      */
-    floor: function (arr) {
-        var res = [];
+    floor: function (input) {
+        var res = null;
+        if (input.constructor === Array) {
+            res = new Array(input.length);
+        } else if (input.constructor === Float32Array) {
+            res = new Float32Array(input.length);
+        }
 
-        _.forEach(arr, function (val, idx) {
+        _.forEach(input, function (val, idx) {
             res[idx] = Math.floor(val);
         });
         return res;
@@ -577,20 +691,31 @@ dtm.transform = {
     /**
      * Ceiling quantizes the float values to the nearest integer values.
      * @function module:transform#round
-     * @param arr {array} Numerical array
+     * @param input {array} Numerical array
      * @returns {Array}
      */
-    ceil: function (arr) {
-        var res = [];
+    ceil: function (input) {
+        var res = null;
+        if (input.constructor === Array) {
+            res = new Array(input.length);
+        } else if (input.constructor === Float32Array) {
+            res = new Float32Array(input.length);
+        }
 
-        _.forEach(arr, function (val, idx) {
+        _.forEach(input, function (val, idx) {
             res[idx] = Math.floor(val);
         });
         return res;
     },
 
     hwr: function (input) {
-        var res = [];
+        var res = null;
+        if (input.constructor === Array) {
+            res = new Array(input.length);
+        } else if (input.constructor === Float32Array) {
+            res = new Float32Array(input.length);
+        }
+
         _.forEach(input, function (val, idx) {
             res[idx] = (val < 0) ? 0 : val;
         });
@@ -599,7 +724,13 @@ dtm.transform = {
     },
 
     fwr: function (input) {
-        var res = [];
+        var res = null;
+        if (input.constructor === Array) {
+            res = new Array(input.length);
+        } else if (input.constructor === Float32Array) {
+            res = new Float32Array(input.length);
+        }
+
         _.forEach(input, function (val, idx) {
             res[idx] = (val < 0) ? Math.abs(val) : val;
         });
@@ -616,7 +747,11 @@ dtm.transform = {
             }
         }
 
-        return res;
+        if (input.constructor === Array) {
+            return res;
+        } else if (input.constructor === Float32Array) {
+            return new Float32Array(res);
+        }
     },
 
     diff: function (input) {
@@ -626,7 +761,11 @@ dtm.transform = {
             res.push(input[i] - input[i-1]);
         }
 
-        return res;
+        if (input.constructor === Array) {
+            return res;
+        } else if (input.constructor === Float32Array) {
+            return new Float32Array(res);
+        }
     },
 
     /* LIST OPERATIONS */
@@ -648,7 +787,11 @@ dtm.transform = {
         for (var i = input.length - 1; i >= 0; --i) {
             res.push(input[i]);
         }
-        return res;
+        if (input.constructor === Array) {
+            return res;
+        } else if (input.constructor === Float32Array) {
+            return new Float32Array(res);
+        }
     },
 
     /**
@@ -673,7 +816,11 @@ dtm.transform = {
         _.forEach(input, function (val, idx) {
             res[idx] = center - (val - center);
         });
-        return res;
+        if (input.constructor === Array) {
+            return res;
+        } else if (input.constructor === Float32Array) {
+            return new Float32Array(res);
+        }
     },
 
     /**
@@ -701,20 +848,25 @@ dtm.transform = {
 
     /**
      * Repeats the contents of an array.
-     * @param arr
+     * @param input
      * @param count
      * @returns {Array}
      */
-    repeat: function (arr, count) {
+    repeat: function (input, count) {
         var res = [];
 
         if (!count) {
             count = 1;
         }
         for (var i = 0; i < count; i++) {
-            res = res.concat(arr);
+            res = res.concat(input);
         }
-        return res;
+
+        if (input.constructor === Array) {
+            return res;
+        } else if (input.constructor === Float32Array) {
+            return new Float32Array(res);
+        }
     },
 
     // TODO: it should just have one behavior
@@ -755,20 +907,31 @@ dtm.transform = {
 
     window: function (arr, type) {
         var phase = 0;
-        var res = [];
+        var res = null;
+        if (arr.constructor === Array) {
+            res = new Array(arr.length);
+        } else if (arr.constructor === Float32Array) {
+            res = new Float32Array(arr.length);
+        }
 
         for (var i = 0; i < arr.length; i++) {
             phase = i/(arr.length-1);
 
             switch (type) {
+                case 'tri':
+                case 'triangle':
                 case 'triangular':
                     res[i] = arr[i] * (1 - Math.abs(phase * 2 - 1));
                     break;
+                case 'hamm':
                 case 'hamming':
                     var alpha = 0.54;
                     var beta = 0.46;
                     res[i] = arr[i] * (alpha - beta * Math.cos(2 * Math.PI * phase));
                     break;
+                case 'rect':
+                case 'rectangle':
+                case 'rectangular':
                 default:
                     res[i] = arr[i];
                     break;
@@ -1109,15 +1272,29 @@ dtm.transform = {
     tonumber: function (input) {
         var res = [];
         input.forEach(function (val, idx) {
-            res[idx] = Number.parseFloat(val);
+            if (typeof(val) === 'string') {
+                res[idx] = parseFloat(val);
+            } else if (typeof(val) === 'boolean') {
+                res[idx] = val ? 1.0 : 0.0;
+            } else {
+                res[idx] = NaN;
+            }
         });
         return res;
-    }
+    },
 
     //getClasses: function (input) {
     //    return _.clone()
     //
     //}
+
+    mtof: function (input) {
+        var res = [];
+        input.forEach(function (v, i) {
+            res[i] = dtm.value.mtof(v);
+        });
+        return res;
+    }
 };
 
 /**

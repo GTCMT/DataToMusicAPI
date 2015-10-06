@@ -505,6 +505,10 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.normalize = function (min, max) {
+        if (min.constructor === Array) {
+            max = min[1];
+            min = min[0];
+        }
         params.value = dtm.transform.normalize(params.value, min, max);
         array.set(params.value);
         return array;
@@ -522,9 +526,66 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.rescale = function (min, max, dmin, dmax) {
+        var min_, max_, dmin_, dmax_;
+
         // TODO: accept dtm.array
 
-        params.value = dtm.transform.rescale(params.value, min, max, dmin, dmax);
+        if (typeof(min) === 'number') {
+            min_ = min;
+        } else if (typeof(min) === 'object') {
+            if (min.constructor === Array) {
+                if (min.length >= 2) {
+                    if (typeof(min[0]) === 'number') {
+                        min_ = min[0];
+                    }
+                    if (typeof(min[1] === 'number')) {
+                        max_ = min[1];
+                    }
+                }
+                if (min.length === 4) {
+                    if (typeof(min[2]) === 'number') {
+                        dmin_ = min[2];
+                    }
+                    if (typeof(min[3] === 'number')) {
+                        dmax_ = min[3];
+                    }
+                }
+            }
+        } else {
+            return array;
+        }
+
+        if (typeof(max) === 'number') {
+            max_ = max;
+        } else if (typeof(max) === 'object') {
+            if (max.constructor === Array) {
+                if (typeof(max[0]) === 'number') {
+                    dmin_ = max[0];
+                }
+                if (typeof(max[1] === 'number')) {
+                    dmax_ = max[1];
+                }
+            }
+        }
+
+        if (typeof(dmin) === 'number') {
+            dmin_ = dmin;
+        } else if (typeof(dmin) === 'object') {
+            if (dmin.constructor === Array) {
+                if (typeof(dmin[0]) === 'number') {
+                    dmin_ = dmin[0];
+                }
+                if (typeof(dmin[1] === 'number')) {
+                    dmax_ = dmin[1];
+                }
+            }
+        }
+
+        if (typeof(dmax) === 'number') {
+            dmax_ = dmax;
+        }
+
+        params.value = dtm.transform.rescale(params.value, min_, max_, dmin_, dmax_);
         array.set(params.value);
         return array;
     };
@@ -915,10 +976,11 @@ dtm.array = function () {
     /**
      * Rounds float values of the array to integer values.
      * @function module:array#round
+     * @param to {number}
      * @returns {dtm.array}
      */
-    array.round = function () {
-        params.value = dtm.transform.round(params.value);
+    array.round = function (to) {
+        params.value = dtm.transform.round(params.value, to);
         array.set(params.value);
         return array;
     };
