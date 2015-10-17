@@ -34,6 +34,7 @@ dtm.synth3 = function () {
             case 'autoDur':
                 return params.autoDur;
             case 'dur':
+            case 'duration':
                 return params.dur;
             case 'source':
                 return params.source;
@@ -54,12 +55,14 @@ dtm.synth3 = function () {
         pFx: [{}]
     };
 
-    if (arguments.callee.caller.arguments.length > 0) {
-        if (typeof(arguments.callee.caller.arguments[0]) === 'object') {
-            if (arguments.callee.caller.arguments[0].type === 'dtm.clock') {
-                params.clock = arguments.callee.caller.arguments[0];
-                params.lookahead = true;
-                params.autoDur = true;
+    if (!!arguments.callee.caller) {
+        if (arguments.callee.caller.arguments.length > 0) {
+            if (typeof(arguments.callee.caller.arguments[0]) === 'object') {
+                if (arguments.callee.caller.arguments[0].type === 'dtm.clock') {
+                    params.clock = arguments.callee.caller.arguments[0];
+                    params.lookahead = true;
+                    params.autoDur = true;
+                }
             }
         }
     }
@@ -598,7 +601,6 @@ dtm.synth3 = function () {
             //}
             params.wavetable = src;
             params.tabLen = src.length;
-            console.log(params.tabLen);
             params.pitch = freqToPitch(params.freq);
         } else {
             params.wavetable = new Float32Array(params.tabLen);
@@ -759,6 +761,8 @@ dtm.synth3 = function () {
                     //});
                     //console.log(src.rendered);
                     return src.rendered;
+                } else if (src.type === 'dtm.model') {
+                    return new Float32Array(src.get());
                 }
             }
         } else {

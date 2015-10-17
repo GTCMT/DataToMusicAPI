@@ -86,4 +86,18 @@ describe('model abstract', function () {
             expect(a.get()).toEqual([0, 0, 1, 1, 0]);
         });
     });
+
+    describe('creating a freq model', function () {
+        var freqModel;
+
+        beforeEach(function () {
+            freqModel = dtm.model()
+                .toNumeric('histo')
+                .domain([0, 10])
+        });
+
+        it('should convert nominal to numeric', function () {
+            //console.log(freqModel(dtm.array('c', 'heeey')).get());
+        });
+    })
 });

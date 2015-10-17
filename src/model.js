@@ -22,16 +22,40 @@ dtm.model = function (name, categ) {
 
         process: [],
         data: dtm.array(),
+        clock: null,
 
-        output: null // dtm.array
+        //output: null // dtm.array
+        output: []
     };
 
-    var model = function (input) {
-        params.data = input;
-
+    var model = function () {
         if (typeof(params.defaultCb) === 'function') {
             return params.defaultCb.apply(this, arguments);
         } else {
+            if (!!model.caller.arguments[0]) {
+                if (model.caller.arguments[0].type === 'dtm.clock') {
+                    params.clock = model.caller.arguments[0];
+                }
+            }
+
+            if (arguments.length === 1) {
+                var arg = arguments[0];
+
+                if (typeof(arg) === 'number') {
+                    params.data.set(arg);
+                } else if (typeof(arg) === 'string') {
+                    params.data.set('c', arg).histo();
+                } else if (typeof(arg) === 'object') {
+                    if (arg.constructor === Array || arg.constructor === Float32Array) {
+                        params.data.set(arg);
+                    } else if (arg.hasOwnProperty('type') && arg.type === 'dtm.array') {
+                        params.data.set(arg);
+                    }
+                }
+            } else if (arguments.length > 1) {
+                params.data.set.apply(this, arguments);
+            }
+
             params.process.forEach(function (v) {
                 v.method.apply(this, v.params);
             });
@@ -44,6 +68,16 @@ dtm.model = function (name, categ) {
                 }
             } else if (params.domain) {
                 params.data.normalize(params.domain);
+            }
+
+            if (params.output) {
+                params.output.forEach(function (v) {
+                    if (params.clock) {
+                        v.method(params.data, params.clock);
+                    } else {
+                        v.method(params.data);
+                    }
+                });
             }
 
             return params.data;
@@ -187,7 +221,9 @@ dtm.model = function (name, categ) {
             case 'histogram':
                 params.process.push({
                     method: function () {
-                        params.data.histo()
+                        if (params.data.get('type') !== 'number') {
+                            params.data.histo();
+                        }
                     },
                     params: null
                 });
@@ -195,7 +231,9 @@ dtm.model = function (name, categ) {
             case 'class':
                 params.process.push({
                     method: function () {
-                        params.data.class()
+                        if (params.data.get('type') !== 'number') {
+                            params.data.class();
+                        }
                     },
                     params: null
                 });
@@ -261,6 +299,17 @@ dtm.model = function (name, categ) {
         } else if (arguments.length === 2) {
             params.range = [arguments[0], arguments[1]];
         }
+        return model;
+    };
+
+    model.output = function (callback) {
+        //console.log(model.caller.caller.caller.caller.arguments[0]);
+        params.output.push({
+            method: function (a, c) {
+                callback(a, c)
+            },
+            params: null
+        });
         return model;
     };
 
