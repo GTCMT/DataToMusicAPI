@@ -30,23 +30,71 @@ dtm.transform = {
      * dtm.transform.generate('sine', 8, 0, 10);
      * -> [5, 8.909, 9.874, 7.169, 2.830, 0.125, 1.090, 5]
      */
-    generate: function (type, len, min, max) {
-        if (typeof(len) === 'undefined') {
+    generate: function () {
+        var type, len, min, max, cycle;
+        var params = {
+            type: '',
+            len: 8,
+            min: -1,
+            max: 1,
+            cycle: 1
+        };
+
+        if (typeof(arguments[0]) === 'string') {
+            type = arguments[0];
+        } else if (typeof(arguments[0]) === 'object') {
+            for (var key in arguments[0]) {
+                params[key] = arguments[0][key];
+            }
+        }
+
+        if (arguments[1] === undefined) {
             len = 8;
+        } else if (typeof(arguments[1]) === 'number') {
+            len = arguments[1];
         }
 
-        if (typeof(min) === 'undefined') {
-            min = 0;
+        var oscil = ['sin', 'sine', 'cos', 'cosine', 'tri', 'triangle', 'saw'];
+
+        if (typeof(arguments[2]) !== 'number') {
+            if (oscil.indexOf(type) > -1) {
+                min = -1;
+            } else {
+                min = 0;
+            }
+        } else {
+            min = arguments[2];
         }
 
-        if (typeof(max) === 'undefined') {
+        if (typeof(arguments[3]) !== 'number') {
             max = 1;
+        } else {
+            max = arguments[3];
+        }
+
+        if (typeof(arguments[2] === 'number' && typeof(arguments[3] !== 'number'))) {
+            cycle = arguments[2];
         }
 
         var res = [], incr = 0, val = 0, i = 0;
+        var sorted = [];
+
+        switch (type) {
+            case 'rise':
+            case 'decay':
+            case 'fall':
+            case 'noise':
+            case 'random':
+            case 'rand':
+            case 'randi':
+                sorted = dtm.transform.sort([min, max]);
+                max = sorted[1];
+                min = sorted[0];
+        }
 
         switch (type) {
             case 'line':
+            case 'saw':
                 incr = (max - min) / (len-1);
 
                 for (i = 0; i < len; i++) {
@@ -54,12 +102,26 @@ dtm.transform = {
                 }
                 break;
 
+            case 'rise':
+                incr = (max - min) / (len-1);
+
+                for (i = 0; i < len; i++) {
+                    res[i] = min + incr * i;
+                }
+                break;
+
+            case 'decay':
+            case 'fall':
+                incr = (max - min) / (len-1);
+
+                for (i = 0; i < len; i++) {
+                    res[i] = min + incr * (len-1-i);
+                }
+                break;
+
             case 'seq':
             case 'sequence':
-                if (!min) {
-                    min = 0;
-                }
-
+            case 'series':
                 max = max || 1;
 
                 for (i = 0; i < len; i++) {
@@ -67,10 +129,8 @@ dtm.transform = {
                 }
                 break;
 
+            // TODO: args: start, stop, interval
             case 'range':
-                if (!min) {
-                    min = 0;
-                }
                 min = Math.round(min);
                 max = Math.round(max);
                 for (i = 0; i < max-min; i++) {
@@ -94,6 +154,7 @@ dtm.transform = {
 
             case 'gaussian':
             case 'gauss':
+            case 'gaussCurve':
             case 'normal':
                 for (i = 0; i < len; i++) {
                     var x = -Math.PI + (Math.PI * 2 / len) * i;
@@ -121,6 +182,9 @@ dtm.transform = {
                 }
                 break;
 
+            case 'tri':
+                break;
+
             case 'zeros':
             case 'zeroes':
                 for (i = 0; i < len; i++) {
@@ -138,9 +202,15 @@ dtm.transform = {
             case 'constants':
             case 'const':
             case 'consts':
-                min = min || 0;
+                //min = min || 0;
                 for (i = 0; i < len; i++) {
                     res[i] = min;
+                }
+                break;
+
+            case 'repeat':
+                for (i = 0; i < len; i++) {
+                    res[i] = arguments[2];
                 }
                 break;
 

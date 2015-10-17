@@ -1262,3 +1262,17 @@ dtm.array = function () {
 };
 
 dtm.a = dtm.arr = dtm.array;
+
+var generators = ['line', 'rise', 'decay', 'fall', 'seq', 'sequence', 'series', 'range', 'noise', 'random', 'rand', 'randi', 'gaussian', 'gaussCurve', 'gauss', 'normal', 'zeros', 'zeroes', 'ones', 'constant', 'constants', 'const', 'consts', 'repeat', 'string', 'str', 'sin', 'sine', 'cos', 'cosine', 'tri', 'triangle', 'saw'];
+
+generators.forEach(function (type) {
+    dtm[type] = function () {
+        var args = [type];
+
+        for (var i = 0; i < arguments.length; i++) {
+            args.push(arguments[i]);
+        }
+
+        return dtm.array.apply(this, args);
+    }
+});
