@@ -26,6 +26,8 @@ module.exports = function (grunt) {
                     'src/master.js',
                     'src/guido.js',
                     'src/inscore.js',
+                    'src/models/unipolar.js',
+                    'src/models/bipolar.js',
                     //'src/models/rhythm.js',
                     //'src/models/chord.js',
                     //'src/models/phrase.js',

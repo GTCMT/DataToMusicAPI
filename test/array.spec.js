@@ -123,6 +123,17 @@ describe('array object', function () {
 
     describe('set', function () {
 
+        describe('strings as input', function () {
+            var a;
+            beforeEach(function () {
+                a = dtm.array();
+            });
+
+            it('should blah', function () {
+                a.set('c', 'test');
+                expect(a.get('len')).toBe(4);
+            });
+        })
     });
 
     describe('generater', function () {

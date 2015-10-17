@@ -268,11 +268,9 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.set = function (input) {
-        if (typeof(input) === 'undefined') {
-            input = [];
-        }
-
-        if (typeof(input) === 'number') {
+        if (input === undefined) {
+            params.value = [];
+        } else if (typeof(input) === 'number') {
             params.value = [input];
         } else if (input.constructor === Array) {
             params.value = input;
@@ -448,6 +446,7 @@ dtm.array = function () {
             return array;
         }
     };
+
     /**
      * Morphs the array values with a target array / dtm.array values. The lengths can be mismatched.
      * @function module:array#morph
@@ -505,9 +504,11 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.normalize = function (min, max) {
-        if (min.constructor === Array) {
-            max = min[1];
-            min = min[0];
+        if (min !== undefined) {
+            if (min.constructor === Array) {
+                max = min[1];
+                min = min[0];
+            }
         }
         params.value = dtm.transform.normalize(params.value, min, max);
         array.set(params.value);
@@ -797,7 +798,7 @@ dtm.array = function () {
         return array;
     };
 
-    array.append = array.concat;
+    array.append = array.cat = array.concat;
 
     /**
      * Repeats the contents of the current array.
