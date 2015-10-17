@@ -295,30 +295,31 @@ dtm.synth3 = function () {
     };
 
     synth.play = function (time, dur, lookahead) {
-        //===== type check
-        if (typeof(time) !== 'number' || time < 0) {
-            time = 0.0;
-        }
-
-        if (params.autoDur) {
-            params.dur = params.clock.get('dur');
-        }
-
-        if (typeof(dur) !== 'number') {
-            dur = params.dur;
-        } else {
-            if (params.dur > 0) {
-                params.dur = dur;
-            }
-        }
-        //===== end of type check
-
         var defer = 0;
         if (params.lookahead) {
             defer = Math.round(params.clock.get('lookahead') * 500);
         }
-
+        
         setTimeout(function () {
+            //===== type check
+            if (typeof(time) !== 'number' || time < 0) {
+                time = 0.0;
+            }
+
+            if (params.autoDur) {
+                params.dur = params.clock.get('dur');
+            }
+
+            if (typeof(dur) !== 'number') {
+                dur = params.dur;
+                console.log(dur);
+            } else {
+                if (params.dur > 0) {
+                    params.dur = dur;
+                }
+            }
+            //===== end of type check
+
             octx = new OfflineAudioContext(1, (time + dur*4) * params.sr, params.sr);
             time += octx.currentTime;
 
