@@ -70,17 +70,23 @@ dtm.model = function (name, categ) {
                 params.data.normalize(params.domain);
             }
 
+            var res = null;
+
             if (params.output) {
                 params.output.forEach(function (v) {
                     if (params.clock) {
-                        v.method(params.data, params.clock);
+                        res = v.method(params.data, params.clock);
                     } else {
-                        v.method(params.data);
+                        res = v.method(params.data);
                     }
                 });
             }
 
-            return params.data;
+            if (res) {
+                return res;
+            } else {
+                return params.data;
+            }
         }
     };
 
@@ -306,7 +312,7 @@ dtm.model = function (name, categ) {
         //console.log(model.caller.caller.caller.caller.arguments[0]);
         params.output.push({
             method: function (a, c) {
-                callback(a, c)
+                return callback(a, c)
             },
             params: null
         });
