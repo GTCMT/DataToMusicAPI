@@ -20,19 +20,34 @@ dtm.model = function (name, categ) {
         registering: false,
         loading: true,
 
+        process: [],
+        data: dtm.array(),
+
         output: null // dtm.array
     };
 
-    var model = function () {
+    var model = function (input) {
+        params.data = input;
+
         if (typeof(params.defaultCb) === 'function') {
             return params.defaultCb.apply(this, arguments);
         } else {
-            return model;
-        }
-    };
+            params.process.forEach(function (v) {
+                v.method.apply(this, v.params);
+            });
 
-    model.default = function (callback) {
-        params.defaultCb = callback;
+            if (params.range) {
+                if (params.domain) {
+                    params.data.range(params.range, params.domain);
+                } else {
+                    params.data.range(params.range);
+                }
+            } else if (params.domain) {
+                params.data.normalize(params.domain);
+            }
+
+            return params.data;
+        }
     };
 
     model.type = 'dtm.model';
@@ -61,6 +76,10 @@ dtm.model = function (name, categ) {
         params.categ = categ;
     }
 
+    model.default = function (callback) {
+        params.defaultCb = callback;
+    };
+
     model.get = function (param) {
         switch (param) {
             case 'name':
@@ -74,7 +93,6 @@ dtm.model = function (name, categ) {
                 return params.output;
         }
     };
-
 
     /**
      * Sets the category of the model.
@@ -163,6 +181,88 @@ dtm.model = function (name, categ) {
         return model;
     };
 
+    model.toNumeric = function (type) {
+        switch (type) {
+            case 'histo':
+            case 'histogram':
+                params.process.push({
+                    method: function () {
+                        params.data.histo()
+                    },
+                    params: null
+                });
+                break;
+            case 'class':
+                params.process.push({
+                    method: function () {
+                        params.data.class()
+                    },
+                    params: null
+                });
+                break;
+            case 'freq':
+            case 'frequency':
+            case 'appearance':
+                break;
+            default:
+                break;
+        }
+        return model;
+    };
+
+    model.domain = function () {
+        if (arguments.length === 1) {
+            var arg = arguments[0];
+            if (typeof(arg) === 'object') {
+                if (arg.constructor === Array) {
+                    params.domain = arg;
+                } else if (arg.type === 'dtm.array') {
+                    if (arg.get('len') === 2) {
+                        params.domain = arg.get();
+                    } else {
+                        params.domain = arg.get('extent');
+                    }
+                }
+            } else if (typeof(arg) === 'function') {
+                params.process.push({
+                    method: function () {
+                        params.domain = arg(params.data);
+                    },
+                    params: null
+                });
+            }
+        } else if (arguments.length === 2) {
+            params.domain = [arguments[0], arguments[1]];
+        }
+        return model;
+    };
+
+    model.range = function () {
+        if (arguments.length === 1) {
+            var arg = arguments[0];
+            if (typeof(arg) === 'object') {
+                if (arg.constructor === Array) {
+                    params.range = arg;
+                } else if (arg.type === 'dtm.array') {
+                    if (arg.get('len') === 2) {
+                        params.range = arg.get();
+                    } else {
+                        params.range = arg.get('extent');
+                    }
+                }
+            } else if (typeof(arg) === 'function') {
+                params.process.push({
+                    method: function () {
+                        params.range = arg(params.data);
+                    },
+                    params: null
+                });
+            }
+        } else if (arguments.length === 2) {
+            params.range = [arguments[0], arguments[1]];
+        }
+        return model;
+    };
 
     // for instr-type models
     model.start = function () {
@@ -213,8 +313,6 @@ dtm.model = function (name, categ) {
     };
 
     if (typeof(name) === 'string') {
-
-        //console.log(arguments.callee.caller.toString());
         params.loading = arguments.callee.caller.arguments[0];
 
         var modelLoaded, key;
