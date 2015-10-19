@@ -279,7 +279,8 @@ dtm.array = function () {
         } else if (input.type === 'dtm.array') {
             params.value = input.get();
         } else if (typeof(input) === 'string') {
-            params.value = dtm.transform.fill.apply(this, arguments);
+            //params.value = dtm.transform.fill.apply(this, arguments);
+            params.value = dtm.gen.apply(this, arguments).get();
             checkType(params.value);
         }
 
@@ -401,12 +402,12 @@ dtm.array = function () {
      */
     array.fill = function (type, len, min, max) {
         //params.value = dtm.transform.generate(type, len, min, max);
-        params.value = dtm.transform.generate.apply(this, arguments);
+        params.value = dtm.transform.generator.apply(this, arguments);
         array.set(params.value);
         return array;
     };
 
-    array.gen = array.generate = array.fill;
+    array.gen = array.generator = array.fill;
 
     /**
      * Returns a clone of the array object. It can be used when you don't want to reference the same array object from different places.
@@ -950,6 +951,11 @@ dtm.array = function () {
 
     array.rand = array.random = array.randomize = array.shuffle;
 
+
+    array.blockShuffle = function (blockSize) {
+        return array;
+    };
+
     /**
      * Adds new value(s) at the end of the array, and removes the oldest value(s) at the beginning of the array. The size of the array is unchanged.
      * @function module:array#queue | fifo
@@ -1263,7 +1269,7 @@ dtm.array = function () {
 
 dtm.a = dtm.arr = dtm.array;
 
-var generators = ['line', 'rise', 'decay', 'fall', 'seq', 'sequence', 'series', 'range', 'noise', 'random', 'rand', 'randi', 'gaussian', 'gaussCurve', 'gauss', 'normal', 'zeros', 'zeroes', 'ones', 'constant', 'constants', 'const', 'consts', 'repeat', 'string', 'str', 'sin', 'sine', 'cos', 'cosine', 'tri', 'triangle', 'saw'];
+var generators = ['line', 'rise', 'decay', 'fall', 'seq', 'sequence', 'series', 'range', 'noise', 'random', 'rand', 'randi', 'gaussian', 'gaussCurve', 'gauss', 'normal', 'zeros', 'zeroes', 'ones', 'constant', 'constants', 'const', 'consts', 'repeat', 'string', 'str', 'sin', 'sine', 'cos', 'cosine', 'tri', 'triangle', 'saw', 'fibonacci'];
 
 generators.forEach(function (type) {
     dtm[type] = function () {

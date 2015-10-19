@@ -1,12 +1,12 @@
 describe('array helper functions', function () {
     describe('generate', function () {
         it('should add up to 0 for sine', function () {
-            var output = dtm.transform.generate('sine', 1000, -5, 5);
+            var output = dtm.transform.generator('sine', 1000, -5, 5);
             expect(dtm.analyzer.sum(output)).toBeCloseTo(0, 10);
         });
 
         it('should give chara arrays of t, e, s, t', function () {
-            var out = dtm.transform.generate('char', 'test');
+            var out = dtm.transform.generator('char', 'test');
             expect(out).toEqual(['t', 'e', 's', 't']);
         });
 
