@@ -91,6 +91,10 @@ dtm.model = function (name, categ) {
     };
 
     model.type = 'dtm.model';
+    model.meta = {
+        type: 'dtm.model'
+    };
+
     model.parent = {};
     model.siblings = [];
 
@@ -308,14 +312,23 @@ dtm.model = function (name, categ) {
         return model;
     };
 
-    model.output = function (callback) {
+    model.output = function (arg) {
         //console.log(model.caller.caller.caller.caller.arguments[0]);
-        params.output.push({
-            method: function (a, c) {
-                return callback(a, c)
-            },
-            params: null
-        });
+        if (typeof(arg) === 'function') {
+            params.output.push({
+                method: function (a, c) {
+                    return arg(a, c)
+                },
+                params: null
+            });
+        } else {
+            params.output.push({
+                method: function () {
+                    return arg;
+                },
+                params: null
+            })
+        }
         return model;
     };
 
@@ -325,10 +338,6 @@ dtm.model = function (name, categ) {
     };
 
     model.stop = function () {
-        return model;
-    };
-
-    model.morphArrays = function (arrObj1, arrObj2, midx) {
         return model;
     };
 

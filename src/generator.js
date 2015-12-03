@@ -1,3 +1,12 @@
+/**
+ * @fileOverview A module for generating array object with certain shapes
+ * @module generator
+ */
+
+/**
+ * @function module:generator.generator
+ * @returns {dtm.generator}
+ */
 dtm.generator = function () {
     var params = {
         type: null,
@@ -20,7 +29,9 @@ dtm.generator = function () {
 
     };
 
-    generator.type = 'dtm.generator';
+    generator.meta = {
+        type: 'dtm.generator'
+    };
 
     var types = {
         all: [
@@ -34,12 +45,12 @@ dtm.generator = function () {
             'sin', 'sine', 'cos', 'cosine',
             'tri', 'triangle',
             'zeros', 'zeroes', 'ones',
-            'constant', 'constatns', 'const', 'consts',
+            'constant', 'constants', 'const', 'consts',
             'repeat',
             'string', 'str', 's',
             'character', 'characters', 'chars', 'char', 'c'
         ],
-        oscil: ['sin', 'sine', 'cos', 'cosine', 'tri', 'triangle', 'saw', 'invSaw', 'noise'],
+        oscil: ['sin', 'sine', 'cos', 'cosine', 'tri', 'triangle', 'saw', 'invSaw', 'noise', 'square', 'sq'],
         linish: ['line', 'saw', 'rise', 'decay', 'fall', 'invSaw'],
         noLength: ['string', 'str', 's', 'character', 'characters', 'chars', 'char', 'c', 'range'],
         noMinMax: [],
@@ -112,6 +123,11 @@ dtm.generator = function () {
                 res[i] = val;
             }
 
+            return res;
+        }
+
+        function square(len, min, max, amp, cycle, offset) {
+            var res = new Array(len);
             return res;
         }
 

@@ -1,4 +1,14 @@
 describe('generator', function () {
+    describe('initialization', function () {
+        var g = dtm.gen();
+        it('should be empty', function () {
+            expect(g.get('typed')).toBe(true);
+            expect(g.get('pack')).toBe(false);
+            expect(g.get()).toEqual(new Float32Array([]));
+            expect(g.get('len')).toBe(8);
+        });
+    });
+
     describe('basic', function () {
         it('should return the set type', function () {
             var g = dtm.gen('saw');
@@ -50,7 +60,7 @@ describe('generator', function () {
     });
 
     describe('osc', function () {
-        console.log(dtm.gen('cos', 10, 1, 3).get());
+        //console.log(dtm.gen('cos', 10, 1, 3).get());
     });
 
     describe('series', function () {

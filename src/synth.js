@@ -1,8 +1,22 @@
+/**
+ * @fileOverview Some building blocks for model creation. It can be used as one-shot as well.
+ * @module synth
+ */
+
+/**
+ * Creates a new instance of synthesizer object.
+ * @function module:synth.synth
+ * @returns {dtm.synth}
+ */
 dtm.synth = function () {
     var synth = {
         type: 'dtm.synth',
         rendered: null,
-        promise: null
+        promise: null,
+
+        meta: {
+            type: 'dtm.synth'
+        }
     };
 
     var params = {
@@ -22,7 +36,8 @@ dtm.synth = function () {
         clock: null,
         baseTime: 0.0,
         lookahead: false,
-        autoDur: false
+        autoDur: false,
+        voiceId: Math.random()
     };
 
     synth.get = function (param) {
@@ -42,6 +57,8 @@ dtm.synth = function () {
                 return params.tabLen;
             case 'wavetable':
                 return params.wavetable;
+            case 'id':
+                return params.voiceId;
             default:
                 return synth;
         }
@@ -52,7 +69,8 @@ dtm.synth = function () {
         amp: null,
         out: null,
         fx: [{}],
-        pFx: [{}]
+        pFx: [{}],
+        rtSrc: null
     };
 
     if (!!arguments.callee.caller) {
@@ -294,6 +312,10 @@ dtm.synth = function () {
         return synth;
     };
 
+    synth.offset = function (src) {
+        return synth;
+    };
+
     synth.play = function (time, dur, lookahead) {
         var defer = 0;
         if (params.lookahead) {
@@ -303,7 +325,13 @@ dtm.synth = function () {
         // deferred
         setTimeout(function () {
             //===== type check
-            if (typeof(time) !== 'number' || time < 0) {
+            if (typeof(time) === 'boolean') {
+                if (time) {
+                    time = 0.0;
+                } else {
+                    return synth;
+                }
+            } else if (typeof(time) !== 'number' || time < 0) {
                 time = 0.0;
             }
 
@@ -320,6 +348,9 @@ dtm.synth = function () {
             }
             //===== end of type check
 
+            dtm.master.addVoice(synth);
+
+            //===============================
             octx = new OfflineAudioContext(1, (time + dur*4) * params.sr, params.sr);
             time += octx.currentTime;
 
@@ -374,11 +405,11 @@ dtm.synth = function () {
                     time += params.clock.get('lookahead');
                 }
 
-                var src = actx.createBufferSource();
+                nodes.rtSrc = actx.createBufferSource();
                 nodes.pFx[0].out = actx.createGain();
                 var pan = actx.createStereoPanner();
                 var out = actx.createGain();
-                src.connect(nodes.pFx[0].out);
+                nodes.rtSrc.connect(nodes.pFx[0].out);
                 for (var n = 1; n < nodes.pFx.length; n++) {
                     nodes.pFx[n].run(time, dur);
                     nodes.pFx[n-1].out.connect(nodes.pFx[n].in);
@@ -387,28 +418,37 @@ dtm.synth = function () {
                 pan.connect(out);
                 out.connect(actx.destination);
 
-                src.buffer = actx.createBuffer(1, params.rendered.length, params.sr);
-                src.buffer.copyToChannel(params.rendered, 0);
-                src.loop = false;
-                src.start(time);
-                src.stop(time + src.buffer.length);
+                nodes.rtSrc.buffer = actx.createBuffer(1, params.rendered.length, params.sr);
+                nodes.rtSrc.buffer.copyToChannel(params.rendered, 0);
+                nodes.rtSrc.loop = false;
+                nodes.rtSrc.start(time);
+                nodes.rtSrc.stop(time + nodes.rtSrc.buffer.length);
 
                 setParamCurve(time, dur, [{param: pan.pan, value: params.pan}]);
 
                 out.gain.value = 1.0;
 
-                src.onended = function () {
-                    for (var key in params) {
-                        params[key] = undefined;
-                        delete params[key];
+                nodes.rtSrc.onended = function () {
+                    var key;
+                    for (key in params) {
+                        if (params.hasOwnProperty(key)) {
+                            params[key] = undefined;
+                            delete params[key];
+                        }
                     }
-                    for (var key in nodes) {
-                        nodes[key] = undefined;
-                        delete nodes[key];
+                    for (key in nodes) {
+                        if (nodes.hasOwnProperty(key)) {
+                            nodes[key] = undefined;
+                            delete nodes[key];
+                        }
                     }
-                    octx = undefined;
-                    synth = undefined;
-                    arguments.callee = undefined; // ?
+
+                    dtm.master.removeVoice(synth);
+
+                    // TODO: these might actually cause memory leak???
+                    //octx = undefined;
+                    //synth = undefined;
+                    //arguments.callee = undefined; // ?
                 };
 
                 //synth.rendered = e.renderedBuffer.getChannelData(0).slice(0, dur*params.sr);
@@ -494,6 +534,28 @@ dtm.synth = function () {
     };
 
     synth.stop = function (time) {
+        var defer = 0.0;
+        if (params.lookahead) {
+            defer = Math.round(params.clock.get('lookahead') * 500);
+        }
+
+        if (typeof(time) !== 'number' || isNaN(time)) {
+            time = 0.0; // TODO: time not same as rt rendering time
+        }
+
+        setTimeout(function () {
+            if (nodes.src) {
+                nodes.src.stop(time);
+            }
+
+            if (nodes.rtSrc) {
+                nodes.rtSrc.stop(time);
+                console.log('meow');
+            }
+
+            dtm.master.removeVoice(synth);
+        }, defer);
+
         return synth;
     };
 
@@ -738,15 +800,15 @@ dtm.synth = function () {
     function typeCheck(src) {
         if (typeof(src) === 'number') {
             return new Float32Array([src]);
-        } else if (typeof(src) === 'object') {
+        } else if (typeof(src) === 'object' || typeof(src) === 'function') {
             if (src === null) {
                 return false;
             } else if (src.constructor === Array) {
                 return new Float32Array(src);
             } else if (src.constructor === Float32Array) {
                 return src;
-            } else if (src.hasOwnProperty('type')) {
-                if (src.type === 'dtm.array') {
+            } else if (src.hasOwnProperty('meta')) {
+                if (src.meta.type === 'dtm.array' || src.meta.type === 'dtm.generator') {
                     if (src.get().constructor === Array) {
                         //var foo = new Promise(function (resolve) {
                         //    resolve(new Float32Array(src.get()));
@@ -755,14 +817,14 @@ dtm.synth = function () {
                     } else if (src.get().constructor === Float32Array) {
                         return src.get();
                     }
-                } else if (src.type === 'dtm.synth') {
+                } else if (src.meta.type === 'dtm.synth') {
                     //console.log(src.promise);
                     //src.promise.then(function (val) {
                     //    console.log(val);
                     //});
                     //console.log(src.rendered);
                     return src.rendered;
-                } else if (src.type === 'dtm.model') {
+                } else if (src.meta.type === 'dtm.model') {
                     return new Float32Array(src.get());
                 }
             }
@@ -779,6 +841,8 @@ dtm.synth = function () {
                 return synth;
         }
     };
+
+    synth.wt.apply(this, arguments);
 
     return synth;
 };

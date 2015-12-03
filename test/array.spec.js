@@ -235,7 +235,6 @@ describe('array object', function () {
         describe('rescale', function () {
             it('should...', function () {
                 var a = dtm.a(0.5).rescale(0, 100);
-                //console.log(a.get());
             });
 
             describe('rescale w/ domain range specified', function () {

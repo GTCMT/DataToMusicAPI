@@ -42,6 +42,10 @@ dtm.array = function () {
         type: 'dtm.array'
     };
 
+    array.meta = {
+        type: 'dtm.array'
+    };
+
     // TODO: list different query params in detail in the documentation
     /**
      * Returns the array contents or an analyzed value
@@ -769,6 +773,17 @@ dtm.array = function () {
     /* LIST OPERATIONS*/
 
     /**
+     * Performs JS Array.map function to the array values.
+     * @function module:array#map
+     * @param callback
+     * @returns {dtm.array}
+     */
+    array.map = function (callback) {
+        array.set(params.value.map(callback));
+        return array;
+    };
+
+    /**
      * Sorts the contents of numerical array.
      * @function module:array#sort
      * @returns {dtm.array}
@@ -857,8 +872,8 @@ dtm.array = function () {
      * Returns a smaller segment of the array. Similar to get('block', ...), but more destructive.
      * @function module:array#block
      * @param start {number|array} The starting index of the block.
-     * @param size {number=1} The size of the block.
-     * @param clone {boolean=true} This retains the original array object.
+     * @param [size=1] {number} The size of the block.
+     * @param [clone=true] {boolean} This retains the original array object.
      * @returns {dtm.array}
      */
     array.block = function (start, size, clone) {
@@ -887,6 +902,7 @@ dtm.array = function () {
      * Applies a window function to the array. May be combined with array.block() operation.
      * @function module:array#window
      * @param type
+     * @returns {dtm.array}
      */
     array.window = function (type) {
         params.value = dtm.transform.window(params.value, type);

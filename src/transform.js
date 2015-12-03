@@ -30,7 +30,7 @@ dtm.transform = {
      * dtm.transform.generate('sine', 8, 0, 10);
      * -> [5, 8.909, 9.874, 7.169, 2.830, 0.125, 1.090, 5]
      */
-    generate: function () {
+    generator: function () {
         var type, len, min, max, cycle;
         var params = {
             type: '',
@@ -44,7 +44,9 @@ dtm.transform = {
             type = arguments[0];
         } else if (typeof(arguments[0]) === 'object') {
             for (var key in arguments[0]) {
-                params[key] = arguments[0][key];
+                if (arguments[0].hasOwnProperty(key)) {
+                    params[key] = arguments[0][key];
+                }
             }
         }
 
@@ -504,7 +506,7 @@ dtm.transform = {
             window = 'hamming'
         }
 
-        var res = dtm.transform.generate('zeros', Math.round(arr.length * stretchFactor));
+        var res = dtm.transform.generator('zeros', Math.round(arr.length * stretchFactor));
         for (var i = 0; i < (arr.length - blockSize) / hopSize; i++) {
 
         }
@@ -928,8 +930,15 @@ dtm.transform = {
         if (!count) {
             count = 1;
         }
+
         for (var i = 0; i < count; i++) {
-            res = res.concat(input);
+            if (input.constructor === Array) {
+                res = res.concat(input);
+            } else if (input.constructor === Float32Array) {
+                input.forEach(function (v) {
+                    res = res.concat(v);
+                });
+            }
         }
 
         if (input.constructor === Array) {
@@ -1195,7 +1204,7 @@ dtm.transform = {
             len = seqLen;
         }
 
-        var res = res = dtm.transform.generate('zeros', len);
+        var res = res = dtm.transform.generator('zeros', len);
 
         for (var i = 0; i < input.length; i++) {
             if (input[i] >= seqLen) {
@@ -1391,7 +1400,7 @@ dtm.transform.itob = dtm.transform.intervalsToBeats;
  */
 dtm.transform.btoi = dtm.transform.beatsToIntervals;
 
-dtm.transform.fill = dtm.transform.generate;
+dtm.transform.fill = dtm.transform.generator;
 dtm.transform.abs = dtm.transform.fwr;
 dtm.transform.randomize = dtm.transform.shuffle;
 

@@ -4,8 +4,8 @@
     },
     "templates": {
         "cleverLinks": false,
-            "monospaceLinks": false,
-            "default": {
+        "monospaceLinks": false,
+        "default": {
             "outputSourceFiles": true
         },
         "systemName"      : "DTM API",

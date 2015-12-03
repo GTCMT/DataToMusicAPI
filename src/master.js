@@ -27,7 +27,8 @@ dtm.master = {
         chord: null,
         tonalFunc: null,
 
-        numSynthVoices: 0
+        maxNumVoices: 10,
+        voices: []
     },
 
 
@@ -42,7 +43,7 @@ dtm.master = {
 
     activeInstrs: [],
     voices: [],
-    numVoices: 0,
+    maxNumVoices: 0,
     models: [],
 
     /**
@@ -146,6 +147,41 @@ dtm.master = {
     },
 
     set: function (key, val) {
+        return dtm.master;
+    },
+
+    setNumVoices: function (num) {
+        if (typeof(num) === number && num > 0) {
+            dtm.master.params.maxNumVoices = num;
+        }
+
+        return dtm.master;
+    },
+
+    suppressVoices: function () {
+        if (dtm.master.params.voices.length > dtm.master.params.maxNumVoices) {
+            dtm.master.params.voices[0].stop();
+            dtm.master.params.voices.splice(0, 1);
+            dtm.master.suppressVoices();
+        }
+
+        return dtm.master;
+    },
+
+    addVoice: function (voice) {
+        dtm.master.params.voices.push(voice);
+        dtm.master.suppressVoices();
+
+        return dtm.master;
+    },
+
+    removeVoice: function (voice) {
+        dtm.master.params.voices.forEach(function (v, i) {
+            if (v.get('id') === voice.get('id')) {
+                dtm.master.params.voices.splice(i, 1);
+            }
+        });
+
         return dtm.master;
     },
 

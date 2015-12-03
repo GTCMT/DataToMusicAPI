@@ -394,7 +394,7 @@ dtm.instr = function (arg) {
 
         if (typeof(model) !== 'undefined') {
             model.parent = instr;
-            model.map(instr);
+            model.assignMethods(instr);
 
             params.instrModel = model;
         }

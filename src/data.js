@@ -37,6 +37,7 @@ dtm.data = function (arg, cb, type) {
     /**
      * Returns a clone of dtm.array object from the data.
      * @function module:data#get
+     * @param param {string|number}
      * @param id {string|number} Parameter name (string) or index (integer). Param name (string) can be: a|arr|array|arrays|column (2nd arg: name or index), c|col|coll|collection, r|row (2nd arg: row number), dim|dimension|size, len|length, k|key|keys|name|names|list, t|type|types, (empty returns the data object itself). If given an integer in the first argument, it returns an array object. Returned array object is a cloned version, and modifying it will not affect the original array object stored in the data object.
      * @returns {dtm.array}
      */
@@ -89,6 +90,8 @@ dtm.data = function (arg, cb, type) {
 
                 case 'len':
                 case 'length':
+                case 'cardinality':
+                case 'card':
                     return params.size.row;
 
                 case 'k':
@@ -160,7 +163,7 @@ dtm.data = function (arg, cb, type) {
             data.callback = cb;
         }
 
-        data.promise = new Promise(function (resolve, reject) {
+        data.promise = new Promise(function (resolve) {
             var ext = url.split('.').pop(); // checks the extension
 
             if (ext === 'jsonp') {
@@ -332,6 +335,8 @@ dtm.data = function (arg, cb, type) {
             }
         });
 
+        data.then = data.promise.then;
+
         // CHECK: this doesn't work
         data.promise.get = function (arg) {
             data.promise.then(function (d) {
@@ -384,8 +389,7 @@ dtm.data = function (arg, cb, type) {
 
     function setArrays() {
         _.forEach(params.keys, function (key) {
-            var a = dtm.array(_.pluck(params.coll, key)).name(key);
-            params.arrays[key] = a;
+            params.arrays[key] = dtm.array(_.pluck(params.coll, key)).name(key);
         })
     }
 
@@ -420,21 +424,23 @@ dtm.data = function (arg, cb, type) {
         return data;
     };
 
-    data.stream = function (uri, rate) {
-        return data;
-    };
+    //data.stream = function (uri, rate) {
+    //    return data;
+    //};
 
     data.init = function (arg) {
+        var i = 0;
+
         if (arguments.length === 1) {
             if (typeof(arg) === 'number') {
-                for (var i = 0; i < arg; i++) {
+                for (i = 0; i < arg; i++) {
                     params.arrays[i] = dtm.array();
                     params.keys[i] = i.toString();
                     params.size.col = arg;
                     params.size.row = 0;
                 }
             } else if (typeof(arg) === 'object') {
-                for (var i = 0; i < arg.num; i++) {
+                for (i = 0; i < arg.num; i++) {
                     params.arrays[i] = dtm.array().fill('zeros', arg.len);
                     params.keys[i] = i.toString();
                     params.size.col = arg.num;
@@ -442,14 +448,14 @@ dtm.data = function (arg, cb, type) {
                 }
             }
         } else if (arguments.length === 2) {
-            for (var i = 0; i < arguments[0]; i++) {
+            for (i = 0; i < arguments[0]; i++) {
                 params.arrays[i] = dtm.array().fill('zeros', arguments[1]);
                 params.keys[i] = i.toString();
                 params.size.col = arguments[0];
                 params.size.row = arguments[1];
             }
         } else if (arguments.length === 3) {
-        for (var i = 0; i < arguments[0]; i++) {
+        for (i = 0; i < arguments[0]; i++) {
             params.arrays[arguments[2][i]] = dtm.array().fill('zeros', arguments[1]).name(arguments[2][i]);
             params.keys[i] = arguments[2][i];
             params.size.col = arguments[0];

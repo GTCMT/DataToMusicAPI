@@ -689,6 +689,22 @@ dtm.clock = function (bpm, subDiv, autoStart) {
         return clock;
     };
 
+    clock.seq = function (callback, seqArray, interval) {
+        var cb = (function (cb, arr, len) {
+            return function (c) {
+                if (len === undefined) {
+                    len = c.get('subDiv');
+                }
+                if (arr.indexOf(c.get('beat') % len) > -1) {
+                    cb(c);
+                }
+            };
+        })(arguments[0], arguments[1], arguments[2]);
+
+        clock.callbacks.push(cb);
+        return clock;
+    };
+
     // single-shot scheduler
     clock.delayEvent = function () {
         return clock;

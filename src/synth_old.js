@@ -1,16 +1,11 @@
 /**
- * @fileOverview Some building blocks for model creation. It can be used as one-shot as well.
- * @module synth
- */
-
-/**
  * Creates a new instance of synthesizer object. Wraps WebAudio functions somehow.
  * @function module:synth.synth
  * @param [type='sine'] {string} Choices: 'sine', 'saw', 'square', 'triange', 'noise', 'click', 'sampler', etc...
  * @param [wt] {string}
  * @returns {dtm.synth}
  */
-dtm.synth = function (type, wt) {
+dtm.synth3 = function (type, wt) {
     var params = {
         type: 'sine',
 
@@ -812,5 +807,3 @@ dtm.synth = function (type, wt) {
 
     return synth;
 };
-
-dtm.s = dtm.syn = dtm.synth;
