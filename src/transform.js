@@ -9,6 +9,7 @@ dtm.transform = {
 
     /* GENERTORS */
 
+    // TODO: deprecate this
     /**
      * Generates values for a new array.
      * @function module:transform#generate
@@ -252,11 +253,11 @@ dtm.transform = {
      * -> [0, 0.55, 0.2, 0.55, 0.05, 1, 0.1, 0.9]
      */
     normalize: function (arr, min, max) {
-        if (typeof(min) !== 'number') {
+        if (!isNumber(min)) {
             min = _.min(arr);
         }
 
-        if (typeof(max) !== 'number') {
+        if (!isNumber(max)) {
             max = _.max(arr);
         }
 
@@ -477,14 +478,14 @@ dtm.transform = {
     },
 
     ola: function (arr, stretchFactor, blockSize, hopSize, window) {
-        if (typeof(stretchFactor) !== 'number') {
+        if (!isNumber(stretchFactor)) {
             stretchFactor = 1.0;
         } else {
             if (stretchFactor < 0.0) {
                 stretchFactor = 1.0;
             }
         }
-        if (typeof(blockSize) === 'number') {
+        if (isNumber(blockSize)) {
             blockSize = Math.round(blockSize);
 
             if (blockSize > arr.length) {
@@ -493,7 +494,7 @@ dtm.transform = {
                 blockSize = 1;
             }
         }
-        if (typeof(hopSize) !== 'number') {
+        if (!isNumber(hopSize)) {
             hopSize = blockSize;
         } else {
             hopSize = Math.round(hopSize);
@@ -594,11 +595,11 @@ dtm.transform = {
             res = new Float32Array(input.length);
         }
 
-        if (typeof(factor) === 'number') {
+        if (isNumber(factor)) {
             _.forEach(input, function (val, idx) {
                 res[idx] = val + factor;
             });
-        } else if (factor.constructor === Array) {
+        } else if (isArray(factor)) {
             if (input.length !== factor.length) {
                 factor = dtm.transform.fit(factor, input.length, interp);
             }
@@ -627,12 +628,12 @@ dtm.transform = {
             res = new Float32Array(input.length);
         }
 
-        if (typeof(factor) === 'number') {
+        if (isNumber(factor)) {
             _.forEach(input, function (val, idx) {
                 res[idx] = val * factor;
             });
 
-        } else if (factor.constructor === Array) {
+        } else if (isArray(factor)) {
             if (input.length !== factor.length) {
                 factor = dtm.transform.fit(factor, input.length, interp);
             }
@@ -661,11 +662,11 @@ dtm.transform = {
             res = new Float32Array(input.length);
         }
 
-        if (typeof(factor) === 'number') {
+        if (isNumber(factor)) {
             _.forEach(input, function (val, idx) {
                 res[idx] = Math.pow(val, factor);
             });
-        } else if (factor.constructor === Array) {
+        } else if (isArray(factor)) {
             if (input.length !== factor.length) {
                 factor = dtm.transform.fit(factor, input.length, interp);
             }
@@ -693,11 +694,11 @@ dtm.transform = {
             res = new Float32Array(input.length);
         }
 
-        if (typeof(factor) === 'number') {
+        if (isNumber(factor)) {
             _.forEach(input, function (val, idx) {
                 res[idx] = Math.pow(factor, val);
             });
-        } else if (factor.constructor === Array) {
+        } else if (isArray(factor)) {
             if (input.length !== factor.length) {
                 factor = dtm.transform.fit(factor, input.length, interp);
             }
@@ -728,7 +729,7 @@ dtm.transform = {
             res = new Float32Array(input.length);
         }
 
-        if (typeof(to) !== 'number') {
+        if (!isNumber(to)) {
             input.forEach(function (val, idx) {
                 res[idx] = Math.round(val);
             });
@@ -1059,8 +1060,6 @@ dtm.transform = {
     },
 
     interleave: function (srcArr, tgtArr) {
-
-
     },
 
 
@@ -1424,7 +1423,7 @@ dtm.transform.abs = dtm.transform.fwr;
 dtm.transform.randomize = dtm.transform.shuffle;
 
 function morphFixed (srcArr, tgtArr, morphIdx) {
-    if (typeof(morphIdx) === 'undefined') {
+    if (!isNumber(morphIdx)) {
         morphIdx = 0.5;
     }
 

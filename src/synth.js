@@ -299,7 +299,7 @@ dtm.synth = function () {
     };
 
     synth.dur = function (src) {
-        if (typeof(src) === 'number') {
+        if (isNumber(src)) {
             if (src > 0) {
                 params.autoDur = false;
                 params.dur = src;
@@ -316,6 +316,14 @@ dtm.synth = function () {
         return synth;
     };
 
+    /**
+     *
+     * @function module:synth#play
+     * @param time {number=0} Delay in seconds that the synth starts playing
+     * @param dur {number} Duration in seconds
+     * @param lookahead {number} Delay in seconds for the s
+     * @returns {dtm.synth}
+     */
     synth.play = function (time, dur, lookahead) {
         var defer = 0;
         if (params.lookahead) {
@@ -331,7 +339,7 @@ dtm.synth = function () {
                 } else {
                     return synth;
                 }
-            } else if (typeof(time) !== 'number' || time < 0) {
+            } else if (!isNumber(time) || time < 0) {
                 time = 0.0;
             }
 
@@ -339,7 +347,7 @@ dtm.synth = function () {
                 params.dur = params.clock.get('dur');
             }
 
-            if (typeof(dur) !== 'number') {
+            if (!isNumber(dur)) {
                 dur = params.dur;
             } else {
                 if (params.dur > 0) {
@@ -460,7 +468,7 @@ dtm.synth = function () {
 
     synth.render = function (time, dur) {
         //===== type check
-        if (typeof(time) !== 'number' || time < 0) {
+        if (!isNumber(time) || time < 0) {
             time = 0.0;
         }
 
@@ -468,7 +476,7 @@ dtm.synth = function () {
             params.dur = params.clock.get('dur');
         }
 
-        if (typeof(dur) !== 'number') {
+        if (!isNumber(dur)) {
             dur = params.dur;
         } else {
             if (params.dur > 0) {
@@ -539,7 +547,7 @@ dtm.synth = function () {
             defer = Math.round(params.clock.get('lookahead') * 500);
         }
 
-        if (typeof(time) !== 'number' || isNaN(time)) {
+        if (!isNumber(time)) {
             time = 0.0; // TODO: time not same as rt rendering time
         }
 
@@ -550,7 +558,6 @@ dtm.synth = function () {
 
             if (nodes.rtSrc) {
                 nodes.rtSrc.stop(time);
-                console.log('meow');
             }
 
             dtm.master.removeVoice(synth);
@@ -798,16 +805,16 @@ dtm.synth = function () {
     synth.samplehold = synth.samphold = synth.sh;
 
     function typeCheck(src) {
-        if (typeof(src) === 'number') {
+        if (isNumber(src)) {
             return new Float32Array([src]);
         } else if (typeof(src) === 'object' || typeof(src) === 'function') {
             if (src === null) {
                 return false;
-            } else if (src.constructor === Array) {
-                return new Float32Array(src);
             } else if (src.constructor === Float32Array) {
                 return src;
-            } else if (src.hasOwnProperty('meta')) {
+            } else if (isNumArray(src)) {
+                return new Float32Array(src);
+            } else if (isDtmObj(src)) {
                 if (src.meta.type === 'dtm.array' || src.meta.type === 'dtm.generator') {
                     if (src.get().constructor === Array) {
                         //var foo = new Promise(function (resolve) {

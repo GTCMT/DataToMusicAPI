@@ -1,6 +1,6 @@
 /**
  * Creates a new instance of synthesizer object. Wraps WebAudio functions somehow.
- * @function module:synth.synth
+ * @function module:synth_old.synth_old
  * @param [type='sine'] {string} Choices: 'sine', 'saw', 'square', 'triange', 'noise', 'click', 'sampler', etc...
  * @param [wt] {string}
  * @returns {dtm.synth}
@@ -97,7 +97,7 @@ dtm.synth3 = function (type, wt) {
 
     /**
      * Returns the value of a parameter.
-     * @function module:synth#get
+     * @function module:synth_old#get
      * @param param {string} amp, volume | gain, frequency | freq | cps, noteNum | notenum | note | nn, buffer
      * @returns {*}
      */
@@ -137,7 +137,7 @@ dtm.synth3 = function (type, wt) {
 
     /**
      * Sets the wavetable or mode of the dtm.synth.
-     * @function module:synth#set
+     * @function module:synth_old#set
      * @param type {string|array} Choices: sine, saw, square, triangle, noise, click, sampler
      * @returns {dtm.synth}
      */
@@ -224,7 +224,7 @@ dtm.synth3 = function (type, wt) {
 
     /**
      * Sets the ADSR envelope for the main amplitude.
-     * @function module:synth#adsr
+     * @function module:synth_old#adsr
      * @param attack {number} Attack time in seconds.
      * @param decay {number} Decay time in seconds.
      * @param sustain {number} Sustain level between 0-1.
@@ -246,7 +246,7 @@ dtm.synth3 = function (type, wt) {
 
     /**
      * Loads an audio sample eaither from a URL, an ArrayBuffer, or Webaudio buffer data. When loading from URL or un-decoded ArrayBuffer, it will return a promise object which passes the dtm.synth object to the callback with decoded buffer being loaded. You could call the play() function directly on the promise, but the timing of the playback is not guaranteed as immediate. If given a WebAudio buffer, it returns the dtm.synth object. It will also set the current synth type to 'sampler'.
-     * @function module:synth#load
+     * @function module:synth_old#load
      * @param arg {string|arraybuffer|buffer}
      * @param [cb] {function}
      * @returns {promise | dtm.synth}
@@ -318,7 +318,7 @@ dtm.synth3 = function (type, wt) {
 
     /**
      * Starts playing the dtm.synth object.
-     * @function module:synth#play
+     * @function module:synth_old#play
      * @param [del=0] {number} Delay in seconds for the playback.
      * @param [dur] {number} Duration of the playback in seconds.
      * @returns {dtm.synth}
@@ -547,7 +547,7 @@ dtm.synth3 = function (type, wt) {
 
     /**
      * Sets the MIDI note number to be played.
-     * @function module:synth#nn
+     * @function module:synth_old#nn
      * @param nn {number}
      * @returns {dtm.synth}
      */
@@ -566,7 +566,7 @@ dtm.synth3 = function (type, wt) {
 
     /**
      * Sets the frequency of the note to be played.
-     * @function module:synth#freq
+     * @function module:synth_old#freq
      * @param freq {number}
      * @returns {dtm.synth}
      */
@@ -583,7 +583,7 @@ dtm.synth3 = function (type, wt) {
 
     /**
      * Sets the amplitude of the note.
-     * @function module:synth#amp
+     * @function module:synth_old#amp
      * @param val {number} Amplitude between 0-1.
      * @returns {dtm.synth}
      */
@@ -611,7 +611,7 @@ dtm.synth3 = function (type, wt) {
 
     /**
      * Sets the duration for the each note.
-     * @function module:synth#dur | duration | len | length
+     * @function module:synth_old#dur | duration | len | length
      * @param val {number} Duration in seconds.
      * @returns {dtm.synth}
      */
@@ -635,7 +635,7 @@ dtm.synth3 = function (type, wt) {
 
     /**
      * Sets the attack time of the amplitude envelope
-     * @function module:synth#attack | atk
+     * @function module:synth_old#attack | atk
      * @param val {number} Attack time in seconds
      * @returns {dtm.synth}
      */
@@ -647,7 +647,7 @@ dtm.synth3 = function (type, wt) {
 
     /**
      * Sets the decay time of the amplitude envelope
-     * @function module:synth#decay | dcy
+     * @function module:synth_old#decay | dcy
      * @param val {number} Decay time in seconds
      * @returns {dtm.synth}
      */
@@ -659,7 +659,7 @@ dtm.synth3 = function (type, wt) {
 
     /**
      * Sets the sustain level of the amplitude envelope
-     * @function module:synth#sustain | sus
+     * @function module:synth_old#sustain | sus
      * @param val {number} Normalized sustain level between 0 and 1
      * @returns {{type: string, promise: null}}
      */
@@ -671,7 +671,7 @@ dtm.synth3 = function (type, wt) {
 
     /**
      * Sets the release time of the amplitude envelope
-     * @function module:synth#release | rel
+     * @function module:synth_old#release | rel
      * @param val {number} Release time in seconds
      * @returns {{type: string, promise: null}}
      */
@@ -683,7 +683,7 @@ dtm.synth3 = function (type, wt) {
 
     /**
      * Sets the output gain level
-     * @function module:synth#gain
+     * @function module:synth_old#gain
      * @param val {number} Normalized gain value between 0 and 1
      * @returns {{type: string, promise: null}}
      */
@@ -699,7 +699,7 @@ dtm.synth3 = function (type, wt) {
 
     /**
      * Sets the output stereo panning
-     * @function module:synth#pan
+     * @function module:synth_old#pan
      * @param val {number} Stereo pan value between 0 and 1. The center = 0.5.
      * @returns {{type: string}}
      */
@@ -715,7 +715,7 @@ dtm.synth3 = function (type, wt) {
 
     /**
      * Applies a Low Pass Filter.
-     * @function module:synth#lpf
+     * @function module:synth_old#lpf
      * @param cof {number} Cutoff Frequency in Hz.
      * @param res {number} Q or resonance level.
      * @returns {dtm.synth}
@@ -729,7 +729,7 @@ dtm.synth3 = function (type, wt) {
 
     /**
      * Applies a reverb to the voice.
-     * @function module:synth#verb
+     * @function module:synth_old#verb
      * @param amt {number} 0-1
      * @returns {dtm.synth}
      */
@@ -741,7 +741,7 @@ dtm.synth3 = function (type, wt) {
 
     /**
      * Same as synth.verb().
-     * @function module:synth#reverb
+     * @function module:synth_old#reverb
      * @type {Function}
      */
     synth.reverb = synth.verb;
@@ -749,7 +749,7 @@ dtm.synth3 = function (type, wt) {
     // TODO: stereo mode
     /**
      * Applies a feedback delay.
-     * @function module:synth#delay
+     * @function module:synth_old#delay
      * @param amt {number} The amount or amplitude of the delay (0-1).
      * @param [time=0.3] {number} Delay time in seconds.
      * @param [fb=0.3] {number} Feedback amount in 0-1.
@@ -782,7 +782,7 @@ dtm.synth3 = function (type, wt) {
     // TODO: implement FM
     /**
      * Applies Frequency Modulation
-     * @function module:synth#fm
+     * @function module:synth_old#fm
      * @param amp
      * @param base
      * @param freq

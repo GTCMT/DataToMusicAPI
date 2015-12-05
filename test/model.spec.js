@@ -53,17 +53,16 @@ describe('model abstract', function () {
         var uni;
 
         beforeEach(function () {
-            //uni = dtm.model().load('unipolar');
             uni = dtm.model('unipolar');
         });
 
         it('should have the name unipolar', function () {
             expect(uni.get('name')).toBe('unipolar');
         });
-
         it('should normalize to 0 - 1', function () {
             expect(uni([1, 2, 3]).get()).toEqual([0.0, 0.5, 1.0]);
             expect(uni(dtm.array([1, 2, 3])).get()).toEqual([0.0, 0.5, 1.0]);
+            expect(uni(0.5).get()).toEqual([0.5]);
         });
 
         it('should set the domain by args', function () {
@@ -85,6 +84,11 @@ describe('model abstract', function () {
             expect(typeof(a.get(0))).toBe('number');
             expect(a.get()).toEqual([0, 0, 1, 1, 0]);
         });
+
+        it('should work with multiple args for set', function () {
+            var a = uni(1, 2, 3);
+            expect(a.get()).toEqual([0.0, 0.5, 1.0]);
+        })
     });
 
     describe('creating a freq model', function () {

@@ -41,7 +41,7 @@ dtm.model = function (name, categ) {
             if (arguments.length === 1) {
                 var arg = arguments[0];
 
-                if (typeof(arg) === 'number') {
+                if (isNumber(arg)) {
                     params.data.set(arg);
                 } else if (typeof(arg) === 'string') {
                     params.data.set('c', arg).histo();
@@ -112,27 +112,27 @@ dtm.model = function (name, categ) {
         'preserve': ['preserve', 'preserved', 'p', 'n']
     };
 
-    if (name !== undefined) {
+    if (typeof(name) === 'string') {
         params.name = name;
     }
 
-    if (categ !== undefined) {
+    if (typeof(categ) === 'string') {
         params.categ = categ;
     }
 
     model.default = function (callback) {
-        params.defaultCb = callback;
+        if (typeof(callback) === 'function') {
+            params.defaultCb = callback;
+        }
     };
 
     model.get = function (param) {
         switch (param) {
             case 'name':
                 return params.name;
-
             case 'category':
             case 'categ':
                 return params.categ;
-
             default:
                 return params.output;
         }
@@ -145,7 +145,9 @@ dtm.model = function (name, categ) {
      * @returns {dtm.model}
      */
     model.categ = function (categ) {
-        params.categ = categ;
+        if (typeof(categ) === 'string') {
+            params.categ = categ;
+        }
         return model;
     };
 

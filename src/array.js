@@ -301,11 +301,8 @@ dtm.array = function () {
             params.length = params.value.length;
             params.index = params.length - 1;
         } else if (arguments.length > 1) {
-            params.value = [];
-            for (var i = 0; i < arguments.length; i++) {
-                // assuming each item is not an array / other array-ish types
-                params.value[i] = arguments[i];
-            }
+            // assuming each item is not an array / other array-ish types
+            params.value = argsToArray(arguments);
             //if (typeof(arguments[0]) === 'string') {
             //    params.value = dtm.gen.apply(this, arguments).get();
             //    checkType(params.value);
@@ -1307,17 +1304,3 @@ dtm.array = function () {
 };
 
 dtm.a = dtm.arr = dtm.array;
-
-var generators = ['line', 'rise', 'decay', 'fall', 'seq', 'sequence', 'series', 'range', 'noise', 'random', 'rand', 'randi', 'gaussian', 'gaussCurve', 'gauss', 'normal', 'zeros', 'zeroes', 'ones', 'constant', 'constants', 'const', 'consts', 'repeat', 'string', 'str', 'sin', 'sine', 'cos', 'cosine', 'tri', 'triangle', 'saw', 'fibonacci'];
-
-generators.forEach(function (type) {
-    dtm[type] = function () {
-        var args = [type];
-
-        for (var i = 0; i < arguments.length; i++) {
-            args.push(arguments[i]);
-        }
-
-        return dtm.array.apply(this, args);
-    }
-});

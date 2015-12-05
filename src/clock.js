@@ -4,7 +4,7 @@
  */
 
 /**
- * Creates a new instance of clock. Don't put "new".
+ * Creates a new instance of clock.
  * @function module:clock.clock
  * @param [bpm=true] {boolean|number} Synchronization or Tempo setting. If given a boolean, or string "sync", it sets the current sync state of the clock as a slave to the master clock. If given a number, it sets the unsynced tempo in beats-per-minute. Default BPM for unsynced clock is 120. Recommended value range is around 60-140.
  * @param [subDiv=16] {number} Sub division / tick speed. Recommended: 4, 8, 16, etc.
@@ -180,7 +180,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
      * cl.bpm(90);
      */
     clock.bpm = function (bpm) {
-        if (typeof(bpm) === 'number') {
+        if (isNumber(bpm)) {
             params.bpm = bpm;
             params.sync = false;
         } else if (typeof(bpm) === 'boolean') {
@@ -200,7 +200,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
      * @returns {dtm.clock}
      */
     clock.subDiv = function (val) {
-        if (typeof(val) === 'number') {
+        if (isNumber(val)) {
             params.subDiv = val;
         } else if (typeof(val) === 'string') {
             val = val.split('/');
@@ -237,7 +237,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
     //};
 
     clock.setTime = function (input) {
-        if (typeof(input) === 'Array') {
+        if (isArray(input)) {
             clock.time = input;
         } else if (typeof(input) === 'string') {
             clock.time = input.split('/');
@@ -253,7 +253,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
     };
 
     clock.lookahead = function (lookahead) {
-        if (typeof(lookahead) === 'number' && lookahead >= 0.0) {
+        if (isNumber(lookahead) && lookahead >= 0.0) {
             params.lookahead = lookahead;
         }
         return clock;
@@ -638,7 +638,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
     };
 
     clock.when = function (arr, cb) {
-        if (typeof(arr) !== 'undefined') {
+        if (isArray(arr)) {
             if (arr.indexOf(clock.beat) > -1) {
                 if (typeof(cb) !== 'undefined') {
                     cb(clock);
@@ -649,7 +649,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
     };
 
     clock.notWhen = function (arr, cb) {
-        if (typeof(arr) !== 'undefined') {
+        if (isArray(arr)) {
             if (arr.indexOf(clock.beat) == -1) {
                 if (typeof(cb) !== 'undefined') {
                     cb(clock);

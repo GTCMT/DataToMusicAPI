@@ -8,18 +8,18 @@
         if (arguments.length === 1) {
             var arg = arguments[0];
 
-            if (typeof(arg) === 'number') {
+            if (isNumber(arg)) {
                 a.set(arg);
             } else if (typeof(arg) === 'string') {
-                a.set('c', arg).histo();
+                a.set(arg).split().histo();
             } else if (typeof(arg) === 'object') {
-                if (arg.constructor === Array || arg.constructor === Float32Array) {
-                    a.set(arg);
-
-                    if (a.get('type') !== 'number') {
-                        a.histo();
+                if (isArray(arg)) {
+                    if (isNumArray(arg)) {
+                        a.set(arg);
+                    } else {
+                        a.set(arg).split().histo();
                     }
-                } else if (arg.hasOwnProperty('type') && arg.type === 'dtm.array') {
+                } else if (isDtmObj(arg)) {
                     a.set(arg);
 
                     if (a.get('type') !== 'number') {
@@ -28,14 +28,12 @@
                 }
             }
         } else if (arguments.length > 1) {
-            var args = arguments;
+            var args = argsToArray(arguments);
 
-            // TODO: proper type check
-
-            if (typeof(args[0]) === 'number') {
+            if (isNumArray(args)) {
                 a.set(args);
-            } else if (typeof(args[0]) === 'string') {
-                a.set(args).histo();
+            } else if (isStringArray(args)) {
+                a.set(args).split().histo();
             }
         }
 

@@ -8,13 +8,13 @@ module.exports = function (grunt) {
             target: {
                 src: [
                     'misc/start.js',
+                    'src/utils.js',
                     'src/core.js',
                     'src/osc.js',
                     'src/analyzer.js',
                     'src/generator.js',
                     'src/transform.js',
                     'src/array.js',
-                    'src/array2.js',
                     'src/collection.js',
                     'src/value.js',
                     'src/iterator.js',
