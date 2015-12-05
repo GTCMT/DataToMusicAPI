@@ -268,39 +268,51 @@ dtm.array = function () {
     /**
      * Sets or overwrites the contents of the array object.
      * @function module:array#set
-     * @param input {array}
      * @returns {dtm.array}
      */
-    array.set = function (input) {
-        if (input === undefined) {
+    array.set = function () {
+        if (arguments.length === 1) {
+            if (arguments[0] === undefined) {
+                params.value = [];
+            } else if (typeof(arguments[0]) === 'number') {
+                params.value = [arguments[0]];
+            } else if (arguments[0].constructor === Array) {
+                params.value = arguments[0];
+            } else if (arguments[0].constructor === Float32Array) {
+                params.value = arguments[0];
+            } else if (arguments[0].type === 'dtm.array') {
+                params.value = arguments[0].get();
+            } else if (typeof(arguments[0]) === 'string') {
+                params.value = [arguments[0]]; // no splitting
+                checkType(params.value);
+            }
+
+            if (params.original.length === 0) {
+                params.original = params.value;
+
+                // CHECK: type checking - may be redundant
+                checkType(params.value);
+            } else {
+                params.processed++;
+            }
+
+            generateHash(params.value);
+
+            params.length = params.value.length;
+            params.index = params.length - 1;
+        } else if (arguments.length > 1) {
             params.value = [];
-        } else if (typeof(input) === 'number') {
-            params.value = [input];
-        } else if (input.constructor === Array) {
-            params.value = input;
-        } else if (input.constructor === Float32Array) {
-            params.value = input;
-        } else if (input.type === 'dtm.array') {
-            params.value = input.get();
-        } else if (typeof(input) === 'string') {
-            //params.value = dtm.transform.fill.apply(this, arguments);
-            params.value = dtm.gen.apply(this, arguments).get();
-            checkType(params.value);
+            for (var i = 0; i < arguments.length; i++) {
+                // assuming each item is not an array / other array-ish types
+                params.value[i] = arguments[i];
+            }
+            //if (typeof(arguments[0]) === 'string') {
+            //    params.value = dtm.gen.apply(this, arguments).get();
+            //    checkType(params.value);
+            //} else {
+            //
+            //}
         }
-
-        if (params.original.length === 0) {
-            params.original = params.value;
-
-            // CHECK: type checking - may be redundant
-            checkType(params.value);
-        } else {
-            params.processed++;
-        }
-
-        generateHash(params.value);
-
-        params.length = params.value.length;
-        params.index = params.length - 1;
 
         return array;
     };
@@ -1150,6 +1162,17 @@ dtm.array = function () {
     };
 
     array.lt = array.lessthan;
+
+    /* STRING OPERATIONS */
+
+    /**
+     * Separates the array items into new array using the separator
+     * @param [separator=''] {string}
+     * @returns dtm.array
+     */
+    array.split = function (separator) {
+        return array.set(dtm.transform.split(params.value, separator));
+    };
 
     /* MUSICAL */
 

@@ -475,4 +475,17 @@ describe('array helper functions', function () {
             expect(res).toEqual([1, 2, 3]);
         });
     });
+
+    describe('split', function () {
+        it('should output h e y', function () {
+            expect(dtm.transform.split(['hey'])).toEqual(['h', 'e', 'y']);
+        });
+        it('should process array of string', function () {
+            expect(dtm.transform.split(['hey', 'ho'])).toEqual(['h', 'e', 'y', 'h', 'o']);
+        });
+
+        it('should convert non-string values to a string', function () {
+            expect(dtm.transform.split([123, '456'])).toEqual(['1', '2', '3', '4', '5', '6']);
+        });
+    });
 });

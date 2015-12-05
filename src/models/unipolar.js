@@ -11,7 +11,7 @@
             if (typeof(arg) === 'number') {
                 a.set(arg);
             } else if (typeof(arg) === 'string') {
-                a.set('c', arg).histo();
+                a.set(arg).split().histo();
             } else if (typeof(arg) === 'object') {
                 if (arg.constructor === Array || arg.constructor === Float32Array) {
                     a.set(arg);

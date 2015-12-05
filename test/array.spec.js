@@ -49,13 +49,13 @@ describe('array object', function () {
             });
         });
 
-        describe('shorted', function () {
+        describe('sorted', function () {
             var a = dtm.array([3, 1, 2]);
             it('should return [1, 2, 3]', function () {
                 expect(a.get('sorted').toString()).toBe([1, 2, 3].toString());
             });
 
-            var b = dtm.array('s', 'hey');
+            var b = dtm.array('hey').split();
             it('should return e h y', function () {
                 expect(b.get('sorted').toString()).toBe(['e', 'h', 'y'].toString());
             });
@@ -76,14 +76,14 @@ describe('array object', function () {
         });
 
         describe('mode', function () {
-            var a = dtm.array('s', 'hello world!');
+            var a = dtm.array('hello world!').split();
             it('should return l', function () {
                 expect(a.get('mode')).toBe('l');
             });
         });
 
         describe('histo', function () {
-            var a = dtm.array('s', 'hello world!');
+            var a = dtm.array('hello world!').split();
             it('should return 3 ls', function () {
                 expect(a.get('histo')[2]).toBe(3);
             });
@@ -93,14 +93,14 @@ describe('array object', function () {
         });
 
         describe('classes', function () {
-            var a = dtm.array('s', 'hello world!');
+            var a = dtm.array('hello world!').split();
             it('should return unique classes', function () {
                 expect(a.get('classes').length).toBe(9);
             });
         });
 
         describe('numClasses', function () {
-            var a = dtm.array('s', 'hello world!');
+            var a = dtm.array('hello world!').split();
             it('should return 9', function () {
                 expect(a.get('numClasses')).toBe(9);
             });
@@ -123,17 +123,6 @@ describe('array object', function () {
 
     describe('set', function () {
 
-        describe('strings as input', function () {
-            var a;
-            beforeEach(function () {
-                a = dtm.array();
-            });
-
-            it('should blah', function () {
-                a.set('c', 'test');
-                expect(a.get('len')).toBe(4);
-            });
-        })
     });
 
     describe('generater', function () {
@@ -154,7 +143,7 @@ describe('array object', function () {
 
     describe('nominal operations', function () {
         describe('histogram', function () {
-            var a = dtm.array('s', 'hello world!').histo();
+            var a = dtm.array('hello world!').split().histo();
             it('should return 3 ls', function () {
                 expect(a.get()[2]).toBe(3);
             });
@@ -273,7 +262,14 @@ describe('array object', function () {
         });
     });
 
-    
+    describe('string operations', function () {
+        describe('split', function () {
+            it('should split test into t e s t', function () {
+                expect(dtm.array('test').split().get()).toEqual(['t', 'e', 's', 't']);
+            });
+        });
+    });
+
     describe('getBlock', function () {
         var a = dtm.a().fill('seq', 16, 0).block(2, 3);
         it('should have the length of 3', function () {

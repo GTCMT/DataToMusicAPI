@@ -1373,6 +1373,25 @@ dtm.transform = {
             res[i] = dtm.value.mtof(v);
         });
         return res;
+    },
+
+    split: function (input, separator) {
+        if (isEmpty(separator)) {
+            separator = '';
+        }
+
+        var res = [];
+        if (!isEmpty(input)) {
+            if (isArray(input)) {
+                input.forEach(function (v) {
+                    if (typeof(v) === 'number') {
+                        v = v.toString();
+                    }
+                    res = res.concat(v.split(separator));
+                });
+            }
+        }
+        return res;
     }
 };
 
