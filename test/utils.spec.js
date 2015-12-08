@@ -44,3 +44,27 @@ describe('argIsSingleArray', function () {
         })([1, 2], 3)).toBe(false);
     })
 });
+
+describe('argsAreSingleVals', function () {
+    it('should work', function () {
+        expect((function () {
+            return argsAreSingleVals(arguments);
+        })(1, 2, 3)).toBe(true);
+
+        expect((function () {
+            return argsAreSingleVals(arguments);
+        })([1, 2, 3])).toBe(false);
+
+        expect((function () {
+            return argsAreSingleVals(arguments);
+        })(1, [2], 3)).toBe(false);
+    });
+});
+
+describe('objForEach', function () {
+    it('should work', function () {
+        objForEach({foo: 123, bar: 456}, function (val, key) {
+
+        });
+    });
+});

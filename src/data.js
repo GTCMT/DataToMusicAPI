@@ -507,3 +507,23 @@ dtm.data = function (arg, cb, type) {
 
 dtm.load = dtm.d = dtm.data;
 dtm.load.name = 'dtm.load';
+
+dtm.loadUserFile = function (elem_files) {
+    var fileType = null;
+    var reader = new FileReader();
+    if (elem_files[0].name.match(/.+\.json/gi)) {
+        fileType = 'json';
+    } else if (elem_files[0].name.match(/.+\.csv/gi)) {
+        fileType = 'csv';
+    }
+    reader.readAsText(elem_files[0]);
+    return new Promise(function (resolve, reject) {
+        reader.onload = function (e) {
+            if (fileType === 'json') {
+                resolve(JSON.parse(e.target.result));
+            } else if (fileType === 'csv') {
+                resolve(dtm.parser.csvToCols(e.target.result));
+            }
+        };
+    });
+};

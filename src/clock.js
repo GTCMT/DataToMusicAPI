@@ -40,7 +40,9 @@ dtm.clock = function (bpm, subDiv, autoStart) {
         lookahead: 0.1,
         offset: 0,
         requestId: null,
-        autoStart: true
+        autoStart: true,
+
+        time: [4, 4]
     };
 
     var clock = {
@@ -48,7 +50,6 @@ dtm.clock = function (bpm, subDiv, autoStart) {
 
         interval: 1,
 
-        time: [4, 4],
         beat: 0,
 
         list: [],
@@ -143,11 +144,11 @@ dtm.clock = function (bpm, subDiv, autoStart) {
             clock.bpm(bpm);
         }
 
-        if (typeof(subDiv) !== 'undefined') {
+        if (!isEmpty(subDiv)) {
             clock.subDiv(subDiv);
         }
 
-        if (typeof(autoStart) === 'boolean') {
+        if (isBoolean(autoStart)) {
             params.autoStart = autoStart;
         }
 
@@ -161,7 +162,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
      * @returns {dtm.clock}
      */
     clock.sync = function (bool) {
-        if (typeof(bool) === 'undefined') {
+        if (!isBoolean(bool)) {
             bool = true;
         }
 
@@ -216,6 +217,13 @@ dtm.clock = function (bpm, subDiv, autoStart) {
 
     clock.div = clock.subdiv = clock.subDiv;
 
+    clock.time = function (val) {
+        if (isNumber(val) && val !== 0) {
+            params.subDiv = 1/val;
+        }
+        return clock;
+    };
+
     function getInterval() {
         if (params.sync) {
             return 1.0/(dtm.master.get('clock').get('bpm')/60.0 * params.subDiv/4.0);
@@ -238,9 +246,9 @@ dtm.clock = function (bpm, subDiv, autoStart) {
 
     clock.setTime = function (input) {
         if (isArray(input)) {
-            clock.time = input;
+            clock.params.time = input;
         } else if (typeof(input) === 'string') {
-            clock.time = input.split('/');
+            clock.params.time = input.split('/');
         }
         return clock;
     };
@@ -445,7 +453,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
                     cb(clock);
                 });
 
-                clock.beat = (clock.beat + 1) % (params.subDiv * clock.time[0] / clock.time[1]);
+                clock.beat = (clock.beat + 1) % (params.subDiv * clock.params.time[0] / clock.params.time[1]);
 
             } else if (params.source === 'animationFrame') {
                 params.reported = Math.round(timestamp / 1000. * params.bpm / 60. * params.resolution * params.subDiv / 4);
@@ -504,7 +512,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
                     cb(clock);
                 });
 
-                clock.beat = (clock.beat + 1) % (params.subDiv * clock.time[0] / clock.time[1]);
+                clock.beat = (clock.beat + 1) % (params.subDiv * clock.params.time[0] / clock.params.time[1]);
 
             } else if (params.source === 'animationFrame') {
                 params.reported = Math.round(timestamp / 1000. * params.bpm / 60. * params.resolution);

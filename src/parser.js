@@ -29,7 +29,7 @@ dtm.parser = {
      * -> [{foo: 123, bar: 456.78, buz:'hey'}, {foo: 789, bar: 444.44, buz:'hoo'}]
      */
     csvToJson: function (csv) {
-        var lines = csv.split("\r"); // \r for Macs
+        var lines = csv.split("\n"); // \r for Macs
         var result = [];
         var headers = lines[0].split(",");
 
@@ -52,6 +52,34 @@ dtm.parser = {
 
         return result; //JavaScript object
 //        return JSON.stringify(result); //JSON
+    },
+
+    csvToCols: function (csvText) {
+        var lines = csvText.split("\n"); // \r for Macs
+        var headers = lines[0].split(",");
+        var obj = {};
+        headers.forEach(function (v, i) {
+            headers[i] = v.trim(); // removes the spaces at the both ends
+            obj[headers[i]] = [];
+        });
+
+        for (var i = 1; i < lines.length; i++) {
+            var currentline = lines[i].split(",");
+
+            if (currentline.length > 1) {
+                for (var j = 0; j < headers.length; j++) {
+                    var val = currentline[j];
+                    if (!isNaN(val)) {
+                        val = parseFloat(val);
+                    } else {
+                        val = val.trim();
+                    }
+                    obj[headers[j]].push(val);
+                }
+            }
+        }
+
+        return obj; //JavaScript object
     },
 
     /**

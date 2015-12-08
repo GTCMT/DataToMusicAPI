@@ -43,7 +43,15 @@ dtm.array = function () {
     };
 
     array.meta = {
-        type: 'dtm.array'
+        type: 'dtm.array',
+        getParams: function () {
+            return params;
+        },
+        addParams: function (paramsExt) {
+            objForEach(paramsExt, function (val, key) {
+                params[key] = val;
+            });
+        }
     };
 
     // TODO: list different query params in detail in the documentation
@@ -54,14 +62,14 @@ dtm.array = function () {
      * @returns {number|array|string}
      */
     array.get = function (param) {
-        if (typeof(param) === 'number') {
+        if (isNumber(param)) {
             if (param < 0 || param >= params.length) {
                 dtm.log('Index out of range');
                 return params.value[dtm.value.mod(param, params.length)];
             } else {
                 return params.value[param];
             }
-        } else {
+        } else if (isString(param)) {
             switch (param) {
                 case 'getters':
                 case 'help':
@@ -77,6 +85,11 @@ dtm.array = function () {
                     return params.name;
 
                 case 'type':
+                    //if (isNumArray(params.value)) {
+                    //    return 'number';
+                    //} else if (isStringArray(params.value)) {
+                    //    return 'string';
+                    //}
                     return params.type;
                 
                 case 'len':
@@ -260,8 +273,14 @@ dtm.array = function () {
                     return dtm.analyzer.histo(params.value);
 
                 default:
-                    return params.value;
+                    if (params.hasOwnProperty(param)) {
+                        return params[param];
+                    } else {
+                        return params.value;
+                    }
             }
+        } else {
+            return params.value;
         }
     };
 
@@ -272,9 +291,9 @@ dtm.array = function () {
      */
     array.set = function () {
         if (arguments.length === 1) {
-            if (arguments[0] === undefined) {
+            if (isEmpty(arguments[0])) {
                 params.value = [];
-            } else if (typeof(arguments[0]) === 'number') {
+            } else if (isNumber(arguments[0])) {
                 params.value = [arguments[0]];
             } else if (arguments[0].constructor === Array) {
                 params.value = arguments[0];
@@ -282,7 +301,9 @@ dtm.array = function () {
                 params.value = arguments[0];
             } else if (arguments[0].type === 'dtm.array') {
                 params.value = arguments[0].get();
-            } else if (typeof(arguments[0]) === 'string') {
+            } else if (isDtmObj(arguments[0])) {
+                params.value = arguments[0].get();
+            } else if (isString(arguments[0])) {
                 params.value = [arguments[0]]; // no splitting
                 checkType(params.value);
             }
@@ -321,7 +342,7 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.name = function (name) {
-        if (!name) {
+        if (isEmpty(name)) {
             name = '';
         }
         params.name = name.toString();
@@ -360,7 +381,7 @@ dtm.array = function () {
         //}
 
         // TODO: workaround for a missing value
-        if (isNaN(arr[0])) {
+        if (!isNumber(arr[0])) {
             if (typeof(arr[0]) === 'object') {
                 params.type = 'collection';
             } else {
@@ -381,7 +402,9 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.step = function (val) {
-        params.step = Math.round(val);
+        if (isNumber(val)) {
+            params.step = Math.round(val);
+        }
         return array;
     };
 
@@ -447,7 +470,7 @@ dtm.array = function () {
     array.d = array.dup = array.dupe = array.duplicate = array.c = array.copy = array.clone;
 
     array.parent = function (clone) {
-        if (typeof(clone) !== 'boolean') {
+        if (!isBoolean(clone)) {
             clone = true;
         }
         if (params.parent !== null) {
@@ -470,13 +493,13 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.morph = function (tgtArr, morphIdx, interp) {
-        if (typeof(tgtArr) !== 'array') {
+        if (!isArray(tgtArr)) {
             if (tgtArr.type === 'dtm.array') {
                 tgtArr = tgtArr.get();
             }
         }
 
-        if (typeof(morphIdx) === 'undefined') {
+        if (!isNumber(morphIdx)) {
             morphIdx = 0.5;
         }
 
@@ -545,58 +568,36 @@ dtm.array = function () {
 
         // TODO: accept dtm.array
 
-        if (typeof(min) === 'number') {
+        if (isNumber(min)) {
             min_ = min;
-        } else if (typeof(min) === 'object') {
-            if (min.constructor === Array) {
-                if (min.length >= 2) {
-                    if (typeof(min[0]) === 'number') {
-                        min_ = min[0];
-                    }
-                    if (typeof(min[1] === 'number')) {
-                        max_ = min[1];
-                    }
-                }
-                if (min.length === 4) {
-                    if (typeof(min[2]) === 'number') {
-                        dmin_ = min[2];
-                    }
-                    if (typeof(min[3] === 'number')) {
-                        dmax_ = min[3];
-                    }
-                }
+        } else if (isNumArray(min)) {
+            if (min.length >= 2) {
+                min_ = min[0];
+                max_ = min[1];
+            }
+            if (min.length === 4) {
+                dmin_ = min[2];
+                dmax_ = min[3];
             }
         } else {
             return array;
         }
 
-        if (typeof(max) === 'number') {
+        if (isNumber(max)) {
             max_ = max;
-        } else if (typeof(max) === 'object') {
-            if (max.constructor === Array) {
-                if (typeof(max[0]) === 'number') {
-                    dmin_ = max[0];
-                }
-                if (typeof(max[1] === 'number')) {
-                    dmax_ = max[1];
-                }
-            }
+        } else if (isNumArray(max) && max.length === 2) {
+            dmin_ = max[0];
+            dmax_ = max[1];
         }
 
-        if (typeof(dmin) === 'number') {
+        if (isNumber(dmin)) {
             dmin_ = dmin;
-        } else if (typeof(dmin) === 'object') {
-            if (dmin.constructor === Array) {
-                if (typeof(dmin[0]) === 'number') {
-                    dmin_ = dmin[0];
-                }
-                if (typeof(dmin[1] === 'number')) {
-                    dmax_ = dmin[1];
-                }
-            }
+        } else if (isNumArray(dmin) && dmin.length === 2) {
+            dmin_ = dmin[0];
+            dmax_ = dmin[1];
         }
 
-        if (typeof(dmax) === 'number') {
+        if (isNumber(dmax)) {
             dmax_ = dmax;
         }
 
@@ -634,10 +635,10 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.expCurve = function (factor, min, max) {
-        if (typeof(min) === 'undefined') {
+        if (isEmpty(min)) {
             min = array.get('min');
         }
-        if (typeof(max) === 'undefined') {
+        if (isEmpty(max)) {
             max = array.get('max');
         }
 
@@ -657,10 +658,10 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.logCurve = function (factor, min, max) {
-        if (typeof(min) === 'undefined') {
+        if (isEmpty(min)) {
             min = array.get('min');
         }
-        if (typeof(max) === 'undefined') {
+        if (isEmpty(max)) {
             max = array.get('max');
         }
 
@@ -810,11 +811,11 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.concat = function (arr) {
-        if (typeof(arr) === 'undefined') {
+        if (isEmpty(arr)) {
             arr = [];
         }
         var temp = params.value;
-        if (arr.constructor === Array || typeof(arr) === 'number') {
+        if (isArray(arr) || isNumber(arr)) {
             temp = temp.concat(arr);
         } else if (arr.type === 'dtm.array') {
             temp = temp.concat(arr.get());
@@ -891,9 +892,9 @@ dtm.array = function () {
         }
 
         var blockArray;
-        if (start.constructor === Array) {
+        if (isArray(start)) {
             blockArray = dtm.transform.getBlock(params.value, start[0], start[1]);
-        } else if (typeof(start) === 'number' && typeof(size) === 'number') {
+        } else if (isNumber(start) && isNumber(size)) {
             blockArray = dtm.transform.getBlock(params.value, start, size);
         } else {
             // CHECK: ???
@@ -988,13 +989,13 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.queue = function (input) {
-        if (typeof(input) === 'number') {
+        if (isNumber(input)) {
             params.value.push(input);
             params.value.shift();
-        } else if (input.constructor === Array) {
+        } else if (isArray(input)) {
             params.value = params.value.concat(input);
             params.value = params.value.splice(input.length);
-        } else if (input.type === 'dtm.array') {
+        } else if (isDtmObj(input) && input.meta.type === 'dtm.array') {
             params.value = params.value.concat(input.get());
             params.value = params.value.splice(input.get('len'));
         }
@@ -1195,7 +1196,7 @@ dtm.array = function () {
             scale = _.range(12);
         } else if (scale.constructor === Array) {
 
-        } else if (typeof(scale) === 'string') {
+        } else if (isString(scale)) {
             scale = scales[scale.toLowerCase()];
         }
 

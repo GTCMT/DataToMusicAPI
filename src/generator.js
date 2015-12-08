@@ -8,26 +8,28 @@
  * @returns {dtm.generator}
  */
 dtm.generator = function () {
-    var params = {
+    var paramsExt = {
         type: null,
-        len: 8,
+        length: 8,
         min: 0.0,
         max: 1.0,
-        step: 0.0,
+        //step: 0.0,
         amp: 1.0,
         cycle: 1.0,
         phase: 0.0,
         const: 0.0,
         interval: 1.0,
         string: '',
-        res: [],
+        value: [],
         pack: false, // into dtm.array
         typed: true // Float32Array
     };
 
-    var generator = function () {
-
-    };
+    var generator = dtm.array();
+    var params = generator.meta.getParams();
+    objForEach(paramsExt, function (val, key) {
+        params[key] = val;
+    });
 
     generator.meta = {
         type: 'dtm.generator'
@@ -62,33 +64,33 @@ dtm.generator = function () {
         return types[type].indexOf(params.type) > -1;
     }
 
-    generator.get = function (param) {
-        for (var key in params) {
-            if (params.hasOwnProperty(key)) {
-                if (key === param) {
-                    return params[param];
-                }
-            }
-        }
-
-        if (param === undefined) {
-            if (params.pack) {
-                if (params.typed) {
-                    return dtm.array(new Float32Array(params.res));
-                } else {
-                    return dtm.array(params.res);
-                }
-            } else {
-                if (params.typed) {
-                    return new Float32Array(params.res);
-                } else {
-                    return params.res;
-                }
-            }
-        }
-
-        return generator;
-    };
+    //generator.get = function (param) {
+    //    for (var key in params) {
+    //        if (params.hasOwnProperty(key)) {
+    //            if (key === param) {
+    //                return params[param];
+    //            }
+    //        }
+    //    }
+    //
+    //    if (isEmpty(param)) {
+    //        if (params.pack) {
+    //            if (params.typed) {
+    //                return dtm.array(new Float32Array(params.value));
+    //            } else {
+    //                return dtm.array(params.value);
+    //            }
+    //        } else {
+    //            if (params.typed) {
+    //                return new Float32Array(params.value);
+    //            } else {
+    //                return params.value;
+    //            }
+    //        }
+    //    }
+    //
+    //    return generator;
+    //};
 
     function process() {
         function line(len, min, max, cycle) {
@@ -174,7 +176,7 @@ dtm.generator = function () {
             return res;
         }
 
-        params.res = [];
+        params.value = [];
 
         var sorted;
         if (isTypeOf('noMinMaxDir')) {
@@ -184,46 +186,46 @@ dtm.generator = function () {
         switch (params.type) {
             case 'line':
             case 'saw':
-                params.res = line(params.len, params.min, params.max);
+                params.value = line(params.length, params.min, params.max);
                 break;
 
             case 'rise':
-                params.res = line(params.len, sorted[0], sorted[1]);
+                params.value = line(params.length, sorted[0], sorted[1]);
                 break;
 
             case 'decay':
             case 'fall':
-                params.res = line(params.len, sorted[1], sorted[0]);
+                params.value = line(params.length, sorted[1], sorted[0]);
                 break;
 
             case 'sin':
             case 'sine':
-                params.res = sin(params.len, params.min, params.max, params.amp, params.cycle, 0.0);
+                params.value = sin(params.length, params.min, params.max, params.amp, params.cycle, 0.0);
                 break;
 
             case 'cos':
             case 'cosine':
-                params.res = cos(params.len, params.min, params.max, params.amp, params.cycle, 0.00);
+                params.value = cos(params.length, params.min, params.max, params.amp, params.cycle, 0.00);
                 break;
 
             case 'rand':
             case 'random':
-                params.res = random(params.len, sorted[0], sorted[1], 1.0, false);
+                params.value = random(params.length, sorted[0], sorted[1], 1.0, false);
                 break;
             case 'noise':
-                params.res = random(params.len, sorted[0], sorted[1], params.amp, false);
+                params.value = random(params.length, sorted[0], sorted[1], params.amp, false);
                 break;
 
             case 'randi':
-                params.res = random(params.len, sorted[0], sorted[1], 1.0, true);
+                params.value = random(params.length, sorted[0], sorted[1], 1.0, true);
                 break;
 
             case 'range':
-                params.res = range(params.min, params.max, params.interval);
+                params.value = range(params.min, params.max, params.interval);
                 break;
 
             case 'fibonacci':
-                params.res = fibonacci(params.len);
+                params.value = fibonacci(params.length);
                 break;
 
             case 'string':
@@ -234,7 +236,7 @@ dtm.generator = function () {
             case 'chars':
             case 'char':
             case 'c':
-                params.res = params.string.split('');
+                params.value = params.string.split('');
                 break;
 
             default:
@@ -243,20 +245,20 @@ dtm.generator = function () {
     }
 
     generator.type = function (type) {
-        if (typeof(type) === 'string') {
+        if (isString(type)) {
             if (types.all.indexOf(type) > -1) {
                 params.type = type;
             }
         }
 
-        process();
+        process(); // TODO: gets called too many times?
         return generator;
     };
 
     generator.len = function (length) {
         var len = parseInt(length);
         if (!isNaN(len) && len > 0) {
-            params.len = len;
+            params.length = len;
         }
 
         process();
@@ -268,6 +270,7 @@ dtm.generator = function () {
         if (!isNaN(val)) {
             params.min = val;
         }
+        process();
         return generator;
     };
 
@@ -276,12 +279,14 @@ dtm.generator = function () {
         if (!isNaN(val)) {
             params.max = val;
         }
+        process();
         return generator;
     };
 
     generator.minMax = function (min, max) {
         generator.min(min);
         generator.max(max);
+        process();
         return generator;
     };
 
@@ -290,6 +295,8 @@ dtm.generator = function () {
         if (!isNaN(val)) {
             params.amp = val;
         }
+        process();
+        return generator;
     };
 
     generator.cycle = function (cycle) {
@@ -297,8 +304,10 @@ dtm.generator = function () {
         if (!isNaN(val)) {
             params.cycle = val;
         }
+        process();
+        return generator;
     };
-    generator.freq = generator.cycle;
+    generator.freq = generator.cycles = generator.cycle;
 
 
     generator.const = function (value) {

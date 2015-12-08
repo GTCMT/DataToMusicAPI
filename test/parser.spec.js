@@ -1,8 +1,8 @@
 describe('parser', function () {
     var p = dtm.parser;
     var mockCsv =
-        'foo, bar, buz\r' +
-        '123, 456.78, hey\r' +
+        'foo, bar, baz\n' +
+        '123, 456.78, hey\n' +
         '789, 444.44, hoo';
     var mockJson = p.csvToJson(mockCsv);
 
@@ -15,6 +15,19 @@ describe('parser', function () {
             expect(p.csvToJson(mockCsv).length).toBe(2);
         });
     });
+
+    describe('csvToCols', function () {
+        it('should have 3 columns', function () {
+            expect(Object.keys(p.csvToCols(mockCsv)).length).toBe(3);
+        });
+
+        it('should work', function () {
+            expect(p.csvToCols(mockCsv)['foo']).toEqual([123, 789]);
+            expect(p.csvToCols(mockCsv)['bar']).toEqual([456.78, 444.44]);
+            expect(p.csvToCols(mockCsv)['baz']).toEqual(['hey', 'hoo']);
+        });
+    });
+
 
     describe('getSize', function () {
         it('should return a 2 value array', function () {

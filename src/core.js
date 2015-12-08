@@ -13,7 +13,7 @@ var params = {
  * @type {object}
  */
 var dtm = {
-    version: '0.0.3',
+    version: '0.0.4',
 
     log: function (arg) {
         if (params.isLogging) {
@@ -52,7 +52,7 @@ var dtm = {
     },
 
     wa: {
-        isOn: false
+        isOn: true
     },
 
     startWebAudio: function () {
@@ -119,75 +119,6 @@ var dtm = {
 
 this.dtm = dtm;
 
-function jsonp(url, cb) {
-    var cbName = 'jsonp_callback_' + Math.round(100000 * Math.random());
-    window[cbName] = function (data) {
-        delete window[cbName];
-        document.body.removeChild(script);
-        var keys = _.keys(data);
-        _.forEach(keys, function (val) {
-            if (val !== 'response') {
-                console.log(data[val]);
-            }
-        });
-        //cb(data);
-    };
-
-    var script = document.createElement('script');
-    script.src = url + (url.indexOf('?') >= 0 ? '&' : '?') + 'callback=' + cbName;
-    document.body.appendChild(script);
-}
-
-function ajaxGet(url, cb) {
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', url, true);
-    xhr.setRequestHeader('Accept', 'text/xml');
-    xhr.setRequestHeader('Content-Type', 'application/html');
-    xhr.setRequestHeader('Access-Control-Allow-Origin', '*');
-    xhr.setRequestHeader('Access-Control-Allow-Methods', 'GET, POST, PUT');
-    xhr.setRequestHeader("Access-Control-Allow-Headers", "X-Requested-With");
-
-    //req.setRequestHeader("Access-Control-Max-Age", "3600");
-
-
-    var ext = url.split('.').pop();
-
-    switch (ext) {
-        case 'txt':
-        case 'csv':
-//            req.responseType = 'blob';
-            break;
-        case 'json':
-            //xhr.responseType = 'json';
-            break;
-        case 'wav':
-        case 'aif':
-        case 'aiff':
-        case 'ogg':
-        case 'mp3':
-            xhr.responseType = 'arraybuffer';
-            break;
-
-        case 'html':
-            xhr.responseType = 'document';
-            break;
-        default:
-            xhr.responseType = 'blob';
-            break;
-    }
-
-    xhr.onreadystatechange = function () {
-        if (xhr.readyState == 4 && xhr.status == 200) {
-            //cb(xhr.response);
-            console.log(xhr.response);
-        } else {
-            //console.log(xhr.status);
-        }
-    };
-
-    xhr.send();
-}
-
 dtm.loadData = function (url, cb) {
     return new Promise(function (resolve, reject) {
         var xhr = new XMLHttpRequest();
@@ -231,7 +162,6 @@ dtm.loadData = function (url, cb) {
     });
 };
 
-
 dtm.loadAudio = function (url, cb) {
     return new Promise(function (resolve, reject) {
         var xhr = new XMLHttpRequest();
@@ -257,70 +187,3 @@ dtm.loadAudio = function (url, cb) {
         xhr.send();
     });
 };
-
-function loadBuffer(arrayBuf) {
-    var buffer = {};
-    actx.decodeAudioData(arrayBuf, function (buf) {
-        buffer = buf;
-    });
-
-    return buffer;
-}
-
-
-//function clone(obj) {
-    //return JSON.parse(JSON.stringify(obj));
-    //return _.cloneDeep(obj); // CHECK: broken????????
-//}
-
-
-function clone(obj) {
-    var copy;
-
-    // Handle the 3 simple types, and null or undefined
-    if (null == obj || "object" != typeof obj) {
-        return obj;
-    }
-
-    // Handle Date
-    if (obj instanceof Date) {
-        copy = new Date();
-        copy.setTime(obj.getTime());
-        return copy;
-    }
-
-    // Handle Array
-    if (obj instanceof Array) {
-        copy = [];
-        for (var i = 0, len = obj.length; i < len; i++) {
-            copy[i] = clone(obj[i]);
-        }
-        return copy;
-    }
-
-    // Handle Object
-    if (obj instanceof Object) {
-        if (obj.type == 'dtm.array') {
-            return obj.clone();
-        } else {
-            copy = {};
-            for (var attr in obj) {
-                if (obj.hasOwnProperty(attr)) {
-                    copy[attr] = clone(obj[attr]);
-                }
-            }
-            return copy;
-        }
-    }
-
-    throw new Error("Unable to copy obj! Its type isn't supported.");
-}
-
-
-function append() {
-
-}
-
-function appendNoDupes() {
-
-}

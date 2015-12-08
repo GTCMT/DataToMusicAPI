@@ -41,8 +41,18 @@
     });
 
     m.domain = function () {
-        min = arguments[0];
-        max = arguments[1];
+        if (argsAreSingleVals(arguments) && arguments.length == 2) {
+            var args = argsToArray(arguments);
+            if (isNumArray(args)) {
+                min = args[0];
+                max = args[1];
+            }
+        } else if (argIsSingleArray(arguments)) {
+            if (isNumArray(arguments[0]) && arguments[0].length == 2) {
+                min = arguments[0][0];
+                max = arguments[0][1];
+            }
+        }
     };
 
     return m;
