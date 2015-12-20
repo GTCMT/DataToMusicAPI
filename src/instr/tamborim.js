@@ -15,7 +15,7 @@
 
     var idx = 0;
     var offset = dtm.tr.calcBeatsOffset(m.motif.original.get(), m.motif.target.get());
-    var noOffset = dtm.array().fill('zeroes', offset.length).get();
+    var noOffset = dtm.gen('zeroes', offset.length).get();
 
     var curNote = 0;
 
@@ -63,7 +63,7 @@
         } else {
             if (src.constructor === Array) {
                 params.modules[dest] = dtm.array(src);
-            } else if (src.type === 'dtm.array') {
+            } else if (isDtmArray(src)) {
                 if (src.get('type') === 'string') {
                     params.modules[dest] = src.clone().classify();
                 } else {

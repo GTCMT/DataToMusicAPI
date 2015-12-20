@@ -48,7 +48,7 @@ dtm.model = function (name, categ) {
                 } else if (typeof(arg) === 'object') {
                     if (arg.constructor === Array || arg.constructor === Float32Array) {
                         params.data.set(arg);
-                    } else if (arg.hasOwnProperty('type') && arg.type === 'dtm.array') {
+                    } else if (isDtmArray(arg)) {
                         params.data.set(arg);
                     }
                 }
@@ -266,7 +266,7 @@ dtm.model = function (name, categ) {
             if (typeof(arg) === 'object') {
                 if (arg.constructor === Array) {
                     params.domain = arg;
-                } else if (arg.type === 'dtm.array') {
+                } else if (isDtmArray(arg)) {
                     if (arg.get('len') === 2) {
                         params.domain = arg.get();
                     } else {
@@ -293,7 +293,7 @@ dtm.model = function (name, categ) {
             if (typeof(arg) === 'object') {
                 if (arg.constructor === Array) {
                     params.range = arg;
-                } else if (arg.type === 'dtm.array') {
+                } else if (isDtmArray(arg)) {
                     if (arg.get('len') === 2) {
                         params.range = arg.get();
                     } else {

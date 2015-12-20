@@ -85,13 +85,14 @@ dtm.array = function () {
                     return params.name;
 
                 case 'type':
-                    //if (isNumArray(params.value)) {
-                    //    return 'number';
-                    //} else if (isStringArray(params.value)) {
-                    //    return 'string';
-                    //}
-                    return params.type;
-                
+                    if (isNumArray(params.value)) {
+                        return 'number';
+                    } else if (isStringArray(params.value)) {
+                        return 'string';
+                    } else {
+                        return params.type;
+                    }
+
                 case 'len':
                 case 'length':
                     return params.length;
@@ -292,16 +293,14 @@ dtm.array = function () {
     array.set = function () {
         if (arguments.length === 1) {
             if (isEmpty(arguments[0])) {
-                params.value = [];
+                return array;
             } else if (isNumber(arguments[0])) {
                 params.value = [arguments[0]];
             } else if (arguments[0].constructor === Array) {
                 params.value = arguments[0];
             } else if (arguments[0].constructor === Float32Array) {
                 params.value = arguments[0];
-            } else if (arguments[0].type === 'dtm.array') {
-                params.value = arguments[0].get();
-            } else if (isDtmObj(arguments[0])) {
+            } else if (isDtmArray(arguments[0])) {
                 params.value = arguments[0].get();
             } else if (isString(arguments[0])) {
                 params.value = [arguments[0]]; // no splitting
@@ -322,8 +321,11 @@ dtm.array = function () {
             params.length = params.value.length;
             params.index = params.length - 1;
         } else if (arguments.length > 1) {
-            // assuming each item is not an array / other array-ish types
-            params.value = argsToArray(arguments);
+            if (argsAreSingleVals(arguments)) {
+                params.value = argsToArray(arguments);
+                params.length = params.value.length;
+            }
+
             //if (typeof(arguments[0]) === 'string') {
             //    params.value = dtm.gen.apply(this, arguments).get();
             //    checkType(params.value);
@@ -342,24 +344,26 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.name = function (name) {
-        if (isEmpty(name)) {
-            name = '';
+        if (isString(name)) {
+            params.name = name;
         }
-        params.name = name.toString();
         return array;
     };
 
     /**
      * Sets the value type of the array content. Should be either 'number' or 'string'?
-     * @funciton mudule:array#setType
+     * @function mudule:array#valuetype
      * @param arg
      * @returns {dtm.array}
      */
-    array.setType = function (arg) {
-        params.type = arg.toString();
+    array.valuetype = function (arg) {
+        if (isString(arg)) {
+            params.type = arg;
+        }
         return array;
     };
 
+    // set the array content here
     array.set.apply(this, arguments);
 
     function generateHash(arr) {
@@ -397,7 +401,7 @@ dtm.array = function () {
 
     /**
      * Sets the size of the iteration step.
-     * @function module:array#step | stepSize
+     * @function module:array#step
      * @param val {number}
      * @returns {dtm.array}
      */
@@ -408,43 +412,21 @@ dtm.array = function () {
         return array;
     };
 
-    array.stepSize = array.step;
-
     /**
      * Sets the current index within the array for the iterator. Value exceeding the max or min value will be wrapped around.
-     * @function module:array#index | setIndex
+     * @function module:array#index
      * @param val {number}
      * @returns {dtm.array}
      */
     array.index = function (val) {
-        params.index = dtm.value.mod(Math.round(val), params.length);
+        if (isNumber(val)) {
+            params.index = dtm.value.mod(Math.round(val), params.length);
+        }
         return array;
     };
-
-    array.setIndex = array.index;
-
 
 
     /* GENERATORS */
-
-    /**
-     * Fills the contents of the array with
-     * @function module:array#fill | gen | generate
-     * @param type {string} Choices: line, noise | random, gaussian | gauss | normal, sin | sine, cos | cosine, zeroes, ones
-     * @param [len=8] {number}
-     * @param [min=0] {number}
-     * @param [max=1] {number}
-     * @returns {dtm.array}
-     */
-    array.fill = function (type, len, min, max) {
-        //params.value = dtm.transform.generate(type, len, min, max);
-        params.value = dtm.transform.generator.apply(this, arguments);
-        array.set(params.value);
-        return array;
-    };
-
-    array.gen = array.generator = array.fill;
-
     /**
      * Returns a clone of the array object. It can be used when you don't want to reference the same array object from different places.
      * @function module:array#clone
@@ -494,7 +476,7 @@ dtm.array = function () {
      */
     array.morph = function (tgtArr, morphIdx, interp) {
         if (!isArray(tgtArr)) {
-            if (tgtArr.type === 'dtm.array') {
+            if (isDtmArray(tgtArr)) {
                 tgtArr = tgtArr.get();
             }
         }
@@ -503,8 +485,9 @@ dtm.array = function () {
             morphIdx = 0.5;
         }
 
-        params.value = dtm.transform.morph(params.value, tgtArr, morphIdx, interp);
-        array.set(params.value);
+        if (isNumArray(params.value) && isNumArray(tgtArr)) {
+            array.set(dtm.transform.morph(params.value, tgtArr, morphIdx, interp));
+        }
         return array;
     };
 
@@ -514,8 +497,7 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.reset = function () {
-        array.set(params.original);
-        return array;
+        return array.set(params.original);
     };
 
     array.original = array.r = array.reset;
@@ -536,76 +518,95 @@ dtm.array = function () {
     /**
      * Rescales the range of the numerical values to 0-1.
      * @function module:array#normalize | normal | nml
-     * @param [min] {number} Prefered domain minimum value. If not present, the minimum of the input array is used.
-     * @param [max] {number} Prefered domain maximum value. If not present, the maximum of the input array is used.
+     * @param [arg1] {number} Prefered domain minimum value. If not present, the minimum of the input array is used.
+     * @param [arg2] {number} Prefered domain maximum value. If not present, the maximum of the input array is used.
      * @returns {dtm.array}
      */
-    array.normalize = function (min, max) {
-        if (min !== undefined) {
-            if (min.constructor === Array) {
-                max = min[1];
-                min = min[0];
+    array.normalize = function (arg1, arg2) {
+        var min, max, args;
+        if (isNumber(arg1) && isNumber(arg2)) {
+            min = arg1;
+            max = arg2;
+        } else {
+            if (isNumArray(arg1)) {
+                args = arg1;
+            } else if (isDtmArray(arg1) && isNumArray(arg1.get())) {
+                args = arg1.get();
+            }
+
+            if (isNumArray(args)) {
+                if (args.length === 2) {
+                    min = args[0];
+                    max = args[1];
+                } else if (args.length > 2) {
+                    min = dtm.analyzer.min(args);
+                    max = dtm.analyzer.max(args);
+                }
             }
         }
-        params.value = dtm.transform.normalize(params.value, min, max);
-        array.set(params.value);
-        return array;
+
+        return array.set(dtm.transform.normalize(params.value, min, max));
     };
 
     array.nml = array.normal = array.normalize;
 
     /**
-     * Modifies the range of the array.
-     * @function module:array#rescale | scale | range
-     * @param min {number} The target minimum value of the scaled range.
-     * @param max {number} The target maximum value of the scaled range.
-     * @param [dmin] {number} The minimum of the domain (original) value range.
-     * @param [dmax] {number} The maximum of the domain value range.
+     * Modifies the range of the array. Shorthand: sc()
+     * @function module:array#scale
+     * @param arg1 {number} The target minimum value of the scaled range.
+     * @param arg2 {number} The target maximum value of the scaled range.
+     * @param [arg3] {number} The minimum of the domain (original) value range.
+     * @param [arg4] {number} The maximum of the domain value range.
      * @returns {dtm.array}
      */
-    array.rescale = function (min, max, dmin, dmax) {
+    array.scale = function (arg1, arg2, arg3, arg4) {
         var min_, max_, dmin_, dmax_;
 
         // TODO: accept dtm.array
 
-        if (isNumber(min)) {
-            min_ = min;
-        } else if (isNumArray(min)) {
-            if (min.length >= 2) {
-                min_ = min[0];
-                max_ = min[1];
+        if (isNumber(arg1)) {
+            min_ = arg1;
+        } else if (isNumArray(arg1)) {
+            if (arg1.length >= 2) {
+                min_ = arg1[0];
+                max_ = arg1[1];
             }
-            if (min.length === 4) {
-                dmin_ = min[2];
-                dmax_ = min[3];
+            if (arg1.length === 4) {
+                dmin_ = arg1[2];
+                dmax_ = arg1[3];
+            }
+        } else if (isDtmArray(arg1) && isNumArray(arg1.get())) {
+            if (arg1.get('len') === 2) {
+                min_ = arg1.get(0);
+                max_ = arg1.get(1);
             }
         } else {
             return array;
         }
 
-        if (isNumber(max)) {
-            max_ = max;
-        } else if (isNumArray(max) && max.length === 2) {
-            dmin_ = max[0];
-            dmax_ = max[1];
+        if (isNumber(arg2)) {
+            max_ = arg2;
+        } else if (isNumArray(arg2) && arg2.length === 2) {
+            dmin_ = arg2[0];
+            dmax_ = arg2[1];
         }
 
-        if (isNumber(dmin)) {
-            dmin_ = dmin;
-        } else if (isNumArray(dmin) && dmin.length === 2) {
-            dmin_ = dmin[0];
-            dmax_ = dmin[1];
+        if (isNumber(arg3)) {
+            dmin_ = arg3;
+        } else if (isNumArray(arg3) && arg3.length === 2) {
+            dmin_ = arg3[0];
+            dmax_ = arg3[1];
         }
 
-        if (isNumber(dmax)) {
-            dmax_ = dmax;
+        if (isNumber(arg4)) {
+            dmax_ = arg4;
         }
 
         params.value = dtm.transform.rescale(params.value, min_, max_, dmin_, dmax_);
         array.set(params.value);
         return array;
     };
-    array.range = array.scale = array.rescale;
+    array.sc = array.scale;
 
     /**
      * Caps the array value range at the min and max values. Only works with a numerical array.
@@ -727,7 +728,7 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.add = function (factor, interp) {
-        if (factor.type === 'dtm.array') {
+        if (isDtmArray(factor)) {
             factor = factor.get();
         }
         array.set(dtm.transform.add(params.value, factor, interp));
@@ -742,7 +743,7 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.mult = function (factor, interp) {
-        if (factor.type === 'dtm.array') {
+        if (isDtmArray(factor)) {
             factor = factor.get();
         }
         array.set(dtm.transform.mult(params.value, factor, interp));
@@ -758,7 +759,7 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.pow = function (factor, interp) {
-        if (factor.type === 'dtm.array') {
+        if (isDtmArray(factor)) {
             factor = factor.get();
         }
         array.set(dtm.transform.pow(params.value, factor, interp));
@@ -773,7 +774,7 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.powof = function (factor, interp) {
-        if (factor.type === 'dtm.array') {
+        if (isDtmArray(factor)) {
             factor = factor.get();
         }
         return array.set(dtm.transform.powof(params.value, factor, interp));
@@ -814,10 +815,13 @@ dtm.array = function () {
         if (isEmpty(arr)) {
             arr = [];
         }
+        // TODO: Float32Array doesn't have .concat()
         var temp = params.value;
-        if (isArray(arr) || isNumber(arr)) {
+        if (isFloat32Array(params.value) || isFloat32Array(arr)) {
+            temp = Float32Concat(params.value, arr);
+        } else if (isArray(arr) || isNumber(arr)) {
             temp = temp.concat(arr);
-        } else if (arr.type === 'dtm.array') {
+        } else if (isDtmArray(arr)) {
             temp = temp.concat(arr.get());
         }
         array.set(temp);
@@ -840,7 +844,7 @@ dtm.array = function () {
 
     array.rep = array.repeat;
 
-    array.fitRep = function (count) {
+    array.fitrep = function (count) {
         params.value = dtm.transform.fit(dtm.transform.repeat(params.value, count), params.length);
         array.set(params.value);
         return array;
@@ -858,9 +862,7 @@ dtm.array = function () {
             test.push(val);
         }
 
-        params.value = params.value.concat(test);
-        array.set(params.value);
-        return array;
+        return array.concat(test);
     };
 
     /**
@@ -933,17 +935,27 @@ dtm.array = function () {
     };
 
     /**
-     * Flips the array contents horizontally.
-     * @function module:array#mirror | reverse | rev
-     * @returns {dtm.array}
+     * Appends an reversed array at the tail.
+     * @function module:array#mirror
+     * @returns {{type: string}}
      */
     array.mirror = function () {
-        params.value = dtm.transform.mirror(params.value);
+        array.concat(dtm.transform.reverse(params.value));
+        return array;
+    };
+
+    /**
+     * Flips the array contents horizontally.
+     * @function module:array#reverse | rev
+     * @returns {dtm.array}
+     */
+    array.reverse = function () {
+        params.value = dtm.transform.reverse(params.value);
         array.set(params.value);
         return array;
     };
 
-    array.rev = array.reverse = array.mirror;
+    array.rev = array.reverse;
 
     /**
      * Flips the numerical values vertically at the given center point.
@@ -995,7 +1007,7 @@ dtm.array = function () {
         } else if (isArray(input)) {
             params.value = params.value.concat(input);
             params.value = params.value.splice(input.length);
-        } else if (isDtmObj(input) && input.meta.type === 'dtm.array') {
+        } else if (isDtmArray(input)) {
             params.value = params.value.concat(input.get());
             params.value = params.value.splice(input.get('len'));
         }
@@ -1300,6 +1312,11 @@ dtm.array = function () {
     };
 
     array.idtob = array.indicesToBeats;
+
+    /* dtm.generator placeholders */
+    // these are not really necessary, but prevents typeError when calling dtm.gen functions on pure dtm.array object
+    array.type = function () { return array; };
+    array.len = function () { return array; };
 
     return array;
 };

@@ -244,9 +244,9 @@ describe('array helper functions', function () {
     });
 
     describe('mirror', function () {
-        var mrr = dtm.transform.mirror;
+        var rev = dtm.transform.reverse;
         var input = _.shuffle(_.range(8));
-        var output = mrr(input);
+        var output = rev(input);
 
         var iSum = _.reduce(input, function (sum, num) {
             return sum + num;

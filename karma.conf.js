@@ -17,6 +17,7 @@ module.exports = function(config) {
         files: [
             'bower_components/lodash/dist/lodash.min.js',
             'dtm.js',
+            'src/utils.js',
             'test/**/*.js'
         ],
 

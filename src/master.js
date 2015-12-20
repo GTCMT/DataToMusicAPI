@@ -185,6 +185,15 @@ dtm.master = {
         return dtm.master;
     },
 
+    panic: function () {
+        dtm.master.params.voices.forEach(function (v) {
+            v.stop();
+        });
+
+        dtm.master.params.voices = [];
+        return dtm.master;
+    },
+
     state: null,
 
     reset: null

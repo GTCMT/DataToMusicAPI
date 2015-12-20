@@ -14,6 +14,12 @@ describe('isNumArray', function () {
     });
 });
 
+describe('isFloat32Array', function () {
+    it('should work', function () {
+        expect(isFloat32Array(new Float32Array([1, 2, 3]))).toBe(true);
+    });
+});
+
 describe('isStringArray', function () {
     it('should work', function () {
         expect(isStringArray(['hey', 'ho'])).toBe(true);

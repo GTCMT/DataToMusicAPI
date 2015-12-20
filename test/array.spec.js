@@ -13,6 +13,11 @@ describe('array object', function () {
             it('should return the given name', function () {
                 expect(a.get('name')).toBe(name);
             });
+
+            a.name(123);
+            it('should not change the name', function () {
+                expect(a.get('name')).toBe(name);
+            });
         });
 
         describe('type', function () {
@@ -35,7 +40,7 @@ describe('array object', function () {
         });
 
         describe('original', function () {
-            var a = dtm.array([1, 2, 3]).rescale(0, 100);
+            var a = dtm.array([1, 2, 3]).scale(0, 100);
             it('should return the original after transformation', function () {
                 expect(a.get('original').toString()).toBe([1, 2, 3].toString());
             });
@@ -114,7 +119,7 @@ describe('array object', function () {
         });
 
         describe('block', function () {
-            var a = dtm.array().fill('seq', 10);
+            var a = dtm.gen('seq', 10);
             it('should return the first 3 items', function () {
                 expect(a.get('block', [3, 3]).get('length')).toBe(3);
             });
@@ -122,21 +127,18 @@ describe('array object', function () {
     });
 
     describe('set', function () {
-
-    });
-
-    describe('generater', function () {
-        describe('sequence', function () {
-            it('should generate 3, 5, 7, etc.', function () {
-                var a = dtm.array().fill('seq', 8, 3, 2);
-                expect(a.get(1) - a.get(0)).toBe(2);
+        describe('various arguments', function () {
+            it('should accept array', function () {
+                expect(dtm.a([1,2,3]).get()).toEqual([1,2,3]);
             });
-        });
 
-        describe('constant', function () {
-            it('should return the same value anywhere', function () {
-                var a = dtm.array().fill('const', 4, 3);
-                expect(a.get(dtm.val.randi(0, 3))).toBe(3);
+            it('should accept dtm.array', function () {
+                expect(dtm.a(dtm.a([1,2,3])).get()).toEqual([1,2,3]);
+            });
+
+            it('should accept single values', function () {
+                expect(dtm.a(1,2,3).get()).toEqual([1,2,3]);
+                expect(dtm.a(1,2,3).get(0)).toBe(1);
             });
         });
     });
@@ -177,61 +179,82 @@ describe('array object', function () {
                 expect(a.get()).toEqual([6, 7, 8]);
             });
         });
+
+        describe('concat', function () {
+            var a = dtm.array([1, 2, 3]);
+            it('should work', function () {
+                expect(a.concat(dtm.a([4, 5])).get()).toEqual([1, 2, 3, 4, 5]);
+            });
+        });
     });
 
     describe('scalers', function () {
         describe('normalize', function () {
             describe('normalize to full 0-1 range', function () {
                 it('should return 1s for ones', function () {
-                    var a = dtm.array().fill('ones');
+                    var a = dtm.gen('ones');
                     a.normalize();
                     expect(a.get('sum')).toBe(8);
                 });
 
                 it('should return 0s for zeros', function () {
-                    var a = dtm.array().fill('zeros');
+                    var a = dtm.gen('zeros');
                     a.normalize();
                     expect(a.get('sum')).toBe(0);
                 });
 
                 it('should return 0s for minuses', function () {
-                    var a = dtm.array().fill('zeros').add(-.5);
+                    var a = dtm.gen('zeros').add(-0.5);
                     a.normalize();
                     expect(a.get('sum')).toBe(0);
                 });
 
                 it('should return 1s for repeated big values', function () {
-                    var a = dtm.array().fill('zeros').add(3);
+                    var a = dtm.gen('zeros').add(3);
                     a.normalize();
                     expect(a.get('sum')).toBe(8);
                 });
 
                 it('should return raw values for repeated values between 0-1', function () {
-                    var a = dtm.array().fill('zeros').add(0.5);
+                    var a = dtm.gen('zeros').add(0.5);
                     a.normalize();
                     expect(a.get('sum')).toBe(4);
                 });
             });
 
             describe('normalize to 0-1 with the domain range specified', function () {
-                var a = dtm.a(7).normalize(0, 10);
                 it('should have the value of 0.7', function () {
-                    expect(a.get()[0]).toBe(0.7);
+                    expect(dtm.a(7).normalize(0, 10).get(0)).toBe(0.7);
+                });
+
+                it('should work the same with dtm.array', function () {
+                    expect(dtm.a(7).normalize(dtm.a(0,10)).get(0)).toBe(0.7);
+                });
+
+                it('should work the same with dtm.gen', function () {
+                    expect(dtm.a(7).normalize(dtm.gen('line').sc(0,10)).get(0)).toBe(0.7);
                 });
             });
         });
 
-        describe('rescale', function () {
-            it('should...', function () {
-                var a = dtm.a(0.5).rescale(0, 100);
+        describe('scale', function () {
+            it('should work', function () {
+                var a = dtm.a(0.5).scale(0, 100);
+                expect(a.get(0)).toBe(50);
             });
 
             describe('rescale w/ domain range specified', function () {
-                var a = dtm.a(0.3).rescale(0, 10, 0, 1);
+                var a = dtm.a(0.3).scale(0, 10, 0, 1);
                 it('should have the value of 3', function () {
-                    expect(a.get()[0]).toBe(3);
+                    expect(a.get(0)).toBe(3);
                 })
-            })
+            });
+
+            describe('input types', function () {
+                it('should accept dtm.array', function () {
+                    expect(dtm.a([1,2,3]).scale(dtm.a([0, 10])).get()).toEqual([0,5,10]);
+                });
+            });
         });
 
         describe('add', function () {
@@ -270,8 +293,9 @@ describe('array object', function () {
         });
     });
 
-    describe('getBlock', function () {
-        var a = dtm.a().fill('seq', 16, 0).block(2, 3);
+    // TODO: implement
+    xdescribe('getBlock', function () {
+        var a = dtm.gen('seq', 16, 0).block(2, 3);
         it('should have the length of 3', function () {
             expect(a.get('len')).toBe(3);
         });

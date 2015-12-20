@@ -37,7 +37,10 @@ dtm.synth = function () {
         baseTime: 0.0,
         lookahead: false,
         autoDur: false,
-        voiceId: Math.random()
+        voiceId: Math.random(),
+
+        useOfflineContext: true,
+        named: []
     };
 
     synth.get = function (param) {
@@ -137,8 +140,31 @@ dtm.synth = function () {
     }
 
     var fx = {
-        Gain: function (post) {
-            post = (typeof(post) === 'boolean') ? post : false;
+        //Gain: function (post) {
+        //    post = (typeof(post) === 'boolean') ? post : false;
+        //    this.mult = new Float32Array([1.0]);
+        //
+        //    this.run = function (time, dur) {
+        //        var ctx = post ? actx : octx;
+        //        this.in = ctx.createGain();
+        //        this.gain = ctx.createGain();
+        //        this.out = ctx.createGain();
+        //        this.in.connect(this.gain);
+        //        this.gain.connect(this.out);
+        //
+        //        var curves = [];
+        //        curves.push({param: this.gain.gain, value: this.mult});
+        //        setParamCurve(time, dur, curves);
+        //    }
+        //},
+
+        Gain: function (mode) {
+            var name = null;
+            var post = isBoolean(mode) ? post : false;
+            if (isString(mode)) {
+                post = true;
+                name = mode;
+            }
             this.mult = new Float32Array([1.0]);
 
             this.run = function (time, dur) {
@@ -152,11 +178,15 @@ dtm.synth = function () {
                 var curves = [];
                 curves.push({param: this.gain.gain, value: this.mult});
                 setParamCurve(time, dur, curves);
+
+                if (!isEmpty(name)) {
+                    params.named[name] = this.gain.gain;
+                }
             }
         },
 
         LPF: function (post) {
-            post = (typeof(post) === 'boolean') ? post : false;
+            post = isBoolean(post) ? post : false;
             this.freq = new Float32Array([20000.0]);
             this.q = new Float32Array([1.0]);
 
@@ -176,15 +206,70 @@ dtm.synth = function () {
         },
 
         HPF: function (post) {
+            post = isBoolean(post) ? post : false;
+            this.freq = new Float32Array([30.0]);
+            this.q = new Float32Array([1.0]);
 
+            this.run = function (time, dur) {
+                var ctx = post ? actx : octx;
+                this.in = ctx.createGain();
+                this.hpf = ctx.createBiquadFilter();
+                this.hpf.type = 'highpass';
+                this.out = ctx.createGain();
+                this.in.connect(this.hpf);
+                this.hpf.connect(this.out);
+
+                var curves = [];
+                curves.push({param: this.hpf.frequency, value: this.freq});
+                curves.push({param: this.hpf.Q, value: this.q});
+                setParamCurve(time, dur, curves);
+            };
         },
 
         BPF: function (post) {
+            post = isBoolean(post) ? post : false;
+            this.freq = new Float32Array([30.0]);
+            this.q = new Float32Array([1.0]);
 
+            this.run = function (time, dur) {
+                var ctx = post ? actx : octx;
+                this.in = ctx.createGain();
+                this.bpf = ctx.createBiquadFilter();
+                this.bpf.type = 'bandpass';
+                this.out = ctx.createGain();
+                this.in.connect(this.bpf);
+                this.bpf.connect(this.out);
+
+                var curves = [];
+                curves.push({param: this.bpf.frequency, value: this.freq});
+                curves.push({param: this.bpf.Q, value: this.q});
+                setParamCurve(time, dur, curves);
+            };
+        },
+
+        APF: function (post) {
+            post = isBoolean(post) ? post : false;
+            this.freq = new Float32Array([30.0]);
+            this.q = new Float32Array([1.0]);
+
+            this.run = function (time, dur) {
+                var ctx = post ? actx : octx;
+                this.in = ctx.createGain();
+                this.apf = ctx.createBiquadFilter();
+                this.apf.type = 'allpass';
+                this.out = ctx.createGain();
+                this.in.connect(this.apf);
+                this.apf.connect(this.out);
+
+                var curves = [];
+                curves.push({param: this.apf.frequency, value: this.freq});
+                curves.push({param: this.apf.Q, value: this.q});
+                setParamCurve(time, dur, curves);
+            };
         },
 
         Delay: function (post) {
-            post = (typeof(post) === 'boolean') ? post : false;
+            post = isBoolean(post) ? post : false;
             this.mix = new Float32Array([0.5]);
             this.time = new Float32Array([0.3]);
             this.feedback = new Float32Array([0.5]);
@@ -282,6 +367,12 @@ dtm.synth = function () {
         }
     };
 
+    /**
+     * Sets dtm.clock object for internal-use in the synth.
+     * @function module:synth#clock
+     * @param clock {dtm.clock} dtm.clock object
+     * @returns {dtm.synth}
+     */
     synth.clock = function (clock) {
         if (typeof(clock) === 'object') {
             if (clock.type === 'dtm.clock') {
@@ -291,20 +382,30 @@ dtm.synth = function () {
         return synth;
     };
 
+    /**
+     * @function module:synth#lookahead
+     * @param lookahead
+     * @returns {dtm.synth}
+     */
     synth.lookahead = function (lookahead) {
-        if (typeof(lookahead) === 'boolean') {
+        if (isBoolean(lookahead)) {
             params.lookahead = lookahead;
         }
         return synth;
     };
 
+    /**
+     * @function module:synth#dur
+     * @param src
+     * @returns {dtm.synth}
+     */
     synth.dur = function (src) {
         if (isNumber(src)) {
             if (src > 0) {
                 params.autoDur = false;
                 params.dur = src;
             }
-        } else if (typeof(src) === 'boolean') {
+        } else if (isBoolean(src)) {
             params.autoDur = src;
         } else if (src === 'auto') {
             params.autoDur = true;
@@ -317,11 +418,11 @@ dtm.synth = function () {
     };
 
     /**
-     *
+     * Plays
      * @function module:synth#play
-     * @param time {number=0} Delay in seconds that the synth starts playing
-     * @param dur {number} Duration in seconds
-     * @param lookahead {number} Delay in seconds for the s
+     * @param [time=0] {number} Delay in seconds that the synth starts playing
+     * @param [dur] {number} Duration in seconds
+     * @param [lookahead] {number} Delay in seconds for the s
      * @returns {dtm.synth}
      */
     synth.play = function (time, dur, lookahead) {
@@ -333,7 +434,7 @@ dtm.synth = function () {
         // deferred
         setTimeout(function () {
             //===== type check
-            if (typeof(time) === 'boolean') {
+            if (isBoolean(time)) {
                 if (time) {
                     time = 0.0;
                 } else {
@@ -347,10 +448,10 @@ dtm.synth = function () {
                 params.dur = params.clock.get('dur');
             }
 
-            if (!isNumber(dur)) {
+            if (!isNumber(dur) || dur <= 0) {
                 dur = params.dur;
             } else {
-                if (params.dur > 0) {
+                if (dur > 0) {
                     params.dur = dur;
                 }
             }
@@ -359,7 +460,22 @@ dtm.synth = function () {
             dtm.master.addVoice(synth);
 
             //===============================
+            //var test = new OfflineAudioContext(1, (time + dur*4) * params.sr, params.sr);
+            //
+            //var a = test.createBufferSource();
+            //a.buffer = test.createBuffer(1, 100, 44100);
+            //a.connect(test.destination);
+            //a.start();
+            //test.startRendering();
+            //test.oncomplete = function () {
+            //    //a.disconnect();
+            //    console.log('meow');
+            //    //test = undefined;
+            //};
+            //iframe = null;
+
             octx = new OfflineAudioContext(1, (time + dur*4) * params.sr, params.sr);
+
             time += octx.currentTime;
 
             if (params.lookahead) {
@@ -437,19 +553,19 @@ dtm.synth = function () {
                 out.gain.value = 1.0;
 
                 nodes.rtSrc.onended = function () {
-                    var key;
-                    for (key in params) {
-                        if (params.hasOwnProperty(key)) {
-                            params[key] = undefined;
-                            delete params[key];
-                        }
-                    }
-                    for (key in nodes) {
-                        if (nodes.hasOwnProperty(key)) {
-                            nodes[key] = undefined;
-                            delete nodes[key];
-                        }
-                    }
+                    //var key;
+                    //for (key in params) {
+                    //    if (params.hasOwnProperty(key)) {
+                    //        params[key] = undefined;
+                    //        delete params[key];
+                    //    }
+                    //}
+                    //for (key in nodes) {
+                    //    if (nodes.hasOwnProperty(key)) {
+                    //        nodes[key] = undefined;
+                    //        delete nodes[key];
+                    //    }
+                    //}
 
                     dtm.master.removeVoice(synth);
 
@@ -462,6 +578,19 @@ dtm.synth = function () {
                 //synth.rendered = e.renderedBuffer.getChannelData(0).slice(0, dur*params.sr);
             };
         }, defer);
+
+        return synth;
+    };
+
+    // testing
+    synth.cancel = function (time) {
+        if (!isNumber(time)) {
+            time = 0.0;
+        }
+
+        objForEach(params.named, function (p) {
+            p.cancelScheduledValues(actx.currentTime + time);
+        });
 
         return synth;
     };
@@ -541,6 +670,12 @@ dtm.synth = function () {
         return synth;
     };
 
+    /**
+     * Stops the currently playing sound.
+     * @function module:synth#stop
+     * @param [time=0] {number} Delay in seconds for the stop action to be called.
+     * @returns {dtm.synth}
+     */
     synth.stop = function (time) {
         var defer = 0.0;
         if (params.lookahead) {
@@ -566,6 +701,26 @@ dtm.synth = function () {
         return synth;
     };
 
+    synth.mod = function (name, val) {
+        if (isString(name) && params.named.hasOwnProperty(name)) {
+            setTimeout(function () {
+                params.named[name].cancelScheduledValues(0); // TODO: check
+                params.named[name].setValueAtTime(val, 0);
+            }, 0);
+        }
+        return synth;
+    };
+
+    synth.modulate = synth.mod;
+
+    /**
+     * Sets the frequency of the oscillator
+     * @function module:synth#freq
+     * @param src
+     * @param mode
+     * @param [post=false] boolean
+     * @returns {dtm.synth}
+     */
     synth.freq = function (src, mode, post) {
         if (typeof(mode) === 'string') {
             switch (mode) {
@@ -587,6 +742,14 @@ dtm.synth = function () {
         return synth;
     };
 
+    /**
+     * Sets the pitch of the oscillator by a MIDI note number.
+     * @function module:synth#nn | notenum
+     * @param src
+     * @param mode
+     * @param [post=false] {boolean}
+     * @returns {dtm.synth}
+     */
     synth.nn = function (src, mode, post) {
         if (typeof(mode) === 'string') {
 
@@ -610,6 +773,13 @@ dtm.synth = function () {
         return synth;
     };
 
+    /**
+     * @function module:synth#amp
+     * @param src
+     * @param mode
+     * @param post
+     * @returns {dtm.synth}
+     */
     synth.amp = function (src, mode, post) {
         if (typeof(mode) === 'string') {
             var arr = typeCheck(src);
@@ -643,6 +813,11 @@ dtm.synth = function () {
         return synth;
     };
 
+    /**
+     * @function module:synth#pan
+     * @param src
+     * @returns {dtm.synth}
+     */
     synth.pan = function (src) {
         src = typeCheck(src);
         if (src) {
@@ -691,6 +866,12 @@ dtm.synth = function () {
         return synth;
     };
 
+    /**
+     * @function module:synth#gain
+     * @param mult
+     * @param post
+     * @returns {dtm.synth}
+     */
     synth.gain = function (mult, post) {
         var gain = new fx.Gain(post);
 
@@ -706,7 +887,14 @@ dtm.synth = function () {
         }
         return synth;
     };
-    
+
+    /**
+     * @function module:synth#lpf
+     * @param freq
+     * @param q
+     * @param post
+     * @returns {dtm.synth}
+     */
     synth.lpf = function (freq, q, post) {
         var lpf = new fx.LPF(post);
 
@@ -728,6 +916,98 @@ dtm.synth = function () {
         return synth;
     };
 
+    /**
+     * @function module:synth#hpf
+     * @param freq
+     * @param q
+     * @param post
+     * @returns {dtm.synth}
+     */
+    synth.hpf = function (freq, q, post) {
+        var hpf = new fx.HPF(post);
+
+        freq = typeCheck(freq);
+        if (freq) {
+            hpf.freq = freq;
+        }
+
+        q = typeCheck(q);
+        if (q) {
+            hpf.q = q;
+        }
+
+        if (post) {
+            nodes.pFx.push(hpf);
+        } else {
+            nodes.fx.push(hpf);
+        }
+        return synth;
+    };
+
+    /**
+     * @function module:synth#bpf
+     * @param freq
+     * @param q
+     * @param post
+     * @returns {dtm.synth}
+     */
+    synth.bpf = function (freq, q, post) {
+        var bpf = new fx.BPF(post);
+
+        freq = typeCheck(freq);
+        if (freq) {
+            bpf.freq = freq;
+        }
+
+        q = typeCheck(q);
+        if (q) {
+            bpf.q = q;
+        }
+
+        if (post) {
+            nodes.pFx.push(bpf);
+        } else {
+            nodes.fx.push(bpf);
+        }
+        return synth;
+    };
+
+    /**
+     * @function module:synth#apf
+     * @param freq
+     * @param q
+     * @param post
+     * @returns {dtm.synth}
+     */
+    synth.apf = function (freq, q, post) {
+        var apf = new fx.APF(post);
+
+        freq = typeCheck(freq);
+        if (freq) {
+            apf.freq = freq;
+        }
+
+        q = typeCheck(q);
+        if (q) {
+            apf.q = q;
+        }
+
+        if (post) {
+            nodes.pFx.push(apf);
+        } else {
+            nodes.fx.push(apf);
+        }
+        return synth;
+    };
+
+    /**
+     * @function module:synth#delay
+     * @param mix
+     * @param time
+     * @param feedback
+     * @param post
+     * @returns {dtm.synth}
+     */
     synth.delay = function (mix, time, feedback, post) {
         var delay = new fx.Delay(post);
 
@@ -778,6 +1058,11 @@ dtm.synth = function () {
         return synth;
     };
 
+    /**
+     * @function module:synth#bq | bitquantize | crush
+     * @param bit
+     * @returns {dtm.synth}
+     */
     synth.bq = function (bit) {
         var bq = new fx.BitQuantizer();
 
@@ -791,6 +1076,11 @@ dtm.synth = function () {
 
     synth.crush = synth.bitquantize = synth.bq;
 
+    /**
+     * @function module:synth#sh | samphold | samplehold
+     * @param samps
+     * @returns {dtm.synth}
+     */
     synth.sh = function (samps) {
         var sh = new fx.SampleHold();
 
@@ -815,7 +1105,7 @@ dtm.synth = function () {
             } else if (isNumArray(src)) {
                 return new Float32Array(src);
             } else if (isDtmObj(src)) {
-                if (src.meta.type === 'dtm.array' || src.meta.type === 'dtm.generator') {
+                if (isDtmArray(src)) {
                     if (src.get().constructor === Array) {
                         //var foo = new Promise(function (resolve) {
                         //    resolve(new Float32Array(src.get()));
@@ -840,6 +1130,11 @@ dtm.synth = function () {
         }
     }
 
+    /**
+     * @function module:synth#get
+     * @param param
+     * @returns {*}
+     */
     synth.get = function (param) {
         switch (param) {
             case 'fx':
@@ -849,9 +1144,11 @@ dtm.synth = function () {
         }
     };
 
-    synth.wt.apply(this, arguments);
+    //synth.wt.apply(this, arguments);
 
     return synth;
 };
 
 dtm.s = dtm.syn = dtm.synth;
+
+dtm.startWebAudio();

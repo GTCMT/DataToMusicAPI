@@ -290,7 +290,7 @@
         return m.parent;
     };
 
-    m.mod.len = m.mod.note = m.mod.div = m.mod.subdiv = m.mod.subDiv;
+    m.mod.speed = m.mod.len = m.mod.note = m.mod.div = m.mod.subdiv = m.mod.subDiv;
 
     m.param.sync = function (bool) {
         if (typeof(bool) === 'undefined') {
@@ -400,7 +400,7 @@
         } else {
             if (src.constructor === Array) {
                 params.modules[dest] = dtm.array(src);
-            } else if (src.type === 'dtm.array') {
+            } else if (isDtmArray(src)) {
                 if (src.get('type') === 'string') {
                     params.modules[dest] = src.clone().classify();
                 } else {

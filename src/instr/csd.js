@@ -51,7 +51,7 @@
         } else {
             if (src.constructor === Array) {
                 mods[dest] = dtm.array(src);
-            } else if (src.type === 'dtm.array') {
+            } else if (isDtmArray(src)) {
                 if (src.get('type') === 'string') {
                     mods[dest] = src.clone().classify();
                 } else {

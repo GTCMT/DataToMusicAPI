@@ -129,7 +129,7 @@ dtm.instr = function (arg) {
         } else {
             if (src.constructor === Array) {
                 params.models[dest] = dtm.array(src);
-            } else if (src.type === 'dtm.array') {
+            } else if (isDtmArray(src)) {
                 //if (src.get('type') === 'string') {
                 //    params.models[dest] = src.clone().classId();
                 //} else {
@@ -202,7 +202,7 @@ dtm.instr = function (arg) {
                     params.modDest.push(arg);
                 }
 
-            } else if (arg.type === 'dtm.array') {
+            } else if (isDtmArray(src)) {
                 params.models[categ] = arg;
             }
         } else if (typeof(arg) === 'string') {
@@ -227,7 +227,7 @@ dtm.instr = function (arg) {
     instr.map = function (src, dest) {
         if (src.constructor === Array) {
             params.models[dest] = dtm.array(src).normalize();
-        } else if (src.type === 'dtm.array') {
+        } else if (isDtmArray(src)) {
             // CHECK: assigning an array here is maybe not so smart...
             params.models[dest] = src.normalize();
         } else if (src.type === 'dtm.model') {
@@ -331,7 +331,7 @@ dtm.instr = function (arg) {
         } else {
             if (src.constructor === Array) {
                 params.models[dest] = dtm.array(src);
-            } else if (src.type === 'dtm.array') {
+            } else if (isDtmArray(src)) {
                 if (src.get('type') === 'string') {
                     params.models[dest] = src.clone().classify();
                 } else {

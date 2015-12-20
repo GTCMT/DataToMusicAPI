@@ -54,7 +54,7 @@ dtm.iterator = function (arg) {
         if (typeof(input) !== 'undefined') {
             iter.len = input.length; // CHECK: may need update this frequently
 
-            if (input.type === 'dtm.array') {
+            if (isDtmArray(input)) {
                 iter.array = input;
                 //iter.value = input.value;
             } else {

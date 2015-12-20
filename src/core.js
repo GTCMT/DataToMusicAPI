@@ -25,9 +25,6 @@ var dtm = {
         }
     },
 
-    //instrColl: [],
-    //activeInstrs: [],
-
     modelColl: [],
     modelCallers: {},
     clocks: [],
@@ -163,7 +160,7 @@ dtm.loadData = function (url, cb) {
 };
 
 dtm.loadAudio = function (url, cb) {
-    return new Promise(function (resolve, reject) {
+    return new Promise(function (resolve) {
         var xhr = new XMLHttpRequest();
         xhr.open('GET', url, true);
         xhr.responseType = 'arraybuffer';

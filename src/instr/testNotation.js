@@ -117,7 +117,7 @@
         } else {
             if (src.constructor === Array) {
                 params.modules[dest] = dtm.array(src);
-            } else if (src.type === 'dtm.array') {
+            } else if (isDtmArray(src)) {
                 if (src.get('type') === 'string') {
                     params.modules[dest] = src.clone().classify();
                 } else {

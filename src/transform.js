@@ -373,7 +373,7 @@ dtm.transform = {
             res = new Float32Array(len);
         }
         var i = 0;
-        res.length = len;
+        //res.length = len;
         var mult = len / arr.length;
 
         switch (interp) {
@@ -413,6 +413,7 @@ dtm.transform = {
                 }
                 break;
             case 'zeros':
+            case 'zeroes':
                 var prevIdx = -1;
 
                 for (i = 0; i < len; i++) {
@@ -427,22 +428,66 @@ dtm.transform = {
             case 'decay':
                 break;
 
+            case 'cos':
             case 'cosine':
-                if (arr.length > len) {
+                if (arr.length >= len) {
                     res = dtm.transform.fit(arr, len, 'linear');
                 } else {
-                    var ratio = 0, mu2 = 0;
+                    var i = 0;
+                    for (var p = 0; p < (arr.length-1); p++) {
+                        var curX = p * Math.ceil(len/(arr.length-1));
+                        var curY = arr[p];
+                        var nextX = (p+1) * Math.ceil(len/(arr.length-1));
+                        var nextY = arr[p+1];
 
-                    // TODO: implement
-                    res = arr;
+                        for (var k = curX; k < nextX; k++) {
+                            var ratio = (k - curX) / (nextX - 1 - curX);
+                            var mu2 = (1 - Math.cos(ratio * Math.PI)) / 2.0;
+                            res[i] = curY * (1 - mu2) + nextY * mu2;
+                            i++;
+                        }
+                    }
                 }
                 break;
             case 'cubic':
                 if (arr.length > len) {
                     res = dtm.transform.fit(arr, len, 'linear');
                 } else {
+                    var i = 0;
+                    for (var p = 0; p < (arr.length-1); p++) {
+                        var curX = p * Math.ceil(len / (arr.length-1));
+                        var curY = arr[p];
+                        var nextX = (p + 1) * Math.ceil(len / (arr.length-1));
+                        var nextY = arr[p + 1];
 
-                    res = arr;
+                        var y0 = 0;
+                        var y1 = curY;
+                        var y2 = nextY;
+                        var y3 = 0;
+
+                        if (p === 0) {
+                            y0 = arr[arr.length-1];
+                            y3 = arr[p+2];
+                        } else if (p === arr.length-2) {
+                            y0 = arr[p-1];
+                            y3 = arr[0];
+                        } else {
+                            y0 = arr[p-1];
+                            y3 = arr[p+2];
+                        }
+
+                        var a0 = y3 - y2 - y0 + y1;
+                        var a1 = y0 - y1 - a0;
+                        var a2 = y2 - y0;
+                        var a3 = y1;
+
+                        for (var k = curX; k < nextX; k++) {
+                            var mu = (k - curX) / (nextX - 1 - curX);
+                            var mu2 = mu * mu;
+                            res[i] = a0*mu*mu2 + a1*mu2 + a2*mu + a3;
+                            i++;
+                        }
+                    }
                 }
                 break;
 
@@ -844,18 +889,18 @@ dtm.transform = {
     /* LIST OPERATIONS */
 
     /**
-     * Creates a horizontal mirror of the input array.
-     * @function module:transform#mirror
+     * Creates a horizontal reverse of the input array.
+     * @function module:transform#reverse
      * @param {array} input One-dimensional array. Could be any type.
      * @returns {array}
      * @example
      *
      * var input = [4, 1, 2, 7, 5, 0, 6, 3];
      *
-     * dtm.transform.mirror(input);
+     * dtm.transform.reverse(input);
      * -> [3, 6, 0, 5, 7, 2, 1, 4]
      */
-    mirror: function (input) {
+    reverse: function (input) {
         var res = [];
         for (var i = input.length - 1; i >= 0; --i) {
             res.push(input[i]);
@@ -1252,7 +1297,7 @@ dtm.transform = {
     },
 
     applyOffsetToBeats: function (src, offset) {
-        var res = dtm.array().fill('zeroes', src.length).get();
+        var res = dtm.gen('zeroes', src.length).get();
         var curSelection = 0;
 
         for (var i = 0; i < src.length; i++) {

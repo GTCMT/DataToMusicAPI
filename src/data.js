@@ -128,6 +128,24 @@ dtm.data = function (arg, cb, type) {
         setArrays();
         setTypes();
         setSize();
+
+        return data;
+    };
+
+    data.setCols = function (cols) {
+        params.keys = [];
+        objForEach(cols, function (v, k) {
+            params.keys.push(k);
+        });
+
+        params.keys.forEach(function (k) {
+            params.arrays[k] = dtm.array(cols[k]).name(k);
+        });
+
+        params.size.col = params.keys.length;
+        params.size.row = params.arrays[params.keys[0]].length;
+
+        return data;
     };
 
     //if (type !== 'undefined') {
@@ -504,11 +522,11 @@ dtm.data = function (arg, cb, type) {
         return data;
     }
 };
+//
+//dtm.load = dtm.d = dtm.data;
+//dtm.load.name = 'dtm.load';
 
-dtm.load = dtm.d = dtm.data;
-dtm.load.name = 'dtm.load';
-
-dtm.loadUserFile = function (elem_files) {
+dtm.load = function (elem_files) {
     var fileType = null;
     var reader = new FileReader();
     if (elem_files[0].name.match(/.+\.json/gi)) {
@@ -522,7 +540,8 @@ dtm.loadUserFile = function (elem_files) {
             if (fileType === 'json') {
                 resolve(JSON.parse(e.target.result));
             } else if (fileType === 'csv') {
-                resolve(dtm.parser.csvToCols(e.target.result));
+                //resolve(dtm.parser.csvToCols(e.target.result));
+                resolve(dtm.data().setCols(dtm.parser.csvToCols(e.target.result)));
             }
         };
     });

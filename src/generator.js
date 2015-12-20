@@ -1,5 +1,5 @@
 /**
- * @fileOverview A module for generating array object with certain shapes
+ * @fileOverview A module for generating array object with certain shapes, extends the dtm.array module
  * @module generator
  */
 
@@ -25,7 +25,9 @@ dtm.generator = function () {
         typed: true // Float32Array
     };
 
+    // extend the dtm.array module
     var generator = dtm.array();
+
     var params = generator.meta.getParams();
     objForEach(paramsExt, function (val, key) {
         params[key] = val;
@@ -53,8 +55,10 @@ dtm.generator = function () {
             'character', 'characters', 'chars', 'char', 'c'
         ],
         oscil: ['sin', 'sine', 'cos', 'cosine', 'tri', 'triangle', 'saw', 'invSaw', 'noise', 'square', 'sq'],
+        const: ['zeros', 'zeroes', 'ones', 'constant', 'constants', 'const', 'consts'],
         linish: ['line', 'saw', 'rise', 'decay', 'fall', 'invSaw'],
         noLength: ['string', 'str', 's', 'character', 'characters', 'chars', 'char', 'c', 'range'],
+        noRange: [],
         noMinMax: [],
         noMinMaxDir: ['rise', 'decay', 'fall', 'noise', 'random', 'rand', 'randi'],
         string: ['string', 'str', 's', 'character', 'characters', 'chars', 'char', 'c']
@@ -63,6 +67,8 @@ dtm.generator = function () {
     function isTypeOf(type) {
         return types[type].indexOf(params.type) > -1;
     }
+
+    // using dtm.array get instead
 
     //generator.get = function (param) {
     //    for (var key in params) {
@@ -103,6 +109,8 @@ dtm.generator = function () {
 
             return res;
         }
+
+        // TODO: should use Float32Array
 
         function sin(len, min, max, amp, cycle, offset) {
             var res = new Array(len);
@@ -147,7 +155,15 @@ dtm.generator = function () {
         }
 
         function series() {
+            //return res;
+        }
 
+        function constant(len, val) {
+            var res = new Array(len);
+            for (var i = 0; i < len; i++) {
+                res[i] = val;
+            }
+            return res;
         }
 
         // TODO: incomplete
@@ -228,6 +244,19 @@ dtm.generator = function () {
                 params.value = fibonacci(params.length);
                 break;
 
+            case 'zeros':
+            case 'zeroes':
+                params.value = constant(params.length, 0);
+                break;
+
+            case 'ones':
+                params.value = constant(params.length, 1);
+                break;
+
+            case 'const':
+                params.value = constant(params.length, params.const);
+                break;
+
             case 'string':
             case 'str':
             case 's':
@@ -244,6 +273,12 @@ dtm.generator = function () {
         }
     }
 
+    /**
+     * Sets the method of generating a shape
+     * @function module:generator#type
+     * @param type {string}
+     * @returns {array}
+     */
     generator.type = function (type) {
         if (isString(type)) {
             if (types.all.indexOf(type) > -1) {
@@ -255,6 +290,11 @@ dtm.generator = function () {
         return generator;
     };
 
+    /**
+     * @function module:generator#len | size
+     * @param length
+     * @returns {array}
+     */
     generator.len = function (length) {
         var len = parseInt(length);
         if (!isNaN(len) && len > 0) {
@@ -265,6 +305,13 @@ dtm.generator = function () {
         return generator;
     };
 
+    generator.size = generator.len;
+
+    /**
+     * @function module:generator#min
+     * @param min
+     * @returns {array}
+     */
     generator.min = function (min) {
         var val = parseFloat(min);
         if (!isNaN(val)) {
@@ -274,6 +321,11 @@ dtm.generator = function () {
         return generator;
     };
 
+    /**
+     * @function module:generator#max
+     * @param max
+     * @returns {array}
+     */
     generator.max = function (max) {
         var val = parseFloat(max);
         if (!isNaN(val)) {
@@ -283,13 +335,41 @@ dtm.generator = function () {
         return generator;
     };
 
-    generator.minMax = function (min, max) {
-        generator.min(min);
-        generator.max(max);
-        process();
+    /**
+     * @function module:generator#range
+     * @param arg1 {number|array|dtm.array} A min value or an array of min and max values
+     * @param [arg2] {number} A max value
+     * @returns {array}
+     */
+    generator.range = function (arg1, arg2) {
+        var args;
+
+        if (isDtmObj(arg1)) {
+            args = arg1.get();
+        } else if (argIsSingleArray(arguments)) {
+            args = arguments[0];
+        } else if (argsAreSingleVals(arguments)) {
+            args = argsToArray(arguments);
+        }
+
+        if (isNumArray(args)) {
+            if (args.length === 2) {
+                generator.min(args[0]);
+                generator.max(args[1]);
+            } else if (args.length > 2) {
+                generator.min(dtm.analyzer.min(args));
+                generator.max(dtm.analyzer.max(args));
+            }
+            process();
+        }
         return generator;
     };
 
+    /**
+     * @function module:generator#amp
+     * @param amp
+     * @returns {array}
+     */
     generator.amp = function (amp) {
         var val = parseFloat(amp);
         if (!isNaN(val)) {
@@ -299,6 +379,11 @@ dtm.generator = function () {
         return generator;
     };
 
+    /**
+     * @function module:generator#cycle | cycles | freq
+     * @param cycle
+     * @returns {array}
+     */
     generator.cycle = function (cycle) {
         var val = parseFloat(cycle);
         if (!isNaN(val)) {
@@ -309,61 +394,67 @@ dtm.generator = function () {
     };
     generator.freq = generator.cycles = generator.cycle;
 
-
+    /**
+     * @function module:generator#const
+     * @param value
+     * @returns {array}
+     */
     generator.const = function (value) {
+        if (isSingleVal(value)) {
+            params.const = value;
+        }
         return generator;
     };
 
-    var iter;
+
+    // TODO: do more readable type check
+
     if (arguments.length >= 1) {
         if (typeof(arguments[0]) === 'object') {
-            if (!Array.isArray(arguments[0])) {
-                for (iter in arguments[0]) {
-                    if (arguments[0].hasOwnProperty(iter)) {
-                        if (params.hasOwnProperty(iter)) {
-                            params[iter] = arguments[0][iter];
-                        }
+            if (!isArray(arguments[0])) {
+                objForEach(arguments[0], function (iter) {
+                    if (params.hasOwnProperty(iter)) {
+                        params[iter] = arguments[0][iter];
                     }
-                }
+                });
             }
         } else {
-            generator.type(arguments[0]);
+            // set the generator type from arg 0
+            if (isString(arguments[0])) {
+                generator.type(arguments[0]);
+            }
         }
 
         if (typeof(arguments[1]) === 'object') {
-            if (!Array.isArray(arguments[1])) {
-                for (iter in arguments[1]) {
-                    if (arguments[1].hasOwnProperty(iter)) {
-                        if (params.hasOwnProperty(iter)) {
-                            params[iter] = arguments[1][iter];
-                        }
+            if (!isArray(arguments[1])) {
+                objForEach(arguments[1], function (iter) {
+                    if (params.hasOwnProperty(iter)) {
+                        params[iter] = arguments[1][iter];
                     }
-                }
+                });
             }
         }
     }
 
     if (arguments.length <= 2) {
         if (isTypeOf('oscil')) {
-            generator.min(-1.0);
-            generator.max(1.0);
+            generator.range(-1.0, 1.0);
         } else {
-            generator.min(0.0);
-            generator.max(1.0);
+            generator.range(0.0, 1.0);
         }
     }
 
     if (arguments.length >= 2) {
         if (isTypeOf('noLength')) {
             if (isTypeOf('string')) {
-                if (typeof(arguments[1]) === 'string') {
+                if (isString(arguments[1])) {
                     params.string = arguments[1];
                     params.typed = false;
                 } else {
                     params.string = String(arguments[1]);
                 }
             } else if (params.type === 'range') {
-                if (Array.isArray(arguments[1])) {
+                if (isArray(arguments[1])) {
                     if (arguments[1].length === 1) {
                         generator.max(arguments[1][0]);
                     } else if (arguments[1].length === 2) {
@@ -378,11 +469,12 @@ dtm.generator = function () {
                 }
             }
         } else {
+            // set the length from arg 1
             generator.len(arguments[1]);
 
             if (isTypeOf('oscil')) {
                 if (arguments.length >= 3) {
-                    if (Array.isArray(arguments[2])) {
+                    if (isArray(arguments[2])) {
                         if (arguments[2].length === 1) {
                             generator.amp(arguments[2][0]);
                         } else if (arguments[2].length === 2) {
@@ -396,26 +488,28 @@ dtm.generator = function () {
 
                 if (arguments.length === 3) {
                     // set as amplitude
-                    generator.min(-1.0);
-                    generator.max(1.0);
+                    generator.range(-1.0, 1.0);
                     generator.amp(arguments[2]);
                 }
 
                 if (arguments.length === 4) {
-                    if (Array.isArray(arguments[3])) {
+                    if (isArray(arguments[3])) {
                         if (arguments[3].length === 2) {
                             generator.min(arguments[3][0]);
                             generator.max(arguments[3][1]);
                         }
                     } else {
-                        generator.min(-1.0);
-                        generator.max(1.0);
+                        generator.range(-1.0, 1.0);
                         generator.cycle(arguments[3]);
                     }
                 }
+            } else if (isTypeOf('const')) {
+                if (isSingleVal(arguments[2])) {
+                    params.const = arguments[2];
+                }
             } else {
                 if (arguments.length >= 3) {
-                    if (Array.isArray(arguments[2])) {
+                    if (isArray(arguments[2])) {
                         if (arguments[2].length === 1) {
                             generator.max(arguments[2][0]);
                         } else if (arguments[2].length === 2) {
@@ -444,7 +538,7 @@ dtm.generator = function () {
     return generator;
 };
 
-dtm.gen = dtm.generator;
+dtm.g = dtm.gen = dtm.generator;
 
 var generators = ['line', 'rise', 'decay', 'fall', 'seq', 'sequence', 'series', 'range', 'noise', 'random', 'rand', 'randi', 'gaussian', 'gaussCurve', 'gauss', 'normal', 'zeros', 'zeroes', 'ones', 'constant', 'constants', 'const', 'consts', 'repeat', 'string', 'str', 'sin', 'sine', 'cos', 'cosine', 'tri', 'triangle', 'saw', 'fibonacci'];
 

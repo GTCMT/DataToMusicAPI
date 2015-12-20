@@ -350,7 +350,7 @@ dtm.synth2 = function (source) {
             } else if (src.constructor === Array) {
                 return src;
             } else if (src.hasOwnProperty('type')) {
-                if (src.type === 'dtm.array') {
+                if (isDtmArray(src)) {
                     return src.get();
                 } else if (src.type === 'dtm.synth') {
                     return src.wt;

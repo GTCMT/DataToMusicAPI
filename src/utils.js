@@ -26,6 +26,24 @@ function isArray(value) {
     return Array.isArray(value);
 }
 
+function isFloat32Array(value) {
+    var res = false;
+    if (!isEmpty(value)) {
+        res = value.constructor.name === 'Float32Array';
+    }
+    return res;
+}
+
+function isNumArray(array) {
+    var res = false;
+    if (isArray(array)) {
+        res = array.every(function (v) {
+            return isNumber(v);
+        });
+    }
+    return res;
+}
+
 function isSingleVal(value) {
     return !!(!isArray(value) && !isEmpty(value));
 }
@@ -38,14 +56,14 @@ function isDtmObj(value) {
     }
 }
 
-function isNumArray(array) {
-    var res = false;
-    if (isArray(array)) {
-        res = array.every(function (v) {
-            return isNumber(v);
-        });
+function isDtmArray(value) {
+    if (typeof(value) === 'object' || typeof(value) === 'function') {
+        if (value.hasOwnProperty('meta')) {
+            return (value.meta.type === 'dtm.array' || value.meta.type === 'dtm.generator');
+        }
+    } else {
+        return false;
     }
-    return res;
 }
 
 function isStringArray(array) {
@@ -147,7 +165,7 @@ function clone(obj) {
 
     // Handle Object
     if (obj instanceof Object) {
-        if (obj.type == 'dtm.array') {
+        if (isDtmArray(obj)) {
             return obj.clone();
         } else {
             copy = {};
@@ -231,4 +249,14 @@ function ajaxGet(url, cb) {
     };
 
     xhr.send();
+}
+
+function Float32Concat(first, second) {
+    var firstLength = first.length,
+        result = new Float32Array(firstLength + second.length);
+
+    result.set(first);
+    result.set(second, firstLength);
+
+    return result;
 }

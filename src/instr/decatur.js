@@ -86,9 +86,6 @@
         var pLen = Math.round(numNotes/rep);
         var pArr = mods.pitch.clone().fit(pLen, 'linear').log(10).round();
 
-        //var range = mods.range.clone().fit(pLen, 'step');
-        //var low = Math.round((params.range[params.name][0] - params.range[params.name][1]) * range.get('mean') + params.range[params.name][1]);
-        //var high = Math.round((params.range[params.name][2] - params.range[params.name][1]) * range.get('mean') + params.range[params.name][1]);
         var nArr = mods.note.clone().scale(0.1, 1).fit(pLen, 'linear').fitSum(pLen, true);
         var acArr = mods.activity.clone().fit(pLen, 'linear').round();
         var trArr = mods.transp.clone().fit(pLen, 'linear').round();
@@ -135,10 +132,6 @@
                             post = 4;
                         }
                         pre = len - post;
-                        //console.log('bad: ' + i);
-                        //console.log('accum: ' + accum);
-                        //console.log('pre: ' + pre);
-                        //console.log('post: ' + post);
                     }
                     accum += len;
                     //==================================
@@ -220,16 +213,6 @@
                         slurOn = false;
                     }
 
-                    //if (i > 0) {
-                    //    if (dyn != prevDyn && (params.durFx[dur] != 'rest' || ac === 0)) {
-                    //        seq[i] = '\\intens<"' + params.dynFx[dyn] + '", dx=-0.3, dy=-4> ' + seq[i];
-                    //    }
-                    //} else {
-                    //    if (params.durFx[dur] != 'rest' || ac === 0) {
-                    //        seq[i] = '\\intens<"' + params.dynFx[dyn] + '", dx=-0.3, dy=-4> ' + seq[i];
-                    //    }
-                    //}
-
                     fixImaginaryLines = false;
                 }
 
@@ -277,27 +260,6 @@
                 if (mods.chord.get('len') > 1) {
                     seq = harmonizeGuido(seq, chord, sc);
                 }
-
-                //var accum = 0;
-                //var space = ' \\space<4> ';
-                //for (var i = 0; i < seq.length; i++) {
-                //    accum += parseInt(seq[i].substr(seq[i].indexOf('*')+1, (seq[i].indexOf('/')-seq[i].indexOf('*')-1)));
-                //
-                //    if (seq[i].indexOf('_') > -1) {
-                //        seq[i] = seq[i] + ' \\space<4> ';
-                //    }
-                //
-                //
-                //    if (accum >= 16) {
-                //        seq[i] += space;
-                //        if (accum % 16 === 0 && i !== seq.length-1) {
-                //            seq[i+1] = '\\bar ' + space + seq[i+1];
-                //        } else if (i === seq.length-1) {
-                //            seq[i] += ' \\space<4> ';
-                //        }
-                //        accum -= 16;
-                //    }
-                //}
 
                 var staffFormat = '\\staffFormat<"5-line",';
                 if (seq.length === 1) {
@@ -376,8 +338,6 @@
                     pageFormat = '\\pageFormat<30cm, 10cm, 2cm, 5cm, 2cm, 5cm>';
                 }
 
-                //console.log('[' + pageFormat + autoBreak + name + clef + time + seq + ' \\space<6> \\repeatEnd]');
-
                 //+ staff + staffFormat
                 osc.send('/decatur/score', [params.name, '[' + pageFormat + autoBreak + name + clef + time + seq + ' \\space<6> \\repeatEnd]']);
             }
@@ -426,10 +386,6 @@
                         }
                     }
                 }
-
-                //if (params.name === 'PianoL') {
-                //    console.log(evList);
-                //}
 
                 for (var i = 0; i < evList.length; i++) {
                     if (typeof(evList[i]) !== 'undefined') {
@@ -770,7 +726,7 @@
         } else {
             if (src.constructor === Array) {
                 mods[dest] = dtm.array(src);
-            } else if (src.type === 'dtm.array') {
+            } else if (isDtmArray(src)) {
                 if (src.get('type') === 'string') {
                     mods[dest] = src.clone().classify();
                 } else {
