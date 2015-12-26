@@ -23,6 +23,10 @@ function isBoolean(value) {
     return typeof(value) === 'boolean';
 }
 
+function isFunction(value) {
+    return typeof(value) === 'function';
+}
+
 function isArray(value) {
     return Array.isArray(value);
 }
@@ -46,11 +50,15 @@ function isNumArray(array) {
 }
 
 function isSingleVal(value) {
-    return !!(!isArray(value) && !isEmpty(value));
+    return !!(!isArray(value) && !isDtmObj(value) && !isFunction(value) && !isEmpty(value));
+}
+
+function isObject(value) {
+    return (typeof(value) === 'object' && value !== null);
 }
 
 function isDtmObj(value) {
-    if (typeof(value) === 'object' || typeof(value) === 'function') {
+    if (isObject(value) || isFunction(value)) {
         return value.hasOwnProperty('meta');
     } else {
         return false;
@@ -58,9 +66,11 @@ function isDtmObj(value) {
 }
 
 function isDtmArray(value) {
-    if (typeof(value) === 'object' || typeof(value) === 'function') {
+    if (isObject(value) || isFunction(value)) {
         if (value.hasOwnProperty('meta')) {
             return (value.meta.type === 'dtm.array' || value.meta.type === 'dtm.generator');
+        } else {
+            return false;
         }
     } else {
         return false;

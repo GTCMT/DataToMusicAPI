@@ -773,6 +773,7 @@ dtm.array = function () {
 
     /* LIST OPERATIONS*/
 
+    // TODO: support for the optional 'this' argument (see the JS Array documentation)
     /**
      * Performs JS Array.map function to the array values.
      * @function module:array#map
@@ -781,6 +782,85 @@ dtm.array = function () {
      */
     array.map = function (callback) {
         return array.set(params.value.map(callback));
+    };
+
+    array.forEach = function (callback) {
+        params.value.forEach(callback);
+        return array;
+    };
+
+    array.foreach = array.forEach;
+
+    array.filter = function (callback) {
+        return array.set(params.value.filter(callback));
+    };
+
+    array.reduce = function (callback) {
+        return array.set(params.value.reduce(callback));
+    };
+
+    // TODO: these should be in the get method
+    array.some = function (callback) {
+        return array.set(params.value.some(callback));
+    };
+
+    array.every = function (callback) {
+        return array.set(params.value.every(callback));
+    };
+
+    array.subarray = function () {
+        return array;
+    };
+
+    // TODO: regexp-like processing???
+    array.match = function () {
+        return array;
+    };
+
+    array.replace = function (tgt, elem) {
+        // TODO: type and length check
+        // TODO: if elem is an array-ish, fill the tgt w/ the array elements
+        if (isSingleVal(elem)) {
+            if (isSingleVal(tgt)) {
+                return array.set(params.value.map(function (v) {
+                    if (v === tgt) {
+                        return elem;
+                    } else {
+                        return v;
+                    }
+                }));
+            } else if (isArray(tgt)) {
+                return array.set(params.value.map(function (v) {
+                    if (tgt.some(function (w) {
+                            return w === v;
+                        })) {
+                        return elem;
+                    } else {
+                        return v;
+                    }
+                }));
+            } else if (isDtmArray(tgt)) {
+                return array.set(params.value.map(function (v) {
+                    if (tgt.get().some(function (w) {
+                            return w === v;
+                        })) {
+                        return elem;
+                    } else {
+                        return v;
+                    }
+                }));
+            } else if (isFunction(tgt)) {
+                return array.set(params.value.map(function (v) {
+                    if (tgt(v)) {
+                        return elem;
+                    } else {
+                        return v;
+                    }
+                }));
+            }
+        } else {
+            return array;
+        }
     };
 
     /**
@@ -955,7 +1035,7 @@ dtm.array = function () {
         return array.set(dtm.transform.shuffle(params.value));
     };
 
-    array.rand = array.random = array.randomize = array.shuffle;
+    array.randomize = array.shuffle;
 
 
     array.blockShuffle = function (blockSize) {
@@ -1083,15 +1163,15 @@ dtm.array = function () {
 
     // TODO: id by occurrence / rarity, etc.
     /**
-     * @function module:array#classId | class | classify
+     * @function module:array#classify
      * @param by
      * @returns {dtm.array}
      */
-    array.classId = function (by) {
+    array.classify = function (by) {
         return array.set(dtm.transform.classId(params.value));
     };
 
-    array.class = array.classify = array.classId;
+    array.class = array.classify;
 
     /**
      * Converts the array values (such as numbers) into string format.
@@ -1113,7 +1193,7 @@ dtm.array = function () {
         return array.set(dtm.transform.tonumber(params.value));
     };
 
-    array.toNum = array.tonum = array.toNumber = array.tonumber;
+    array.tonum = array.tonumber;
 
     array.toFloat32 = function () {
         var newArr = new Float32Array(array.get('len'));
@@ -1271,4 +1351,4 @@ dtm.array = function () {
     return array;
 };
 
-dtm.a = dtm.arr = dtm.array;
+dtm.a = dtm.array;

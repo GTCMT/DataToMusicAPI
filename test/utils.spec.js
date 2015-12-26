@@ -2,8 +2,20 @@ describe('isSingleVal', function () {
     it('should work', function () {
         expect(isSingleVal(123)).toBe(true);
         expect(isSingleVal('hey')).toBe(true);
+        expect(isSingleVal(undefined)).toBe(false);
         expect(isSingleVal(null)).toBe(false);
         expect(isSingleVal([1, 2, 3])).toBe(false);
+        expect(isSingleVal(dtm.array([1, 2, 3]))).toBe(false);
+        expect(isSingleVal(function(){})).toBe(false);
+    });
+});
+
+describe('isObject', function () {
+    it('should work', function () {
+        expect(isObject({})).toBe(true);
+        expect(isObject(123)).toBe(false);
+        expect(isObject(null)).toBe(false);
+        expect(isObject(undefined)).toBe(false);
     });
 });
 
@@ -16,6 +28,16 @@ describe('isBoolean', function () {
         expect(isBoolean([1,2,3])).toBe(false);
         expect(isBoolean(undefined)).toBe(false);
         expect(isBoolean(null)).toBe(false);
+    });
+});
+
+describe('isFunction', function () {
+    it('should work', function () {
+        expect(isFunction(function(){})).toBe(true);
+        expect(isFunction(1)).toBe(false);
+        expect(isFunction('1')).toBe(false);
+        expect(isFunction(null)).toBe(false);
+        expect(isFunction(undefined)).toBe(false);
     });
 });
 
@@ -36,6 +58,15 @@ describe('isStringArray', function () {
     it('should work', function () {
         expect(isStringArray(['hey', 'ho'])).toBe(true);
         expect(isStringArray(['hey', 1])).toBe(false);
+    });
+});
+
+describe('isDtmArray', function () {
+    it('should work', function () {
+        expect(isDtmArray(dtm.a())).toBe(true);
+        expect(isDtmArray(dtm.a([1,2,3]))).toBe(true);
+        expect(isDtmArray(dtm.gen('sine'))).toBe(true);
+        expect(isDtmArray([1,2,3])).toBe(false);
     });
 });
 
