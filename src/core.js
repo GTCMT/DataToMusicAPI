@@ -49,7 +49,8 @@ var dtm = {
     },
 
     wa: {
-        isOn: true
+        isOn: true,
+        useOfflineContext: false
     },
 
     startWebAudio: function () {

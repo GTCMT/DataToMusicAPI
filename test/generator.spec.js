@@ -29,6 +29,7 @@ describe('generator', function () {
             expect(g.get('max')).toBe(10);
         });
 
+        // TODO: implement
         xit('should set the range from a dtm.array', function () {
             var g = dtm.gen('line', 10, dtm.a([1, 10]));
             expect(g.get('min')).toBe(1);
@@ -72,6 +73,9 @@ describe('generator', function () {
     });
 
     describe('osc', function () {
+        describe('sine', function () {
+
+        });
         //console.log(dtm.gen('cos', 10, 1, 3).get());
     });
 

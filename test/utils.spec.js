@@ -7,6 +7,18 @@ describe('isSingleVal', function () {
     });
 });
 
+describe('isBoolean', function () {
+    it('should work', function () {
+        expect(isBoolean(true)).toBe(true);
+        expect(isBoolean(false)).toBe(true);
+        expect(isBoolean(123)).toBe(false);
+        expect(isBoolean('123')).toBe(false);
+        expect(isBoolean([1,2,3])).toBe(false);
+        expect(isBoolean(undefined)).toBe(false);
+        expect(isBoolean(null)).toBe(false);
+    });
+});
+
 describe('isNumArray', function () {
     it('should work', function () {
         expect(isNumArray([1, 2, 3])).toBe(true);

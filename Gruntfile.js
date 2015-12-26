@@ -33,6 +33,7 @@ module.exports = function (grunt) {
                     'src/inscore.js',
                     'src/models/unipolar.js',
                     'src/models/bipolar.js',
+                    'src/models/huffman.js',
                     //'src/models/rhythm.js',
                     //'src/models/chord.js',
                     //'src/models/phrase.js',

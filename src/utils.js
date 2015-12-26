@@ -1,3 +1,4 @@
+/* TYPE CHECKING */
 function isEmpty(value) {
     if (typeof(value) === 'undefined') {
         return true;
@@ -102,6 +103,11 @@ function argsAreSingleVals(args) {
     }
     return res;
 }
+
+
+
+
+
 
 function append() {
 

@@ -240,10 +240,6 @@ dtm.clock = function (bpm, subDiv, autoStart) {
         }
     }
 
-    //clock.interval = function (sec) {
-    //    return clock;
-    //};
-
     clock.setTime = function (input) {
         if (isArray(input)) {
             clock.params.time = input;

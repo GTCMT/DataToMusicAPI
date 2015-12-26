@@ -90,7 +90,6 @@ dtm.model = function (name, categ) {
         }
     };
 
-    model.type = 'dtm.model';
     model.meta = {
         type: 'dtm.model'
     };

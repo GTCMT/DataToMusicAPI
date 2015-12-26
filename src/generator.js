@@ -51,7 +51,7 @@ dtm.generator = function () {
             'zeros', 'zeroes', 'ones',
             'constant', 'constants', 'const', 'consts',
             'repeat',
-            'string', 'str', 's',
+            'string', 'str', 's', 'text',
             'character', 'characters', 'chars', 'char', 'c'
         ],
         oscil: ['sin', 'sine', 'cos', 'cosine', 'tri', 'triangle', 'saw', 'invSaw', 'noise', 'square', 'sq'],
@@ -61,42 +61,14 @@ dtm.generator = function () {
         noRange: [],
         noMinMax: [],
         noMinMaxDir: ['rise', 'decay', 'fall', 'noise', 'random', 'rand', 'randi'],
-        string: ['string', 'str', 's', 'character', 'characters', 'chars', 'char', 'c']
+        string: ['string', 'str', 's', 'character', 'characters', 'chars', 'char', 'c', 'text']
     };
 
     function isTypeOf(type) {
         return types[type].indexOf(params.type) > -1;
     }
 
-    // using dtm.array get instead
-
-    //generator.get = function (param) {
-    //    for (var key in params) {
-    //        if (params.hasOwnProperty(key)) {
-    //            if (key === param) {
-    //                return params[param];
-    //            }
-    //        }
-    //    }
-    //
-    //    if (isEmpty(param)) {
-    //        if (params.pack) {
-    //            if (params.typed) {
-    //                return dtm.array(new Float32Array(params.value));
-    //            } else {
-    //                return dtm.array(params.value);
-    //            }
-    //        } else {
-    //            if (params.typed) {
-    //                return new Float32Array(params.value);
-    //            } else {
-    //                return params.value;
-    //            }
-    //        }
-    //    }
-    //
-    //    return generator;
-    //};
+    // dtm.gen().get(): using dtm.array get instead
 
     function process() {
         function line(len, min, max, cycle) {
@@ -136,6 +108,7 @@ dtm.generator = function () {
             return res;
         }
 
+        // TODO: implement
         function square(len, min, max, amp, cycle, offset) {
             var res = new Array(len);
             return res;
@@ -154,6 +127,7 @@ dtm.generator = function () {
             return res;
         }
 
+        // TODO: implement
         function series() {
             //return res;
         }
