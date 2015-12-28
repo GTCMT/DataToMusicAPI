@@ -51,13 +51,23 @@ dtm.value = {
     },
 
     /**
-     * MIDI note number to frequncy convertion.
+     * MIDI note number to frequency conversion.
      * @function module:value#mtof
-     * @param nn {integer} Note number
+     * @param nn {number} Note number
      * @returns {number}
      */
     mtof: function (nn) {
-        return 440. * Math.pow(2, (nn - 69) / 12.);
+        return 440.0 * Math.pow(2, (nn - 69) / 12.);
+    },
+
+    /**
+     * Frequency to MIDI note number conversion.
+     * @function module:value#mtof
+     * @param freq {number} Note number
+     * @returns {number}
+     */
+    ftom: function (freq) {
+        return Math.log2(freq / 440.0) * 12 + 69;
     },
 
     /**

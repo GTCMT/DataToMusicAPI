@@ -879,9 +879,9 @@ dtm.transform = {
             res.push(input[i] - input[i-1]);
         }
 
-        if (input.constructor === Array) {
+        if (isArray(input)) {
             return res;
-        } else if (input.constructor === Float32Array) {
+        } else if (isFloat32Array(input)) {
             return new Float32Array(res);
         }
     },
@@ -905,9 +905,9 @@ dtm.transform = {
         for (var i = input.length - 1; i >= 0; --i) {
             res.push(input[i]);
         }
-        if (input.constructor === Array) {
+        if (isArray(input)) {
             return res;
-        } else if (input.constructor === Float32Array) {
+        } else if (isFloat32Array(input)) {
             return new Float32Array(res);
         }
     },
@@ -926,7 +926,7 @@ dtm.transform = {
      * -> [3, 7, 4, 6, 5, 0, 2, 1]
      */
     invert: function (input, center) {
-        if (typeof(center) === 'undefined') {
+        if (!isNumber(center)) {
             center = dtm.analyzer.mean(input);
         }
 
@@ -934,9 +934,9 @@ dtm.transform = {
         _.forEach(input, function (val, idx) {
             res[idx] = center - (val - center);
         });
-        if (input.constructor === Array) {
+        if (isArray(input)) {
             return res;
-        } else if (input.constructor === Float32Array) {
+        } else if (isFloat32Array(input)) {
             return new Float32Array(res);
         }
     },
@@ -978,18 +978,18 @@ dtm.transform = {
         }
 
         for (var i = 0; i < count; i++) {
-            if (input.constructor === Array) {
+            if (isArray(input)) {
                 res = res.concat(input);
-            } else if (input.constructor === Float32Array) {
+            } else if (isFloat32Array(input)) {
                 input.forEach(function (v) {
                     res = res.concat(v);
                 });
             }
         }
 
-        if (input.constructor === Array) {
+        if (isArray(input)) {
             return res;
-        } else if (input.constructor === Float32Array) {
+        } else if (isFloat32Array(input)) {
             return new Float32Array(res);
         }
     },
@@ -1005,7 +1005,7 @@ dtm.transform = {
      */
     truncate: function (arr, arg1, arg2) {
         var res = [];
-        if (typeof(arg2) !== 'undefined') {
+        if (!isEmpty(arg2)) {
             for (var i = 0; i < (arr.length - (arg1 + arg2)); i++) {
                 res[i] = arr[arg1 + i];
             }
@@ -1033,9 +1033,9 @@ dtm.transform = {
     window: function (arr, type) {
         var phase = 0;
         var res = null;
-        if (arr.constructor === Array) {
+        if (isArray(arr)) {
             res = new Array(arr.length);
-        } else if (arr.constructor === Float32Array) {
+        } else if (isFloat32Array(arr)) {
             res = new Float32Array(arr.length);
         }
 
@@ -1093,7 +1093,7 @@ dtm.transform = {
      * @param [morphIdx=0.5] {float}
      */
     morph: function (srcArr, tgtArr, morphIdx, interp) {
-        if (typeof(morphIdx) === 'undefined') {
+        if (!isNumber(morphIdx)) {
             morphIdx = 0.5;
         }
 
@@ -1239,7 +1239,7 @@ dtm.transform = {
     indicesToBeats: function (input, seqLen) {
         input = dtm.transform.sort(input);
 
-        if (typeof(seqLen) === 'undefined') {
+        if (!isNumber(seqLen)) {
             var f = 0, len = 1;
             while (input[input.length-1] >= len) {
                 len = Math.pow(2, ++f);
@@ -1395,9 +1395,9 @@ dtm.transform = {
     tonumber: function (input) {
         var res = [];
         input.forEach(function (val, idx) {
-            if (typeof(val) === 'string') {
+            if (isString(val)) {
                 res[idx] = parseFloat(val);
-            } else if (typeof(val) === 'boolean') {
+            } else if (isBoolean(val)) {
                 res[idx] = val ? 1.0 : 0.0;
             } else {
                 res[idx] = NaN;
@@ -1412,28 +1412,49 @@ dtm.transform = {
     //}
 
     mtof: function (input) {
-        var res = [];
+        var res;
+
+        if (isFloat32Array(input)) {
+            res = new Float32Array(input.length);
+        } else {
+            res = new Array(input.length);
+        }
+
         input.forEach(function (v, i) {
             res[i] = dtm.value.mtof(v);
         });
         return res;
     },
 
+    ftom: function (input) {
+        var res;
+
+        if (isFloat32Array(input)) {
+            res = new Float32Array(input.length);
+        } else {
+            res = new Array(input.length);
+        }
+
+        input.forEach(function (v, i) {
+            res[i] = dtm.value.ftom(v);
+        });
+
+        return res;
+    },
+
     split: function (input, separator) {
-        if (isEmpty(separator)) {
+        if (!isString(separator)) {
             separator = '';
         }
 
         var res = [];
-        if (!isEmpty(input)) {
-            if (isArray(input)) {
-                input.forEach(function (v) {
-                    if (typeof(v) === 'number') {
-                        v = v.toString();
-                    }
-                    res = res.concat(v.split(separator));
-                });
-            }
+        if (isArray(input)) {
+            input.forEach(function (v) {
+                if (typeof(v) === 'number') {
+                    v = v.toString();
+                }
+                res = res.concat(v.split(separator));
+            });
         }
         return res;
     }

@@ -63,12 +63,25 @@ dtm.array = function () {
      */
     array.get = function (param) {
         if (isNumber(param)) {
+            // TODO: support multiple single val arguments
             if (param < 0 || param >= params.length) {
                 dtm.log('Index out of range');
                 return params.value[dtm.value.mod(param, params.length)];
             } else {
                 return params.value[param];
             }
+        } else if (isNumArray(param) || (isDtmArray(param) && isNumArray(param.get()))) {
+            var indices = isDtmArray(param) ? param.get() : param;
+            var res = []; // TODO: support typed array?
+
+            // TODO: only accept integers
+
+            indices.forEach(function (i) {
+                res.push(params.value[dtm.value.mod(i, params.length)]);
+            });
+
+            return res;
+
         } else if (isString(param)) {
             switch (param) {
                 case 'getters':
@@ -709,7 +722,7 @@ dtm.array = function () {
      * @param [round=false] {boolean}
      * @returns {dtm.array}
      */
-    array.fitsum = function (tgt, round) {
+    array.fitsum = function (tgt, round, min) {
         return array.set(dtm.transform.fitSum(params.value, tgt, round));
     };
 
@@ -817,14 +830,14 @@ dtm.array = function () {
         return array;
     };
 
-    array.replace = function (tgt, elem) {
+    array.replace = function (tgt, val) {
         // TODO: type and length check
-        // TODO: if elem is an array-ish, fill the tgt w/ the array elements
-        if (isSingleVal(elem)) {
+        // TODO: if val is an array-ish, fill the tgt w/ the array elements
+        if (isSingleVal(val)) {
             if (isSingleVal(tgt)) {
                 return array.set(params.value.map(function (v) {
                     if (v === tgt) {
-                        return elem;
+                        return val;
                     } else {
                         return v;
                     }
@@ -834,7 +847,7 @@ dtm.array = function () {
                     if (tgt.some(function (w) {
                             return w === v;
                         })) {
-                        return elem;
+                        return val;
                     } else {
                         return v;
                     }
@@ -844,7 +857,7 @@ dtm.array = function () {
                     if (tgt.get().some(function (w) {
                             return w === v;
                         })) {
-                        return elem;
+                        return val;
                     } else {
                         return v;
                     }
@@ -852,7 +865,7 @@ dtm.array = function () {
             } else if (isFunction(tgt)) {
                 return array.set(params.value.map(function (v) {
                     if (tgt(v)) {
-                        return elem;
+                        return val;
                     } else {
                         return v;
                     }
@@ -862,6 +875,34 @@ dtm.array = function () {
             return array;
         }
     };
+
+    // TODO: impelemnt
+    array.replaceat = function (idx, val) {
+        return array;
+    };
+
+    // TODO: support typed array
+    array.select = function () {
+        var indices, res = [];
+        if (argsAreSingleVals(arguments)) {
+            indices = argsToArray(arguments);
+        } else if (isArray(arguments[0])) {
+            indices = arguments[0];
+        } else if (isDtmArray(arguments[0]) && isNumArray(arguments[0].get())) {
+            indices = arguments[0].get();
+        }
+
+        if (!isNumArray(indices)) {
+            return array;
+        } else {
+            indices.forEach(function (i) {
+                res.push(params.value[dtm.value.mod(i, params.length)]);
+            });
+            return array.set(res);
+        }
+    };
+
+    array.sel = array.select;
 
     /**
      * Sorts the contents of numerical array.
@@ -1262,7 +1303,7 @@ dtm.array = function () {
     };
 
     array.ftom = function () {
-        return array;
+        return array.set(dtm.transform.ftom(params.value));
     };
 
     //array.transpose = function (val) {

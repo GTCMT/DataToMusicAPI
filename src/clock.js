@@ -49,9 +49,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
         type: 'dtm.clock',
 
         interval: 1,
-
         beat: 0,
-
         list: [],
 
         // temp
@@ -85,6 +83,9 @@ dtm.clock = function (bpm, subDiv, autoStart) {
             case 'subdiv':
             case 'subDiv':
             case 'div':
+                return params.subDiv;
+
+            case 'time':
                 return params.subDiv;
 
             case 'dur':

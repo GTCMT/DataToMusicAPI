@@ -41,6 +41,7 @@ dtm.generator = function () {
         all: [
             'line', 'saw', 'rise',
             'decay', 'fall', 'invSaw',
+            'adsr', 'ADSR',
             'seq', 'sequence', 'series',
             'range',
             'fibonacci',
@@ -57,7 +58,7 @@ dtm.generator = function () {
         oscil: ['sin', 'sine', 'cos', 'cosine', 'tri', 'triangle', 'saw', 'invSaw', 'noise', 'square', 'sq'],
         const: ['zeros', 'zeroes', 'ones', 'constant', 'constants', 'const', 'consts'],
         linish: ['line', 'saw', 'rise', 'decay', 'fall', 'invSaw'],
-        noLength: ['string', 'str', 's', 'character', 'characters', 'chars', 'char', 'c', 'range'],
+        noLength: ['string', 'str', 's', 'character', 'characters', 'chars', 'char', 'c', 'range', 'seq'],
         noRange: [],
         noMinMax: [],
         noMinMaxDir: ['rise', 'decay', 'fall', 'noise', 'random', 'rand', 'randi'],
@@ -127,11 +128,6 @@ dtm.generator = function () {
             return res;
         }
 
-        // TODO: implement
-        function series() {
-            //return res;
-        }
-
         function constant(len, val) {
             var res = new Array(len);
             for (var i = 0; i < len; i++) {
@@ -140,11 +136,37 @@ dtm.generator = function () {
             return res;
         }
 
+        // TODO: implement
+        function series() {
+            //return res;
+        }
+
+        // TODO: broekn
+        function sequence(start, end, interval) {
+            if (!isNumber(interval) && interval === 0.0) {
+                interval = 1.0;
+            }
+
+            var steps = Math.floor((end - start) / interval) + 1;
+            params.length = steps;
+            //console.log(steps);
+            var res = new Array();
+
+            for (var i = 0; i < steps; i++) {
+                res[i] = start + interval * i;
+            }
+            return res;
+        }
+
         // TODO: incomplete
         function range(min, max, interval) {
+            if (!isNumber(interval) || interval === 0.0) {
+                interval = 1.0;
+            }
+
             var len = Math.abs(Math.round(max) - Math.round(min)) + 1;
             var interval = (max - min) / (len - 1);
-            var res = new Array(len);
+            var res = new Float32Array(len);
 
             for (var i = 0; i < len; i++) {
                 res[i] = Math.round(min) + i * interval;
@@ -153,8 +175,9 @@ dtm.generator = function () {
             return res;
         }
 
+        // TODO: typed?
         function fibonacci(len) {
-            var res = new Array(len);
+            var res = new Float32Array(len);
             res[0] = 1;
 
             if (len > 1) {
@@ -212,6 +235,10 @@ dtm.generator = function () {
 
             case 'range':
                 params.value = range(params.min, params.max, params.interval);
+                break;
+
+            case 'seq':
+                params.value = sequence(params.min, params.max);
                 break;
 
             case 'fibonacci':
@@ -384,7 +411,7 @@ dtm.generator = function () {
     // TODO: do more readable type check
 
     if (arguments.length >= 1) {
-        if (typeof(arguments[0]) === 'object') {
+        if (isObject(arguments[0])) {
             if (!isArray(arguments[0])) {
                 objForEach(arguments[0], function (iter) {
                     if (params.hasOwnProperty(iter)) {
@@ -399,7 +426,7 @@ dtm.generator = function () {
             }
         }
 
-        if (typeof(arguments[1]) === 'object') {
+        if (isObject(arguments[1])) {
             if (!isArray(arguments[1])) {
                 objForEach(arguments[1], function (iter) {
                     if (params.hasOwnProperty(iter)) {
@@ -441,6 +468,8 @@ dtm.generator = function () {
                         generator.max(arguments[2]);
                     }
                 }
+            } else if (params.type === 'seq') {
+                generator.range(arguments[1], arguments[2]);
             }
         } else {
             // set the length from arg 1

@@ -29,6 +29,7 @@ dtm.synth = function () {
         tabLen: 8192,
         source: 'sine',
         amp: null,
+        notenum: null,
         freq: null,
         pitch: null,
         pan: null,
@@ -93,7 +94,7 @@ dtm.synth = function () {
     var actx = dtm.wa.actx;
     var octx = null;
     params.sr = actx.sampleRate;
-    //params.rtFxOnly = !dtm.wa.useOfflineContext;
+    params.rtFxOnly = !dtm.wa.useOfflineContext;
 
     var init = function () {
         if (typeof(arguments[0]) === 'object') {
@@ -109,6 +110,7 @@ dtm.synth = function () {
         params.baseTime = actx.currentTime;
 
         params.amp = new Float32Array([1]);
+        params.notenum = new Float32Array([69]);
         params.freq = new Float32Array([440]);
         params.pitch = freqToPitch(params.freq);
         params.wavetable = new Float32Array(params.tabLen);
@@ -380,11 +382,9 @@ dtm.synth = function () {
      * @returns {dtm.synth}
      */
     synth.dur = function (src) {
-        if (isNumber(src)) {
-            if (src > 0) {
-                params.autoDur = false;
-                params.dur = src;
-            }
+        if (isNumber(src) && src > 0) {
+            params.autoDur = false;
+            params.dur = src;
         } else if (isBoolean(src)) {
             params.autoDur = src;
         } else if (src === 'auto') {
@@ -396,6 +396,16 @@ dtm.synth = function () {
     synth.offset = function (src) {
         if (isNumber(src) && src >= 0.0) {
             params.offset = src;
+        }
+        return synth;
+    };
+
+    // maybe not good to have this in synth, instead should be in a model?
+    synth.time = function (src) {
+        if (isNumber(src) && (src > 0) && !isEmpty(params.clock)) {
+            if (dtm.val.mod(params.clock.get('beat'), params.clock.get('time') * src) === 0) {
+                console.log('meow');
+            }
         }
         return synth;
     };
@@ -708,98 +718,184 @@ dtm.synth = function () {
      * Sets the frequency of the oscillator
      * @function module:synth#freq
      * @param src
-     * @param mode
      * @param [post=false] boolean
      * @returns {dtm.synth}
      */
-    synth.freq = function (src, mode, post) {
-        if (typeof(mode) === 'string') {
-            switch (mode) {
-                case 'add':
-                    break;
-                case 'mult':
-                case 'dot':
-                    break;
-                default:
-                    break;
-            }
-        } else {
-            src = typeCheck(src);
-            if (src) {
-                params.freq = src;
-                params.pitch = freqToPitch(params.freq);
-            }
+    synth.freq = function (src, post) {
+        src = typeCheck(src);
+        if (src) {
+            params.freq = src;
+            params.pitch = freqToPitch(params.freq);
         }
+        return synth;
+    };
+
+    synth.freq.add = function (src, interp) {
+        src = typeCheck(src);
+        if (!isString(interp)) {
+            interp = 'step';
+        }
+
+        if (src) {
+            if (src.length > params.freq.length) {
+                params.freq = dtm.a(params.freq).fit(src.length, interp).get();
+            } else if (src.length < params.freq.length) {
+                src = dtm.a(src).fit(params.freq.length, interp).get();
+            }
+            src.forEach(function (v, i) {
+                params.freq[i] += v;
+            });
+
+            params.pitch = freqToPitch(params.freq);
+        }
+
+        return synth;
+    };
+
+    synth.freq.mult = function (src, interp) {
+        src = typeCheck(src);
+        if (!isString(interp)) {
+            interp = 'step';
+        }
+
+        if (src) {
+            if (src.length > params.freq.length) {
+                params.freq = dtm.a(params.freq).fit(src.length, interp).get();
+            } else if (src.length < params.freq.length) {
+                src = dtm.a(src).fit(params.freq.length, interp).get();
+            }
+            src.forEach(function (v, i) {
+                params.freq[i] *= v;
+            });
+
+            params.pitch = freqToPitch(params.freq);
+        }
+
         return synth;
     };
 
     /**
      * Sets the pitch of the oscillator by a MIDI note number.
-     * @function module:synth#nn | notenum
+     * @function module:synth#notenum
      * @param src
-     * @param mode
      * @param [post=false] {boolean}
      * @returns {dtm.synth}
      */
-    synth.nn = function (src, mode, post) {
-        if (typeof(mode) === 'string') {
-
-        } else {
-            src = typeCheck(src);
-            if (src) {
-                params.freq = new Float32Array(src.length);
-                src.forEach(function (v, i) {
-                    params.freq[i] = dtm.value.mtof(v);
-                });
-                params.pitch = freqToPitch(params.freq);
-            }
+    synth.notenum = function (src, post) {
+        src = typeCheck(src);
+        if (src) {
+            params.notenum = new Float32Array(src.length);
+            params.freq = new Float32Array(src.length);
+            src.forEach(function (v, i) {
+                params.notenum[i] = v;
+                params.freq[i] = dtm.value.mtof(v);
+            });
+            params.pitch = freqToPitch(params.freq);
         }
         return synth;
     };
 
-    synth.notenum = synth.nn;
+    synth.nn = synth.notenum;
+
+    synth.notenum.add = function (src, interp) {
+        src = typeCheck(src);
+        if (!isString(interp)) {
+            interp = 'step';
+        }
+
+        if (src) {
+            if (src.length > params.notenum.length) {
+                params.notenum = dtm.a(params.notenum).fit(src.length, interp).get();
+            } else if (src.length < params.notenum.length) {
+                src = dtm.a(src).fit(params.notenum.length, interp).get();
+            }
+            src.forEach(function (v, i) {
+                params.notenum[i] += v;
+            });
+
+            params.freq = dtm.transform.mtof(params.notenum);
+            params.pitch = freqToPitch(params.freq);
+        }
+
+        return synth;
+    };
+
+    synth.notenum.mult = function (src, interp) {
+        src = typeCheck(src);
+        if (!isString(interp)) {
+            interp = 'step';
+        }
+
+        if (src) {
+            if (src.length > params.notenum.length) {
+                params.notenum = dtm.a(params.notenum).fit(src.length, interp).get();
+            } else if (src.length < params.notenum.length) {
+                src = dtm.a(src).fit(params.notenum.length, interp).get();
+            }
+            src.forEach(function (v, i) {
+                params.notenum[i] *= v;
+            });
+
+            params.freq = dtm.transform.mtof(params.notenum);
+            params.pitch = freqToPitch(params.freq);
+        }
+
+        return synth;
+    };
 
     // for longer sample playback
-    synth.pitch = function (src, mode, post) {
+    synth.pitch = function (src, post) {
         return synth;
     };
 
     /**
      * @function module:synth#amp
      * @param src
-     * @param mode
      * @param post
      * @returns {dtm.synth}
      */
-    synth.amp = function (src, mode, post) {
-        if (typeof(mode) === 'string') {
-            var arr = typeCheck(src);
+    synth.amp = function (src, post) {
+        src = typeCheck(src);
+        if (src) {
+            params.amp = src;
+        }
+        return synth;
+    };
 
-            // TODO: fit to the longer array
-            if (arr.length !== params.amp.length) {
-                arr = dtm.transform.fit(arr, params.amp.length, 'linear');
-            }
+    synth.amp.add = function (src, interp) {
+        src = typeCheck(src);
+        if (!isString(interp)) {
+            interp = 'step';
+        }
 
-            switch (mode) {
-                case 'add':
-                    params.amp.forEach(function (v, i) {
-                        params.amp[i] = v + arr[i];
-                    });
-                    break;
-                case 'mult':
-                case 'dot':
-                    params.amp.forEach(function (v, i) {
-                        params.amp[i] = v * arr[i];
-                    });
-                    break;
-                default:
-                    break;
+        if (src) {
+            if (src.length > params.amp.length) {
+                params.amp = dtm.a(params.amp).fit(src.length, interp).get();
+            } else if (src.length < params.amp.length) {
+                src = dtm.a(src).fit(params.amp.length, interp).get();
             }
-        } else {
-            src = typeCheck(src);
-            if (src) {
-                params.amp = src;
+            src.forEach(function (v, i) {
+                params.amp[i] += v;
+            });
+        }
+        return synth;
+    };
+
+    synth.amp.mult = function (src, interp) {
+        src = typeCheck(src);
+        if (!isString(interp)) {
+            interp = 'step';
+        }
+
+        if (src) {
+            if (src.length > params.amp.length) {
+                params.amp = dtm.a(params.amp).fit(src.length, interp).get();
+            } else if (src.length < params.amp.length) {
+                src = dtm.a(src).fit(params.amp.length, interp).get();
             }
+            src.forEach(function (v, i) {
+                params.amp[i] *= v;
+            });
         }
         return synth;
     };
@@ -850,7 +946,7 @@ dtm.synth = function () {
     synth.wt = synth.wavetable;
 
     synth.source = function (src) {
-        if (typeof(src) === 'string') {
+        if (isString(src)) {
             params.source = src;
         }
 
@@ -1031,26 +1127,6 @@ dtm.synth = function () {
         return synth;
     };
 
-    synth.am = function (src) {
-        src = typeCheck(src);
-        if (src) {
-
-        }
-        return synth;
-    };
-
-    synth.fm = function (src) {
-        src = typeCheck(src);
-        if (src) {
-            src = dtm.transform.fit(src, Math.round(params.tabLen/10), 'linear');
-            params.freq = dtm.transform.fit(params.freq, Math.round(params.tabLen/10), 'step');
-            params.freq.forEach(function (v, i) {
-                params.freq[i] = v + src[i];
-            });
-        }
-        return synth;
-    };
-
     synth.waveshape = function (src) {
         return synth;
     };
@@ -1094,21 +1170,21 @@ dtm.synth = function () {
     function typeCheck(src) {
         if (isNumber(src)) {
             return new Float32Array([src]);
-        } else if (typeof(src) === 'object' || typeof(src) === 'function') {
+        } else if (isObject(src) || isFunction(src)) {
             if (src === null) {
                 return false;
-            } else if (src.constructor === Float32Array) {
+            } else if (isFloat32Array(src)) {
                 return src;
             } else if (isNumArray(src)) {
                 return new Float32Array(src);
             } else if (isDtmObj(src)) {
                 if (isDtmArray(src)) {
-                    if (src.get().constructor === Array) {
+                    if (isArray(src.get())) {
                         //var foo = new Promise(function (resolve) {
                         //    resolve(new Float32Array(src.get()));
                         //});
                         return new Float32Array(src.get());
-                    } else if (src.get().constructor === Float32Array) {
+                    } else if (isFloat32Array(src.get())) {
                         return src.get();
                     }
                 } else if (src.meta.type === 'dtm.synth') {

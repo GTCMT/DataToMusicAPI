@@ -79,7 +79,35 @@ describe('generator', function () {
         //console.log(dtm.gen('cos', 10, 1, 3).get());
     });
 
-    xdescribe('series', function () {
+    describe('series', function () {
+        // TODO: design
+        xdescribe('sequence', function () {
+            it('should work', function () {
+                expect(dtm.gen('seq', 1, 5).get()).toEqual(new Float32Array([1, 2, 3, 4, 5]));
+                //expect(dtm.gen('seq', 1, 1).get()).toEqual(new Float32Array([1]));
+            });
+        });
+
+        // TODO: impelement
+        xdescribe('sequence', function () {
+            it('should generate 3, 5, 7, etc.', function () {
+                var a = dtm.gen('seq', 8, 3, 2);
+                expect(a.get(1) - a.get(0)).toBe(2);
+            });
+        });
+
+        // should the end value be inclusive???
+        xdescribe('range', function () {
+            it('should work', function () {
+                expect(dtm.gen('range').get()).toEqual(new Float32Array([0, 1]));
+                expect(dtm.gen('range', 0, 5).get()).toEqual(new Float32Array([0, 1, 2, 3, 4, 5]));
+                expect(dtm.gen('range', 5, 0).get()).toEqual(new Float32Array([5, 4, 3, 2, 1, 0]));
+                expect(dtm.gen('range', [0, 5]).get()).toEqual(new Float32Array([0, 1, 2, 3, 4, 5]));
+
+                expect(dtm.gen('range', 0, 1.5).get()).toEqual(new Float32Array([0, 1]));
+            });
+        });
+
         describe('fibonacci', function () {
             it('should work', function () {
                 expect(dtm.gen('fibonacci', 10).get()).toEqual(new Float32Array([1, 1, 2, 3, 5, 8, 13, 21, 34, 55]));
@@ -87,14 +115,6 @@ describe('generator', function () {
         });
     });
 
-    xdescribe('range', function () {
-        it('should work', function () {
-            expect(dtm.gen('range').get()).toEqual(new Float32Array([0, 1]));
-            expect(dtm.gen('range', 0, 5).get()).toEqual(new Float32Array([0, 1, 2, 3, 4, 5]));
-            expect(dtm.gen('range', 5, 0).get()).toEqual(new Float32Array([5, 4, 3, 2, 1, 0]));
-            expect(dtm.gen('range', [0, 5]).get()).toEqual(new Float32Array([0, 1, 2, 3, 4, 5]));
-        });
-    });
 
     describe('array operations', function () {
         it('should expand or concat', function () {
@@ -117,13 +137,6 @@ describe('generator', function () {
         });
     });
 
-    // TODO: impelement
-    xdescribe('sequence', function () {
-        it('should generate 3, 5, 7, etc.', function () {
-            var a = dtm.gen('seq', 8, 3, 2);
-            expect(a.get(1) - a.get(0)).toBe(2);
-        });
-    });
 
     describe('constant', function () {
         it('should return the same value anywhere', function () {

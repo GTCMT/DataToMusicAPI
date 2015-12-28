@@ -43,14 +43,22 @@ dtm.model = function (name, categ) {
 
                 if (isNumber(arg)) {
                     params.data.set(arg);
-                } else if (typeof(arg) === 'string') {
+                } else if (isString(arg)) {
                     params.data.set('c', arg).histo();
-                } else if (typeof(arg) === 'object') {
+                } else if (isObject(arg) && !isFunction(arg)) {
                     if (arg.constructor === Array || arg.constructor === Float32Array) {
                         params.data.set(arg);
                     } else if (isDtmArray(arg)) {
                         params.data.set(arg);
                     }
+                } else if (isFunction(arg)) {
+                    // TODO: not working
+                    params.output.push({
+                        method: function (a, c) {
+                            return arg(a, c)
+                        },
+                        params: null
+                    });
                 }
             } else if (arguments.length > 1) {
                 params.data.set.apply(this, arguments);
@@ -315,7 +323,7 @@ dtm.model = function (name, categ) {
 
     model.output = function (arg) {
         //console.log(model.caller.caller.caller.caller.arguments[0]);
-        if (typeof(arg) === 'function') {
+        if (isFunction(arg)) {
             params.output.push({
                 method: function (a, c) {
                     return arg(a, c)
@@ -377,7 +385,7 @@ dtm.model = function (name, categ) {
         return model;
     };
 
-    if (typeof(name) === 'string') {
+    if (isString(name)) {
         params.loading = arguments.callee.caller.arguments[0];
 
         var modelLoaded, key;
@@ -402,6 +410,13 @@ dtm.model = function (name, categ) {
             dtm.log('loading a registered / saved model: ' + name);
             model = modelLoaded;
         }
+    } else if (isFunction(name)) {
+        params.output.push({
+            method: function (a, c) {
+                return name(a, c)
+            },
+            params: null
+        });
     }
 
     //model.load.apply(this, arguments);

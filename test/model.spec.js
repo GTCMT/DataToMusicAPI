@@ -113,6 +113,6 @@ describe('model abstract', function () {
 
     describe('huffman', function () {
         var m = dtm.model('huffman');
-        console.log(m.build());
+        //console.log(m.build());
     });
 });
