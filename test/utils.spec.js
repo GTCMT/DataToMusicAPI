@@ -1,3 +1,51 @@
+describe('isEmpty', function () {
+    it('should work', function () {
+        expect(isEmpty()).toBe(true);
+        expect(isEmpty(undefined)).toBe(true);
+        expect(isEmpty(null)).toBe(true);
+        expect(isEmpty(NaN)).toBe(true);
+        expect(isEmpty(1)).toBe(false);
+        expect(isEmpty('')).toBe(false);
+        expect(isEmpty([])).toBe(false);
+        expect(isEmpty({})).toBe(false);
+    });
+});
+
+describe('isNumber', function () {
+    it('should work', function () {
+        expect(isNumber(1)).toBe(true);
+        expect(isNumber('1')).toBe(false);
+        expect(isNumber(NaN)).toBe(false);
+        expect(isNumber(undefined)).toBe(false);
+        expect(isNumber(null)).toBe(false);
+
+        expect(isNumber(Infinity)).toBe(true);
+        expect(isNumber(-Infinity)).toBe(true);
+    });
+});
+
+describe('isInteger', function () {
+    it('should work', function () {
+        expect(isInteger(1)).toBe(true);
+        expect(isInteger(1.0)).toBe(true);
+        expect(isInteger(1.5)).toBe(false);
+        expect(isInteger('1')).toBe(false);
+        expect(isInteger(null)).toBe(false);
+        expect(isInteger([1])).toBe(false);
+    });
+});
+
+//describe('isFloat', function () {
+//    it('should work', function () {
+//        expect(isFloat(1.5)).toBe(true);
+//        expect(isFloat(1.0)).toBe(true);
+//        expect(isFloat(1)).toBe(false);
+//        expect(isFloat('1.5')).toBe(false);
+//        expect(isFloat(null)).toBe(false);
+//        expect(isFloat([1.5])).toBe(false);
+//    });
+//});
+
 describe('isSingleVal', function () {
     it('should work', function () {
         expect(isSingleVal(123)).toBe(true);
@@ -45,12 +93,23 @@ describe('isNumArray', function () {
     it('should work', function () {
         expect(isNumArray([1, 2, 3])).toBe(true);
         expect(isNumArray([1, 2, 'meow', 4])).toBe(false);
+        expect(isNumArray(new Float32Array([1, 2, 3]))).toBe(false);
+        expect(isNumArray([])).toBe(false);
     });
 });
 
 describe('isFloat32Array', function () {
     it('should work', function () {
         expect(isFloat32Array(new Float32Array([1, 2, 3]))).toBe(true);
+        expect(isFloat32Array([1, 2, 3])).toBe(false);
+        expect(isFloat32Array(new Float32Array([]))).toBe(false);
+    });
+});
+
+describe('isNumOrFloat32Array', function () {
+    it('should work', function () {
+        expect(isNumOrFloat32Array([1, 2, 3])).toBe(true);
+        expect(isNumOrFloat32Array(new Float32Array([1, 2, 3]))).toBe(true);
     });
 });
 
@@ -58,6 +117,15 @@ describe('isStringArray', function () {
     it('should work', function () {
         expect(isStringArray(['hey', 'ho'])).toBe(true);
         expect(isStringArray(['hey', 1])).toBe(false);
+    });
+});
+
+describe('hasMissingValues', function () {
+    it('should work', function () {
+        expect(hasMissingValues([1, 2, 3])).toBe(false);
+        expect(hasMissingValues([1, undefined, 3])).toBe(true);
+        expect(hasMissingValues([1, null, 3])).toBe(true);
+        expect(hasMissingValues([1, NaN, 3])).toBe(true);
     });
 });
 
@@ -115,5 +183,44 @@ describe('objForEach', function () {
         objForEach({foo: 123, bar: 456}, function (val, key) {
 
         });
+    });
+});
+
+describe('toFloat32Array', function () {
+    it('should work', function () {
+        expect(toFloat32Array(1)).toEqual(new Float32Array([1]));
+        expect(toFloat32Array([1, 2, 3])).toEqual(new Float32Array([1, 2, 3]));
+        expect(toFloat32Array(dtm.a([1, 2, 3]))).toEqual(new Float32Array([1, 2, 3]));
+        expect(toFloat32Array(dtm.gen('range', 1, 4))).toEqual(new Float32Array([1, 2, 3]));
+        expect(toFloat32Array(undefined)).toBe(undefined);
+    });
+});
+
+describe('deferCallback', function () {
+    var res = [];
+
+    function normal (a) {
+        res.push(a);
+    }
+    function deferThis(a) {
+        res.push(a);
+    }
+
+    var deferred = deferCallback(deferThis, 0);
+
+    deferred(0);
+    normal(1);
+    it('should work', function (done) {
+        setTimeout(function () {
+            expect(res).toEqual([1, 0]);
+            done();
+        }, 1);
+    });
+});
+
+describe('cloneArray', function () {
+    it('should work', function () {
+        expect(cloneArray([1,2,3])).toEqual([1,2,3]);
+        expect(cloneArray(new Float32Array([1,2,3]))).toEqual(new Float32Array([1,2,3]));
     });
 });

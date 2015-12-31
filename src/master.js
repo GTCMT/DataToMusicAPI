@@ -62,7 +62,7 @@ dtm.master = {
      * @function module:master#stop
      */
     stop: function () {
-        _.forEach(dtm.clocks, function (c) {
+        dtm.clocks.forEach(function (c) {
             c.stop();
             c.clear();
             //_.forEach(c, function (d) {
@@ -70,7 +70,7 @@ dtm.master = {
             //})
         });
 
-        _.forEach(dtm.master.activeInstrs, function (i) {
+        dtm.master.activeInstrs.forEach(function (i) {
             i.stop();
         });
 

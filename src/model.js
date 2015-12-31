@@ -29,7 +29,7 @@ dtm.model = function (name, categ) {
     };
 
     var model = function () {
-        if (typeof(params.defaultCb) === 'function') {
+        if (isFunction(params.defaultCb)) {
             return params.defaultCb.apply(this, arguments);
         } else {
             if (!!model.caller.arguments[0]) {
@@ -44,21 +44,19 @@ dtm.model = function (name, categ) {
                 if (isNumber(arg)) {
                     params.data.set(arg);
                 } else if (isString(arg)) {
-                    params.data.set('c', arg).histo();
-                } else if (isObject(arg) && !isFunction(arg)) {
-                    if (arg.constructor === Array || arg.constructor === Float32Array) {
-                        params.data.set(arg);
-                    } else if (isDtmArray(arg)) {
-                        params.data.set(arg);
-                    }
+                    params.data.set(dtm.gen('s', arg)).histo();
+                } else if (isNumOrFloat32Array(arg)) {
+                    params.data.set(arg);
+                } else if (isDtmArray(arg)) {
+                    params.data.set(arg);
                 } else if (isFunction(arg)) {
                     // TODO: not working
-                    params.output.push({
-                        method: function (a, c) {
-                            return arg(a, c)
-                        },
-                        params: null
-                    });
+                    //params.output.push({
+                    //    method: function (a, c) {
+                    //        return arg(a, c);
+                    //    },
+                    //    params: null
+                    //});
                 }
             } else if (arguments.length > 1) {
                 params.data.set.apply(this, arguments);
@@ -363,22 +361,22 @@ dtm.model = function (name, categ) {
     };
 
     model.assignMethods = function (parent) {
-        _.forEach(model.mod, function (method, key) {
+        model.mod.forEach(function (method, key) {
             parent[key] = method;
             parent.params.push(key);
         });
 
-        _.forEach(model.param, function (method, key) {
+        model.param.forEach(function (method, key) {
             parent[key] = method;
             parent.params.push(key);
         });
 
-        _.forEach(model.set, function (method, key) {
+        model.set.forEach(function (method, key) {
             parent[key] = method;
             parent.params.push(key);
         });
 
-        _.forEach(model.map, function (method, key) {
+        model.map.forEach(function (method, key) {
             parent[key] = method;
             parent.params.push(key);
         });
@@ -398,7 +396,7 @@ dtm.model = function (name, categ) {
             }
         }
 
-        if (modelLoaded === undefined) {
+        if (isEmpty(modelLoaded)) {
             for (key in dtm.modelColl) {
                 if (key === name && model.load.caller.arguments[0] !== name) {
                     modelLoaded = dtm.modelColl[name].clone();
@@ -406,7 +404,7 @@ dtm.model = function (name, categ) {
             }
         }
 
-        if (modelLoaded !== undefined) {
+        if (!isEmpty(modelLoaded)) {
             dtm.log('loading a registered / saved model: ' + name);
             model = modelLoaded;
         }

@@ -59,12 +59,12 @@
             c.bpm(params.modules.bpm.get('next'));
         }
 
-        _.forEach(params.callbacks, function (cb) {
+        params.callbacks.forEach(function (cb) {
             cb(params.clock);
         });
 
         if (r) {
-            _.forEach(ct, function (val) {
+            ct.forEach(function (val) {
                 if (wt) {
                     v.wt(wt.get());
                 }

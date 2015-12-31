@@ -91,7 +91,7 @@ dtm.parser = {
     valueTypes: function (row) {
         var types = [];
 
-        _.forEach(row, function (val, idx) {
+        row.forEach(function (val, idx) {
             var parsedVal = parseFloat(val);
 
             if (isNaN(parsedVal)) {

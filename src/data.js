@@ -192,7 +192,7 @@ dtm.data = function (arg, cb, type) {
 
                     var keys = _.keys(res);
 
-                    _.forEach(keys, function (val) {
+                    keys.forEach(function (val) {
                         // CHECK: this is a little too case specific
                         if (val !== 'response') {
                             params.coll = res[val];
@@ -202,7 +202,6 @@ dtm.data = function (arg, cb, type) {
                             setSize();
 
                             resolve(data);
-
                         }
                     });
 
@@ -406,13 +405,13 @@ dtm.data = function (arg, cb, type) {
 
 
     function setArrays() {
-        _.forEach(params.keys, function (key) {
+        params.keys.forEach(function (key) {
             params.arrays[key] = dtm.array(_.pluck(params.coll, key)).name(key);
         })
     }
 
     function setTypes() {
-        _.forEach(params.keys, function (key) {
+        params.keys.forEach(function (key) {
             params.types[key] = params.arrays[key].get('type');
         })
     }
@@ -507,7 +506,7 @@ dtm.data = function (arg, cb, type) {
     };
 
     data.flush = function () {
-        _.forEach(params.arrays, function (a) {
+        params.arrays.forEach(function (a) {
             a.flush();
         });
         params.size.row = 0;

@@ -6,28 +6,29 @@
 dtm.analyzer = {
     type: 'dtm.analyzer',
 
-    /**
-     * Checks the data type of the input array.
-     * @function module:analyzer#checkType
-     * @param arr {array}
-     * @returns type {string}
-     */
-    checkType: function (arr) {
-        var sum = _.reduce(arr, function (num, sum) {
-            return num + sum;
-        });
-
-        if (isNaN(sum) || typeof(sum) === 'string') {
-            return 'string';
-        } else {
-            // TODO: won't work in cases like [0.7, 0.3]
-            if (sum.toString().indexOf('.') > -1) {
-                return 'float';
-            } else {
-                return 'int';
-            }
-        }
-    },
+    // TODO: deprecate
+    ///**
+    // * Checks the data type of the input array.
+    // * @function module:analyzer#checkType
+    // * @param arr {array}
+    // * @returns type {string}
+    // */
+    //checkType: function (arr) {
+    //    var sum = arr.reduce(function (num, sum) {
+    //        return num + sum;
+    //    });
+    //
+    //    if (isNaN(sum) || isString(sum)) {
+    //        return 'string';
+    //    } else {
+    //        // TODO: won't work in cases like [0.7, 0.3]
+    //        if (sum.toString().indexOf('.') > -1) {
+    //            return 'float';
+    //        } else {
+    //            return 'int';
+    //        }
+    //    }
+    //},
 
     /**
      * Returns the minimum value of numeric array.
@@ -36,11 +37,8 @@ dtm.analyzer = {
      * @returns {number}
      */
     min: function (arr) {
-        if (dtm.analyzer.checkType(arr) === 'string') {
-            dtm.log('cannot get the min value of a string array');
-            return null;
-        } else {
-            return _.min(arr);
+        if (isNumOrFloat32Array(arr)) {
+            return Math.min.apply(this, arr);
         }
     },
 
@@ -51,11 +49,8 @@ dtm.analyzer = {
      * @returns {number}
      */
     max: function (arr) {
-        if (dtm.analyzer.checkType(arr) === 'string') {
-            dtm.log('cannot get the max value of a string array');
-            return null;
-        } else {
-            return _.max(arr);
+        if (isNumOrFloat32Array(arr)) {
+            return Math.max.apply(this, arr);
         }
     },
 
@@ -70,17 +65,8 @@ dtm.analyzer = {
      * -> 4.875
      */
     mean: function (arr) {
-        var type = dtm.anal.checkType(arr);
-
-        if (type === 'string') {
-            dtm.log('cannot get the mean value of a string array');
-            return null;
-        } else {
-            var sum = _.reduce(arr, function (num, sum) {
-                return num + sum;
-            });
-
-            return sum / _.size(arr);
+        if (isNumOrFloat32Array(arr)) {
+            return dtm.analyzer.sum(arr) / arr.length;
         }
     },
 
@@ -91,14 +77,14 @@ dtm.analyzer = {
      * @returns {value}
      */
     mode: function (arr) {
-        var uniqs = _.uniq(arr);
+        var uniqs = dtm.analyzer.unique(arr);
         var max = 0;
         var num = 0;
         var res = null;
 
-        var histo = _.countBy(arr);
+        var histo = dtm.anal.countBy(arr);
 
-        _.forEach(uniqs, function (val) {
+        uniqs.forEach(function (val) {
             num = histo[val];
 
             if (num > max) {
@@ -147,16 +133,7 @@ dtm.analyzer = {
      * @returns {number}
      */
     sum: function (arr) {
-        return _.reduce(arr, function (num, sum) {
-            //if (!isNaN(num) && !isNaN(sum)) {
-            //    if (num.toString().indexOf('.') > -1) {
-            //        num = Number.parseFloat(num);
-            //        sum = Number.parseFloat(sum);
-            //    } else {
-            //        num = Number.parseInt(num);
-            //        sum = Number.parseInt(sum);
-            //    }
-            //}
+        return arr.reduce(function (num, sum) {
             return num + sum;
         });
     },
@@ -171,10 +148,11 @@ dtm.analyzer = {
         var mean = dtm.analyzer.mean(arr);
 
         var res = [];
-        _.forEach(arr, function (val, idx) {
+        arr.forEach(function (val, idx) {
             res[idx] = Math.pow((mean - val), 2);
         });
 
+        // TODO: divide-by-zero error
         return dtm.analyzer.sum(res) / (arr.length-1);
     },
 
@@ -198,7 +176,7 @@ dtm.analyzer = {
         var mean = dtm.analyzer.mean(arr);
 
         var res = [];
-        _.forEach(arr, function (val, idx) {
+        arr.forEach(function (val, idx) {
             res[idx] = Math.pow((mean - val), 2);
         });
 
@@ -223,11 +201,22 @@ dtm.analyzer = {
      */
     rms: function (arr) {
         var res = [];
-        _.forEach(arr, function (val, idx) {
+        arr.forEach(function (val, idx) {
             res[idx] = Math.pow(val, 2);
         });
 
         return Math.sqrt(dtm.analyzer.mean(res));
+    },
+
+    unique: function (input) {
+        var res = [];
+        input.forEach(function (v) {
+            if (res.indexOf(v) === -1) {
+                res.push(v);
+            }
+        });
+
+        return res;
     },
 
     /**
@@ -238,13 +227,25 @@ dtm.analyzer = {
      */
     histo: function (input) {
         var res = [];
-        var classes = _.clone(input);
-        var histogram = _.countBy(input);
+        var classes = cloneArray(input);
+        var histogram = dtm.anal.countBy(input);
 
-        _.forEach(classes, function (val, idx) {
+        classes.forEach(function (val, idx) {
             res[idx] = histogram[val];
         });
 
+        return res;
+    },
+
+    countBy: function (input) {
+        var res = {};
+        input.forEach(function (v) {
+            if (!res.hasOwnProperty(v)) {
+                res[v] = 1;
+            } else {
+                res[v]++;
+            }
+        });
         return res;
     },
 
@@ -255,7 +256,7 @@ dtm.analyzer = {
      * @returns {array}
      */
     classes: function (input) {
-        return _.uniq(input).sort();
+        return dtm.analyzer.unique(input).sort();
     },
 
 
@@ -267,15 +268,7 @@ dtm.analyzer = {
         return arr1.filter(function (n) {
             return arr2.indexOf(n) !== -1;
         });
-    },
-
-    ///**
-    // * Auto-correlation (WIP)
-    // * @function module:analyzer#autoCorr
-    // * @param arr {array}
-    // * @returns arr {array}
-    // */
-    autoCorr: null
+    }
 };
 
 //dtm.analyzer.pvariance = dtm.analyzer.pvar;

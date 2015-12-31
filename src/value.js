@@ -83,7 +83,7 @@ dtm.value = {
             scale = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
         }
 
-        if (typeof(round) === 'undefined') {
+        if (isEmpty(round)) {
             round = false;
         }
 
@@ -112,17 +112,36 @@ dtm.value = {
 
     },
 
-    // TODO: min / max / single-value defaults
-    randi: function (min, max) {
-        return _.random(min, max);
+    randi: function (arg1, arg2) {
+        var min, max;
+        if (!isNumber(arg1) && !isNumber(arg2)) {
+            min = 0.0;
+            max = 1.0;
+        } else if (isNumber(arg1) && !isNumber(arg2)) {
+            min = 0.0;
+            max = arg1;
+        } else if (isNumber(arg1) && isNumber(arg2)) {
+            min = arg1;
+            max = arg2;
+        }
+
+        return Math.floor(Math.random() * (max - min) + min);
     },
 
-    random: function (min, max) {
-        if (typeof(min) === 'undefined' && typeof(max) === 'undefined') {
-            min = 0;
-            max = 1;
+    random: function (arg1, arg2) {
+        var min, max;
+        if (!isNumber(arg1) && !isNumber(arg2)) {
+            min = 0.0;
+            max = 1.0;
+        } else if (isNumber(arg1) && !isNumber(arg2)) {
+            min = 0.0;
+            max = arg1;
+        } else if (isNumber(arg1) && isNumber(arg2)) {
+            min = arg1;
+            max = arg2;
         }
-        return _.random(min, max, true);
+
+        return Math.random() * (max - min) + min;
     }
 };
 

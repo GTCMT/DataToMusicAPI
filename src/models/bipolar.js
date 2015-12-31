@@ -10,9 +10,9 @@
 
             if (isNumber(arg)) {
                 a.set(arg);
-            } else if (typeof(arg) === 'string') {
+            } else if (isString(arg)) {
                 a.set(arg).split().histo();
-            } else if (typeof(arg) === 'object') {
+            } else if (isObject(arg)) {
                 if (isArray(arg)) {
                     if (isNumArray(arg)) {
                         a.set(arg);

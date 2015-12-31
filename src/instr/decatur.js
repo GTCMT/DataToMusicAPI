@@ -75,7 +75,7 @@
         var numNotes = params.div * params.measures;
 
         if (c.get('beat') % (numNotes * params.update) === 0) {
-            _.forEach(params.callbacks, function (cb) {
+            params.callbacks.forEach(function (cb) {
                 cb(c);
             });
         }

@@ -25,7 +25,6 @@ dtm.array = function () {
         original: [],
         normalized: [],
         classes: null,
-        histogram: null,
         numClasses: null,
 
         index: 0,
@@ -177,10 +176,10 @@ dtm.array = function () {
 
                 case 'next':
                     // TODO: increment after return
-                    if (arguments[1] === undefined) {
+                    if (isEmpty(arguments[1])) {
                         params.index = dtm.value.mod(params.index + params.step, params.length);
                         return params.value[params.index];
-                    } else if (typeof(arguments[1]) === 'number' && arguments[1] >= 1) {
+                    } else if (isNumber(arguments[1]) && arguments[1] >= 1) {
                         // TODO: incr w/ the step size AFTER RETURN
                         params.index = dtm.value.mod(params.index + params.step, params.length);
                         blockArray = dtm.transform.getBlock(params.value, params.index, arguments[1]);
@@ -199,7 +198,7 @@ dtm.array = function () {
 
                 case 'rand':
                 case 'random':
-                    params.index = _.random(0, params.length - 1);
+                    params.index = dtm.val.randi(0, params.length - 1);
                     return params.value[params.index];
 
                 case 'urn':
@@ -222,12 +221,12 @@ dtm.array = function () {
 
                 case 'block':
                     var start, size, blockArray;
-                    if (arguments[1].constructor === Array) {
+                    if (isArray(arguments[1])) {
                         start = arguments[1][0];
                         size = arguments[1][1];
                         blockArray = dtm.transform.getBlock(params.value, start, size);
                         return dtm.array(blockArray);
-                    } else if (typeof(arguments[1]) === 'number' && typeof(arguments[2]) === 'number') {
+                    } else if (isNumber(arguments[1]) && isNumber(arguments[2])) {
                         start = arguments[1];
                         size = arguments[2];
                         blockArray = dtm.transform.getBlock(params.value, start, size);
@@ -309,9 +308,9 @@ dtm.array = function () {
                 return array;
             } else if (isNumber(arguments[0])) {
                 params.value = [arguments[0]];
-            } else if (arguments[0].constructor === Array) {
+            } else if (isArray(arguments[0])) {
                 params.value = arguments[0];
-            } else if (arguments[0].constructor === Float32Array) {
+            } else if (isFloat32Array(arguments[0])) {
                 params.value = arguments[0];
             } else if (isDtmArray(arguments[0])) {
                 params.value = arguments[0].get();
@@ -399,7 +398,7 @@ dtm.array = function () {
 
         // TODO: workaround for a missing value
         if (!isNumber(arr[0])) {
-            if (typeof(arr[0]) === 'object') {
+            if (isObject(arr[0])) {
                 params.type = 'collection';
             } else {
                 params.type = typeof(arr[0]);
@@ -419,8 +418,8 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.step = function (val) {
-        if (isNumber(val)) {
-            params.step = Math.round(val);
+        if (isInteger(val) && val > 0) {
+            params.step = val;
         }
         return array;
     };
@@ -457,7 +456,6 @@ dtm.array = function () {
 
         if (params.type === 'string') {
             newArr.classes = params.classes;
-            newArr.histogram = _.clone(params.histogram);
             newArr.setType('string');
         }
         return newArr;
@@ -686,6 +684,17 @@ dtm.array = function () {
 
     array.log = array.logcurve;
 
+    // TODO: design & implement
+    /**
+     * Log curve and exp curve combined
+     * @param factor
+     * @param [min]
+     * @param [max]
+     */
+    array.curve = function (factor, min, max) {
+        return array;
+    };
+
     // TODO: there might be a memory leak / some inefficiency
     /**
      * Stretches or shrinks the length of the array into the specified length.
@@ -697,6 +706,8 @@ dtm.array = function () {
     array.fit = function (len, interp) {
         return array.set(dtm.transform.fit(params.value, len, interp));
     };
+
+    array.f = array.fit;
 
     /**
      * Multiplies the length of the array by the given factor.
@@ -951,6 +962,8 @@ dtm.array = function () {
     array.fitrep = function (count) {
         return array.set(dtm.transform.fit(dtm.transform.repeat(params.value, count), params.length));
     };
+
+    array.frep = array.fitrep;
 
     /**
      * @function module:array#pad
@@ -1286,8 +1299,8 @@ dtm.array = function () {
         };
 
         if (arguments.length === 0) {
-            scale = _.range(12);
-        } else if (scale.constructor === Array) {
+            scale = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+        } else if (isNumArray(scale)) {
 
         } else if (isString(scale)) {
             scale = scales[scale.toLowerCase()];

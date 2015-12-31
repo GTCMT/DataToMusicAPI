@@ -24,6 +24,8 @@ dtm.synth = function () {
         kr: 4410,
         dur: 1.0,
         offset: 0.0,
+        repeat: 1, // TODO: inclusive?
+
         wavetable: null,
         rendered: null,
         tabLen: 8192,
@@ -81,7 +83,7 @@ dtm.synth = function () {
 
     if (!!arguments.callee.caller) {
         if (arguments.callee.caller.arguments.length > 0) {
-            if (typeof(arguments.callee.caller.arguments[0]) === 'object') {
+            if (isObject(arguments.callee.caller.arguments[0])) {
                 if (arguments.callee.caller.arguments[0].type === 'dtm.clock') {
                     params.clock = arguments.callee.caller.arguments[0];
                     params.lookahead = true;
@@ -95,9 +97,10 @@ dtm.synth = function () {
     var octx = null;
     params.sr = actx.sampleRate;
     params.rtFxOnly = !dtm.wa.useOfflineContext;
+    var deferIncr = 1;
 
     var init = function () {
-        if (typeof(arguments[0]) === 'object') {
+        if (isObject(arguments[0])) {
             if (arguments[0].hasOwnProperty('type')) {
                 if (arguments[0].type === 'dtm.clock') {
                     params.clock = arguments[0];
@@ -356,7 +359,7 @@ dtm.synth = function () {
      * @returns {dtm.synth}
      */
     synth.clock = function (clock) {
-        if (typeof(clock) === 'object') {
+        if (isObject(clock)) {
             if (clock.type === 'dtm.clock') {
                 params.clock = clock;
             }
@@ -404,7 +407,7 @@ dtm.synth = function () {
     synth.time = function (src) {
         if (isNumber(src) && (src > 0) && !isEmpty(params.clock)) {
             if (dtm.val.mod(params.clock.get('beat'), params.clock.get('time') * src) === 0) {
-                console.log('meow');
+                // TODO: implement
             }
         }
         return synth;
@@ -423,6 +426,14 @@ dtm.synth = function () {
         var defer = 0;
         if (params.lookahead) {
             defer = Math.round(params.clock.get('lookahead') * 500);
+        }
+
+        if (isNumber(time) && time >= 0.0) {
+            params.offset = time;
+        }
+
+        if (isNumber(dur) && dur > 0.0) {
+            params.dur = dur;
         }
 
         // deferred
@@ -576,10 +587,16 @@ dtm.synth = function () {
 
                 nodes.src.onended = function () {
                     dtm.master.removeVoice(synth);
+
+                    // rep(1) would only play once
+                    if (params.repeat > 1) {
+                        params.repeat--;
+                        synth.play();
+                    }
                 };
             }
 
-        }, defer);
+        }, defer + deferIncr);
 
         return synth;
     };
@@ -597,80 +614,6 @@ dtm.synth = function () {
         return synth;
     };
 
-    //synth.render = function (time, dur) {
-    //    //===== type check
-    //    if (!isNumber(time) || time < 0) {
-    //        time = 0.0;
-    //    }
-    //
-    //    if (params.autoDur) {
-    //        params.dur = params.clock.get('dur');
-    //    }
-    //
-    //    if (!isNumber(dur)) {
-    //        dur = params.dur;
-    //    } else {
-    //        if (params.dur > 0) {
-    //            params.dur = dur;
-    //        }
-    //    }
-    //    //===== end of type check
-    //    synth.promise = new Promise(function (resolve) {
-    //        // defer
-    //        setTimeout(function () {
-    //            octx = new OfflineAudioContext(1, (time + dur * 4) * params.sr, params.sr);
-    //            time += octx.currentTime;
-    //
-    //            nodes.src = octx.createBufferSource();
-    //            nodes.amp = octx.createGain();
-    //            nodes.out = octx.createGain();
-    //            nodes.fx[0].out = octx.createGain();
-    //            nodes.src.connect(nodes.amp);
-    //            nodes.amp.connect(nodes.fx[0].out);
-    //            nodes.out.connect(octx.destination);
-    //
-    //            for (var n = 1; n < nodes.fx.length; n++) {
-    //                nodes.fx[n].run(time, dur);
-    //                nodes.fx[n - 1].out.connect(nodes.fx[n].in);
-    //            }
-    //            nodes.fx[n - 1].out.connect(nodes.out);
-    //
-    //            if (params.source === 'noise') {
-    //                nodes.src.buffer = octx.createBuffer(1, params.sr / 2, params.sr);
-    //                var chData = nodes.src.buffer.getChannelData(0);
-    //                chData.forEach(function (v, i) {
-    //                    chData[i] = Math.random() * 2.0 - 1.0;
-    //                });
-    //                nodes.src.loop = true;
-    //            } else {
-    //                nodes.src.buffer = octx.createBuffer(1, params.tabLen, params.sr);
-    //                nodes.src.buffer.copyToChannel(params.wavetable, 0);
-    //                nodes.src.loop = true;
-    //            }
-    //
-    //            var curves = [];
-    //            curves.push({param: nodes.src.playbackRate, value: params.pitch});
-    //            curves.push({param: nodes.amp.gain, value: params.amp});
-    //            setParamCurve(time, dur, curves);
-    //
-    //            nodes.fx[0].out.gain.value = 1.0;
-    //            nodes.out.gain.value = 0.3;
-    //
-    //            nodes.src.start(time);
-    //            nodes.src.stop(time + dur);
-    //
-    //            octx.startRendering();
-    //
-    //            octx.oncomplete = function (e) {
-    //                //synth.rendered = e.renderedBuffer.getChannelData(0).slice(0, dur * params.sr);
-    //                resolve(e.renderedBuffer.getChannelData(0).slice(0, dur * params.sr));
-    //            };
-    //        }, 0);
-    //    });
-    //
-    //    return synth;
-    //};
-
     /**
      * Stops the currently playing sound.
      * @function module:synth#stop
@@ -687,6 +630,8 @@ dtm.synth = function () {
             time = 0.0; // TODO: time not same as rt rendering time
         }
 
+        params.repeat = 0;
+
         setTimeout(function () {
             if (nodes.src) {
                 nodes.src.stop(time);
@@ -697,10 +642,19 @@ dtm.synth = function () {
             }
 
             dtm.master.removeVoice(synth);
-        }, defer);
+        }, defer + deferIncr*2);
 
         return synth;
     };
+
+    synth.repeat = function (times, interval) {
+        if (isInteger(times) && times > 0) {
+            params.repeat = times;
+        }
+        return synth;
+    };
+
+    synth.rep = synth.repeat;
 
     synth.mod = function (name, val) {
         if (isString(name) && params.named.hasOwnProperty(name)) {
@@ -730,6 +684,7 @@ dtm.synth = function () {
         return synth;
     };
 
+    // TODO: support function for src, s and c as the argument
     synth.freq.add = function (src, interp) {
         src = typeCheck(src);
         if (!isString(interp)) {
@@ -803,13 +758,20 @@ dtm.synth = function () {
             interp = 'step';
         }
 
-        if (src) {
-            if (src.length > params.notenum.length) {
-                params.notenum = dtm.a(params.notenum).fit(src.length, interp).get();
-            } else if (src.length < params.notenum.length) {
-                src = dtm.a(src).fit(params.notenum.length, interp).get();
+        var arr;
+        if (isFloat32Array(src)) {
+            arr = src;
+        } else if (isFunction(src)) {
+            arr = toFloat32Array(src(synth, params.clock, dtm.a(params.notenum))); // TODO: what args to pass?
+        }
+
+        if (isNumOrFloat32Array(arr)) {
+            if (arr.length > params.notenum.length) {
+                params.notenum = dtm.a(params.notenum).fit(arr.length, interp).get();
+            } else if (arr.length < params.notenum.length) {
+                arr = dtm.a(arr).fit(params.notenum.length, interp).get();
             }
-            src.forEach(function (v, i) {
+            arr.forEach(function (v, i) {
                 params.notenum[i] += v;
             });
 
@@ -868,13 +830,20 @@ dtm.synth = function () {
             interp = 'step';
         }
 
-        if (src) {
-            if (src.length > params.amp.length) {
-                params.amp = dtm.a(params.amp).fit(src.length, interp).get();
-            } else if (src.length < params.amp.length) {
-                src = dtm.a(src).fit(params.amp.length, interp).get();
+        var arr;
+        if (isFloat32Array(src)) {
+            arr = src;
+        } else if (isFunction(src)) {
+            arr = toFloat32Array(src(synth, params.clock, dtm.a(params.amp))); // TODO: what args to pass?
+        }
+
+        if (isFloat32Array(arr)) {
+            if (arr.length > params.amp.length) {
+                params.amp = dtm.a(params.amp).fit(arr.length, interp).get();
+            } else if (arr.length < params.amp.length) {
+                arr = dtm.a(arr).fit(params.amp.length, interp).get();
             }
-            src.forEach(function (v, i) {
+            arr.forEach(function (v, i) {
                 params.amp[i] += v;
             });
         }
@@ -1168,38 +1137,11 @@ dtm.synth = function () {
     synth.samplehold = synth.samphold = synth.sh;
 
     function typeCheck(src) {
-        if (isNumber(src)) {
-            return new Float32Array([src]);
-        } else if (isObject(src) || isFunction(src)) {
-            if (src === null) {
-                return false;
-            } else if (isFloat32Array(src)) {
-                return src;
-            } else if (isNumArray(src)) {
-                return new Float32Array(src);
-            } else if (isDtmObj(src)) {
-                if (isDtmArray(src)) {
-                    if (isArray(src.get())) {
-                        //var foo = new Promise(function (resolve) {
-                        //    resolve(new Float32Array(src.get()));
-                        //});
-                        return new Float32Array(src.get());
-                    } else if (isFloat32Array(src.get())) {
-                        return src.get();
-                    }
-                } else if (src.meta.type === 'dtm.synth') {
-                    //console.log(src.promise);
-                    //src.promise.then(function (val) {
-                    //    console.log(val);
-                    //});
-                    //console.log(src.rendered);
-                    return src.rendered;
-                } else if (src.meta.type === 'dtm.model') {
-                    return new Float32Array(src.get());
-                }
-            }
+        if (isFunction(src)) {
+            //return deferCallback(src);
+            return src;
         } else {
-            return false;
+            return toFloat32Array(src);
         }
     }
 
@@ -1210,6 +1152,11 @@ dtm.synth = function () {
      */
     synth.get = function (param) {
         switch (param) {
+            case 'dur':
+                return params.dur;
+            case 'nn':
+            case 'notenum':
+                return params.notenum;
             case 'fx':
                 return nodes.fx;
             default:

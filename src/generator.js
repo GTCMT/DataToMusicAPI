@@ -13,12 +13,15 @@ dtm.generator = function () {
         length: 8,
         min: 0.0,
         max: 1.0,
+
+        start: 0.0,
+        end: 1.0,
         //step: 0.0,
         amp: 1.0,
         cycle: 1.0,
         phase: 0.0,
         const: 0.0,
-        interval: 1.0,
+        interval: null,
         string: '',
         value: [],
         pack: false, // into dtm.array
@@ -44,6 +47,7 @@ dtm.generator = function () {
             'adsr', 'ADSR',
             'seq', 'sequence', 'series',
             'range',
+            'scale', 'mode', 'chord',
             'fibonacci',
             'noise', 'random', 'rand', 'randi',
             'gauss', 'gaussian', 'gaussCurve', 'normal',
@@ -58,11 +62,30 @@ dtm.generator = function () {
         oscil: ['sin', 'sine', 'cos', 'cosine', 'tri', 'triangle', 'saw', 'invSaw', 'noise', 'square', 'sq'],
         const: ['zeros', 'zeroes', 'ones', 'constant', 'constants', 'const', 'consts'],
         linish: ['line', 'saw', 'rise', 'decay', 'fall', 'invSaw'],
-        noLength: ['string', 'str', 's', 'character', 'characters', 'chars', 'char', 'c', 'range', 'seq'],
+        noLength: ['string', 'str', 's', 'character', 'characters', 'chars', 'char', 'c', 'range', 'seq', 'scale', 'mode', 'chord'],
         noRange: [],
         noMinMax: [],
         noMinMaxDir: ['rise', 'decay', 'fall', 'noise', 'random', 'rand', 'randi'],
         string: ['string', 'str', 's', 'character', 'characters', 'chars', 'char', 'c', 'text']
+    };
+
+    var scales = {
+        chromatic: {
+            names: ['chromatic', 'chr'],
+            values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+        },
+        major: {
+            names: ['major', 'maj'],
+            values: [0, 2, 4, 5, 7, 9, 11]
+        },
+        minor: {
+            names: ['minor', 'min'],
+            values: [0, 2, 3, 5, 7, 8, 10]
+        },
+        wholetone: {
+            names: ['wholetone', 'whole', 'wt'],
+            values: [0, 2, 4, 6, 8, 10]
+        }
     };
 
     function isTypeOf(type) {
@@ -86,9 +109,9 @@ dtm.generator = function () {
         // TODO: should use Float32Array
 
         function sin(len, min, max, amp, cycle, offset) {
-            var res = new Array(len);
+            var res = new Float32Array(len);
             for (var i = 0; i < len; i++) {
-                var phase = dtm.value.mod(i/(len-1) + offset, 1.0);
+                var phase = dtm.value.mod(i/(len-1) + offset / cycle, 1.0);
                 var val = Math.sin(Math.PI * 2.0 * phase * cycle) * amp;
                 val = (val+1)/2 * (max - min) + min;
                 res[i] = val;
@@ -98,7 +121,7 @@ dtm.generator = function () {
         }
 
         function cos(len, min, max, amp, cycle, offset) {
-            var res = new Array(len);
+            var res = new Float32Array(len);
             for (var i = 0; i < len; i++) {
                 var phase = dtm.value.mod(i/(len-1) + offset, 1.0);
                 var val = Math.cos(Math.PI * 2.0 * phase * cycle) * amp;
@@ -111,12 +134,12 @@ dtm.generator = function () {
 
         // TODO: implement
         function square(len, min, max, amp, cycle, offset) {
-            var res = new Array(len);
+            var res = new Float32Array(len);
             return res;
         }
 
         function random(len, min, max, amp, round) {
-            var res = new Array(len);
+            var res = new Float32Array(len);
             for (var i = 0; i < len; i++) {
                 var val = Math.random() * (max - min) + min;
                 if (round) {
@@ -129,7 +152,7 @@ dtm.generator = function () {
         }
 
         function constant(len, val) {
-            var res = new Array(len);
+            var res = new Float32Array(len);
             for (var i = 0; i < len; i++) {
                 res[i] = val;
             }
@@ -150,7 +173,7 @@ dtm.generator = function () {
             var steps = Math.floor((end - start) / interval) + 1;
             params.length = steps;
             //console.log(steps);
-            var res = new Array();
+            var res = new Float32Array();
 
             for (var i = 0; i < steps; i++) {
                 res[i] = start + interval * i;
@@ -158,21 +181,32 @@ dtm.generator = function () {
             return res;
         }
 
-        // TODO: incomplete
-        function range(min, max, interval) {
+        function range(start, end, interval) {
             if (!isNumber(interval) || interval === 0.0) {
                 interval = 1.0;
             }
 
-            var len = Math.abs(Math.round(max) - Math.round(min)) + 1;
-            var interval = (max - min) / (len - 1);
+            if (end >= start) {
+                interval = Math.abs(interval);
+            } else {
+                interval = -Math.abs(interval);
+            }
+
+            var len = Math.ceil(Math.abs(end - start) / Math.abs(interval));
             var res = new Float32Array(len);
 
             for (var i = 0; i < len; i++) {
-                res[i] = Math.round(min) + i * interval;
+                res[i] = start + i * interval;
             }
 
             return res;
+        }
+
+        function scale(name) {
+            var scale = 'chromatic';
+            if (isString(name)) {
+                scale = name;
+            }
         }
 
         // TODO: typed?
@@ -196,6 +230,7 @@ dtm.generator = function () {
             sorted = dtm.transform.sort([params.min, params.max]);
         }
 
+        // TODO: params or paramsExt?
         switch (params.type) {
             case 'line':
             case 'saw':
@@ -213,7 +248,7 @@ dtm.generator = function () {
 
             case 'sin':
             case 'sine':
-                params.value = sin(params.length, params.min, params.max, params.amp, params.cycle, 0.0);
+                params.value = sin(params.length, params.min, params.max, params.amp, params.cycle, paramsExt.phase);
                 break;
 
             case 'cos':
@@ -234,7 +269,7 @@ dtm.generator = function () {
                 break;
 
             case 'range':
-                params.value = range(params.min, params.max, params.interval);
+                params.value = range(paramsExt.start, paramsExt.end, paramsExt.interval);
                 break;
 
             case 'seq':
@@ -366,6 +401,30 @@ dtm.generator = function () {
         return generator;
     };
 
+    generator.start = function (val) {
+        if (isNumber(val)) {
+            paramsExt.start = val;
+        }
+        process();
+        return generator;
+    };
+
+    generator.end = function (val) {
+        if (isNumber(val)) {
+            paramsExt.end = val;
+        }
+        process();
+        return generator;
+    };
+
+    generator.interval = function (val) {
+        if (isNumber(val)) {
+            paramsExt.interval = val;
+        }
+        process();
+        return generator;
+    };
+
     /**
      * @function module:generator#amp
      * @param amp
@@ -393,7 +452,17 @@ dtm.generator = function () {
         process();
         return generator;
     };
-    generator.freq = generator.cycles = generator.cycle;
+    generator.freq = generator.cycle;
+
+    generator.phase = function (phase) {
+        if (isNumber(phase)) {
+            paramsExt.phase = phase;
+        }
+        process();
+        return generator;
+    };
+
+    generator.offset = generator.phase;
 
     /**
      * @function module:generator#const
@@ -455,21 +524,40 @@ dtm.generator = function () {
                     params.string = String(arguments[1]);
                 }
             } else if (params.type === 'range') {
-                if (isArray(arguments[1])) {
+                if (isNumArray(arguments[1])) {
                     if (arguments[1].length === 1) {
-                        generator.max(arguments[1][0]);
-                    } else if (arguments[1].length === 2) {
-                        generator.min(arguments[1][0]);
-                        generator.max(arguments[1][1]);
+                        generator.start(0.0);
+                        generator.end(arguments[1][0]);
+                    } else if (arguments[1].length >= 2) {
+                        generator.start(arguments[1][0]);
+                        generator.end(arguments[1][1]);
+                    }
+
+                    if (arguments[1].length === 3) {
+                        generator.interval(arguments[1][2]);
                     }
                 } else {
-                    if (arguments.length === 3) {
-                        generator.min(arguments[1]);
-                        generator.max(arguments[2]);
+                    if (arguments.length === 2 && isNumber(arguments[1])) {
+                        generator.start(0.0);
+                        generator.end(arguments[1]);
+                    } else if (arguments.length >= 3) {
+                        if (isNumber(arguments[1])) {
+                            generator.start(arguments[1]);
+                        }
+                        if (isNumber(arguments[2])) {
+                            generator.end(arguments[2]);
+                        }
+                    }
+
+                    if (arguments.length === 4) {
+                        generator.interval(arguments[3]);
                     }
                 }
             } else if (params.type === 'seq') {
+                // TODO: incomplete
                 generator.range(arguments[1], arguments[2]);
+            } else if (params.type === 'scale') {
+
             }
         } else {
             // set the length from arg 1

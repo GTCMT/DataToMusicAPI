@@ -795,7 +795,7 @@ dtm.synth3 = function (type, wt) {
     };
 
     synth.mono = function (bool) {
-        if (bool === undefined) {
+        if (!isBoolean(bool)) {
             params.mono = true;
         } else {
             params.mono = bool;

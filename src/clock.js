@@ -139,7 +139,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
      * @returns {dtm.clock}
      */
     clock.set = function (bpm, subDiv, autoStart) {
-        if (typeof(bpm) === 'function') {
+        if (isFunction(bpm)) {
             clock.callback(bpm);
         } else {
             clock.bpm(bpm);
@@ -185,7 +185,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
         if (isNumber(bpm)) {
             params.bpm = bpm;
             params.sync = false;
-        } else if (typeof(bpm) === 'boolean') {
+        } else if (isBoolean(bpm)) {
             params.sync = bpm;
         } else if (bpm == 'sync') {
             params.sync = true;
@@ -204,7 +204,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
     clock.subDiv = function (val) {
         if (isNumber(val)) {
             params.subDiv = val;
-        } else if (typeof(val) === 'string') {
+        } else if (isString(val)) {
             val = val.split('/');
             try {
                 val = Math.round(parseFloat(val[1])/parseFloat(val[0]));
@@ -244,7 +244,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
     clock.setTime = function (input) {
         if (isArray(input)) {
             clock.params.time = input;
-        } else if (typeof(input) === 'string') {
+        } else if (isString(input)) {
             clock.params.time = input.split('/');
         }
         return clock;
@@ -277,8 +277,8 @@ dtm.clock = function (bpm, subDiv, autoStart) {
         // prevent adding identical functions
         var dupe = false;
 
-        if (typeof(name) === 'string') {
-            _.forEach(clock.callbacks, function (stored) {
+        if (isString(name)) {
+            clock.callbacks.forEach(function (stored) {
                 if (stored.name == name) {
                     dtm.log('clock.add(): identical function exists in the callback list');
 
@@ -291,7 +291,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
                 clock.callbacks.push(cb);
             }
         } else {
-            _.forEach(clock.callbacks, function (stored) {
+            clock.callbacks.forEach(function (stored) {
                 if (_.isEqual(stored, cb)) {
                     dtm.log('clock.add(): identical function exists in the callback list');
 
@@ -316,12 +316,12 @@ dtm.clock = function (bpm, subDiv, autoStart) {
      * @returns {dtm.clock}
      */
     clock.remove = function (id) {
-        if (typeof(id) === 'function') {
+        if (isFunction(id)) {
             dtm.log('removing a calblack function');
             _.remove(clock.callbacks, function (cb) {
                 return _.isEqual(cb, id);
             });
-        } else if (typeof(id) === 'string') {
+        } else if (isString(id)) {
             dtm.log('removing a calblack function: ' + id);
             _.remove(clock.callbacks, function (cb) {
                 return cb.name == id;
@@ -346,11 +346,11 @@ dtm.clock = function (bpm, subDiv, autoStart) {
      * @returns {dtm.clock}
      */
     clock.modify = function (id, fn) {
-        if (typeof(id) === 'function') {
+        if (isFunction(id)) {
             dtm.log('modifying the callback: ' + id.name);
             clock.remove(id.name);
             clock.add(id);
-        } else if (typeof(id) === 'string') {
+        } else if (isString(id)) {
             dtm.log('modifying the callback: ' + id);
             clock.remove(id);
 
@@ -446,7 +446,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
 //                curTime = now();
                 };
 
-                _.forEach(clock.callbacks, function (cb) {
+                clock.callbacks.forEach(function (cb) {
                     cb(clock);
                 });
 
@@ -460,7 +460,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
                         params.beat = Math.round(params.current / params.resolution);
                         //console.log(params.beat);
 
-                        _.forEach(clock.callbacks, function (cb) {
+                        clock.callbacks.forEach(function (cb) {
                             cb(clock);
                         });
                     }
@@ -505,7 +505,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
                     //};
                 };
 
-                _.forEach(clock.callbacks, function (cb) {
+                clock.callbacks.forEach(function (cb) {
                     cb(clock);
                 });
 
@@ -523,7 +523,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
                     }
 
 
-                    _.forEach(clock.callbacks, function (cb) {
+                    clock.callbacks.forEach(function (cb) {
                         cb(clock);
                     });
 
@@ -546,7 +546,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
 
         if (dtm.master.clock.get('source') === 'webAudio') {
             if (dtm.master.clock.beat % Math.round(params.resolution/params.subDiv) === 0) {
-                _.forEach(clock.callbacks, function (cb) {
+                clock.callbacks.forEach(function (cb) {
                     cb(clock);
                 });
             }
@@ -558,7 +558,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
                 params.beat = Math.round((dtm.master.clock.get('cur')-params.offset) / params.resolution * params.subDiv / 4);
 
                 //if (params.beat > params.prevBeat) {
-                _.forEach(clock.callbacks, function (cb) {
+                clock.callbacks.forEach(function (cb) {
                     cb(clock);
                 });
                 //}
@@ -645,7 +645,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
     clock.when = function (arr, cb) {
         if (isArray(arr)) {
             if (arr.indexOf(clock.beat) > -1) {
-                if (typeof(cb) !== 'undefined') {
+                if (!isEmpty(cb)) {
                     cb(clock);
                 }
             }
@@ -656,7 +656,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
     clock.notWhen = function (arr, cb) {
         if (isArray(arr)) {
             if (arr.indexOf(clock.beat) == -1) {
-                if (typeof(cb) !== 'undefined') {
+                if (!isEmpty(cb)) {
                     cb(clock);
                 }
             }
@@ -697,7 +697,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
     clock.seq = function (callback, seqArray, interval) {
         var cb = (function (cb, arr, len) {
             return function (c) {
-                if (len === undefined) {
+                if (isEmpty(len)) {
                     len = c.get('subDiv');
                 }
                 if (arr.indexOf(c.get('beat') % len) > -1) {
@@ -717,7 +717,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
 
     clock.delay = clock.delayEvent;
 
-    if (!params.isMaster && typeof(dtm.master) !== 'undefined') {
+    if (!params.isMaster && !isEmpty(dtm.master)) {
         dtm.master.clock.add(clock.tickSynced);
 
         if (params.autoStart) {

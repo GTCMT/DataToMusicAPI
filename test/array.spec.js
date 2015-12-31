@@ -67,9 +67,8 @@ describe('array object', function () {
         });
 
         describe('min', function () {
-            var a = dtm.array('hello');
-            it('should return a null', function () {
-                expect(a.get('min')).toBe(null);
+            it('should work', function () {
+                expect(dtm.a([1,2,3]).get('min')).toBe(1);
             });
         });
 
@@ -148,6 +147,15 @@ describe('array object', function () {
                 expect(dtm.a(1,2,3).get()).toEqual([1,2,3]);
                 expect(dtm.a(1,2,3).get(0)).toBe(1);
             });
+        });
+    });
+
+    describe('clone', function () {
+        it('should work', function () {
+            var a = dtm.a([1,2,3]);
+            var b = a.clone().add(1);
+            expect(a.get()).toEqual([1,2,3]);
+            expect(b.get()).toEqual([2,3,4]);
         });
     });
 

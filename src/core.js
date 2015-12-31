@@ -39,7 +39,7 @@ var dtm = {
                 return dtm.modelColl;
             case 'modelNames':
                 var res = [];
-                _.forEach(dtm.modelColl, function (m) {
+                dtm.modelColl.forEach(function (m) {
                     res.push(m.get('name'));
                 });
                 return res;
@@ -74,8 +74,8 @@ var dtm = {
             var buffer = actx.createBuffer(1, bufLen, dtm.wa.actx.sampleRate);
             var contents = buffer.getChannelData(0);
 
-            _.forEach(_.range(bufLen), function (idx) {
-                contents[idx] = _.random(-1, 1, true);
+            _.range(bufLen).forEach(function (idx) {
+                contents[idx] = dtm.value.random(-1, 1);
             });
 
             return buffer;
@@ -91,9 +91,9 @@ var dtm = {
             var right = buffer.getChannelData(1);
 
             var exp = 10;
-            _.forEach(_.range(bufLen), function (idx) {
-                left[idx] = dtm.val.rescale(dtm.val.expCurve(_.random(0, 1, true) * (bufLen - idx) / bufLen, exp), -1, 1);
-                right[idx] = dtm.val.rescale(dtm.val.expCurve(_.random(0, 1, true) * (bufLen - idx) / bufLen, exp), -1, 1);
+            _.range(bufLen).forEach(function (idx) {
+                left[idx] = dtm.val.rescale(dtm.val.expCurve(dtm.value.random(0, 1) * (bufLen - idx) / bufLen, exp), -1, 1);
+                right[idx] = dtm.val.rescale(dtm.val.expCurve(dtm.value.random(0, 1) * (bufLen - idx) / bufLen, exp), -1, 1);
             });
 
             return buffer;

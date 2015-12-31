@@ -14,4 +14,24 @@ describe('single value transformation', function () {
             expect(dtm.value.mtof(60)).toBeCloseTo(262, 0);
         });
     });
+
+    describe('random', function () {
+        it('should be within normal range', function () {
+            var val = dtm.value.random();
+            expect(val).toBeLessThan(1.000001);
+            expect(val).toBeGreaterThan(-0.000001);
+        });
+
+        it('should be within the set range', function () {
+            var val = dtm.value.random(1, 10);
+            expect(val).toBeLessThan(10.000001);
+            expect(val).toBeGreaterThan(1.0 - 0.000001);
+        });
+
+        it('should take the max range', function () {
+            var val = dtm.value.random(100);
+            expect(val).toBeLessThan(100.000001);
+            expect(val).toBeGreaterThan(-0.000001);
+        });
+    });
 });

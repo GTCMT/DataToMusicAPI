@@ -2,10 +2,9 @@ describe('analyzer', function () {
     var input = [0, 2, 2, 3, 4, 4, 4, 5];
 
     describe('mean', function () {
-        var arr = ['foo', 'bar', 'buz'];
-
-        var output = dtm.analyzer.mean(input);
-        //console.log(output);
+        it('should be 2', function () {
+            expect(dtm.analyzer.mean([1, 2, 3])).toBe(2);
+        });
     });
 
     describe('mode', function () {
@@ -54,6 +53,36 @@ describe('analyzer', function () {
 
     describe('rms', function () {
         var output = dtm.analyzer.rms(input);
+    });
+
+    describe('unique', function () {
+        it('should work', function () {
+            expect(dtm.analyzer.unique([0, 1, 2, 3, 2, 1, 0])).toEqual([0, 1, 2, 3]);
+        });
+    });
+
+    describe('classes', function () {
+        it('should work', function () {
+            expect(dtm.analyzer.classes([3, 2, 1, 0, -1, 0, 1, 2, 3])).toEqual([-1, 0, 1, 2, 3]);
+            expect(dtm.analyzer.classes(['c', 'b', 'a', 'b', 'c'])).toEqual(['a', 'b', 'c']);
+        });
+    });
+
+    describe('histogram', function () {
+        it('should work', function () {
+            expect(dtm.analyzer.histo([1, 2, 2, 3, 4, 4, 4])).toEqual([1, 2, 2, 1, 3, 3, 3]);
+        });
+    });
+
+    describe('countBy', function () {
+        it('should work', function () {
+            expect(dtm.analyzer.countBy([1, 2, 2, 3, 4, 4, 4])).toEqual({
+                '1': 1,
+                '2': 2,
+                '3': 1,
+                '4': 3
+            });
+        });
     });
 
     describe('uniformity', function () {

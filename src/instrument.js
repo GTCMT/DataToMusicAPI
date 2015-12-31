@@ -48,12 +48,12 @@ dtm.instr = function (arg) {
                 params.clock.bpm(params.models.bpm.get('next'));
             }
 
-            _.forEach(params.callbacks, function (cb) {
+            params.callbacks.forEach(function (cb) {
                 cb(params.clock);
             });
 
             if (r) {
-                _.forEach(ct, function (val) {
+                ct.forEach(function (val) {
                     if (wt) {
                         v.wt(wt.get());
                     }
@@ -124,7 +124,7 @@ dtm.instr = function (arg) {
     };
 
     instr.set = function (dest, src, adapt) {
-        if (typeof(src) === 'number') {
+        if (isNumber(src)) {
             params.models[dest] = dtm.array(src);
         } else {
             if (src.constructor === Array) {
@@ -174,7 +174,7 @@ dtm.instr = function (arg) {
         var arg = arguments[0];
         var categ = 'none'; // TODO: WIP
 
-        if (typeof(arguments[1]) === 'string') {
+        if (isString(arguments[1])) {
             categ = arguments[1];
         }
 
@@ -185,7 +185,7 @@ dtm.instr = function (arg) {
             } else {
                 params.models['none'] = dtm.array(arg);
             }
-        } else if (typeof(arg) === 'object') {
+        } else if (isObject(arg)) {
             if (arg.type === 'dtm.model') {
                 if (arg.get('categ') === 'instr') {
                     // CHECK: ...
@@ -205,12 +205,12 @@ dtm.instr = function (arg) {
             } else if (isDtmArray(src)) {
                 params.models[categ] = arg;
             }
-        } else if (typeof(arg) === 'string') {
+        } else if (isString(arg)) {
             var model = _.find(dtm.modelColl, {params: {
                 name: arg
             }});
 
-            if (typeof(model) !== 'undefined') {
+            if (!isEmpty(model)) {
                 if (!categ) {
                     categ = model.params.categ;
                 }
@@ -225,7 +225,7 @@ dtm.instr = function (arg) {
     };
 
     instr.map = function (src, dest) {
-        if (src.constructor === Array) {
+        if (isArray(src)) {
             params.models[dest] = dtm.array(src).normalize();
         } else if (isDtmArray(src)) {
             // CHECK: assigning an array here is maybe not so smart...
@@ -308,9 +308,9 @@ dtm.instr = function (arg) {
     instr.mod = function (tgt, src, mode) {
         var dest = '';
 
-        if (typeof(tgt) === 'string') {
+        if (isString(tgt)) {
             dest = tgt;
-        } else if (typeof(tgt) === 'number') {
+        } else if (isNumber(tgt)) {
             // TODO: error check
             dest = instr.params[tgt];
         }
@@ -324,12 +324,12 @@ dtm.instr = function (arg) {
     instr.modulate = instr.mod;
 
     function mapper(dest, src) {
-        if (typeof(src) === 'number') {
+        if (isNumber(src)) {
             params.models[dest] = dtm.array(src);
-        } else if (typeof(src) === 'string') {
+        } else if (isString(src)) {
             params.models[dest] = dtm.array(src).classify();
         } else {
-            if (src.constructor === Array) {
+            if (isArray(src)) {
                 params.models[dest] = dtm.array(src);
             } else if (isDtmArray(src)) {
                 if (src.get('type') === 'string') {
@@ -383,7 +383,7 @@ dtm.instr = function (arg) {
     instr.load = function (arg) {
         var model;
 
-        if (typeof(arg) === 'string') {
+        if (isString(arg)) {
             //model = _.find(dtm.modelColl, function (m) {
             //    return m.get('name') == arg;
             //});

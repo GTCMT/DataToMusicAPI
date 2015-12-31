@@ -1,32 +1,16 @@
 describe('array helper functions', function () {
-    describe('generate', function () {
-        it('should add up to 0 for sine', function () {
-            var output = dtm.transform.generator('sine', 1000, -5, 5);
-            expect(dtm.analyzer.sum(output)).toBeCloseTo(0, 10);
-        });
-
-        it('should give chara arrays of t, e, s, t', function () {
-            var out = dtm.transform.generator('char', 'test');
-            expect(out).toEqual(['t', 'e', 's', 't']);
-        });
-
-        //var output = dtm.transform.generate('gauss', 128, 0, 1);
-        //console.log(output);
-        //it('should ...')
-    });
-
     describe('scalers', function () {
         describe('normalize', function () {
             describe('normalize autmatically to 0-1 range', function () {
                 var input = [];
                 for (var i = 0; i < 8; i++) {
-                    input[i] = _.random(-10, 10);
+                    input[i] = dtm.value.randi(-10, 10);
                 }
                 var norm = dtm.transform.normalize(input);
 
                 it('should have 0 as min, 1 as max', function () {
-                    expect(_.min(norm)).toBe(0);
-                    expect(_.max(norm)).toBe(1);
+                    expect(dtm.analyzer.min(norm)).toBe(0);
+                    expect(dtm.analyzer.max(norm)).toBe(1);
                 });
             });
 
@@ -37,7 +21,7 @@ describe('array helper functions', function () {
 
                 var norm = dtm.transform.normalize(input, dmin, dmax);
                 it('should have the max val of 0.25', function () {
-                    expect(_.max(norm)).toBe(0.25);
+                    expect(dtm.analyzer.max(norm)).toBe(0.25);
                 })
             });
         });
@@ -51,13 +35,13 @@ describe('array helper functions', function () {
                 var min = -1;
 
                 for (var i = 0; i < 8; i++) {
-                    input[i] = _.random(0, 10);
+                    input[i] = dtm.value.randi(0, 10);
                 }
 
                 var output = dtm.transform.rescale(input, min, max);
                 it('should have corresponding min & max', function () {
-                    expect(_.max(output)).toBe(max);
-                    expect(_.min(output)).toBe(min);
+                    expect(dtm.analyzer.max(output)).toBe(max);
+                    expect(dtm.analyzer.min(output)).toBe(min);
                 });
             });
 
@@ -72,8 +56,8 @@ describe('array helper functions', function () {
                 var output = dtm.transform.rescale(input, min, max, dmin, dmax);
 
                 it('should have max of ...', function () {
-                    expect(_.max(output)).toBe(0);
-                    expect(_.min(output)).toBe(-1);
+                    expect(dtm.analyzer.max(output)).toBe(0);
+                    expect(dtm.analyzer.min(output)).toBe(-1);
                 })
             })
         });
@@ -99,7 +83,7 @@ describe('array helper functions', function () {
         describe('size manipulation sutff', function () {
             var input = [];
             for (var i = 0; i < 4; i++) {
-                input[i] = _.random(-10, 10);
+                input[i] = dtm.value.randi(-10, 10);
             }
 
             // TODO: write proper test cases
@@ -237,7 +221,7 @@ describe('array helper functions', function () {
     describe('mean', function () {
         var input = [];
         for (var i = 0; i < 8; i++) {
-            input[i] = _.random(0, 10);
+            input[i] = dtm.value.randi(0, 10);
         }
 
         var output = dtm.analyzer.mean(input);
@@ -248,11 +232,11 @@ describe('array helper functions', function () {
         var input = _.shuffle(_.range(8));
         var output = rev(input);
 
-        var iSum = _.reduce(input, function (sum, num) {
+        var iSum = input.reduce(function (sum, num) {
             return sum + num;
         });
 
-        var oSum = _.reduce(output, function (sum, num) {
+        var oSum = output.reduce(function (sum, num) {
             return sum + num;
         });
 
@@ -274,7 +258,7 @@ describe('array helper functions', function () {
     describe('shift', function () {
         var input = [];
         for (var i = 0; i < 8; i++) {
-            input[i] = _.random(-10, 10);
+            input[i] = dtm.value.randi(-10, 10);
         }
 
         var shift = -2;
@@ -289,7 +273,7 @@ describe('array helper functions', function () {
     describe('shuffle', function () {
         var input = [];
         for (var i = 0; i < 8; i++) {
-            input[i] = _.random(-10, 10);
+            input[i] = dtm.value.randi(-10, 10);
         }
 
         var output = dtm.transform.shuffle(input);
@@ -402,7 +386,7 @@ describe('array helper functions', function () {
                 var len = 8;
                 var out = dtm.transform.indicesToBeats(input, len);
 
-                expect(out).toEqual([1, 0, 0, 1, 1, 0, 1, 1]);
+                expect(out).toEqual(new Float32Array([1, 0, 0, 1, 1, 0, 1, 1]));
             });
 
             it('should work w/ unsorted indices too', function () {
@@ -410,7 +394,7 @@ describe('array helper functions', function () {
                 var len = 8;
                 var out = dtm.transform.indicesToBeats(input, len);
 
-                expect(out).toEqual([1, 0, 0, 1, 1, 0, 1, 1]);
+                expect(out).toEqual(new Float32Array([1, 0, 0, 1, 1, 0, 1, 1]));
             });
 
             it('should terminate if the length is smaller', function () {
@@ -418,14 +402,14 @@ describe('array helper functions', function () {
                 var len = 6;
                 var out = dtm.transform.indicesToBeats(input, len);
 
-                expect(out).toEqual([1, 0, 0, 1, 1, 0]);
+                expect(out).toEqual(new Float32Array([1, 0, 0, 1, 1, 0]));
             });
 
             it('should automatically set the length', function () {
                 var input = [3, 0, 7, 6, 4];
                 var out = dtm.transform.indicesToBeats(input);
 
-                expect(out).toEqual([1, 0, 0, 1, 1, 0, 1, 1]);
+                expect(out).toEqual(new Float32Array([1, 0, 0, 1, 1, 0, 1, 1]));
             });
 
             it('should have length of 16', function () {

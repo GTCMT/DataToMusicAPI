@@ -162,8 +162,8 @@ dtm.iterator = function (arg) {
         var min = 1;
         if (repeat) { min = 0; }
 
-        var val = _.random(min, stepSize);
-        if (_.random(0, 1)) {
+        var val = dtm.value.randi(min, stepSize);
+        if (dtm.value.randi(0, 1)) {
             val = -val;
         }
 
