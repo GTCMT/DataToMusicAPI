@@ -100,10 +100,10 @@ dtm.master = {
         var scale;
 
         if (arguments.length === 0) {
-            scale = _.range(12);
-        } else if (typeof(arguments[0]) === 'array') {
+            scale = dtm.gen('range', 12).get();
+        } else if (isArray(arguments[0])) {
             scale = arguments[0];
-        } else if (typeof(arguments[0]) === 'string') {
+        } else if (isString(arguments[0])) {
             scale = dtm.scales[arguments[0].toLowerCase()];
         } else {
             scale = arguments;
@@ -117,7 +117,7 @@ dtm.master = {
     },
 
     data: function (d) {
-        if (typeof(d) !== 'undefined') {
+        if (!isEmpty(d)) {
             dtm.master.params.data = d;
         }
 
@@ -151,7 +151,7 @@ dtm.master = {
     },
 
     setNumVoices: function (num) {
-        if (typeof(num) === number && num > 0) {
+        if (isInteger(num) && num > 0) {
             dtm.master.params.maxNumVoices = num;
         }
 

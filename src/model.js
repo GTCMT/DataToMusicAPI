@@ -421,5 +421,4 @@ dtm.model = function (name, categ) {
     return model;
 };
 
-dtm.model.load = dtm.model;
 dtm.m = dtm.model;

@@ -71,6 +71,10 @@ function isNumOrFloat32Array(array) {
     return isNumArray(array) || isFloat32Array(array);
 }
 
+function isMixedArray(array) {
+    return isArray(array) && !isNumOrFloat32Array(array);
+}
+
 function isSingleVal(value) {
     return !!(!isArray(value) && !isDtmObj(value) && !isFunction(value) && !isEmpty(value));
 }
@@ -139,8 +143,96 @@ function argsAreSingleVals(args) {
     return res;
 }
 
+function toFloat32Array(src) {
+    if (isNumber(src)) {
+        return new Float32Array([src]);
+    } else if (isDtmObj(src)) {
+        if (isDtmArray(src)) {
+            if (isNumArray(src.get())) {
+                return new Float32Array(src.get());
+            } else if (isFloat32Array(src.get())) {
+                return src.get();
+            }
+        } else if (src.meta.type === 'dtm.model') {
+            return new Float32Array(src.get());
+        }
+    } else if (isNumOrFloat32Array(src)) {
+        if (isFloat32Array(src)) {
+            return src;
+        } else {
+            return new Float32Array(src);
+        }
+    } else {
+        return src;
+    }
+}
 
+function Float32Concat(first, second) {
+    var firstLen = first.length;
+    var res = new Float32Array(firstLen + second.length);
 
+    res.set(first);
+    res.set(second, firstLen);
+
+    return res;
+}
+
+function concat(first, second) {
+    if (isFloat32Array(first) || isFloat32Array(second)) {
+        return Float32Concat(first, second);
+    } else {
+        return first.concat(second);
+    }
+}
+
+function Float32Splice(array, len) {
+    var res = new Float32Array(array.length - len);
+    var temp = Array.prototype.slice.call(array);
+    res.set(temp.splice(len));
+
+    return res;
+}
+
+function splice(array, len) {
+
+}
+
+function truncateDigits(value) {
+    var digits = 10;
+    return Math.round(value * Math.pow(10, digits)) / Math.pow(10, digits);
+}
+
+function Float32Map(array, cb) {
+    var res = new Float32Array(array.length);
+
+    array.forEach(function (v, i) {
+        res[i] = cb(v);
+    });
+
+    return res;
+}
+
+function deferCallback(cb, time) {
+    var defer = 0;
+    if (isNumber(time) && time > 0) {
+        defer = time;
+    }
+
+    if (isFunction(cb)) {
+        return function () {
+            var args = arguments;
+            setTimeout(function () {
+                cb.apply(this, args);
+            }, defer);
+        }
+    }
+}
+
+function cloneArray(input) {
+    if (isArray(input) || isFloat32Array(input)) {
+        return input.slice(0);
+    }
+}
 
 
 
@@ -163,6 +255,18 @@ function objForEach(obj, callback) {
         return res;
     }
 }
+
+function numProperties(obj) {
+    var count = 0;
+    if (isObject(obj)) {
+        objForEach(obj, function () {
+            count++;
+        });
+    }
+    return count;
+}
+
+
 
 function loadBuffer(arrayBuf) {
     var buffer = {};
@@ -228,7 +332,7 @@ function jsonp(url, cb) {
     window[cbName] = function (data) {
         delete window[cbName];
         document.body.removeChild(script);
-        var keys = _.keys(data);
+        var keys = Object.keys(data);
         keys.forEach(function (val) {
             if (val !== 'response') {
                 console.log(data[val]);
@@ -290,60 +394,4 @@ function ajaxGet(url, cb) {
     };
 
     xhr.send();
-}
-
-function toFloat32Array(src) {
-    if (isNumber(src)) {
-        return new Float32Array([src]);
-    } else if (isDtmObj(src)) {
-        if (isDtmArray(src)) {
-            if (isNumArray(src.get())) {
-                return new Float32Array(src.get());
-            } else if (isFloat32Array(src.get())) {
-                return src.get();
-            }
-        } else if (src.meta.type === 'dtm.model') {
-            return new Float32Array(src.get());
-        }
-    } else if (isNumOrFloat32Array(src)) {
-        if (isFloat32Array(src)) {
-            return src;
-        } else {
-            return new Float32Array(src);
-        }
-    } else {
-        return src;
-    }
-}
-
-function Float32Concat(first, second) {
-    var firstLength = first.length,
-        result = new Float32Array(firstLength + second.length);
-
-    result.set(first);
-    result.set(second, firstLength);
-
-    return result;
-}
-
-function deferCallback(cb, time) {
-    var defer = 0;
-    if (isNumber(time) && time > 0) {
-        defer = time;
-    }
-
-    if (isFunction(cb)) {
-        return function () {
-            var args = arguments;
-            setTimeout(function () {
-                cb.apply(this, args);
-            }, defer);
-        }
-    }
-}
-
-function cloneArray(input) {
-    if (isArray(input) || isFloat32Array(input)) {
-        return input.slice(0);
-    }
 }

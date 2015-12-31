@@ -229,7 +229,7 @@ describe('array helper functions', function () {
 
     describe('mirror', function () {
         var rev = dtm.transform.reverse;
-        var input = _.shuffle(_.range(8));
+        var input = _.shuffle(dtm.gen('range', 8).get());
         var output = rev(input);
 
         var iSum = input.reduce(function (sum, num) {
@@ -247,7 +247,7 @@ describe('array helper functions', function () {
 
     describe('invert', function () {
         var num = 8;
-        var input = _.shuffle(_.range(num));
+        var input = _.shuffle(dtm.gen('range', num));
         var output = dtm.transform.invert(input);
 
         for (var i = 0; i < num; i++) {

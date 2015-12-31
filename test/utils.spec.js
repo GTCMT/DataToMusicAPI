@@ -120,6 +120,12 @@ describe('isStringArray', function () {
     });
 });
 
+describe('isMixedArray', function () {
+    it('should work', function () {
+        expect(isMixedArray([1, '2'])).toBe(true);
+    });
+});
+
 describe('hasMissingValues', function () {
     it('should work', function () {
         expect(hasMissingValues([1, 2, 3])).toBe(false);
@@ -181,8 +187,15 @@ describe('argsAreSingleVals', function () {
 describe('objForEach', function () {
     it('should work', function () {
         objForEach({foo: 123, bar: 456}, function (val, key) {
-
+            expect(isNumber(val)).toBe(true);
         });
+    });
+});
+
+describe('numProperties', function () {
+    it('should work', function () {
+        expect(numProperties({foo: 123, bar: 456})).toBe(2);
+        expect(numProperties({})).toBe(0);
     });
 });
 
@@ -193,6 +206,32 @@ describe('toFloat32Array', function () {
         expect(toFloat32Array(dtm.a([1, 2, 3]))).toEqual(new Float32Array([1, 2, 3]));
         expect(toFloat32Array(dtm.gen('range', 1, 4))).toEqual(new Float32Array([1, 2, 3]));
         expect(toFloat32Array(undefined)).toBe(undefined);
+    });
+});
+
+describe('Float32Splice', function () {
+    it('should work', function () {
+        expect(Float32Splice(new Float32Array([1,2,3]), 2)).toEqual(toFloat32Array(3));
+    });
+});
+
+describe('concat', function () {
+    it('should work with both numArray and Float32Array', function () {
+        expect(concat([1, 2], [3, 4])).toEqual([1, 2, 3, 4]);
+        expect(concat(toFloat32Array([1, 2]), [3, 4])).toEqual(toFloat32Array([1, 2, 3, 4]));
+        expect(concat([1, 2], toFloat32Array([3, 4]))).toEqual(toFloat32Array([1, 2, 3, 4]));
+    });
+});
+
+describe('truncateDigits', function () {
+    it('should work', function () {
+        expect(truncateDigits(1.00000000001)).toBe(1.0);
+    });
+});
+
+describe('Float32Map', function () {
+    it('should work', function () {
+        expect(Float32Map(toFloat32Array([1,2,3]), function (v) { return v * 2; })).toEqual(toFloat32Array([2,4,6]));
     });
 });
 

@@ -277,6 +277,16 @@ dtm.transform = {
             return arr.map(function (val) {
                 return (val - min) / denom;
             });
+
+            //if (isFloat32Array(arr)) {
+            //    return Float32Map(arr, function (val) {
+            //        return (val - min) / denom;
+            //    });
+            //} else if (isNumArray(arr)) {
+            //    return arr.map(function (val) {
+            //        return (val - min) / denom;
+            //    });
+            //}
         }
     },
 
@@ -299,7 +309,7 @@ dtm.transform = {
         var res = [];
 
         normalized.forEach(function (val, idx) {
-            res[idx] = dtm.value.rescale(val, min, max);
+            res[idx] = truncateDigits(dtm.value.rescale(val, min, max));
         });
 
         return res;

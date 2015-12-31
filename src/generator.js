@@ -16,12 +16,15 @@ dtm.generator = function () {
 
         start: 0.0,
         end: 1.0,
+        interval: null,
+
+        scale: 'chromatic',
+
         //step: 0.0,
         amp: 1.0,
         cycle: 1.0,
         phase: 0.0,
         const: 0.0,
-        interval: null,
         string: '',
         value: [],
         pack: false, // into dtm.array
@@ -67,25 +70,6 @@ dtm.generator = function () {
         noMinMax: [],
         noMinMaxDir: ['rise', 'decay', 'fall', 'noise', 'random', 'rand', 'randi'],
         string: ['string', 'str', 's', 'character', 'characters', 'chars', 'char', 'c', 'text']
-    };
-
-    var scales = {
-        chromatic: {
-            names: ['chromatic', 'chr'],
-            values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
-        },
-        major: {
-            names: ['major', 'maj'],
-            values: [0, 2, 4, 5, 7, 9, 11]
-        },
-        minor: {
-            names: ['minor', 'min'],
-            values: [0, 2, 3, 5, 7, 8, 10]
-        },
-        wholetone: {
-            names: ['wholetone', 'whole', 'wt'],
-            values: [0, 2, 4, 6, 8, 10]
-        }
     };
 
     function isTypeOf(type) {
@@ -203,10 +187,34 @@ dtm.generator = function () {
         }
 
         function scale(name) {
-            var scale = 'chromatic';
-            if (isString(name)) {
-                scale = name;
-            }
+            var res = null;
+
+            var scales = {
+                chromatic: {
+                    names: ['chromatic', 'chr'],
+                    values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+                },
+                major: {
+                    names: ['major', 'maj'],
+                    values: [0, 2, 4, 5, 7, 9, 11]
+                },
+                minor: {
+                    names: ['minor', 'min'],
+                    values: [0, 2, 3, 5, 7, 8, 10]
+                },
+                wholetone: {
+                    names: ['wholetone', 'whole', 'wt'],
+                    values: [0, 2, 4, 6, 8, 10]
+                }
+            };
+
+            objForEach(scales, function (v) {
+                if (v.names.indexOf(name.toLowerCase()) !== -1) {
+                    res = new Float32Array(v.values);
+                }
+            });
+
+            return res ? res : new Float32Array();
         }
 
         // TODO: typed?
@@ -274,6 +282,10 @@ dtm.generator = function () {
 
             case 'seq':
                 params.value = sequence(params.min, params.max);
+                break;
+
+            case 'scale':
+                params.value = scale(paramsExt.scale);
                 break;
 
             case 'fibonacci':
@@ -388,7 +400,7 @@ dtm.generator = function () {
             args = argsToArray(arguments);
         }
 
-        if (isNumArray(args)) {
+        if (isNumOrFloat32Array(args)) {
             if (args.length === 2) {
                 generator.min(args[0]);
                 generator.max(args[1]);
@@ -476,7 +488,6 @@ dtm.generator = function () {
         return generator;
     };
 
-
     // TODO: do more readable type check
 
     if (arguments.length >= 1) {
@@ -557,7 +568,10 @@ dtm.generator = function () {
                 // TODO: incomplete
                 generator.range(arguments[1], arguments[2]);
             } else if (params.type === 'scale') {
-
+                if (isString(arguments[1])) {
+                    paramsExt.scale = arguments[1];
+                    process();
+                }
             }
         } else {
             // set the length from arg 1

@@ -134,7 +134,7 @@ dtm.iterator = function (arg) {
 
     // TODO: ...
     iter.urn = function () {
-        var range = _.range(iter.array.length - 1);
+        var range = dtm.gen('range', iter.array.length - 1).get();
         iter.modIdx = dtm.transform.shuffle(range);
     };
 

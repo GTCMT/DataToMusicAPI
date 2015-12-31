@@ -60,40 +60,41 @@ describe('model abstract', function () {
             expect(uni.get('name')).toBe('unipolar');
         });
         it('should normalize to 0 - 1', function () {
-            expect(uni([1, 2, 3]).get()).toEqual([0.0, 0.5, 1.0]);
-            expect(uni(dtm.array([1, 2, 3])).get()).toEqual([0.0, 0.5, 1.0]);
-            expect(uni(0.5).get()).toEqual([0.5]);
+            expect(uni([1, 2, 3]).get()).toEqual(toFloat32Array([0.0, 0.5, 1.0]));
+            expect(uni(dtm.array([1, 2, 3])).get()).toEqual(toFloat32Array([0.0, 0.5, 1.0]));
+            expect(uni(0.5).get()).toEqual(toFloat32Array([0.5]));
         });
 
         it('should set the domain by args', function () {
             uni.domain(0, 10);
-            expect(uni([0, 1, 2]).get()).toEqual([0.0, 0.1, 0.2]);
+            expect(uni([0, 1, 2]).get()).toEqual(toFloat32Array([0.0, 0.1, 0.2]));
         });
 
         it('should reset the domain upon reinstantiation', function () {
-            expect(uni([0, 1, 2]).get()).toEqual([0.0, 0.5, 1.0]);
+            expect(uni([0, 1, 2]).get()).toEqual(toFloat32Array([0.0, 0.5, 1.0]));
         });
 
+        // TODO: some float32 precision error
         it('should set the domain by array', function () {
             uni.domain([0, 5]);
-            expect(uni([0, 1, 2]).get()).toEqual([0.0, 0.2, 0.4]);
+            expect(uni([0, 1, 2]).get()).toEqual(toFloat32Array([0.0, 0.2, 0.4]));
         });
 
         it('should deal with strings', function () {
             var a = uni('hello');
             expect(typeof(a.get(0))).toBe('number');
-            expect(a.get()).toEqual([0, 0, 1, 1, 0]);
+            expect(a.get()).toEqual(toFloat32Array([0, 0, 1, 1, 0]));
         });
 
         it('should work with multiple args for set', function () {
             var a = uni(1, 2, 3);
-            expect(a.get()).toEqual([0.0, 0.5, 1.0]);
+            expect(a.get()).toEqual(toFloat32Array([0.0, 0.5, 1.0]));
         });
 
         xit('should work with generators', function () {
             var data = dtm.gen('line', 5, 0, 100);
             var a = uni(data);
-            expect(a.get()).toEqual([0, 0.25, 0.5, 0.75, 1]);
+            expect(a.get()).toEqual(toFloat32Array([0, 0.25, 0.5, 0.75, 1]));
         });
     });
 

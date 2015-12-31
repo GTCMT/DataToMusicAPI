@@ -124,7 +124,7 @@ dtm.data = function (arg, cb, type) {
 
     data.set = function (res) {
         params.coll = res;
-        params.keys = _.keys(params.coll[0]);
+        params.keys = Object.keys(params.coll[0]);
         setArrays();
         setTypes();
         setSize();
@@ -190,13 +190,13 @@ dtm.data = function (arg, cb, type) {
                     delete window[cbName];
                     document.body.removeChild(script);
 
-                    var keys = _.keys(res);
+                    var keys = Object.keys(res);
 
                     keys.forEach(function (val) {
                         // CHECK: this is a little too case specific
                         if (val !== 'response') {
                             params.coll = res[val];
-                            params.keys = _.keys(params.coll[0]);
+                            params.keys = Object.keys(params.coll[0]);
                             setArrays();
                             setTypes();
                             setSize();
@@ -288,7 +288,7 @@ dtm.data = function (arg, cb, type) {
 
                             if (ext === 'csv') {
                                 params.coll = dtm.parser.csvToJson(xhr.response);
-                                keys = _.keys(params.coll[0]);
+                                keys = Object.keys(params.coll[0]);
                             } else if (ext === 'json') {
                                 var res = xhr.responseText;
 

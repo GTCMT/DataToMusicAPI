@@ -73,6 +73,10 @@ function isNumOrFloat32Array(array) {
     return isNumArray(array) || isFloat32Array(array);
 }
 
+function isMixedArray(array) {
+    return isArray(array) && !isNumOrFloat32Array(array);
+}
+
 function isSingleVal(value) {
     return !!(!isArray(value) && !isDtmObj(value) && !isFunction(value) && !isEmpty(value));
 }
@@ -141,8 +145,96 @@ function argsAreSingleVals(args) {
     return res;
 }
 
+function toFloat32Array(src) {
+    if (isNumber(src)) {
+        return new Float32Array([src]);
+    } else if (isDtmObj(src)) {
+        if (isDtmArray(src)) {
+            if (isNumArray(src.get())) {
+                return new Float32Array(src.get());
+            } else if (isFloat32Array(src.get())) {
+                return src.get();
+            }
+        } else if (src.meta.type === 'dtm.model') {
+            return new Float32Array(src.get());
+        }
+    } else if (isNumOrFloat32Array(src)) {
+        if (isFloat32Array(src)) {
+            return src;
+        } else {
+            return new Float32Array(src);
+        }
+    } else {
+        return src;
+    }
+}
 
+function Float32Concat(first, second) {
+    var firstLen = first.length;
+    var res = new Float32Array(firstLen + second.length);
 
+    res.set(first);
+    res.set(second, firstLen);
+
+    return res;
+}
+
+function concat(first, second) {
+    if (isFloat32Array(first) || isFloat32Array(second)) {
+        return Float32Concat(first, second);
+    } else {
+        return first.concat(second);
+    }
+}
+
+function Float32Splice(array, len) {
+    var res = new Float32Array(array.length - len);
+    var temp = Array.prototype.slice.call(array);
+    res.set(temp.splice(len));
+
+    return res;
+}
+
+function splice(array, len) {
+
+}
+
+function truncateDigits(value) {
+    var digits = 10;
+    return Math.round(value * Math.pow(10, digits)) / Math.pow(10, digits);
+}
+
+function Float32Map(array, cb) {
+    var res = new Float32Array(array.length);
+
+    array.forEach(function (v, i) {
+        res[i] = cb(v);
+    });
+
+    return res;
+}
+
+function deferCallback(cb, time) {
+    var defer = 0;
+    if (isNumber(time) && time > 0) {
+        defer = time;
+    }
+
+    if (isFunction(cb)) {
+        return function () {
+            var args = arguments;
+            setTimeout(function () {
+                cb.apply(this, args);
+            }, defer);
+        }
+    }
+}
+
+function cloneArray(input) {
+    if (isArray(input) || isFloat32Array(input)) {
+        return input.slice(0);
+    }
+}
 
 
 
@@ -165,6 +257,18 @@ function objForEach(obj, callback) {
         return res;
     }
 }
+
+function numProperties(obj) {
+    var count = 0;
+    if (isObject(obj)) {
+        objForEach(obj, function () {
+            count++;
+        });
+    }
+    return count;
+}
+
+
 
 function loadBuffer(arrayBuf) {
     var buffer = {};
@@ -230,7 +334,7 @@ function jsonp(url, cb) {
     window[cbName] = function (data) {
         delete window[cbName];
         document.body.removeChild(script);
-        var keys = _.keys(data);
+        var keys = Object.keys(data);
         keys.forEach(function (val) {
             if (val !== 'response') {
                 console.log(data[val]);
@@ -294,61 +398,6 @@ function ajaxGet(url, cb) {
     xhr.send();
 }
 
-function toFloat32Array(src) {
-    if (isNumber(src)) {
-        return new Float32Array([src]);
-    } else if (isDtmObj(src)) {
-        if (isDtmArray(src)) {
-            if (isNumArray(src.get())) {
-                return new Float32Array(src.get());
-            } else if (isFloat32Array(src.get())) {
-                return src.get();
-            }
-        } else if (src.meta.type === 'dtm.model') {
-            return new Float32Array(src.get());
-        }
-    } else if (isNumOrFloat32Array(src)) {
-        if (isFloat32Array(src)) {
-            return src;
-        } else {
-            return new Float32Array(src);
-        }
-    } else {
-        return src;
-    }
-}
-
-function Float32Concat(first, second) {
-    var firstLength = first.length,
-        result = new Float32Array(firstLength + second.length);
-
-    result.set(first);
-    result.set(second, firstLength);
-
-    return result;
-}
-
-function deferCallback(cb, time) {
-    var defer = 0;
-    if (isNumber(time) && time > 0) {
-        defer = time;
-    }
-
-    if (isFunction(cb)) {
-        return function () {
-            var args = arguments;
-            setTimeout(function () {
-                cb.apply(this, args);
-            }, defer);
-        }
-    }
-}
-
-function cloneArray(input) {
-    if (isArray(input) || isFloat32Array(input)) {
-        return input.slice(0);
-    }
-}
 /**
  * @fileOverview
  * @module core
@@ -424,8 +473,7 @@ var dtm = {
 
             var buffer = actx.createBuffer(1, bufLen, dtm.wa.actx.sampleRate);
             var contents = buffer.getChannelData(0);
-
-            _.range(bufLen).forEach(function (idx) {
+            dtm.gen('range', bufLen).get().forEach(function (idx) {
                 contents[idx] = dtm.value.random(-1, 1);
             });
 
@@ -442,7 +490,7 @@ var dtm = {
             var right = buffer.getChannelData(1);
 
             var exp = 10;
-            _.range(bufLen).forEach(function (idx) {
+            dtm.gen('range', bufLen).get().forEach(function (idx) {
                 left[idx] = dtm.val.rescale(dtm.val.expCurve(dtm.value.random(0, 1) * (bufLen - idx) / bufLen, exp), -1, 1);
                 right[idx] = dtm.val.rescale(dtm.val.expCurve(dtm.value.random(0, 1) * (bufLen - idx) / bufLen, exp), -1, 1);
             });
@@ -1029,12 +1077,15 @@ dtm.generator = function () {
 
         start: 0.0,
         end: 1.0,
+        interval: null,
+
+        scale: 'chromatic',
+
         //step: 0.0,
         amp: 1.0,
         cycle: 1.0,
         phase: 0.0,
         const: 0.0,
-        interval: null,
         string: '',
         value: [],
         pack: false, // into dtm.array
@@ -1080,25 +1131,6 @@ dtm.generator = function () {
         noMinMax: [],
         noMinMaxDir: ['rise', 'decay', 'fall', 'noise', 'random', 'rand', 'randi'],
         string: ['string', 'str', 's', 'character', 'characters', 'chars', 'char', 'c', 'text']
-    };
-
-    var scales = {
-        chromatic: {
-            names: ['chromatic', 'chr'],
-            values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
-        },
-        major: {
-            names: ['major', 'maj'],
-            values: [0, 2, 4, 5, 7, 9, 11]
-        },
-        minor: {
-            names: ['minor', 'min'],
-            values: [0, 2, 3, 5, 7, 8, 10]
-        },
-        wholetone: {
-            names: ['wholetone', 'whole', 'wt'],
-            values: [0, 2, 4, 6, 8, 10]
-        }
     };
 
     function isTypeOf(type) {
@@ -1216,10 +1248,34 @@ dtm.generator = function () {
         }
 
         function scale(name) {
-            var scale = 'chromatic';
-            if (isString(name)) {
-                scale = name;
-            }
+            var res = null;
+
+            var scales = {
+                chromatic: {
+                    names: ['chromatic', 'chr'],
+                    values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+                },
+                major: {
+                    names: ['major', 'maj'],
+                    values: [0, 2, 4, 5, 7, 9, 11]
+                },
+                minor: {
+                    names: ['minor', 'min'],
+                    values: [0, 2, 3, 5, 7, 8, 10]
+                },
+                wholetone: {
+                    names: ['wholetone', 'whole', 'wt'],
+                    values: [0, 2, 4, 6, 8, 10]
+                }
+            };
+
+            objForEach(scales, function (v) {
+                if (v.names.indexOf(name.toLowerCase()) !== -1) {
+                    res = new Float32Array(v.values);
+                }
+            });
+
+            return res ? res : new Float32Array();
         }
 
         // TODO: typed?
@@ -1287,6 +1343,10 @@ dtm.generator = function () {
 
             case 'seq':
                 params.value = sequence(params.min, params.max);
+                break;
+
+            case 'scale':
+                params.value = scale(paramsExt.scale);
                 break;
 
             case 'fibonacci':
@@ -1401,7 +1461,7 @@ dtm.generator = function () {
             args = argsToArray(arguments);
         }
 
-        if (isNumArray(args)) {
+        if (isNumOrFloat32Array(args)) {
             if (args.length === 2) {
                 generator.min(args[0]);
                 generator.max(args[1]);
@@ -1489,7 +1549,6 @@ dtm.generator = function () {
         return generator;
     };
 
-
     // TODO: do more readable type check
 
     if (arguments.length >= 1) {
@@ -1570,7 +1629,10 @@ dtm.generator = function () {
                 // TODO: incomplete
                 generator.range(arguments[1], arguments[2]);
             } else if (params.type === 'scale') {
-
+                if (isString(arguments[1])) {
+                    paramsExt.scale = arguments[1];
+                    process();
+                }
             }
         } else {
             // set the length from arg 1
@@ -1931,6 +1993,16 @@ dtm.transform = {
             return arr.map(function (val) {
                 return (val - min) / denom;
             });
+
+            //if (isFloat32Array(arr)) {
+            //    return Float32Map(arr, function (val) {
+            //        return (val - min) / denom;
+            //    });
+            //} else if (isNumArray(arr)) {
+            //    return arr.map(function (val) {
+            //        return (val - min) / denom;
+            //    });
+            //}
         }
     },
 
@@ -1953,7 +2025,7 @@ dtm.transform = {
         var res = [];
 
         normalized.forEach(function (val, idx) {
-            res[idx] = dtm.value.rescale(val, min, max);
+            res[idx] = truncateDigits(dtm.value.rescale(val, min, max));
         });
 
         return res;
@@ -3196,10 +3268,8 @@ dtm.array = function () {
         processed: 0
     };
 
-    // public
-    var array = {
-        type: 'dtm.array'
-    };
+    var array = {};
+    //var array = function () {};
 
     array.meta = {
         type: 'dtm.array',
@@ -3468,9 +3538,11 @@ dtm.array = function () {
                 return array;
             } else if (isNumber(arguments[0])) {
                 params.value = [arguments[0]];
-            } else if (isArray(arguments[0])) {
-                params.value = arguments[0];
+            } else if (isNumArray(arguments[0])) {
+                params.value = new Float32Array(arguments[0]);
             } else if (isFloat32Array(arguments[0])) {
+                params.value = arguments[0];
+            } else if (isMixedArray(arguments[0])) {
                 params.value = arguments[0];
             } else if (isDtmArray(arguments[0])) {
                 params.value = arguments[0].get();
@@ -3494,16 +3566,14 @@ dtm.array = function () {
             params.index = params.length - 1;
         } else if (arguments.length > 1) {
             if (argsAreSingleVals(arguments)) {
-                params.value = argsToArray(arguments);
+                var args = argsToArray(arguments);
+                if (isNumArray(args)) {
+                    params.value = new Float32Array(args);
+                } else {
+                    params.value = args;
+                }
                 params.length = params.value.length;
             }
-
-            //if (typeof(arguments[0]) === 'string') {
-            //    params.value = dtm.gen.apply(this, arguments).get();
-            //    checkType(params.value);
-            //} else {
-            //
-            //}
         }
 
         return array;
@@ -3534,9 +3604,6 @@ dtm.array = function () {
         }
         return array;
     };
-
-    // set the array content here
-    array.set.apply(this, arguments);
 
     function generateHash(arr) {
 
@@ -3699,13 +3766,13 @@ dtm.array = function () {
             min = arg1;
             max = arg2;
         } else {
-            if (isNumArray(arg1)) {
+            if (isNumOrFloat32Array(arg1)) {
                 args = arg1;
-            } else if (isDtmArray(arg1) && isNumArray(arg1.get())) {
+            } else if (isDtmArray(arg1) && isNumOrFloat32Array(arg1.get())) {
                 args = arg1.get();
             }
 
-            if (isNumArray(args)) {
+            if (isNumOrFloat32Array(args)) {
                 if (args.length === 2) {
                     min = args[0];
                     max = args[1];
@@ -3747,7 +3814,7 @@ dtm.array = function () {
                 min = dtm.analyzer.min(arg1);
                 max = dtm.analyzer.max(arg1);
             }
-        } else if (isDtmArray(arg1) && isNumArray(arg1.get())) {
+        } else if (isDtmArray(arg1) && isNumOrFloat32Array(arg1.get())) {
             if (arg1.get('len') === 2) {
                 min = arg1.get(0);
                 max = arg1.get(1);
@@ -4057,13 +4124,13 @@ dtm.array = function () {
         var indices, res = [];
         if (argsAreSingleVals(arguments)) {
             indices = argsToArray(arguments);
-        } else if (isArray(arguments[0])) {
+        } else if (isNumOrFloat32Array(arguments[0])) {
             indices = arguments[0];
-        } else if (isDtmArray(arguments[0]) && isNumArray(arguments[0].get())) {
+        } else if (isDtmArray(arguments[0]) && isNumOrFloat32Array(arguments[0].get())) {
             indices = arguments[0].get();
         }
 
-        if (!isNumArray(indices)) {
+        if (!isNumOrFloat32Array(indices)) {
             return array;
         } else {
             indices.forEach(function (i) {
@@ -4100,7 +4167,7 @@ dtm.array = function () {
         } else if (isArray(arr) || isNumber(arr)) {
             temp = temp.concat(arr);
         } else if (isDtmArray(arr)) {
-            temp = temp.concat(arr.get());
+            temp = concat(temp, arr.get());
         }
         return array.set(temp);
     };
@@ -4266,9 +4333,17 @@ dtm.array = function () {
         if (isNumber(input)) {
             params.value.push(input);
             params.value.shift();
-        } else if (isArray(input)) {
-            params.value = params.value.concat(input);
+        } else if (isFloat32Array(input)) {
+            params.value = Float32Concat(params.value, input);
             params.value = params.value.splice(input.length);
+        } else if (isArray(input)) {
+            if (isFloat32Array(params.value)) {
+                params.value = Float32Concat(params.value, input);
+                params.value = Float32Splice(params.value, input.length);
+            } else {
+                params.value = params.value.concat(input);
+                params.value = params.value.splice(input.length);
+            }
         } else if (isDtmArray(input)) {
             params.value = params.value.concat(input.get());
             params.value = params.value.splice(input.get('len'));
@@ -4561,6 +4636,9 @@ dtm.array = function () {
     // these are not really necessary, but prevents typeError when calling dtm.gen functions on pure dtm.array object
     array.type = function () { return array; };
     array.len = function () { return array; };
+
+    // set the array content here
+    array.set.apply(this, arguments);
 
     return array;
 };
@@ -4896,7 +4974,7 @@ dtm.iterator = function (arg) {
 
     // TODO: ...
     iter.urn = function () {
-        var range = _.range(iter.array.length - 1);
+        var range = dtm.gen('range', iter.array.length - 1).get();
         iter.modIdx = dtm.transform.shuffle(range);
     };
 
@@ -5068,8 +5146,8 @@ dtm.parser = {
      * @returns {array}
      */
     getSize: function (json) {
-        var col = _.size(json[0]); // header
-        var row = _.size(json);
+        var col = numProperties(json[0]); // header
+        var row = numProperties(json);
         return [col, row];
     }
 };
@@ -5199,7 +5277,7 @@ dtm.data = function (arg, cb, type) {
 
     data.set = function (res) {
         params.coll = res;
-        params.keys = _.keys(params.coll[0]);
+        params.keys = Object.keys(params.coll[0]);
         setArrays();
         setTypes();
         setSize();
@@ -5265,13 +5343,13 @@ dtm.data = function (arg, cb, type) {
                     delete window[cbName];
                     document.body.removeChild(script);
 
-                    var keys = _.keys(res);
+                    var keys = Object.keys(res);
 
                     keys.forEach(function (val) {
                         // CHECK: this is a little too case specific
                         if (val !== 'response') {
                             params.coll = res[val];
-                            params.keys = _.keys(params.coll[0]);
+                            params.keys = Object.keys(params.coll[0]);
                             setArrays();
                             setTypes();
                             setSize();
@@ -5363,7 +5441,7 @@ dtm.data = function (arg, cb, type) {
 
                             if (ext === 'csv') {
                                 params.coll = dtm.parser.csvToJson(xhr.response);
-                                keys = _.keys(params.coll[0]);
+                                keys = Object.keys(params.coll[0]);
                             } else if (ext === 'json') {
                                 var res = xhr.responseText;
 
@@ -7187,7 +7265,6 @@ dtm.model = function (name, categ) {
     return model;
 };
 
-dtm.model.load = dtm.model;
 dtm.m = dtm.model;
 
 /**
@@ -9032,7 +9109,7 @@ dtm.synth3 = function (type, wt) {
                 } else if (arg.constructor === Array) {
                     var buf = actx.createBuffer(1, arg.length, dtm.wa.actx.sampleRate);
                     var content = buf.getChannelData(0);
-                    _.forEach(content, function (val, idx) {
+                    content.forEach(function (val, idx) {
                         content[idx] = arg[idx];
                     });
 
@@ -9363,9 +9440,9 @@ dtm.synth3 = function (type, wt) {
     synth.len = synth.length = synth.duration = synth.dur;
 
     synth.attr = function (obj) {
-        var keys = _.keys(obj);
+        var keys = Object.keys(obj);
 
-        _.forEach(keys, function (key) {
+        keys.forEach(function (key) {
             if (typeof(synth[key]) !== 'undefined') {
                 synth[key] = obj[key];
             }
@@ -9689,10 +9766,10 @@ dtm.master = {
         var scale;
 
         if (arguments.length === 0) {
-            scale = _.range(12);
-        } else if (typeof(arguments[0]) === 'array') {
+            scale = dtm.gen('range', 12).get();
+        } else if (isArray(arguments[0])) {
             scale = arguments[0];
-        } else if (typeof(arguments[0]) === 'string') {
+        } else if (isString(arguments[0])) {
             scale = dtm.scales[arguments[0].toLowerCase()];
         } else {
             scale = arguments;
@@ -9706,7 +9783,7 @@ dtm.master = {
     },
 
     data: function (d) {
-        if (typeof(d) !== 'undefined') {
+        if (!isEmpty(d)) {
             dtm.master.params.data = d;
         }
 
@@ -9740,7 +9817,7 @@ dtm.master = {
     },
 
     setNumVoices: function (num) {
-        if (typeof(num) === number && num > 0) {
+        if (isInteger(num) && num > 0) {
             dtm.master.params.maxNumVoices = num;
         }
 

@@ -291,7 +291,7 @@ dtm.synth3 = function (type, wt) {
                 } else if (arg.constructor === Array) {
                     var buf = actx.createBuffer(1, arg.length, dtm.wa.actx.sampleRate);
                     var content = buf.getChannelData(0);
-                    _.forEach(content, function (val, idx) {
+                    content.forEach(function (val, idx) {
                         content[idx] = arg[idx];
                     });
 
@@ -622,9 +622,9 @@ dtm.synth3 = function (type, wt) {
     synth.len = synth.length = synth.duration = synth.dur;
 
     synth.attr = function (obj) {
-        var keys = _.keys(obj);
+        var keys = Object.keys(obj);
 
-        _.forEach(keys, function (key) {
+        keys.forEach(function (key) {
             if (typeof(synth[key]) !== 'undefined') {
                 synth[key] = obj[key];
             }

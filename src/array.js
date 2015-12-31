@@ -36,10 +36,8 @@ dtm.array = function () {
         processed: 0
     };
 
-    // public
-    var array = {
-        type: 'dtm.array'
-    };
+    var array = {};
+    //var array = function () {};
 
     array.meta = {
         type: 'dtm.array',
@@ -308,9 +306,11 @@ dtm.array = function () {
                 return array;
             } else if (isNumber(arguments[0])) {
                 params.value = [arguments[0]];
-            } else if (isArray(arguments[0])) {
-                params.value = arguments[0];
+            } else if (isNumArray(arguments[0])) {
+                params.value = new Float32Array(arguments[0]);
             } else if (isFloat32Array(arguments[0])) {
+                params.value = arguments[0];
+            } else if (isMixedArray(arguments[0])) {
                 params.value = arguments[0];
             } else if (isDtmArray(arguments[0])) {
                 params.value = arguments[0].get();
@@ -334,16 +334,14 @@ dtm.array = function () {
             params.index = params.length - 1;
         } else if (arguments.length > 1) {
             if (argsAreSingleVals(arguments)) {
-                params.value = argsToArray(arguments);
+                var args = argsToArray(arguments);
+                if (isNumArray(args)) {
+                    params.value = new Float32Array(args);
+                } else {
+                    params.value = args;
+                }
                 params.length = params.value.length;
             }
-
-            //if (typeof(arguments[0]) === 'string') {
-            //    params.value = dtm.gen.apply(this, arguments).get();
-            //    checkType(params.value);
-            //} else {
-            //
-            //}
         }
 
         return array;
@@ -374,9 +372,6 @@ dtm.array = function () {
         }
         return array;
     };
-
-    // set the array content here
-    array.set.apply(this, arguments);
 
     function generateHash(arr) {
 
@@ -539,13 +534,13 @@ dtm.array = function () {
             min = arg1;
             max = arg2;
         } else {
-            if (isNumArray(arg1)) {
+            if (isNumOrFloat32Array(arg1)) {
                 args = arg1;
-            } else if (isDtmArray(arg1) && isNumArray(arg1.get())) {
+            } else if (isDtmArray(arg1) && isNumOrFloat32Array(arg1.get())) {
                 args = arg1.get();
             }
 
-            if (isNumArray(args)) {
+            if (isNumOrFloat32Array(args)) {
                 if (args.length === 2) {
                     min = args[0];
                     max = args[1];
@@ -587,7 +582,7 @@ dtm.array = function () {
                 min = dtm.analyzer.min(arg1);
                 max = dtm.analyzer.max(arg1);
             }
-        } else if (isDtmArray(arg1) && isNumArray(arg1.get())) {
+        } else if (isDtmArray(arg1) && isNumOrFloat32Array(arg1.get())) {
             if (arg1.get('len') === 2) {
                 min = arg1.get(0);
                 max = arg1.get(1);
@@ -897,13 +892,13 @@ dtm.array = function () {
         var indices, res = [];
         if (argsAreSingleVals(arguments)) {
             indices = argsToArray(arguments);
-        } else if (isArray(arguments[0])) {
+        } else if (isNumOrFloat32Array(arguments[0])) {
             indices = arguments[0];
-        } else if (isDtmArray(arguments[0]) && isNumArray(arguments[0].get())) {
+        } else if (isDtmArray(arguments[0]) && isNumOrFloat32Array(arguments[0].get())) {
             indices = arguments[0].get();
         }
 
-        if (!isNumArray(indices)) {
+        if (!isNumOrFloat32Array(indices)) {
             return array;
         } else {
             indices.forEach(function (i) {
@@ -940,7 +935,7 @@ dtm.array = function () {
         } else if (isArray(arr) || isNumber(arr)) {
             temp = temp.concat(arr);
         } else if (isDtmArray(arr)) {
-            temp = temp.concat(arr.get());
+            temp = concat(temp, arr.get());
         }
         return array.set(temp);
     };
@@ -1106,9 +1101,17 @@ dtm.array = function () {
         if (isNumber(input)) {
             params.value.push(input);
             params.value.shift();
-        } else if (isArray(input)) {
-            params.value = params.value.concat(input);
+        } else if (isFloat32Array(input)) {
+            params.value = Float32Concat(params.value, input);
             params.value = params.value.splice(input.length);
+        } else if (isArray(input)) {
+            if (isFloat32Array(params.value)) {
+                params.value = Float32Concat(params.value, input);
+                params.value = Float32Splice(params.value, input.length);
+            } else {
+                params.value = params.value.concat(input);
+                params.value = params.value.splice(input.length);
+            }
         } else if (isDtmArray(input)) {
             params.value = params.value.concat(input.get());
             params.value = params.value.splice(input.get('len'));
@@ -1401,6 +1404,9 @@ dtm.array = function () {
     // these are not really necessary, but prevents typeError when calling dtm.gen functions on pure dtm.array object
     array.type = function () { return array; };
     array.len = function () { return array; };
+
+    // set the array content here
+    array.set.apply(this, arguments);
 
     return array;
 };

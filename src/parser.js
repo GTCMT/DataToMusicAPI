@@ -116,8 +116,8 @@ dtm.parser = {
      * @returns {array}
      */
     getSize: function (json) {
-        var col = _.size(json[0]); // header
-        var row = _.size(json);
+        var col = numProperties(json[0]); // header
+        var row = numProperties(json);
         return [col, row];
     }
 };

@@ -4,7 +4,7 @@ describe('generator', function () {
         it('should be empty', function () {
             expect(g.get('typed')).toBe(true);
             expect(g.get('pack')).toBe(false);
-            //expect(g.get()).toEqual(new Float32Array([]));
+            //expect(g.get()).toEqual(toFloat32Array([]));
             expect(g.get('len')).toBe(8);
         });
     });
@@ -91,8 +91,8 @@ describe('generator', function () {
         // TODO: design
         xdescribe('sequence', function () {
             it('should work', function () {
-                expect(dtm.gen('seq', 1, 5).get()).toEqual(new Float32Array([1, 2, 3, 4, 5]));
-                //expect(dtm.gen('seq', 1, 1).get()).toEqual(new Float32Array([1]));
+                expect(dtm.gen('seq', 1, 5).get()).toEqual(toFloat32Array([1, 2, 3, 4, 5]));
+                //expect(dtm.gen('seq', 1, 1).get()).toEqual(toFloat32Array([1]));
             });
         });
 
@@ -106,36 +106,44 @@ describe('generator', function () {
 
         describe('range', function () {
             it('should work', function () {
-                expect(dtm.gen('range').get()).toEqual(new Float32Array([0]));
+                expect(dtm.gen('range').get()).toEqual(toFloat32Array([0]));
 
                 // single arg
-                expect(dtm.gen('range', 3).get()).toEqual(new Float32Array([0, 1, 2]));
-                expect(dtm.gen('range', -3).get()).toEqual(new Float32Array([0, -1, -2]));
-                expect(dtm.gen('range', 3.5).get()).toEqual(new Float32Array([0, 1, 2, 3]));
+                expect(dtm.gen('range', 3).get()).toEqual(toFloat32Array([0, 1, 2]));
+                expect(dtm.gen('range', -3).get()).toEqual(toFloat32Array([0, -1, -2]));
+                expect(dtm.gen('range', 3.5).get()).toEqual(toFloat32Array([0, 1, 2, 3]));
 
                 // 2 arg integer
-                expect(dtm.gen('range', 1, 4).get()).toEqual(new Float32Array([1, 2, 3]));
-                expect(dtm.gen('range', 3, 0).get()).toEqual(new Float32Array([3, 2, 1]));
-                expect(dtm.gen('range', [1, 4]).get()).toEqual(new Float32Array([1, 2, 3]));
-                expect(dtm.gen('range', 0, -3).get()).toEqual(new Float32Array([0, -1, -2]));
-                expect(dtm.gen('range', 2, -2).get()).toEqual(new Float32Array([2, 1, 0, -1]));
+                expect(dtm.gen('range', 1, 4).get()).toEqual(toFloat32Array([1, 2, 3]));
+                expect(dtm.gen('range', 3, 0).get()).toEqual(toFloat32Array([3, 2, 1]));
+                expect(dtm.gen('range', [1, 4]).get()).toEqual(toFloat32Array([1, 2, 3]));
+                expect(dtm.gen('range', 0, -3).get()).toEqual(toFloat32Array([0, -1, -2]));
+                expect(dtm.gen('range', 2, -2).get()).toEqual(toFloat32Array([2, 1, 0, -1]));
 
-                expect(dtm.gen('range', 1.5, 4).get()).toEqual(new Float32Array([1.5, 2.5, 3.5]));
-                expect(dtm.gen('range', 0.5, -2).get()).toEqual(new Float32Array([0.5, -0.5, -1.5]));
-                expect(dtm.gen('range', 0, 1.5).get()).toEqual(new Float32Array([0, 1]));
-                expect(dtm.gen('range', 2, -1.5).get()).toEqual(new Float32Array([2, 1, 0, -1]));
+                expect(dtm.gen('range', 1.5, 4).get()).toEqual(toFloat32Array([1.5, 2.5, 3.5]));
+                expect(dtm.gen('range', 0.5, -2).get()).toEqual(toFloat32Array([0.5, -0.5, -1.5]));
+                expect(dtm.gen('range', 0, 1.5).get()).toEqual(toFloat32Array([0, 1]));
+                expect(dtm.gen('range', 2, -1.5).get()).toEqual(toFloat32Array([2, 1, 0, -1]));
 
                 // with intervals
-                expect(dtm.gen('range', 0, 2, 0.5).get()).toEqual(new Float32Array([0, 0.5, 1, 1.5]));
-                expect(dtm.gen('range', 0, 2, 2).get()).toEqual(new Float32Array([0]));
-                expect(dtm.gen('range', 0, 3, 2).get()).toEqual(new Float32Array([0, 2]));
-                expect(dtm.gen('range', 0, -2, 0.5).get()).toEqual(new Float32Array([0, -0.5, -1, -1.5]));
+                expect(dtm.gen('range', 0, 2, 0.5).get()).toEqual(toFloat32Array([0, 0.5, 1, 1.5]));
+                expect(dtm.gen('range', 0, 2, 2).get()).toEqual(toFloat32Array([0]));
+                expect(dtm.gen('range', 0, 3, 2).get()).toEqual(toFloat32Array([0, 2]));
+                expect(dtm.gen('range', 0, -2, 0.5).get()).toEqual(toFloat32Array([0, -0.5, -1, -1.5]));
+            });
+        });
+
+        describe('scale', function () {
+            it('should work', function () {
+                expect(dtm.gen('scale').get()).toEqual(toFloat32Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]));
+                expect(dtm.gen('scale', 'major').get()).toEqual(toFloat32Array([0, 2, 4, 5, 7, 9, 11]));
+                expect(dtm.gen('scale', 'minor').get()).toEqual(toFloat32Array([0, 2, 3, 5, 7, 8, 10]));
             });
         });
 
         describe('fibonacci', function () {
             it('should work', function () {
-                expect(dtm.gen('fibonacci', 10).get()).toEqual(new Float32Array([1, 1, 2, 3, 5, 8, 13, 21, 34, 55]));
+                expect(dtm.gen('fibonacci', 10).get()).toEqual(toFloat32Array([1, 1, 2, 3, 5, 8, 13, 21, 34, 55]));
             });
         });
     });
@@ -143,22 +151,22 @@ describe('generator', function () {
 
     describe('array operations', function () {
         it('should expand or concat', function () {
-            expect(dtm.gen('line', 3, 0, 2).concat([3, 4]).get()).toEqual(new Float32Array([0, 1, 2, 3, 4]));
-            expect(dtm.gen('line', 3, 0, 2).pad(0, 3).get()).toEqual(new Float32Array([0, 1, 2, 0, 0, 0]));
+            expect(dtm.gen('line', 3, 0, 2).concat([3, 4]).get()).toEqual(toFloat32Array([0, 1, 2, 3, 4]));
+            expect(dtm.gen('line', 3, 0, 2).pad(0, 3).get()).toEqual(toFloat32Array([0, 1, 2, 0, 0, 0]));
         });
     });
 
     describe('range param', function () {
         it('should accept single values', function () {
-            expect(dtm.gen('line', 3).range(10, 20).get()).toEqual(new Float32Array([10, 15, 20]));
+            expect(dtm.gen('line', 3).range(10, 20).get()).toEqual(toFloat32Array([10, 15, 20]));
         });
 
         it('should accept an array for the range', function () {
-            expect(dtm.gen('line', 3).range([10, 20]).get()).toEqual(new Float32Array([10, 15, 20]));
+            expect(dtm.gen('line', 3).range([10, 20]).get()).toEqual(toFloat32Array([10, 15, 20]));
         });
 
         it('should accept a dtm.array', function () {
-            expect(dtm.gen('line', 3).range(dtm.a([10, 20])).get()).toEqual(new Float32Array([10, 15, 20]));
+            expect(dtm.gen('line', 3).range(dtm.a([10, 20])).get()).toEqual(toFloat32Array([10, 15, 20]));
         });
     });
 
@@ -176,7 +184,7 @@ describe('generator', function () {
         });
 
         it('should ignore the type', function () {
-            expect(dtm.a([1, 2, 3]).type('sine').get()).toEqual([1, 2, 3]);
+            expect(dtm.a([1, 2, 3]).type('sine').get()).toEqual(toFloat32Array([1, 2, 3]));
         });
     });
 });
