@@ -106,6 +106,10 @@ describe('array helper functions', function () {
         });
 
         describe('mult', function () {
+            it('should work', function () {
+                expect(dtm.transform.mult([1,2,3])).toEqual([1,2,3]);
+            });
+
             it('should do element-wise multiplication', function () {
                 var input = [1, 2, 3];
                 var right = [2, 3, 4];

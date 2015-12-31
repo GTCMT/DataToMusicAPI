@@ -194,7 +194,11 @@ function Float32Splice(array, len) {
 }
 
 function splice(array, len) {
-
+    if (isArray(array)) {
+        return array.splice(len);
+    } else if (isFloat32Array(array)) {
+        return Float32Splice(array, len);
+    }
 }
 
 function truncateDigits(value) {

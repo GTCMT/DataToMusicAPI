@@ -652,6 +652,10 @@ dtm.transform = {
             res = new Float32Array(input.length);
         }
 
+        if (isEmpty(factor)) {
+            factor = 1;
+        }
+
         if (isNumber(factor)) {
             input.forEach(function (val, idx) {
                 res[idx] = val + factor;
@@ -685,11 +689,14 @@ dtm.transform = {
             res = new Float32Array(input.length);
         }
 
+        if (isEmpty(factor)) {
+            factor = 1;
+        }
+
         if (isNumber(factor)) {
             input.forEach(function (val, idx) {
                 res[idx] = val * factor;
             });
-
         } else if (isNumOrFloat32Array(factor)) {
             if (input.length !== factor.length) {
                 factor = dtm.transform.fit(factor, input.length, interp);
@@ -717,6 +724,10 @@ dtm.transform = {
             res = new Array(input.length);
         } else if (isFloat32Array(input)) {
             res = new Float32Array(input.length);
+        }
+
+        if (isEmpty(factor)) {
+            factor = 1;
         }
 
         if (isNumber(factor)) {
@@ -749,6 +760,10 @@ dtm.transform = {
             res = new Array(input.length);
         } else if (isFloat32Array(input)) {
             res = new Float32Array(input.length);
+        }
+
+        if (isEmpty(factor)) {
+            factor = 1;
         }
 
         if (isNumber(factor)) {

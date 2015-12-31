@@ -196,7 +196,11 @@ function Float32Splice(array, len) {
 }
 
 function splice(array, len) {
-
+    if (isArray(array)) {
+        return array.splice(len);
+    } else if (isFloat32Array(array)) {
+        return Float32Splice(array, len);
+    }
 }
 
 function truncateDigits(value) {
@@ -2368,6 +2372,10 @@ dtm.transform = {
             res = new Float32Array(input.length);
         }
 
+        if (isEmpty(factor)) {
+            factor = 1;
+        }
+
         if (isNumber(factor)) {
             input.forEach(function (val, idx) {
                 res[idx] = val + factor;
@@ -2401,11 +2409,14 @@ dtm.transform = {
             res = new Float32Array(input.length);
         }
 
+        if (isEmpty(factor)) {
+            factor = 1;
+        }
+
         if (isNumber(factor)) {
             input.forEach(function (val, idx) {
                 res[idx] = val * factor;
             });
-
         } else if (isNumOrFloat32Array(factor)) {
             if (input.length !== factor.length) {
                 factor = dtm.transform.fit(factor, input.length, interp);
@@ -2433,6 +2444,10 @@ dtm.transform = {
             res = new Array(input.length);
         } else if (isFloat32Array(input)) {
             res = new Float32Array(input.length);
+        }
+
+        if (isEmpty(factor)) {
+            factor = 1;
         }
 
         if (isNumber(factor)) {
@@ -2465,6 +2480,10 @@ dtm.transform = {
             res = new Array(input.length);
         } else if (isFloat32Array(input)) {
             res = new Float32Array(input.length);
+        }
+
+        if (isEmpty(factor)) {
+            factor = 1;
         }
 
         if (isNumber(factor)) {
@@ -7299,6 +7318,9 @@ dtm.synth = function () {
         rendered: null,
         tabLen: 8192,
         source: 'sine',
+        type: 'synth',
+        promise: null,
+
         amp: null,
         notenum: null,
         freq: null,
@@ -7705,6 +7727,15 @@ dtm.synth = function () {
             params.dur = dur;
         }
 
+        if (!isEmpty(params.promise)) {
+            params.promise.then(function () {
+                synth.play(time, dur, lookahead);
+                return synth;
+            });
+            params.promise = null;
+            return synth;
+        }
+
         // deferred
         setTimeout(function () {
             //===== type check
@@ -7841,7 +7872,7 @@ dtm.synth = function () {
 
                 nodes.src.buffer = actx.createBuffer(1, params.tabLen, params.sr);
                 nodes.src.buffer.copyToChannel(params.wavetable, 0);
-                nodes.src.loop = true;
+                nodes.src.loop = (params.type !== 'sample');
                 nodes.src.start(time);
                 nodes.src.stop(time + dur);
 
@@ -8076,6 +8107,10 @@ dtm.synth = function () {
 
     // for longer sample playback
     synth.pitch = function (src, post) {
+        src = typeCheck(src);
+        if (src) {
+            params.pitch =src;
+        }
         return synth;
     };
 
@@ -8162,13 +8197,6 @@ dtm.synth = function () {
     synth.wavetable = function (src, mode) {
         src = typeCheck(src);
         if (src) {
-            //if (src.length !== params.tabLen) {
-            //    if (src.length > 1000) {
-            //        src = dtm.transform.fit(src, params.tabLen, 'step');
-            //    } else {
-            //        src = dtm.transform.fit(src, params.tabLen, 'linear');
-            //    }
-            //}
             params.wavetable = src;
             params.tabLen = src.length;
             params.pitch = freqToPitch(params.freq);
@@ -8186,6 +8214,60 @@ dtm.synth = function () {
     synth.source = function (src) {
         if (isString(src)) {
             params.source = src;
+        }
+
+        return synth;
+    };
+
+    synth.load = function (name) {
+        if (isString(name)) {
+            params.promise = new Promise(function (resolve) {
+                if (isString(name)) {
+                    var xhr = new XMLHttpRequest();
+                    xhr.open('GET', name, true);
+                    xhr.responseType = 'arraybuffer';
+                    xhr.onreadystatechange = function () {
+                        if (xhr.readyState == 4 && xhr.status == 200) {
+                            actx.decodeAudioData(xhr.response, function (buf) {
+                                params.wavetable = buf.getChannelData(0);
+                                params.tabLen = params.wavetable.length;
+                                params.dur = params.tabLen / params.sr;
+                                resolve(synth);
+                            });
+                        }
+                    };
+
+                    xhr.send();
+                }
+                //else if (arg.constructor.name === 'ArrayBuffer') {
+                //    actx.decodeAudioData(arg, function (buf) {
+                //        params.buffer = buf;
+                //        resolve(synth);
+                //
+                //        if (typeof(cb) !== 'undefined') {
+                //            cb(synth);
+                //        }
+                //    });
+                //} else if (arg.constructor === Array) {
+                //    var buf = actx.createBuffer(1, arg.length, dtm.wa.actx.sampleRate);
+                //    var content = buf.getChannelData(0);
+                //    content.forEach(function (val, idx) {
+                //        content[idx] = arg[idx];
+                //    });
+                //
+                //    params.buffer = buf;
+                //    resolve(synth);
+                //
+                //    if (typeof(cb) !== 'undefined') {
+                //        cb(synth);
+                //    }
+                //}
+            });
+
+            params.source = 'name';
+            params.type = 'sample';
+
+            params.pitch = toFloat32Array(1.0);
         }
 
         return synth;

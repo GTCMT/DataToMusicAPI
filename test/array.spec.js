@@ -252,15 +252,15 @@ describe('array object', function () {
 
             describe('normalize to 0-1 with the domain range specified', function () {
                 it('should have the value of 0.7', function () {
-                    expect(dtm.a(7).normalize(0, 10).get(0)).toBeCloseTo(0.7, 0.0001);
+                    expect(dtm.a(7).normalize(0, 10).get()).toEqual(toFloat32Array(0.7));
                 });
 
                 it('should work the same with dtm.array', function () {
-                    expect(dtm.a(7).normalize(dtm.a(0,10)).get(0)).toBeCloseTo(0.7, 0.0001);
+                    expect(dtm.a(7).normalize(dtm.a(0, 10)).get()).toEqual(toFloat32Array(0.7));
                 });
 
                 it('should work the same with dtm.gen', function () {
-                    expect(dtm.a(7).normalize(dtm.gen('line').sc(0,10)).get(0)).toBeCloseTo(0.7, 0.0001);
+                    expect(dtm.a(7).normalize(dtm.gen('line').sc(0, 10)).get()).toEqual(toFloat32Array(0.7));
                 });
             });
         });
