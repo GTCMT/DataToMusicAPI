@@ -1093,6 +1093,27 @@ dtm.transform = {
         return res;
     },
 
+    //linslide: function (arr, up, down) {
+    //    var res = [arr[0]];
+    //
+    //    if (!isInteger(up)) {
+    //        up = 0;
+    //    }
+    //
+    //    if (!isInteger(down)) {
+    //        down = 0;
+    //    }
+    //
+    //    for (var i = 1; i < arr.length; i++) {
+    //        if (arr[i] < arr[i-1]) {
+    //            res[i] = (arr[i-1] + arr[i]) / 2.0;
+    //        } else {
+    //            res[i] = arr[i];
+    //        }
+    //    }
+    //    return res;
+    //},
+
     /**
      * Shifts the positions of array contents.
      * @function module:transform#shift

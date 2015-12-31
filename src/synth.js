@@ -24,7 +24,7 @@ dtm.synth = function () {
         kr: 4410,
         dur: 1.0,
         offset: 0.0,
-        repeat: 1, // TODO: inclusive?
+        repeat: 1, // TODO: design - inclusive?
 
         wavetable: null,
         rendered: null,
@@ -134,6 +134,10 @@ dtm.synth = function () {
             res[i] = v * params.tabLen / params.sr;
         });
         return res;
+    }
+
+    function pitchToFreq(pitchArr) {
+
     }
 
     function setParamCurve (time, dur, curves) {
@@ -908,10 +912,12 @@ dtm.synth = function () {
 
     synth.wavetable = function (src, mode) {
         src = typeCheck(src);
-        if (src) {
+        if (isFloat32Array(src)) {
             params.wavetable = src;
             params.tabLen = src.length;
-            params.pitch = freqToPitch(params.freq);
+            params.pitch = freqToPitch(params.freq); // ?
+        } else if (isFunction(src)) {
+            params.wavetable = toFloat32Array(src(dtm.array(params.wavetable)));
         } else {
             params.wavetable = new Float32Array(params.tabLen);
             params.wavetable.forEach(function (v, i) {
@@ -1215,6 +1221,9 @@ dtm.synth = function () {
      */
     synth.get = function (param) {
         switch (param) {
+            case 'wt':
+            case 'wavetable':
+                return dtm.array(params.wavetable);
             case 'dur':
                 return params.dur;
             case 'nn':
@@ -1227,8 +1236,7 @@ dtm.synth = function () {
         }
     };
 
-    //synth.wt.apply(this, arguments);
-
+    synth.load.apply(this, arguments);
     return synth;
 };
 

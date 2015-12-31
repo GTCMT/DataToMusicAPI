@@ -65,16 +65,38 @@ describe('generator', function () {
     });
 
     describe('random', function () {
-        it('should be within the range', function () {
+        it('should work', function () {
+            expect(dtm.gen('random').get('len')).toBe(1);
+            expect(dtm.gen('random').get(0)).not.toBeLessThan(0.0);
+            expect(dtm.gen('random').get(0)).not.toBeGreaterThan(1.0);
+        });
+
+        xit('should be within the range', function () {
             var res = dtm.gen('random', 5, -3, 3).get();
             expect(dtm.analyzer.min(res)).not.toBeLessThan(-3);
             expect(dtm.analyzer.max(res)).not.toBeGreaterThan(3);
         });
 
-        it('should be work with negatives', function () {
+        xit('should be work with negatives', function () {
             var res = dtm.gen('random', 5, -3, 0).get();
             expect(dtm.analyzer.min(res)).not.toBeLessThan(-3);
             expect(dtm.analyzer.max(res)).not.toBeGreaterThan(0);
+        });
+    });
+
+    describe('randi', function () {
+        it('should work', function () {
+            expect(dtm.gen('randi').get('len')).toBe(1);
+            expect(dtm.gen('randi').get(0)).not.toBeLessThan(0);
+            expect(dtm.gen('randi').get(0)).not.toBeGreaterThan(1);
+
+            expect(dtm.gen('randi', 3).get('len')).toBe(1);
+            expect(dtm.gen('randi', 3).get(0)).not.toBeLessThan(0);
+            expect(dtm.gen('randi', 3).get(0)).not.toBeGreaterThan(2);
+
+            expect(dtm.gen('randi', 1, 3).get('len')).toBe(1);
+            expect(dtm.gen('randi', 1, 3).get(0)).not.toBeLessThan(1);
+            expect(dtm.gen('randi', 1, 3).get(0)).not.toBeGreaterThan(2);
         });
     });
 
@@ -137,6 +159,9 @@ describe('generator', function () {
             it('should work', function () {
                 expect(dtm.gen('scale').get()).toEqual(toFloat32Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]));
                 expect(dtm.gen('scale', 'major').get()).toEqual(toFloat32Array([0, 2, 4, 5, 7, 9, 11]));
+                expect(dtm.gen('scale', 'major', 'C').get()).toEqual(toFloat32Array([0, 2, 4, 5, 7, 9, 11]));
+                expect(dtm.gen('scale', 'major', 0).get()).toEqual(toFloat32Array([0, 2, 4, 5, 7, 9, 11]));
+                expect(dtm.gen('scale', 'major', 6).get()).toEqual(toFloat32Array([1, 3, 5, 6, 8, 10, 11]));
                 expect(dtm.gen('scale', 'minor').get()).toEqual(toFloat32Array([0, 2, 3, 5, 7, 8, 10]));
             });
         });

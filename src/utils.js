@@ -167,6 +167,10 @@ function toFloat32Array(src) {
     }
 }
 
+function fromFloat32Array(src) {
+
+}
+
 function Float32Concat(first, second) {
     var firstLen = first.length;
     var res = new Float32Array(firstLen + second.length);
@@ -179,6 +183,13 @@ function Float32Concat(first, second) {
 
 function concat(first, second) {
     if (isFloat32Array(first) || isFloat32Array(second)) {
+        if (isNumber(first)) {
+            first = new Float32Array([first]);
+        }
+        if (isNumber(second)) {
+            second = new Float32Array([second]);
+        }
+
         return Float32Concat(first, second);
     } else {
         return first.concat(second);

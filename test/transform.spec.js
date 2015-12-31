@@ -476,4 +476,11 @@ describe('array helper functions', function () {
             expect(dtm.transform.split([123, '456'])).toEqual(['1', '2', '3', '4', '5', '6']);
         });
     });
+
+    xdescribe('linslide', function () {
+        it('should work', function () {
+            expect(dtm.transform.linslide([1,0,0,1],0,1)).toEqual([1,0.5,0,1]);
+            //expect(dtm.transform.linslide([1,0,0,1],0,2)).toEqual([1,0.66,0.33]);
+        });
+    });
 });

@@ -208,10 +208,13 @@ describe('array object', function () {
         });
 
         // TODO: broken
-        xdescribe('concat', function () {
-            var a = dtm.array([1, 2, 3]);
+        describe('concat', function () {
             it('should work', function () {
-                expect(a.concat(dtm.a([4, 5])).get()).toEqual([1, 2, 3, 4, 5]);
+                expect(dtm.array([1,2]).concat([3,4]).get()).toEqual(toFloat32Array([1,2,3,4]));
+                expect(dtm.array([1,2]).concat(3).get()).toEqual(toFloat32Array([1,2,3]));
+                expect(dtm.array([1,2]).concat(dtm.a([3,4])).get()).toEqual(toFloat32Array([1,2,3,4]));
+
+                //expect(dtm.array([1,2]).concat(['foo', 'bar']).get()).toEqual([1,2,'foo','bar']);
             });
         });
     });

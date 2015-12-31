@@ -10,7 +10,6 @@
 dtm.generator = function () {
     var paramsExt = {
         type: null,
-        length: 8,
         min: 0.0,
         max: 1.0,
 
@@ -19,6 +18,7 @@ dtm.generator = function () {
         interval: null,
 
         scale: 'chromatic',
+        transpose: 0,
 
         //step: 0.0,
         amp: 1.0,
@@ -62,13 +62,14 @@ dtm.generator = function () {
             'string', 'str', 's', 'text',
             'character', 'characters', 'chars', 'char', 'c'
         ],
-        oscil: ['sin', 'sine', 'cos', 'cosine', 'tri', 'triangle', 'saw', 'invSaw', 'noise', 'square', 'sq'],
+        oscil: ['sin', 'sine', 'cos', 'cosine', 'tri', 'triangle', 'saw', 'invSaw', 'noise', 'square', 'sq', 'harm', 'harmonic'],
         const: ['zeros', 'zeroes', 'ones', 'constant', 'constants', 'const', 'consts'],
         linish: ['line', 'saw', 'rise', 'decay', 'fall', 'invSaw'],
         noLength: ['string', 'str', 's', 'character', 'characters', 'chars', 'char', 'c', 'range', 'seq', 'scale', 'mode', 'chord'],
         noRange: [],
         noMinMax: [],
-        noMinMaxDir: ['rise', 'decay', 'fall', 'noise', 'random', 'rand', 'randi'],
+        noMinMaxDir: ['rise', 'decay', 'fall', 'noise'],
+        random: ['random', 'rand', 'randi'],
         string: ['string', 'str', 's', 'character', 'characters', 'chars', 'char', 'c', 'text']
     };
 
@@ -122,12 +123,12 @@ dtm.generator = function () {
             return res;
         }
 
-        function random(len, min, max, amp, round) {
+        function random(len, min, max, amp, floor) {
             var res = new Float32Array(len);
             for (var i = 0; i < len; i++) {
                 var val = Math.random() * (max - min) + min;
-                if (round) {
-                    res[i] = Math.round(val) * amp;
+                if (floor) {
+                    res[i] = Math.floor(val) * amp;
                 } else {
                     res[i] = val * amp;
                 }
@@ -155,7 +156,7 @@ dtm.generator = function () {
             }
 
             var steps = Math.floor((end - start) / interval) + 1;
-            params.length = steps;
+            params.len = steps;
             //console.log(steps);
             var res = new Float32Array();
 
@@ -186,7 +187,15 @@ dtm.generator = function () {
             return res;
         }
 
-        function scale(name) {
+        function transposeScale(scale, factor) {
+            var shifted = scale.map(function (v) {
+                return dtm.val.mod(v + factor, 12);
+            });
+
+            return dtm.transform.sort(shifted);
+        }
+
+        function scale(name, transpose) {
             var res = null;
 
             var scales = {
@@ -205,12 +214,16 @@ dtm.generator = function () {
                 wholetone: {
                     names: ['wholetone', 'whole', 'wt'],
                     values: [0, 2, 4, 6, 8, 10]
+                },
+                majpenta: {
+                    names: ['penta', 'pent', 'majpenta'],
+                    values: [0, 2, 4, 7, 9]
                 }
             };
 
             objForEach(scales, function (v) {
                 if (v.names.indexOf(name.toLowerCase()) !== -1) {
-                    res = new Float32Array(v.values);
+                    res = new Float32Array(transposeScale(v.values, transpose));
                 }
             });
 
@@ -234,7 +247,7 @@ dtm.generator = function () {
         params.value = [];
 
         var sorted;
-        if (isTypeOf('noMinMaxDir')) {
+        if (isTypeOf('noMinMaxDir') || isTypeOf('random')) {
             sorted = dtm.transform.sort([params.min, params.max]);
         }
 
@@ -242,38 +255,51 @@ dtm.generator = function () {
         switch (params.type) {
             case 'line':
             case 'saw':
-                params.value = line(params.length, params.min, params.max);
+                params.value = line(params.len, params.min, params.max);
                 break;
 
             case 'rise':
-                params.value = line(params.length, sorted[0], sorted[1]);
+                params.value = line(params.len, sorted[0], sorted[1]);
                 break;
 
             case 'decay':
             case 'fall':
-                params.value = line(params.length, sorted[1], sorted[0]);
+                params.value = line(params.len, sorted[1], sorted[0]);
+                break;
+
+            case 'adsr':
+            case 'ADSR':
                 break;
 
             case 'sin':
             case 'sine':
-                params.value = sin(params.length, params.min, params.max, params.amp, params.cycle, paramsExt.phase);
+                params.value = sin(params.len, params.min, params.max, params.amp, params.cycle, paramsExt.phase);
                 break;
 
             case 'cos':
             case 'cosine':
-                params.value = cos(params.length, params.min, params.max, params.amp, params.cycle, 0.00);
+                params.value = cos(params.len, params.min, params.max, params.amp, params.cycle, 0.00);
+                break;
+
+            case 'tri':
+            case 'triangle':
+                break;
+
+            case 'harm':
+            case 'harmonic':
                 break;
 
             case 'rand':
             case 'random':
-                params.value = random(params.length, sorted[0], sorted[1], 1.0, false);
+                params.value = random(params.len, sorted[0], sorted[1], 1.0, false);
                 break;
+
             case 'noise':
-                params.value = random(params.length, sorted[0], sorted[1], params.amp, false);
+                params.value = random(params.len, sorted[0], sorted[1], params.amp, false);
                 break;
 
             case 'randi':
-                params.value = random(params.length, sorted[0], sorted[1], 1.0, true);
+                params.value = random(params.len, sorted[0], sorted[1], 1.0, true);
                 break;
 
             case 'range':
@@ -285,24 +311,24 @@ dtm.generator = function () {
                 break;
 
             case 'scale':
-                params.value = scale(paramsExt.scale);
+                params.value = scale(paramsExt.scale, paramsExt.transpose);
                 break;
 
             case 'fibonacci':
-                params.value = fibonacci(params.length);
+                params.value = fibonacci(params.len);
                 break;
 
             case 'zeros':
             case 'zeroes':
-                params.value = constant(params.length, 0);
+                params.value = constant(params.len, 0);
                 break;
 
             case 'ones':
-                params.value = constant(params.length, 1);
+                params.value = constant(params.len, 1);
                 break;
 
             case 'const':
-                params.value = constant(params.length, params.const);
+                params.value = constant(params.len, params.const);
                 break;
 
             case 'string':
@@ -346,7 +372,7 @@ dtm.generator = function () {
     generator.len = function (length) {
         var len = parseInt(length);
         if (!isNaN(len) && len > 0) {
-            params.length = len;
+            params.len = len;
         }
 
         process();
@@ -485,10 +511,22 @@ dtm.generator = function () {
         if (isSingleVal(value)) {
             params.const = value;
         }
+        process();
+        return generator;
+    };
+
+    generator.transpose = function (value) {
+        if (isInteger(value)) {
+            paramsExt.transpose = value;
+        } else if (isDtmArray(value)) {
+            paramsExt.transpose = value.get(0);
+        }
+        process();
         return generator;
     };
 
     // TODO: do more readable type check
+    params.len = 8;
 
     if (arguments.length >= 1) {
         if (isObject(arguments[0])) {
@@ -525,7 +563,60 @@ dtm.generator = function () {
         }
     }
 
-    if (arguments.length >= 2) {
+    if (isTypeOf('random')) {
+        params.len = 1;
+        params.min = 0.0;
+
+        if (params.type === 'randi') {
+            params.max = 2;
+        } else {
+            params.max = 1.0;
+        }
+
+        if (arguments.length === 2 && isNumber(arguments[1])) {
+            params.max = arguments[1];
+        } else if (arguments.length === 3) {
+            if (isNumber(arguments[1])) {
+                params.min = arguments[1];
+            }
+            if (isNumber(arguments[2])) {
+                params.max = arguments[2];
+            }
+        }
+    } else if (isTypeOf('oscil')) {
+        params.len = 128;
+
+        if (arguments.length >= 3) {
+            if (isArray(arguments[2])) {
+                if (arguments[2].length === 1) {
+                    generator.amp(arguments[2][0]);
+                } else if (arguments[2].length === 2) {
+                    generator.min(arguments[2][0]);
+                    generator.max(arguments[2][1]);
+                }
+            } else {
+                generator.amp(arguments[2]);
+            }
+        }
+
+        if (arguments.length === 3) {
+            // set as amplitude
+            generator.range(-1.0, 1.0);
+            generator.amp(arguments[2]);
+        }
+
+        if (arguments.length === 4) {
+            if (isArray(arguments[3])) {
+                if (arguments[3].length === 2) {
+                    generator.min(arguments[3][0]);
+                    generator.max(arguments[3][1]);
+                }
+            } else {
+                generator.range(-1.0, 1.0);
+                generator.cycle(arguments[3]);
+            }
+        }
+    } else if (arguments.length >= 2) {
         if (isTypeOf('noLength')) {
             if (isTypeOf('string')) {
                 if (isString(arguments[1])) {
@@ -537,6 +628,7 @@ dtm.generator = function () {
             } else if (params.type === 'range') {
                 if (isNumArray(arguments[1])) {
                     if (arguments[1].length === 1) {
+                        // TODO: reduce the redundant process()
                         generator.start(0.0);
                         generator.end(arguments[1][0]);
                     } else if (arguments[1].length >= 2) {
@@ -570,45 +662,17 @@ dtm.generator = function () {
             } else if (params.type === 'scale') {
                 if (isString(arguments[1])) {
                     paramsExt.scale = arguments[1];
-                    process();
                 }
+                if (isInteger(arguments[2])) {
+                    paramsExt.transpose = arguments[2];
+                }
+                //process();
             }
         } else {
             // set the length from arg 1
             generator.len(arguments[1]);
 
-            if (isTypeOf('oscil')) {
-                if (arguments.length >= 3) {
-                    if (isArray(arguments[2])) {
-                        if (arguments[2].length === 1) {
-                            generator.amp(arguments[2][0]);
-                        } else if (arguments[2].length === 2) {
-                            generator.min(arguments[2][0]);
-                            generator.max(arguments[2][1]);
-                        }
-                    } else {
-                        generator.amp(arguments[2]);
-                    }
-                }
-
-                if (arguments.length === 3) {
-                    // set as amplitude
-                    generator.range(-1.0, 1.0);
-                    generator.amp(arguments[2]);
-                }
-
-                if (arguments.length === 4) {
-                    if (isArray(arguments[3])) {
-                        if (arguments[3].length === 2) {
-                            generator.min(arguments[3][0]);
-                            generator.max(arguments[3][1]);
-                        }
-                    } else {
-                        generator.range(-1.0, 1.0);
-                        generator.cycle(arguments[3]);
-                    }
-                }
-            } else if (isTypeOf('const')) {
+            if (isTypeOf('const')) {
                 if (isSingleVal(arguments[2])) {
                     params.const = arguments[2];
                 }

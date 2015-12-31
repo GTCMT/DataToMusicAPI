@@ -61,9 +61,9 @@ dtm.array = function () {
     array.get = function (param) {
         if (isNumber(param)) {
             // TODO: support multiple single val arguments
-            if (param < 0 || param >= params.length) {
+            if (param < 0 || param >= params.len) {
                 dtm.log('Index out of range');
-                return params.value[dtm.value.mod(param, params.length)];
+                return params.value[dtm.value.mod(param, params.len)];
             } else {
                 return params.value[param];
             }
@@ -74,7 +74,7 @@ dtm.array = function () {
             // TODO: only accept integers
 
             indices.forEach(function (i) {
-                res.push(params.value[dtm.value.mod(i, params.length)]);
+                res.push(params.value[dtm.value.mod(i, params.len)]);
             });
 
             return res;
@@ -105,7 +105,7 @@ dtm.array = function () {
 
                 case 'len':
                 case 'length':
-                    return params.length;
+                    return params.len;
 
                 case 'hash':
                     return params.hash;
@@ -175,11 +175,11 @@ dtm.array = function () {
                 case 'next':
                     // TODO: increment after return
                     if (isEmpty(arguments[1])) {
-                        params.index = dtm.value.mod(params.index + params.step, params.length);
+                        params.index = dtm.value.mod(params.index + params.step, params.len);
                         return params.value[params.index];
                     } else if (isNumber(arguments[1]) && arguments[1] >= 1) {
                         // TODO: incr w/ the step size AFTER RETURN
-                        params.index = dtm.value.mod(params.index + params.step, params.length);
+                        params.index = dtm.value.mod(params.index + params.step, params.len);
                         blockArray = dtm.transform.getBlock(params.value, params.index, arguments[1]);
                         return dtm.array(blockArray);
                     } else {
@@ -188,7 +188,7 @@ dtm.array = function () {
 
                 case 'prev':
                 case 'previous':
-                    params.index = dtm.value.mod(params.index - params.step, params.length);
+                    params.index = dtm.value.mod(params.index - params.step, params.len);
                     return params.value[params.index];
 
                 case 'palindrome':
@@ -196,7 +196,7 @@ dtm.array = function () {
 
                 case 'rand':
                 case 'random':
-                    params.index = dtm.val.randi(0, params.length - 1);
+                    params.index = dtm.val.randi(0, params.len - 1);
                     return params.value[params.index];
 
                 case 'urn':
@@ -236,7 +236,7 @@ dtm.array = function () {
 
                 case 'blockNext':
                     // TODO: incr w/ the step size AFTER RETURN
-                    params.index = dtm.value.mod(params.index + params.step, params.length);
+                    params.index = dtm.value.mod(params.index + params.step, params.len);
                     blockArray = dtm.transform.getBlock(params.value, params.index, arguments[1]);
                     return dtm.array(blockArray);
 
@@ -330,8 +330,8 @@ dtm.array = function () {
 
             generateHash(params.value);
 
-            params.length = params.value.length;
-            params.index = params.length - 1;
+            params.len = params.value.length;
+            params.index = params.len - 1;
         } else if (arguments.length > 1) {
             if (argsAreSingleVals(arguments)) {
                 var args = argsToArray(arguments);
@@ -340,7 +340,7 @@ dtm.array = function () {
                 } else {
                     params.value = args;
                 }
-                params.length = params.value.length;
+                params.len = params.value.length;
             }
         }
 
@@ -427,7 +427,7 @@ dtm.array = function () {
      */
     array.index = function (val) {
         if (isNumber(val)) {
-            params.index = dtm.value.mod(Math.round(val), params.length);
+            params.index = dtm.value.mod(Math.round(val), params.len);
         }
         return array;
     };
@@ -902,7 +902,7 @@ dtm.array = function () {
             return array;
         } else {
             indices.forEach(function (i) {
-                res.push(params.value[dtm.value.mod(i, params.length)]);
+                res.push(params.value[dtm.value.mod(i, params.len)]);
             });
             return array.set(res);
         }
@@ -929,15 +929,13 @@ dtm.array = function () {
         if (isEmpty(arr)) {
             arr = [];
         }
-        var temp = params.value;
-        if (isFloat32Array(params.value) || isFloat32Array(arr)) {
-            temp = Float32Concat(params.value, arr);
-        } else if (isArray(arr) || isNumber(arr)) {
-            temp = temp.concat(arr);
-        } else if (isDtmArray(arr)) {
-            temp = concat(temp, arr.get());
+
+        if (isDtmArray(arr)) {
+            params.value = concat(params.value, arr.get());
+        } else {
+            params.value = concat(params.value, arr);
         }
-        return array.set(temp);
+        return array.set(params.value);
     };
 
     array.append = array.concat;
@@ -955,7 +953,7 @@ dtm.array = function () {
     array.rep = array.repeat;
 
     array.fitrep = function (count) {
-        return array.set(dtm.transform.fit(dtm.transform.repeat(params.value, count), params.length));
+        return array.set(dtm.transform.fit(dtm.transform.repeat(params.value, count), params.len));
     };
 
     array.frep = array.fitrep;
@@ -1286,12 +1284,11 @@ dtm.array = function () {
     // CHECK: this is different from the trnsf function
     /**
      * Pitch quantize the array values.
-     * @function module:array#pq | pitchQuantize | pitchScale
+     * @function module:array#pq | pitchq
      * @param scale {array|string}
-     * @param [round=false] {boolean}
      * @returns {dtm.array}
      */
-    array.pq = function (scale, round) {
+    array.pq = function (scale) {
         var scales = {
             "major": [0, 4, 7],
             "minor": [0, 3, 7],
@@ -1301,18 +1298,21 @@ dtm.array = function () {
             "7sus4": [0, 5, 7, 10]
         };
 
-        if (arguments.length === 0) {
-            scale = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
-        } else if (isNumArray(scale)) {
+        if (isEmpty(scale)) {
+            scale = dtm.gen('range', 12).get();
+        } else if (isDtmArray(scale) && isNumOrFloat32Array(scale.get())) {
+            scale = scale.get();
+        } else if (isNumOrFloat32Array(scale)) {
 
-        } else if (isString(scale)) {
-            scale = scales[scale.toLowerCase()];
         }
+        //else if (isString(scale)) {
+        //    scale = scales[scale.toLowerCase()];
+        //}
 
-        return array.set(dtm.transform.pq(params.value, scale, round));
+        return array.set(dtm.transform.pq(params.value, scale));
     };
 
-    array.pitchScale = array.pitchQuantize = array.pq;
+    array.pitchquantize = array.pq;
 
     array.mtof = function () {
         return array.set(dtm.transform.mtof(params.value));
