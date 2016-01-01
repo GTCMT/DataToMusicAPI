@@ -43,6 +43,16 @@ function isFunction(value) {
     return typeof(value) === 'function';
 }
 
+function isPromise(obj) {
+    if (isObject(obj)) {
+        if (obj.constructor === Promise) {
+            return true;
+        }
+    } else {
+        return false;
+    }
+}
+
 function isArray(value) {
     return Array.isArray(value);
 }
@@ -168,7 +178,7 @@ function toFloat32Array(src) {
 }
 
 function fromFloat32Array(src) {
-
+    return Array.prototype.slice.call(src);
 }
 
 function Float32Concat(first, second) {

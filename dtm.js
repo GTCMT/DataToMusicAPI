@@ -45,6 +45,16 @@ function isFunction(value) {
     return typeof(value) === 'function';
 }
 
+function isPromise(obj) {
+    if (isObject(obj)) {
+        if (obj.constructor === Promise) {
+            return true;
+        }
+    } else {
+        return false;
+    }
+}
+
 function isArray(value) {
     return Array.isArray(value);
 }
@@ -170,7 +180,7 @@ function toFloat32Array(src) {
 }
 
 function fromFloat32Array(src) {
-
+    return Array.prototype.slice.call(src);
 }
 
 function Float32Concat(first, second) {
@@ -2183,13 +2193,17 @@ dtm.transform = {
         //res.length = len;
         var mult = len / arr.length;
 
+        var inNumItv = arr.length - 1;
+        var outNumItv = len - 1;
+        var intermLen = inNumItv * outNumItv + 1;
+
+        if (interp === 'linear' && intermLen > 104857600) {
+            interp = 'step';
+        }
+
         switch (interp) {
             default:
             case 'linear':
-                var inNumItv = arr.length - 1;
-                var outNumItv = len - 1;
-
-                var intermLen = inNumItv * outNumItv + 1;
                 var intermArr = null;
 
                 if (arr.constructor === Array) {
@@ -2257,7 +2271,7 @@ dtm.transform = {
                 }
                 break;
             case 'cubic':
-                if (arr.length > len) {
+                if (arr.length >= len) {
                     res = dtm.transform.fit(arr, len, 'linear');
                 } else {
                     var i = 0;
@@ -2319,7 +2333,9 @@ dtm.transform = {
      * -> [4, 2, 0, -2, 0, 2, 4, 3.666, 3.333, 3]
      */
     stretch: function (arr, factor, interp) {
-        interp = interp || 'linear';
+        if (!isString(interp)) {
+            interp = 'linear';
+        }
 
         var targetLen = Math.round(arr.length * factor);
         if (targetLen == 0) {
@@ -2795,25 +2811,15 @@ dtm.transform = {
     repeat: function (input, count) {
         var res = [];
 
-        if (!count) {
+        if (!isInteger(count) || count < 1) {
             count = 1;
         }
 
         for (var i = 0; i < count; i++) {
-            if (isArray(input)) {
-                res = res.concat(input);
-            } else if (isFloat32Array(input)) {
-                input.forEach(function (v) {
-                    res = res.concat(v);
-                });
-            }
+            res = concat(res, input);
         }
 
-        if (isArray(input)) {
-            return res;
-        } else if (isFloat32Array(input)) {
-            return new Float32Array(res);
-        }
+        return res;
     },
 
     // TODO: it should just have one behavior
@@ -4294,13 +4300,33 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.repeat = function (count) {
+        if (isDtmArray(count) && count.get('len') === 1) {
+            count = count.get(0);
+        }
+
+        if (!isInteger(count)) {
+            count = 1;
+        }
+
         return array.set(dtm.transform.repeat(params.value, count));
     };
 
     array.rep = array.repeat;
 
-    array.fitrep = function (count) {
-        return array.set(dtm.transform.fit(dtm.transform.repeat(params.value, count), params.len));
+    array.fitrep = function (count, interp) {
+        if (isDtmArray(count) && count.get('len') === 1) {
+            count = count.get(0);
+        }
+
+        if (!isInteger(count)) {
+            count = 1;
+        }
+
+        if (!isString(interp)) {
+            interp = 'linear';
+        }
+
+        return array.set(dtm.transform.fit(dtm.transform.repeat(params.value, count), params.len, interp));
     };
 
     array.frep = array.fitrep;
@@ -4391,6 +4417,8 @@ dtm.array = function () {
     array.mirror = function () {
         return array.concat(dtm.transform.reverse(params.value));
     };
+
+    array.mir = array.mirror;
 
     /**
      * Flips the array contents horizontally.
@@ -7395,8 +7423,8 @@ dtm.m = dtm.model;
 dtm.synth = function () {
     var synth = {
         type: 'dtm.synth',
-        rendered: null,
-        promise: null,
+        //rendered: null,
+        //promise: null,
 
         meta: {
             type: 'dtm.synth'
@@ -7416,6 +7444,7 @@ dtm.synth = function () {
         source: 'sine',
         type: 'synth',
         promise: null,
+        pending: false,
 
         amp: null,
         notenum: null,
@@ -7827,12 +7856,22 @@ dtm.synth = function () {
             params.dur = dur;
         }
 
-        if (!isEmpty(params.promise)) {
-            params.promise.then(function () {
+        //if (!isEmpty(params.promise)) {
+        //    params.promise.then(function () {
+        //        console.log(params.promise);
+        //        synth.play(time, dur, lookahead);
+        //        return synth;
+        //    });
+        //    params.promise = null;
+        //    return synth;
+        //}
+
+        if (params.pending) {
+            params.pending = false;
+            params.promise.then(function (v) {
                 synth.play(time, dur, lookahead);
                 return synth;
             });
-            params.promise = null;
             return synth;
         }
 
@@ -7850,7 +7889,12 @@ dtm.synth = function () {
             }
 
             if (params.autoDur) {
-                params.dur = params.clock.get('dur');
+                if (params.type === 'sample') {
+                    params.tabLen = params.wavetable.length;
+                    params.dur = params.tabLen / params.sr / params.pitch;
+                } else if (params.clock) {
+                    params.dur = params.clock.get('dur');
+                }
             }
 
             if (!isNumber(dur) || dur <= 0) {
@@ -8301,7 +8345,13 @@ dtm.synth = function () {
             params.tabLen = src.length;
             params.pitch = freqToPitch(params.freq); // ?
         } else if (isFunction(src)) {
-            params.wavetable = toFloat32Array(src(dtm.array(params.wavetable)));
+            if (params.promise) {
+                params.promise.then(function () {
+                    params.wavetable = toFloat32Array(src(dtm.array(params.wavetable)));
+                });
+            } else {
+                params.wavetable = toFloat32Array(src(dtm.array(params.wavetable)));
+            }
         } else {
             params.wavetable = new Float32Array(params.tabLen);
             params.wavetable.forEach(function (v, i) {
@@ -8323,55 +8373,52 @@ dtm.synth = function () {
 
     synth.load = function (name) {
         if (isString(name)) {
-            params.promise = new Promise(function (resolve) {
-                if (isString(name)) {
-                    var xhr = new XMLHttpRequest();
-                    xhr.open('GET', name, true);
-                    xhr.responseType = 'arraybuffer';
-                    xhr.onreadystatechange = function () {
-                        if (xhr.readyState == 4 && xhr.status == 200) {
-                            actx.decodeAudioData(xhr.response, function (buf) {
-                                params.wavetable = buf.getChannelData(0);
-                                params.tabLen = params.wavetable.length;
-                                params.dur = params.tabLen / params.sr;
-                                resolve(synth);
-                            });
-                        }
-                    };
+            params.pending = true;
 
-                    xhr.send();
-                }
-                //else if (arg.constructor.name === 'ArrayBuffer') {
-                //    actx.decodeAudioData(arg, function (buf) {
-                //        params.buffer = buf;
-                //        resolve(synth);
-                //
-                //        if (typeof(cb) !== 'undefined') {
-                //            cb(synth);
-                //        }
-                //    });
-                //} else if (arg.constructor === Array) {
-                //    var buf = actx.createBuffer(1, arg.length, dtm.wa.actx.sampleRate);
-                //    var content = buf.getChannelData(0);
-                //    content.forEach(function (val, idx) {
-                //        content[idx] = arg[idx];
-                //    });
-                //
-                //    params.buffer = buf;
-                //    resolve(synth);
-                //
-                //    if (typeof(cb) !== 'undefined') {
-                //        cb(synth);
-                //    }
-                //}
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', name, true);
+            xhr.responseType = 'arraybuffer';
+            params.promise = new Promise(function (resolve) {
+                xhr.onreadystatechange = function () {
+                    if (xhr.readyState == 4 && xhr.status == 200) {
+                        actx.decodeAudioData(xhr.response, function (buf) {
+                            params.wavetable = buf.getChannelData(0);
+                            params.autoDur = true;
+                            resolve(synth);
+                        });
+
+                        params.source = name;
+                        params.type = 'sample';
+                        params.pitch = toFloat32Array(1.0);
+                    }
+                };
             });
 
-            params.source = 'name';
-            params.type = 'sample';
-
-            params.pitch = toFloat32Array(1.0);
+            xhr.send();
         }
-
+        //else if (arg.constructor.name === 'ArrayBuffer') {
+        //    actx.decodeAudioData(arg, function (buf) {
+        //        params.buffer = buf;
+        //        resolve(synth);
+        //
+        //        if (typeof(cb) !== 'undefined') {
+        //            cb(synth);
+        //        }
+        //    });
+        //} else if (arg.constructor === Array) {
+        //    var buf = actx.createBuffer(1, arg.length, dtm.wa.actx.sampleRate);
+        //    var content = buf.getChannelData(0);
+        //    content.forEach(function (val, idx) {
+        //        content[idx] = arg[idx];
+        //    });
+        //
+        //    params.buffer = buf;
+        //    resolve(synth);
+        //
+        //    if (typeof(cb) !== 'undefined') {
+        //        cb(synth);
+        //    }
+        //}
         return synth;
     };
 

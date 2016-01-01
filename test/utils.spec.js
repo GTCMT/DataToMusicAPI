@@ -89,6 +89,16 @@ describe('isFunction', function () {
     });
 });
 
+describe('isPromise', function () {
+    it('should work', function () {
+        var foo = new Promise(function (resolve) { resolve(123); });
+        expect(isPromise(foo)).toBe(true);
+        foo.then(function (v) {
+            //expect(isPromise(foo)).toBe(false);
+        });
+    });
+});
+
 describe('isNumArray', function () {
     it('should work', function () {
         expect(isNumArray([1, 2, 3])).toBe(true);

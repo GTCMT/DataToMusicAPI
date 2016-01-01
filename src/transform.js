@@ -388,13 +388,17 @@ dtm.transform = {
         //res.length = len;
         var mult = len / arr.length;
 
+        var inNumItv = arr.length - 1;
+        var outNumItv = len - 1;
+        var intermLen = inNumItv * outNumItv + 1;
+
+        if (interp === 'linear' && intermLen > 104857600) {
+            interp = 'step';
+        }
+
         switch (interp) {
             default:
             case 'linear':
-                var inNumItv = arr.length - 1;
-                var outNumItv = len - 1;
-
-                var intermLen = inNumItv * outNumItv + 1;
                 var intermArr = null;
 
                 if (arr.constructor === Array) {
@@ -462,7 +466,7 @@ dtm.transform = {
                 }
                 break;
             case 'cubic':
-                if (arr.length > len) {
+                if (arr.length >= len) {
                     res = dtm.transform.fit(arr, len, 'linear');
                 } else {
                     var i = 0;
@@ -524,7 +528,9 @@ dtm.transform = {
      * -> [4, 2, 0, -2, 0, 2, 4, 3.666, 3.333, 3]
      */
     stretch: function (arr, factor, interp) {
-        interp = interp || 'linear';
+        if (!isString(interp)) {
+            interp = 'linear';
+        }
 
         var targetLen = Math.round(arr.length * factor);
         if (targetLen == 0) {
@@ -1000,25 +1006,15 @@ dtm.transform = {
     repeat: function (input, count) {
         var res = [];
 
-        if (!count) {
+        if (!isInteger(count) || count < 1) {
             count = 1;
         }
 
         for (var i = 0; i < count; i++) {
-            if (isArray(input)) {
-                res = res.concat(input);
-            } else if (isFloat32Array(input)) {
-                input.forEach(function (v) {
-                    res = res.concat(v);
-                });
-            }
+            res = concat(res, input);
         }
 
-        if (isArray(input)) {
-            return res;
-        } else if (isFloat32Array(input)) {
-            return new Float32Array(res);
-        }
+        return res;
     },
 
     // TODO: it should just have one behavior

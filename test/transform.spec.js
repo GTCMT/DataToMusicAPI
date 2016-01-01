@@ -99,10 +99,13 @@ describe('array helper functions', function () {
 //            console.log(input);
 //            console.log(output);
             });
-//
-//        describe('stretch', function () {
-//            var output = dtm.transform.stretch(input, 2.5);
-//        });
+
+            describe('stretch', function () {
+                it('should work', function () {
+                    expect(dtm.transform.stretch([1,2.5], 2)).toEqual([1,1.5,2,2.5]);
+                    expect(dtm.transform.stretch(toFloat32Array([1,2.5]), 2)).toEqual(toFloat32Array([1,1.5,2,2.5]));
+                });
+            });
         });
 
         describe('mult', function () {
@@ -293,6 +296,10 @@ describe('array helper functions', function () {
         it('should have a length of 9', function () {
             expect(output.length).toBe(9);
         });
+
+        it('should work', function () {
+            expect(dtm.transform.repeat(toFloat32Array([1,2]), 2)).toEqual(toFloat32Array([1,2,1,2]));
+        })
     });
 
     describe('truncate', function () {

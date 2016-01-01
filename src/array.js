@@ -947,13 +947,33 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.repeat = function (count) {
+        if (isDtmArray(count) && count.get('len') === 1) {
+            count = count.get(0);
+        }
+
+        if (!isInteger(count)) {
+            count = 1;
+        }
+
         return array.set(dtm.transform.repeat(params.value, count));
     };
 
     array.rep = array.repeat;
 
-    array.fitrep = function (count) {
-        return array.set(dtm.transform.fit(dtm.transform.repeat(params.value, count), params.len));
+    array.fitrep = function (count, interp) {
+        if (isDtmArray(count) && count.get('len') === 1) {
+            count = count.get(0);
+        }
+
+        if (!isInteger(count)) {
+            count = 1;
+        }
+
+        if (!isString(interp)) {
+            interp = 'linear';
+        }
+
+        return array.set(dtm.transform.fit(dtm.transform.repeat(params.value, count), params.len, interp));
     };
 
     array.frep = array.fitrep;
@@ -1044,6 +1064,8 @@ dtm.array = function () {
     array.mirror = function () {
         return array.concat(dtm.transform.reverse(params.value));
     };
+
+    array.mir = array.mirror;
 
     /**
      * Flips the array contents horizontally.
