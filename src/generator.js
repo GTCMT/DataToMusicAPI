@@ -64,7 +64,7 @@ dtm.generator = function () {
         ],
         oscil: ['sin', 'sine', 'cos', 'cosine', 'tri', 'triangle', 'saw', 'invSaw', 'noise', 'square', 'sq', 'harm', 'harmonic'],
         const: ['zeros', 'zeroes', 'ones', 'constant', 'constants', 'const', 'consts'],
-        linish: ['line', 'saw', 'rise', 'decay', 'fall', 'invSaw'],
+        envelope: ['rise', 'decay', 'fall'],
         noLength: ['string', 'str', 's', 'character', 'characters', 'chars', 'char', 'c', 'range', 'seq', 'scale', 'mode', 'chord'],
         noRange: [],
         noMinMax: [],
@@ -563,6 +563,10 @@ dtm.generator = function () {
         }
     }
 
+    if (isTypeOf('envelope')) {
+        params.len = 128;
+    }
+
     if (isTypeOf('random')) {
         params.len = 1;
         params.min = 0.0;
@@ -584,7 +588,7 @@ dtm.generator = function () {
             }
         }
     } else if (isTypeOf('oscil')) {
-        params.len = 128;
+        params.len = 4096;
 
         if (arguments.length >= 3) {
             if (isArray(arguments[2])) {

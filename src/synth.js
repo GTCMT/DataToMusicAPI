@@ -291,6 +291,51 @@ dtm.synth = function () {
             };
         },
 
+        Reverb: function (post) {
+            this.mix = toFloat32Array(0.5);
+            //this.time = toFloat32Array(2.0);
+
+            this.run = function (time, dur) {
+                var ctx = post ? actx : octx;
+                this.in = ctx.createGain();
+                this.verb = ctx.createConvolver();
+                this.wet = ctx.createGain();
+                this.dry = ctx.createGain();
+                this.out = ctx.createGain();
+                this.in.connect(this.verb);
+                this.verb.connect(this.wet);
+                this.wet.connect(this.out);
+                this.in.connect(this.dry);
+                this.dry.connect(this.out);
+
+                var size = params.sr * 2;
+                var ir = ctx.createBuffer(1, size, params.sr);
+                ir.copyToChannel(dtm.gen('noise').size(size).mult(dtm.gen('decay').size(size)).get(), 0);
+                this.verb.buffer = ir;
+
+                this.dryLevel = this.mix.map(function (v) {
+                    if (v <= 0.5) {
+                        return 1.0;
+                    } else {
+                        return 1.0 - (v - 0.5) * 2.0;
+                    }
+                });
+
+                this.wetLevel = this.mix.map(function (v) {
+                    if (v >= 0.5) {
+                        return 1.0;
+                    } else {
+                        return v * 2.0;
+                    }
+                });
+
+                var curves = [];
+                curves.push({param: this.dry.gain, value: this.dryLevel});
+                curves.push({param: this.wet.gain, value: this.wetLevel});
+                setParamCurve(time, dur, curves);
+            }
+        },
+
         BitQuantizer: function () {
             this.bit = new Float32Array([16]);
             var self = this;
@@ -939,6 +984,8 @@ dtm.synth = function () {
                 });
             } else {
                 params.wavetable = toFloat32Array(src(dtm.array(params.wavetable)));
+                params.tabLen = params.wavetable.length;
+                params.pitch = freqToPitch(params.freq); // ?
             }
         } else {
             params.wavetable = new Float32Array(params.tabLen);
@@ -949,7 +996,7 @@ dtm.synth = function () {
         return synth;
     };
 
-    synth.wt = synth.wavetable;
+    synth.table = synth.wt = synth.wavetable;
 
     synth.source = function (src) {
         if (isString(src)) {
@@ -1183,6 +1230,25 @@ dtm.synth = function () {
         }
         return synth;
     };
+
+    synth.reverb = function (mix, post) {
+        post = isBoolean(post) ? post : params.rtFxOnly;
+        var verb = new fx.Reverb(post);
+
+        mix = typeCheck(mix);
+        if (mix) {
+            verb.mix = mix;
+        }
+
+        if (post) {
+            nodes.pFx.push(verb);
+        } else {
+            nodes.fx.push(verb);
+        }
+        return synth;
+    };
+
+    synth.verb = synth.reverb;
 
     synth.waveshape = function (src) {
         return synth;

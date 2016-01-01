@@ -662,6 +662,10 @@ dtm.transform = {
             factor = 1;
         }
 
+        if (!isString(interp)) {
+            interp = 'step';
+        }
+
         if (isNumber(factor)) {
             input.forEach(function (val, idx) {
                 res[idx] = val + factor;
@@ -697,6 +701,10 @@ dtm.transform = {
 
         if (isEmpty(factor)) {
             factor = 1;
+        }
+
+        if (!isString(interp)) {
+            interp = 'step';
         }
 
         if (isNumber(factor)) {
@@ -736,6 +744,10 @@ dtm.transform = {
             factor = 1;
         }
 
+        if (!isString(interp)) {
+            interp = 'step';
+        }
+
         if (isNumber(factor)) {
             input.forEach(function (val, idx) {
                 res[idx] = Math.pow(val, factor);
@@ -770,6 +782,10 @@ dtm.transform = {
 
         if (isEmpty(factor)) {
             factor = 1;
+        }
+
+        if (!isString(interp)) {
+            interp = 'step';
         }
 
         if (isNumber(factor)) {

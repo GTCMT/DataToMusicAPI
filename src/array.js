@@ -970,7 +970,7 @@ dtm.array = function () {
         }
 
         if (!isString(interp)) {
-            interp = 'linear';
+            interp = 'step';
         }
 
         return array.set(dtm.transform.fit(dtm.transform.repeat(params.value, count), params.len, interp));
