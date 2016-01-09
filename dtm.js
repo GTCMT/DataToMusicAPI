@@ -55,58 +55,83 @@ function isPromise(obj) {
     }
 }
 
-function isArray(value) {
-    return Array.isArray(value) || isFloat32Array(value);
+function isObject(val) {
+    return (typeof(val) === 'object' && val !== null);
 }
 
-function isFloat32Array(value) {
+function isSingleVal(val) {
+    return !!(!isArray(val) && !isDtmObj(val) && !isFunction(val) && !isEmpty(val));
+}
+
+/**
+ * @private
+ * @param val
+ * @returns {boolean}
+ */
+function isArray(val) {
+    return Array.isArray(val) || isFloat32Array(val);
+}
+
+function isFloat32Array(val) {
     var res = false;
-    if (!isEmpty(value)) {
-        if (value.constructor.name === 'Float32Array' && value.length > 0) {
+    if (!isEmpty(val)) {
+        if (val.constructor.name === 'Float32Array' && val.length > 0) {
             res = true;
         }
     }
     return res;
 }
 
-function isNumArray(array) {
+function isNumArray(val) {
     var res = false;
-    if (isArray(array) && !isFloat32Array(array) && array.length > 0) {
-        res = array.every(function (v) {
+    if (isArray(val) && !isFloat32Array(val) && val.length > 0) {
+        res = val.every(function (v) {
             return isNumber(v);
         });
     }
     return res;
 }
 
-function isNumOrFloat32Array(array) {
-    return isNumArray(array) || isFloat32Array(array);
+function isNumOrFloat32Array(val) {
+    return isNumArray(val) || isFloat32Array(val);
 }
 
-function isMixedArray(array) {
-    return isArray(array) && !isNumOrFloat32Array(array);
+function isMixedArray(val) {
+    return isArray(val) && !isNumOrFloat32Array(val);
 }
 
-function isSingleVal(value) {
-    return !!(!isArray(value) && !isDtmObj(value) && !isFunction(value) && !isEmpty(value));
+function isNestedArray(val) {
+    var res = false;
+    if (isArray(val)) {
+        res = val.some(function (v) {
+            return isArray(v);
+        });
+    }
+    return res;
 }
 
-function isObject(value) {
-    return (typeof(value) === 'object' && value !== null);
+function isNestedWithDtmArray(val) {
+    var res = false;
+    if (isArray(val)) {
+        res = val.some(function (v) {
+            return isDtmArray(v);
+        });
+    }
+    return res;
 }
 
-function isDtmObj(value) {
-    if (isObject(value) || isFunction(value)) {
-        return value.hasOwnProperty('meta');
+function isDtmObj(val) {
+    if (isObject(val) || isFunction(val)) {
+        return val.hasOwnProperty('meta');
     } else {
         return false;
     }
 }
 
-function isDtmArray(value) {
-    if (isObject(value) || isFunction(value)) {
-        if (value.hasOwnProperty('meta')) {
-            return (value.meta.type === 'dtm.array' || value.meta.type === 'dtm.generator');
+function isDtmArray(val) {
+    if (isObject(val) || isFunction(val)) {
+        if (val.hasOwnProperty('meta')) {
+            return (val.meta.type === 'dtm.array' || val.meta.type === 'dtm.generator');
         } else {
             return false;
         }
@@ -115,10 +140,10 @@ function isDtmArray(value) {
     }
 }
 
-function isStringArray(array) {
+function isStringArray(val) {
     var res = false;
-    if (isArray(array)) {
-        res = array.every(function (v) {
+    if (isArray(val)) {
+        res = val.every(function (v) {
             return typeof(v) === 'string';
         });
     }
@@ -4385,6 +4410,7 @@ dtm.array = function () {
         return array.set(dtm.transform.sort(params.value));
     };
 
+    // TODO: nested array and concat?
     /**
      * Concatenates new values to the contents.
      * @function module:array#concat | append

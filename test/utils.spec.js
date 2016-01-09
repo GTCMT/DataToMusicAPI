@@ -153,6 +153,27 @@ describe('isMixedArray', function () {
     });
 });
 
+describe('isNestedArray', function () {
+    it('should work', function () {
+        expect(isNestedArray([1, 2, 3])).toBe(false);
+        expect(isNestedArray([1, [2], 3])).toBe(true);
+        expect(isNestedArray([1, [2, 3]])).toBe(true);
+        expect(isNestedArray([[1]])).toBe(true);
+        expect(isNestedArray([toFloat32Array([1,2,3])])).toBe(true);
+    });
+
+    it('should treat dtm.array as an object, not array', function () {
+        expect(isNestedArray([dtm.array([1,2,3])])).toBe(false);
+    });
+});
+
+describe('isNestedWithDtmArray', function () {
+    it('should work', function () {
+        expect(isNestedWithDtmArray([dtm.array([1,2,3])])).toBe(true);
+        expect(isNestedWithDtmArray([[1,2,3]])).toBe(false);
+    });
+});
+
 describe('hasMissingValues', function () {
     it('should work', function () {
         expect(hasMissingValues([1, 2, 3])).toBe(false);
