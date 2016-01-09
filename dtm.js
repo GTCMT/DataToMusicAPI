@@ -3627,7 +3627,7 @@ dtm.array = function () {
 
                 case 'rand':
                 case 'random':
-                    params.index = dtm.val.randi(0, params.len - 1);
+                    params.index = dtm.val.randi(0, params.len);
                     return params.value[params.index];
 
                 case 'urn':
