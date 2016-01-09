@@ -73,14 +73,41 @@ dtm.value = {
     /**
      * Scale or pitch-quantizes the input value to the given models.scales.
      * @function module:value#pq
-     * @param nn {integer} Note number
-     * @param scale
+     * @param nn {number} Note number
+     * @param scale {array} An array of either number or string
      * @param [round=false] {boolean}
      * @returns {*}
      */
     pq: function (nn, scale, round) {
-        if (!isNumOrFloat32Array(scale)) {
-            scale = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+        var solfa = {
+            0: ['do', 'd'],
+            1: ['di', 'ra'],
+            2: ['re', 'r'],
+            3: ['ri', 'me'],
+            4: ['mi', 'm', 'fe'],
+            5: ['fa', 'f'],
+            6: ['fi', 'se'],
+            7: ['sol', 's'],
+            8: ['si', 'le'],
+            9: ['la', 'l'],
+            10: ['li', 'te'],
+            11: ['ti', 't', 'de']
+        };
+
+        var sc = [];
+
+        if (isNumOrFloat32Array(scale)) {
+            sc = scale;
+        } else if (isStringArray(scale)) {
+            scale.forEach(function (v) {
+                objForEach(solfa, function (deg, key) {
+                    if (deg.indexOf(v.toLowerCase()) > -1) {
+                        sc.push(parseInt(key));
+                    }
+                });
+            })
+        } else if (!isArray(scale)) {
+            sc = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
         }
 
         if (isEmpty(round)) {
@@ -89,13 +116,13 @@ dtm.value = {
 
         var pc = nn % 12;
         var oct = nn - pc;
-        var idx = Math.floor(pc / 12. * scale.length);
+        var idx = Math.floor(pc / 12. * sc.length);
         var frac = 0.0;
 
         if (!round) {
             frac = nn % 1;
         }
-        return oct + scale[idx] + frac;
+        return oct + sc[idx] + frac;
     },
 
     /**

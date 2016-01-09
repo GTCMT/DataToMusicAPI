@@ -379,11 +379,14 @@ dtm.transform = {
         }
 
         var res = null;
-        if (isArray(arr)) {
+        if (isNumArray(arr)) {
             res = new Array(len);
         } else if (isFloat32Array(arr)) {
             res = new Float32Array(len);
+        } else {
+            return null;
         }
+
         var i = 0;
         //res.length = len;
         var mult = len / arr.length;
@@ -401,9 +404,9 @@ dtm.transform = {
             case 'linear':
                 var intermArr = null;
 
-                if (arr.constructor === Array) {
+                if (isNumArray(arr)) {
                     intermArr = new Array(intermLen);
-                } else if (arr.constructor === Float32Array) {
+                } else if (isFloat32Array(arr)) {
                     intermArr = new Float32Array(intermLen);
                 }
 
@@ -1423,8 +1426,9 @@ dtm.transform = {
         return res;
     },
 
+    // CHECK: redundant with analyzer.unique
     unique: function (input) {
-        return _.uniq(input);
+        return dtm.analyzer.unique(input);
     },
 
     classId: function (input) {

@@ -43,6 +43,21 @@ dtm.generator = function () {
         type: 'dtm.generator'
     };
 
+    // TODO: define params better
+    // name, arg1, 2, 3, ..., length
+    var tempParams = {
+        oscil: {
+            name: ['sin', 'sine', 'cos', 'cosine', 'tri', 'triangle', 'saw', 'invSaw', 'noise', 'square', 'sq', 'harm', 'harmonic'],
+            args: ['amp', 'freq', 'phase'],
+            len: 4096
+        },
+        envelope: {
+            name: [],
+            args: [],
+            len: 512
+        }
+    };
+
     var types = {
         all: [
             'line', 'saw', 'rise',
@@ -64,7 +79,7 @@ dtm.generator = function () {
         ],
         oscil: ['sin', 'sine', 'cos', 'cosine', 'tri', 'triangle', 'saw', 'invSaw', 'noise', 'square', 'sq', 'harm', 'harmonic'],
         const: ['zeros', 'zeroes', 'ones', 'constant', 'constants', 'const', 'consts'],
-        envelope: ['rise', 'decay', 'fall'],
+        envelope: ['rise', 'decay', 'fall', 'ahr'],
         noLength: ['string', 'str', 's', 'character', 'characters', 'chars', 'char', 'c', 'range', 'seq', 'scale', 'mode', 'chord'],
         noRange: [],
         noMinMax: [],

@@ -135,18 +135,44 @@ describe('array object', function () {
 
     describe('set', function () {
         describe('various arguments', function () {
+            it('should accept single values', function () {
+                expect(dtm.a(1,2,3).get()).toEqual(toFloat32Array([1,2,3]));
+                expect(dtm.a('hey').get()).toEqual(['hey']);
+                expect(dtm.a('1','2').get()).toEqual(['1','2']);
+            });
+
             it('should accept array', function () {
                 expect(dtm.a([1,2,3]).get()).toEqual(toFloat32Array([1,2,3]));
+                expect(dtm.a([1,'hey',3]).get()).toEqual([1,'hey',3]);
             });
 
             it('should accept dtm.array', function () {
                 expect(dtm.a(dtm.a([1,2,3])).get()).toEqual(toFloat32Array([1,2,3]));
             });
 
-            it('should accept single values', function () {
-                expect(dtm.a(1,2,3).get()).toEqual(toFloat32Array([1,2,3]));
-                expect(dtm.a(1,2,3).get(0)).toBe(1);
-            });
+            it('should create a nested array', function () {
+                expect(dtm.a([1], [2,3]).get('len')).toBe(2);
+                expect(dtm.a([1], [2,3]).get(0).get()).toEqual(toFloat32Array(1));
+                expect(dtm.a([1], [2,3]).get(1).get()).toEqual(toFloat32Array([2,3]));
+
+                expect(dtm.a(dtm.a(1,2), [2,3]).get(0).get()).toEqual(toFloat32Array([1,2]));
+
+                var a = dtm.a([1], [2,3]);
+                expect(a.get('next').get()).toEqual(toFloat32Array(1));
+                expect(a.get('next').get()).toEqual(toFloat32Array([2,3]));
+
+                expect(dtm.a([1], [2,3]).normalize().get(0).get()).toEqual(toFloat32Array(1));
+
+                expect(dtm.a([1],[2],[3]).get(0).get('parent').get('len')).toBe(3);
+            })
+        });
+    });
+
+    describe('nest and unnest', function () {
+        it('should work', function () {
+            expect(isDtmArray(dtm.a([1,2,3]).nest().get(0))).toBe(true);
+            expect(dtm.a([1,2,3]).nest().unnest().get()).toEqual(toFloat32Array([1,2,3]));
+            expect(dtm.a([1,2],[3,4]).unnest().get()).toEqual(toFloat32Array([1,2,3,4]));
         });
     });
 

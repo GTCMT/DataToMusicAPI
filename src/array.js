@@ -22,8 +22,8 @@ dtm.array = function () {
         mode: null,
 
         value: [],
-        original: [],
-        normalized: [],
+        original: null,
+        normalized: null,
         classes: null,
         numClasses: null,
 
@@ -102,6 +102,9 @@ dtm.array = function () {
                     } else {
                         return params.type;
                     }
+
+                case 'parent':
+                    return params.parent;
 
                 case 'len':
                 case 'length':
@@ -248,7 +251,14 @@ dtm.array = function () {
                 case 'normal':
                 case 'normalize':
                 case 'normalized':
-                    return dtm.transform.normalize(params.value);
+                    if (isEmpty(params.normalized)) {
+                        params.normalized = dtm.transform.normalize(params.value);
+                    }
+                    if (isInteger(arguments[1])) {
+                        return params.normalized[dtm.value.mod(arguments[1], params.len)];
+                    } else {
+                        return params.normalized;
+                    }
 
                 case 'sorted':
                 case 'sort':
@@ -301,48 +311,60 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.set = function () {
-        if (arguments.length === 1) {
-            if (isEmpty(arguments[0])) {
-                return array;
-            } else if (isNumber(arguments[0])) {
-                params.value = [arguments[0]];
-            } else if (isNumArray(arguments[0])) {
-                params.value = new Float32Array(arguments[0]);
-            } else if (isFloat32Array(arguments[0])) {
-                params.value = arguments[0];
-            } else if (isMixedArray(arguments[0])) {
-                params.value = arguments[0];
-            } else if (isDtmArray(arguments[0])) {
-                params.value = arguments[0].get();
-            } else if (isString(arguments[0])) {
-                params.value = [arguments[0]]; // no splitting
-                checkType(params.value);
-            }
+        if (arguments.length === 0) {
+            return array;
+        }
 
-            if (params.original.length === 0) {
-                params.original = params.value;
-
-                // CHECK: type checking - may be redundant
-                checkType(params.value);
+        if (argsAreSingleVals(arguments)) {
+            var args = argsToArray(arguments);
+            if (isNumArray(args)) {
+                params.value = new Float32Array(args);
             } else {
-                params.processed++;
+                params.value = args;
             }
-
-            generateHash(params.value);
-
-            params.len = params.value.length;
-            params.index = params.len - 1;
-        } else if (arguments.length > 1) {
-            if (argsAreSingleVals(arguments)) {
-                var args = argsToArray(arguments);
-                if (isNumArray(args)) {
-                    params.value = new Float32Array(args);
-                } else {
-                    params.value = args;
+        } else {
+            // if set arguments include any array-like object
+            if (arguments.length === 1) {
+                if (isNumber(arguments[0])) {
+                    params.value = new Float32Array([arguments[0]]);
+                } else if (isNumArray(arguments[0])) {
+                    params.value = new Float32Array(arguments[0]);
+                } else if (isFloat32Array(arguments[0])) {
+                    params.value = arguments[0];
+                } else if (isMixedArray(arguments[0])) {
+                    params.value = arguments[0];
+                } else if (isDtmArray(arguments[0])) {
+                    params.value = arguments[0].get();
+                    // set parent in the child
+                } else if (isString(arguments[0])) {
+                    params.value = [arguments[0]]; // no splitting
+                    checkType(params.value);
                 }
-                params.len = params.value.length;
+            } else {
+                params.value = new Array(arguments.length);
+
+                argsForEach(arguments, function (v, i) {
+                    if (isDtmArray(v)) {
+                        params.value[i] = v;
+                    } else {
+                        params.value[i] = dtm.array(v);
+                    }
+                    params.value[i].parent(array);
+                });
             }
         }
+
+        if (isEmpty(params.original)) {
+            params.original = params.value;
+
+            // CHECK: type checking - may be redundant
+            checkType(params.value);
+        } else {
+            params.processed++;
+        }
+
+        params.len = params.value.length;
+        params.index = params.len - 1;
 
         return array;
     };
@@ -437,12 +459,10 @@ dtm.array = function () {
     /**
      * Returns a clone of the array object. It can be used when you don't want to reference the same array object from different places.
      * @function module:array#clone
+     //* @memberOf module:array
      * @returns {dtm.array}
      */
     array.clone = function () {
-        // this doesn't work
-        //return dtm.clone(array);
-
         var newArr = dtm.array(params.value).name(params.name);
 
         // CHECK: this may cause troubles!
@@ -455,23 +475,55 @@ dtm.array = function () {
         }
         return newArr;
     };
+
+    ///**
+    // * @alias module:array#clone
+    // * @memberOf module:array
+    // */
     array.c = array.clone;
 
-    array.parent = function (clone) {
-        if (!isBoolean(clone)) {
-            clone = true;
+    /**
+     * blah blah
+     * @instance
+     * @memberOf module:array
+     * @name clonetest
+     * @alias c, cl
+     * @returns {dtm.array}
+     */
+    function clonetest() {
+
+    }
+
+    array.parent = function (obj) {
+        if (isDtmArray(obj)) {
+            params.parent = obj;
         }
-        if (params.parent !== null) {
-            if (clone) {
-                return array.parent.clone();
-            } else {
-                return array.parent;
-            }
-        } else {
-            return array;
-        }
+        return array;
     };
 
+    array.nest = function () {
+        if (!isDtmArray(params.value)) {
+            array.set([dtm.array(params.value)]);
+            params.value[0].parent(array);
+        }
+        return array;
+    };
+
+    array.unnest = function () {
+        var flattened = [];
+        params.value.forEach(function (v) {
+            if (isDtmArray(v)) {
+                flattened = concat(flattened, v.get());
+            }
+        });
+
+        if (isNumOrFloat32Array(flattened)) {
+            flattened = toFloat32Array(flattened);
+        }
+        return array.set(flattened);
+    };
+
+    array.flatten = array.unnest;
     /**
      * Morphs the array values with a target array / dtm.array values. The lengths can be mismatched.
      * @function module:array#morph
@@ -556,15 +608,26 @@ dtm.array = function () {
 
     array.n = array.normalize;
 
-    // TODO: update doc
     /**
-     * Modifies the range of the array. Shorthand: sc()
+     * Modifies the range of the array. Shorthand: array.sc
      * @function module:array#scale
      * @param arg1 {number|array|dtm.array} The target minimum value of the scaled range.
-     * @param arg2 {number} The target maximum value of the scaled range.
-     * @param [arg3] {number} The minimum of the domain (original) value range.
-     * @param [arg4] {number} The maximum of the domain value range.
+     * @param arg2 {number|array|dtm.array} The target maximum value of the scaled range.
+     * @param [arg3] {number} The minimum of the domain (original) value.
+     * @param [arg4] {number} The maximum of the domain value.
      * @returns {dtm.array}
+     * @example
+     * // Specifying the output range
+     * dtm.array([1, 2, 3]).scale([0, 10]).get();
+     * // or
+     * dtm.array([1, 2, 3]).scale(0, 10).get();
+     * -> [0, 5, 10]
+     *
+     * // Specifying the domain values (the second array in the argument)
+     * dtm.array([1, 2, 3]).scale([0, 10], [0, 5]).get();
+     * // or
+     * dtm.array([1, 2, 3]).scale(0, 10, 0, 5).get();
+     * -> [2, 4, 6]
      */
     array.scale = function (arg1, arg2, arg3, arg4) {
         var min, max, dmin, dmax;
@@ -919,6 +982,7 @@ dtm.array = function () {
         return array.set(dtm.transform.sort(params.value));
     };
 
+    // TODO: nested array and concat?
     /**
      * Concatenates new values to the contents.
      * @function module:array#concat | append
@@ -1199,8 +1263,20 @@ dtm.array = function () {
      * @function module:array#diff
      * @returns {dtm.array}
      */
-    array.diff = function () {
-        return array.set(dtm.transform.diff(params.value));
+    array.diff = function (order, pad) {
+        if (!isInteger(order) || order < 1) {
+            order = 1;
+        }
+        for (var i = 0; i < order; i++) {
+            params.value = dtm.transform.diff(params.value);
+        }
+
+        if (isSingleVal(pad)) {
+            for (var i = 0; i < order; i++) {
+                params.value = concat(params.value, pad);
+            }
+        }
+        return array.set(params.value);
     };
 
     /**
@@ -1222,11 +1298,8 @@ dtm.array = function () {
     array.histogram = function () {
         // CHECK: this is hacky
         params.type = 'string'; // re-set the type to string from number
-        return array.set(dtm.analyzer.histo(params.value));
+        return array.set(toFloat32Array(dtm.analyzer.histo(params.value)));
     };
-
-    array.histo = array.histogram;
-
     /**
      * Overwrites the contents with unsorted unique values of the array.
      * @function module:array#uniq | unique
@@ -1235,8 +1308,6 @@ dtm.array = function () {
     array.unique = function () {
         return array.set(dtm.transform.unique(params.value));
     };
-
-    array.uniq = array.unique;
 
     // TODO: id by occurrence / rarity, etc.
     /**
@@ -1248,8 +1319,6 @@ dtm.array = function () {
         return array.set(dtm.transform.classId(params.value));
     };
 
-    array.class = array.classify;
-
     /**
      * Converts the array values (such as numbers) into string format.
      * @function module:array#stringify | tostring
@@ -1259,22 +1328,20 @@ dtm.array = function () {
         return array.set(dtm.transform.stringify(params.value));
     };
 
-    array.tostring = array.stringify;
-
     /**
      * Converts string or boolean values to numerical values.
      * @function module:array#tonumber | toNumber
      * @returns {dtm.array}
      */
     array.tonumber = function () {
-        return array.set(dtm.transform.tonumber(params.value));
+        return array.set(toFloat32Array(dtm.transform.tonumber(params.value)));
     };
 
-    array.tonum = array.tonumber;
-
     array.toFloat32 = function () {
-        var newArr = new Float32Array(array.get('len'));
-        return array.set(newArr);
+        if (isNumArray(params.value)) {
+            array.set(toFloat32Array(params.value));
+        }
+        return array;
     };
 
     // CHECK: occurrence or value??
@@ -1282,13 +1349,9 @@ dtm.array = function () {
         return array;
     };
 
-    array.mt = array.morethan;
-
     array.lessthan = function () {
         return array;
     };
-
-    array.lt = array.lessthan;
 
     /* STRING OPERATIONS */
 
@@ -1303,23 +1366,13 @@ dtm.array = function () {
 
     /* MUSICAL */
 
-    // CHECK: this is different from the trnsf function
     /**
-     * Pitch quantize the array values.
-     * @function module:array#pq | pitchq
-     * @param scale {array|string}
+     * Pitch quantize the array values. Shorthand: array.pq
+     * @function module:array#pitchquantize
+     * @param scale {array|dtm.array} A numerical or string (solfa -- e.g., 'do' or 'd' instead of 0) denoting the musical scale degrees.
      * @returns {dtm.array}
      */
-    array.pq = function (scale) {
-        var scales = {
-            "major": [0, 4, 7],
-            "minor": [0, 3, 7],
-            "maj7": [0, 4, 7, 11],
-            "-7": [0, 3, 7, 10],
-            "7": [0, 4, 7, 10],
-            "7sus4": [0, 5, 7, 10]
-        };
-
+    array.pitchquantize = function (scale) {
         if (isEmpty(scale)) {
             scale = dtm.gen('range', 12).get();
         } else if (isDtmArray(scale) && isNumOrFloat32Array(scale.get())) {
@@ -1327,14 +1380,9 @@ dtm.array = function () {
         } else if (isNumOrFloat32Array(scale)) {
 
         }
-        //else if (isString(scale)) {
-        //    scale = scales[scale.toLowerCase()];
-        //}
 
         return array.set(dtm.transform.pq(params.value, scale));
     };
-
-    array.pitchquantize = array.pq;
 
     array.mtof = function () {
         return array.set(dtm.transform.mtof(params.value));
@@ -1363,8 +1411,6 @@ dtm.array = function () {
         return array.set(dtm.transform.notesToBeats(params.value, resolution));
     };
 
-    array.ntob = array.notesToBeats;
-
     /**
      * Converts beat sequence into note values.
      * @function module:array#beatsToNotes | bton
@@ -1376,8 +1422,6 @@ dtm.array = function () {
         return array.set(dtm.transform.beatsToNotes(params.value, resolution));
     };
 
-    array.bton = array.beatsToNotes;
-
     /**
      * Converts intervalic values into a beat sequence.
      * @function module:array#intervalsToBeats | itob
@@ -1387,8 +1431,6 @@ dtm.array = function () {
         return array.set(dtm.transform.intervalsToBeats(params.value));
     };
 
-    array.itob = array.intervalsToBeats;
-
     /**
      * Converts beat sequence into intervalic values.
      * @function module:array#beatsToIntervals | btoi
@@ -1397,9 +1439,6 @@ dtm.array = function () {
     array.beatsToIntervals = function () {
         return array.set(dtm.transform.beatsToIntervals(params.value));
     };
-
-    array.btoi = array.beatsToIntervals;
-
     /**
      * Converts beat sequence into an array of indices (or delays or onset-coordinate vectors.) Useful for creating time delay-based events.
      * @function module:array#beatsToIndices | btoid
@@ -1408,8 +1447,6 @@ dtm.array = function () {
     array.beatsToIndices = function () {
         return array.set(dtm.transform.beatsToIndices(params.value));
     };
-
-    array.btoid = array.beatsToIndices;
 
     /**
      * function module:array#indicesToBeats | idtob
@@ -1420,12 +1457,31 @@ dtm.array = function () {
         return array.set(dtm.transform.indicesToBeats(params.value, len));
     };
 
+
+    /* aliases */
+
+    array.histo = array.histogram;
+    array.uniq = array.unique;
+    array.class = array.classify;
+    array.tostring = array.stringify;
+    array.tonum = array.tonumber;
+    array.mt = array.morethan;
+    array.lt = array.lessthan;
+    array.pq = array.pitchquantize;
+    array.ntob = array.notesToBeats;
+    array.bton = array.beatsToNotes;
+    array.itob = array.intervalsToBeats;
+    array.btoi = array.beatsToIntervals;
+    array.btoid = array.beatsToIndices;
     array.idtob = array.indicesToBeats;
+
+
 
     /* dtm.generator placeholders */
     // these are not really necessary, but prevents typeError when calling dtm.gen functions on pure dtm.array object
     array.type = function () { return array; };
     array.len = function () { return array; };
+
 
     // set the array content here
     array.set.apply(this, arguments);

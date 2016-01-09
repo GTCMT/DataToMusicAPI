@@ -23,8 +23,16 @@ dtm.synth = function () {
         sr: 44100,
         kr: 4410,
         dur: 1.0,
+        durTest: dtm.array(1.0),
         offset: 0.0,
         repeat: 1, // TODO: design - inclusive?
+
+        baseTime: 0.0, // for offline rendering
+        lookahead: false,
+        autoDur: false,
+        voiceId: Math.random(),
+        startTime: 0.0,
+        phase: 0.0,
 
         wavetable: null,
         rendered: null,
@@ -42,10 +50,6 @@ dtm.synth = function () {
         curve: false,
         offline: false,
         clock: null,
-        baseTime: 0.0,
-        lookahead: false,
-        autoDur: false,
-        voiceId: Math.random(),
 
         //useOfflineContext: true,
         rtFxOnly: true,
@@ -82,7 +86,9 @@ dtm.synth = function () {
         out: null,
         fx: [{}],
         pFx: [{}],
-        rtSrc: null
+        rtSrc: null,
+
+        phasor: null
     };
 
     if (!!arguments.callee.caller) {
@@ -156,6 +162,7 @@ dtm.synth = function () {
     }
 
     var fx = {
+        // TODO: named param mode not complete
         Gain: function (mode) {
             var name = null;
             var post = isBoolean(mode) ? mode : params.rtFxOnly;
@@ -422,7 +429,7 @@ dtm.synth = function () {
 
     /**
      * @function module:synth#lookahead
-     * @param lookahead
+     * @param lookahead {bool|}
      * @returns {dtm.synth}
      */
     synth.lookahead = function (lookahead) {
@@ -445,6 +452,8 @@ dtm.synth = function () {
             params.autoDur = src;
         } else if (src === 'auto') {
             params.autoDur = true;
+        } else if (isDtmArray(src)) {
+            params.durTest = src;
         }
         return synth;
     };
@@ -466,7 +475,7 @@ dtm.synth = function () {
         return synth;
     };
 
-    // TODO: accept dtm.array for time and dur
+    // TODO: accept dtm.array for time and dur - redesign the args
     /**
      * Plays
      * @function module:synth#play
@@ -488,6 +497,8 @@ dtm.synth = function () {
         if (isNumber(dur) && dur > 0.0) {
             params.dur = dur;
         }
+
+        params.dur = params.durTest.get('next');
 
         //if (!isEmpty(params.promise)) {
         //    params.promise.then(function () {
@@ -632,6 +643,8 @@ dtm.synth = function () {
                     time += params.clock.get('lookahead');
                 }
 
+                params.startTime = time;
+
                 nodes.src = actx.createBufferSource();
                 nodes.amp = actx.createGain();
                 nodes.pFx[0].out = actx.createGain();
@@ -733,6 +746,16 @@ dtm.synth = function () {
 
     synth.rep = synth.repeat;
 
+    function getPhase() {
+        params.phase = (actx.currentTime - params.startTime) / params.dur;
+        if (params.phase < 0.0) {
+            params.phase = 0.0;
+        } else if (params.phase > 1.0) {
+            params.phase = 1.0;
+        }
+        return params.phase;
+    }
+
     synth.mod = function (name, val) {
         if (isString(name) && params.named.hasOwnProperty(name)) {
             setTimeout(function () {
@@ -810,10 +833,9 @@ dtm.synth = function () {
      * Sets the pitch of the oscillator by a MIDI note number.
      * @function module:synth#notenum
      * @param src
-     * @param [post=false] {boolean}
      * @returns {dtm.synth}
      */
-    synth.notenum = function (src, post) {
+    synth.notenum = function (src) {
         src = typeCheck(src);
         if (src) {
             params.notenum = new Float32Array(src.length);
@@ -1311,6 +1333,8 @@ dtm.synth = function () {
                 return dtm.array(params.wavetable);
             case 'dur':
                 return params.dur;
+            case 'phase':
+                return getPhase();
             case 'nn':
             case 'notenum':
                 return params.notenum;

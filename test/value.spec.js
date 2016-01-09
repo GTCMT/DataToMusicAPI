@@ -34,4 +34,13 @@ describe('single value transformation', function () {
             expect(val).toBeGreaterThan(-0.000001);
         });
     });
+
+    describe('pitch quantize', function () {
+        it('should work with solfa array', function () {
+            expect(dtm.value.pq(67, ['do', 'sol'])).toBe(67);
+            expect(dtm.value.pq(67, ['do', 'fi'])).toBe(66);
+            expect(dtm.value.pq(60, ['mi'])).toBe(64);
+            expect(dtm.value.pq(71, ['te'])).toBe(70);
+        });
+    })
 });

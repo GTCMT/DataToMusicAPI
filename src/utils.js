@@ -54,7 +54,7 @@ function isPromise(obj) {
 }
 
 function isArray(value) {
-    return Array.isArray(value);
+    return Array.isArray(value) || isFloat32Array(value);
 }
 
 function isFloat32Array(value) {
@@ -69,7 +69,7 @@ function isFloat32Array(value) {
 
 function isNumArray(array) {
     var res = false;
-    if (isArray(array) && array.length > 0) {
+    if (isArray(array) && !isFloat32Array(array) && array.length > 0) {
         res = array.every(function (v) {
             return isNumber(v);
         });
@@ -130,12 +130,22 @@ function hasMissingValues(array) {
     });
 }
 
+function arrayCompare(first, second) {
+
+}
+
 function argsToArray(args) {
     var res = [];
     for (var i = 0; i < args.length; i++) {
         res[i] = args[i];
     }
     return res;
+}
+
+function argsForEach(args, fn) {
+    argsToArray(args).forEach(function () {
+        fn.apply(this, arguments);
+    });
 }
 
 function argIsSingleArray(args) {
@@ -191,6 +201,7 @@ function Float32Concat(first, second) {
     return res;
 }
 
+// TODO: other concat types (e.g., string array + typed array)
 function concat(first, second) {
     if (isFloat32Array(first) || isFloat32Array(second)) {
         if (isNumber(first)) {

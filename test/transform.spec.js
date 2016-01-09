@@ -490,4 +490,11 @@ describe('array helper functions', function () {
             //expect(dtm.transform.linslide([1,0,0,1],0,2)).toEqual([1,0.66,0.33]);
         });
     });
+
+    describe('pitch quantize', function () {
+        it('should work with solfa array', function () {
+            //expect(dtm.transform.pq([0,2,4,5,7,9,11], ['d','r','me','f','s','le','te'])).toEqual([0,2,3,5,7,8,10]);
+            expect(dtm.transform.pq([0,2,4,6,7,9,11], ['d','r','me','f','s','le','te'])).toEqual([0,2,3,5,7,8,10]);
+        });
+    });
 });

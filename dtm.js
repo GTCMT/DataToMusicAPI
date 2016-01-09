@@ -56,7 +56,7 @@ function isPromise(obj) {
 }
 
 function isArray(value) {
-    return Array.isArray(value);
+    return Array.isArray(value) || isFloat32Array(value);
 }
 
 function isFloat32Array(value) {
@@ -71,7 +71,7 @@ function isFloat32Array(value) {
 
 function isNumArray(array) {
     var res = false;
-    if (isArray(array) && array.length > 0) {
+    if (isArray(array) && !isFloat32Array(array) && array.length > 0) {
         res = array.every(function (v) {
             return isNumber(v);
         });
@@ -132,12 +132,22 @@ function hasMissingValues(array) {
     });
 }
 
+function arrayCompare(first, second) {
+
+}
+
 function argsToArray(args) {
     var res = [];
     for (var i = 0; i < args.length; i++) {
         res[i] = args[i];
     }
     return res;
+}
+
+function argsForEach(args, fn) {
+    argsToArray(args).forEach(function () {
+        fn.apply(this, arguments);
+    });
 }
 
 function argIsSingleArray(args) {
@@ -193,6 +203,7 @@ function Float32Concat(first, second) {
     return res;
 }
 
+// TODO: other concat types (e.g., string array + typed array)
 function concat(first, second) {
     if (isFloat32Array(first) || isFloat32Array(second)) {
         if (isNumber(first)) {
@@ -1129,6 +1140,21 @@ dtm.generator = function () {
         type: 'dtm.generator'
     };
 
+    // TODO: define params better
+    // name, arg1, 2, 3, ..., length
+    var tempParams = {
+        oscil: {
+            name: ['sin', 'sine', 'cos', 'cosine', 'tri', 'triangle', 'saw', 'invSaw', 'noise', 'square', 'sq', 'harm', 'harmonic'],
+            args: ['amp', 'freq', 'phase'],
+            len: 4096
+        },
+        envelope: {
+            name: [],
+            args: [],
+            len: 512
+        }
+    };
+
     var types = {
         all: [
             'line', 'saw', 'rise',
@@ -1150,7 +1176,7 @@ dtm.generator = function () {
         ],
         oscil: ['sin', 'sine', 'cos', 'cosine', 'tri', 'triangle', 'saw', 'invSaw', 'noise', 'square', 'sq', 'harm', 'harmonic'],
         const: ['zeros', 'zeroes', 'ones', 'constant', 'constants', 'const', 'consts'],
-        envelope: ['rise', 'decay', 'fall'],
+        envelope: ['rise', 'decay', 'fall', 'ahr'],
         noLength: ['string', 'str', 's', 'character', 'characters', 'chars', 'char', 'c', 'range', 'seq', 'scale', 'mode', 'chord'],
         noRange: [],
         noMinMax: [],
@@ -2188,11 +2214,14 @@ dtm.transform = {
         }
 
         var res = null;
-        if (isArray(arr)) {
+        if (isNumArray(arr)) {
             res = new Array(len);
         } else if (isFloat32Array(arr)) {
             res = new Float32Array(len);
+        } else {
+            return null;
         }
+
         var i = 0;
         //res.length = len;
         var mult = len / arr.length;
@@ -2210,9 +2239,9 @@ dtm.transform = {
             case 'linear':
                 var intermArr = null;
 
-                if (arr.constructor === Array) {
+                if (isNumArray(arr)) {
                     intermArr = new Array(intermLen);
-                } else if (arr.constructor === Float32Array) {
+                } else if (isFloat32Array(arr)) {
                     intermArr = new Float32Array(intermLen);
                 }
 
@@ -3232,8 +3261,9 @@ dtm.transform = {
         return res;
     },
 
+    // CHECK: redundant with analyzer.unique
     unique: function (input) {
-        return _.uniq(input);
+        return dtm.analyzer.unique(input);
     },
 
     classId: function (input) {
@@ -3395,8 +3425,8 @@ dtm.array = function () {
         mode: null,
 
         value: [],
-        original: [],
-        normalized: [],
+        original: null,
+        normalized: null,
         classes: null,
         numClasses: null,
 
@@ -3475,6 +3505,9 @@ dtm.array = function () {
                     } else {
                         return params.type;
                     }
+
+                case 'parent':
+                    return params.parent;
 
                 case 'len':
                 case 'length':
@@ -3621,7 +3654,14 @@ dtm.array = function () {
                 case 'normal':
                 case 'normalize':
                 case 'normalized':
-                    return dtm.transform.normalize(params.value);
+                    if (isEmpty(params.normalized)) {
+                        params.normalized = dtm.transform.normalize(params.value);
+                    }
+                    if (isInteger(arguments[1])) {
+                        return params.normalized[dtm.value.mod(arguments[1], params.len)];
+                    } else {
+                        return params.normalized;
+                    }
 
                 case 'sorted':
                 case 'sort':
@@ -3674,48 +3714,60 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.set = function () {
-        if (arguments.length === 1) {
-            if (isEmpty(arguments[0])) {
-                return array;
-            } else if (isNumber(arguments[0])) {
-                params.value = [arguments[0]];
-            } else if (isNumArray(arguments[0])) {
-                params.value = new Float32Array(arguments[0]);
-            } else if (isFloat32Array(arguments[0])) {
-                params.value = arguments[0];
-            } else if (isMixedArray(arguments[0])) {
-                params.value = arguments[0];
-            } else if (isDtmArray(arguments[0])) {
-                params.value = arguments[0].get();
-            } else if (isString(arguments[0])) {
-                params.value = [arguments[0]]; // no splitting
-                checkType(params.value);
-            }
+        if (arguments.length === 0) {
+            return array;
+        }
 
-            if (params.original.length === 0) {
-                params.original = params.value;
-
-                // CHECK: type checking - may be redundant
-                checkType(params.value);
+        if (argsAreSingleVals(arguments)) {
+            var args = argsToArray(arguments);
+            if (isNumArray(args)) {
+                params.value = new Float32Array(args);
             } else {
-                params.processed++;
+                params.value = args;
             }
-
-            generateHash(params.value);
-
-            params.len = params.value.length;
-            params.index = params.len - 1;
-        } else if (arguments.length > 1) {
-            if (argsAreSingleVals(arguments)) {
-                var args = argsToArray(arguments);
-                if (isNumArray(args)) {
-                    params.value = new Float32Array(args);
-                } else {
-                    params.value = args;
+        } else {
+            // if set arguments include any array-like object
+            if (arguments.length === 1) {
+                if (isNumber(arguments[0])) {
+                    params.value = new Float32Array([arguments[0]]);
+                } else if (isNumArray(arguments[0])) {
+                    params.value = new Float32Array(arguments[0]);
+                } else if (isFloat32Array(arguments[0])) {
+                    params.value = arguments[0];
+                } else if (isMixedArray(arguments[0])) {
+                    params.value = arguments[0];
+                } else if (isDtmArray(arguments[0])) {
+                    params.value = arguments[0].get();
+                    // set parent in the child
+                } else if (isString(arguments[0])) {
+                    params.value = [arguments[0]]; // no splitting
+                    checkType(params.value);
                 }
-                params.len = params.value.length;
+            } else {
+                params.value = new Array(arguments.length);
+
+                argsForEach(arguments, function (v, i) {
+                    if (isDtmArray(v)) {
+                        params.value[i] = v;
+                    } else {
+                        params.value[i] = dtm.array(v);
+                    }
+                    params.value[i].parent(array);
+                });
             }
         }
+
+        if (isEmpty(params.original)) {
+            params.original = params.value;
+
+            // CHECK: type checking - may be redundant
+            checkType(params.value);
+        } else {
+            params.processed++;
+        }
+
+        params.len = params.value.length;
+        params.index = params.len - 1;
 
         return array;
     };
@@ -3810,12 +3862,10 @@ dtm.array = function () {
     /**
      * Returns a clone of the array object. It can be used when you don't want to reference the same array object from different places.
      * @function module:array#clone
+     //* @memberOf module:array
      * @returns {dtm.array}
      */
     array.clone = function () {
-        // this doesn't work
-        //return dtm.clone(array);
-
         var newArr = dtm.array(params.value).name(params.name);
 
         // CHECK: this may cause troubles!
@@ -3828,23 +3878,55 @@ dtm.array = function () {
         }
         return newArr;
     };
+
+    ///**
+    // * @alias module:array#clone
+    // * @memberOf module:array
+    // */
     array.c = array.clone;
 
-    array.parent = function (clone) {
-        if (!isBoolean(clone)) {
-            clone = true;
+    /**
+     * blah blah
+     * @instance
+     * @memberOf module:array
+     * @name clonetest
+     * @alias c, cl
+     * @returns {dtm.array}
+     */
+    function clonetest() {
+
+    }
+
+    array.parent = function (obj) {
+        if (isDtmArray(obj)) {
+            params.parent = obj;
         }
-        if (params.parent !== null) {
-            if (clone) {
-                return array.parent.clone();
-            } else {
-                return array.parent;
-            }
-        } else {
-            return array;
-        }
+        return array;
     };
 
+    array.nest = function () {
+        if (!isDtmArray(params.value)) {
+            array.set([dtm.array(params.value)]);
+            params.value[0].parent(array);
+        }
+        return array;
+    };
+
+    array.unnest = function () {
+        var flattened = [];
+        params.value.forEach(function (v) {
+            if (isDtmArray(v)) {
+                flattened = concat(flattened, v.get());
+            }
+        });
+
+        if (isNumOrFloat32Array(flattened)) {
+            flattened = toFloat32Array(flattened);
+        }
+        return array.set(flattened);
+    };
+
+    array.flatten = array.unnest;
     /**
      * Morphs the array values with a target array / dtm.array values. The lengths can be mismatched.
      * @function module:array#morph
@@ -3929,15 +4011,26 @@ dtm.array = function () {
 
     array.n = array.normalize;
 
-    // TODO: update doc
     /**
-     * Modifies the range of the array. Shorthand: sc()
+     * Modifies the range of the array. Shorthand: array.sc
      * @function module:array#scale
      * @param arg1 {number|array|dtm.array} The target minimum value of the scaled range.
-     * @param arg2 {number} The target maximum value of the scaled range.
-     * @param [arg3] {number} The minimum of the domain (original) value range.
-     * @param [arg4] {number} The maximum of the domain value range.
+     * @param arg2 {number|array|dtm.array} The target maximum value of the scaled range.
+     * @param [arg3] {number} The minimum of the domain (original) value.
+     * @param [arg4] {number} The maximum of the domain value.
      * @returns {dtm.array}
+     * @example
+     * // Specifying the output range
+     * dtm.array([1, 2, 3]).scale([0, 10]).get();
+     * // or
+     * dtm.array([1, 2, 3]).scale(0, 10).get();
+     * -> [0, 5, 10]
+     *
+     * // Specifying the domain values (the second array in the argument)
+     * dtm.array([1, 2, 3]).scale([0, 10], [0, 5]).get();
+     * // or
+     * dtm.array([1, 2, 3]).scale(0, 10, 0, 5).get();
+     * -> [2, 4, 6]
      */
     array.scale = function (arg1, arg2, arg3, arg4) {
         var min, max, dmin, dmax;
@@ -4572,8 +4665,20 @@ dtm.array = function () {
      * @function module:array#diff
      * @returns {dtm.array}
      */
-    array.diff = function () {
-        return array.set(dtm.transform.diff(params.value));
+    array.diff = function (order, pad) {
+        if (!isInteger(order) || order < 1) {
+            order = 1;
+        }
+        for (var i = 0; i < order; i++) {
+            params.value = dtm.transform.diff(params.value);
+        }
+
+        if (isSingleVal(pad)) {
+            for (var i = 0; i < order; i++) {
+                params.value = concat(params.value, pad);
+            }
+        }
+        return array.set(params.value);
     };
 
     /**
@@ -4595,11 +4700,8 @@ dtm.array = function () {
     array.histogram = function () {
         // CHECK: this is hacky
         params.type = 'string'; // re-set the type to string from number
-        return array.set(dtm.analyzer.histo(params.value));
+        return array.set(toFloat32Array(dtm.analyzer.histo(params.value)));
     };
-
-    array.histo = array.histogram;
-
     /**
      * Overwrites the contents with unsorted unique values of the array.
      * @function module:array#uniq | unique
@@ -4608,8 +4710,6 @@ dtm.array = function () {
     array.unique = function () {
         return array.set(dtm.transform.unique(params.value));
     };
-
-    array.uniq = array.unique;
 
     // TODO: id by occurrence / rarity, etc.
     /**
@@ -4621,8 +4721,6 @@ dtm.array = function () {
         return array.set(dtm.transform.classId(params.value));
     };
 
-    array.class = array.classify;
-
     /**
      * Converts the array values (such as numbers) into string format.
      * @function module:array#stringify | tostring
@@ -4632,22 +4730,20 @@ dtm.array = function () {
         return array.set(dtm.transform.stringify(params.value));
     };
 
-    array.tostring = array.stringify;
-
     /**
      * Converts string or boolean values to numerical values.
      * @function module:array#tonumber | toNumber
      * @returns {dtm.array}
      */
     array.tonumber = function () {
-        return array.set(dtm.transform.tonumber(params.value));
+        return array.set(toFloat32Array(dtm.transform.tonumber(params.value)));
     };
 
-    array.tonum = array.tonumber;
-
     array.toFloat32 = function () {
-        var newArr = new Float32Array(array.get('len'));
-        return array.set(newArr);
+        if (isNumArray(params.value)) {
+            array.set(toFloat32Array(params.value));
+        }
+        return array;
     };
 
     // CHECK: occurrence or value??
@@ -4655,13 +4751,9 @@ dtm.array = function () {
         return array;
     };
 
-    array.mt = array.morethan;
-
     array.lessthan = function () {
         return array;
     };
-
-    array.lt = array.lessthan;
 
     /* STRING OPERATIONS */
 
@@ -4676,23 +4768,13 @@ dtm.array = function () {
 
     /* MUSICAL */
 
-    // CHECK: this is different from the trnsf function
     /**
-     * Pitch quantize the array values.
-     * @function module:array#pq | pitchq
-     * @param scale {array|string}
+     * Pitch quantize the array values. Shorthand: array.pq
+     * @function module:array#pitchquantize
+     * @param scale {array|dtm.array} A numerical or string (solfa -- e.g., 'do' or 'd' instead of 0) denoting the musical scale degrees.
      * @returns {dtm.array}
      */
-    array.pq = function (scale) {
-        var scales = {
-            "major": [0, 4, 7],
-            "minor": [0, 3, 7],
-            "maj7": [0, 4, 7, 11],
-            "-7": [0, 3, 7, 10],
-            "7": [0, 4, 7, 10],
-            "7sus4": [0, 5, 7, 10]
-        };
-
+    array.pitchquantize = function (scale) {
         if (isEmpty(scale)) {
             scale = dtm.gen('range', 12).get();
         } else if (isDtmArray(scale) && isNumOrFloat32Array(scale.get())) {
@@ -4700,14 +4782,9 @@ dtm.array = function () {
         } else if (isNumOrFloat32Array(scale)) {
 
         }
-        //else if (isString(scale)) {
-        //    scale = scales[scale.toLowerCase()];
-        //}
 
         return array.set(dtm.transform.pq(params.value, scale));
     };
-
-    array.pitchquantize = array.pq;
 
     array.mtof = function () {
         return array.set(dtm.transform.mtof(params.value));
@@ -4736,8 +4813,6 @@ dtm.array = function () {
         return array.set(dtm.transform.notesToBeats(params.value, resolution));
     };
 
-    array.ntob = array.notesToBeats;
-
     /**
      * Converts beat sequence into note values.
      * @function module:array#beatsToNotes | bton
@@ -4749,8 +4824,6 @@ dtm.array = function () {
         return array.set(dtm.transform.beatsToNotes(params.value, resolution));
     };
 
-    array.bton = array.beatsToNotes;
-
     /**
      * Converts intervalic values into a beat sequence.
      * @function module:array#intervalsToBeats | itob
@@ -4760,8 +4833,6 @@ dtm.array = function () {
         return array.set(dtm.transform.intervalsToBeats(params.value));
     };
 
-    array.itob = array.intervalsToBeats;
-
     /**
      * Converts beat sequence into intervalic values.
      * @function module:array#beatsToIntervals | btoi
@@ -4770,9 +4841,6 @@ dtm.array = function () {
     array.beatsToIntervals = function () {
         return array.set(dtm.transform.beatsToIntervals(params.value));
     };
-
-    array.btoi = array.beatsToIntervals;
-
     /**
      * Converts beat sequence into an array of indices (or delays or onset-coordinate vectors.) Useful for creating time delay-based events.
      * @function module:array#beatsToIndices | btoid
@@ -4781,8 +4849,6 @@ dtm.array = function () {
     array.beatsToIndices = function () {
         return array.set(dtm.transform.beatsToIndices(params.value));
     };
-
-    array.btoid = array.beatsToIndices;
 
     /**
      * function module:array#indicesToBeats | idtob
@@ -4793,12 +4859,31 @@ dtm.array = function () {
         return array.set(dtm.transform.indicesToBeats(params.value, len));
     };
 
+
+    /* aliases */
+
+    array.histo = array.histogram;
+    array.uniq = array.unique;
+    array.class = array.classify;
+    array.tostring = array.stringify;
+    array.tonum = array.tonumber;
+    array.mt = array.morethan;
+    array.lt = array.lessthan;
+    array.pq = array.pitchquantize;
+    array.ntob = array.notesToBeats;
+    array.bton = array.beatsToNotes;
+    array.itob = array.intervalsToBeats;
+    array.btoi = array.beatsToIntervals;
+    array.btoid = array.beatsToIndices;
     array.idtob = array.indicesToBeats;
+
+
 
     /* dtm.generator placeholders */
     // these are not really necessary, but prevents typeError when calling dtm.gen functions on pure dtm.array object
     array.type = function () { return array; };
     array.len = function () { return array; };
+
 
     // set the array content here
     array.set.apply(this, arguments);
@@ -4926,14 +5011,41 @@ dtm.value = {
     /**
      * Scale or pitch-quantizes the input value to the given models.scales.
      * @function module:value#pq
-     * @param nn {integer} Note number
-     * @param scale
+     * @param nn {number} Note number
+     * @param scale {array} An array of either number or string
      * @param [round=false] {boolean}
      * @returns {*}
      */
     pq: function (nn, scale, round) {
-        if (!isNumOrFloat32Array(scale)) {
-            scale = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+        var solfa = {
+            0: ['do', 'd'],
+            1: ['di', 'ra'],
+            2: ['re', 'r'],
+            3: ['ri', 'me'],
+            4: ['mi', 'm', 'fe'],
+            5: ['fa', 'f'],
+            6: ['fi', 'se'],
+            7: ['sol', 's'],
+            8: ['si', 'le'],
+            9: ['la', 'l'],
+            10: ['li', 'te'],
+            11: ['ti', 't', 'de']
+        };
+
+        var sc = [];
+
+        if (isNumOrFloat32Array(scale)) {
+            sc = scale;
+        } else if (isStringArray(scale)) {
+            scale.forEach(function (v) {
+                objForEach(solfa, function (deg, key) {
+                    if (deg.indexOf(v.toLowerCase()) > -1) {
+                        sc.push(parseInt(key));
+                    }
+                });
+            })
+        } else if (!isArray(scale)) {
+            sc = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
         }
 
         if (isEmpty(round)) {
@@ -4942,13 +5054,13 @@ dtm.value = {
 
         var pc = nn % 12;
         var oct = nn - pc;
-        var idx = Math.floor(pc / 12. * scale.length);
+        var idx = Math.floor(pc / 12. * sc.length);
         var frac = 0.0;
 
         if (!round) {
             frac = nn % 1;
         }
-        return oct + scale[idx] + frac;
+        return oct + sc[idx] + frac;
     },
 
     /**
@@ -5428,7 +5540,8 @@ dtm.data = function (arg, cb, type) {
             }
         } else if (typeof(param) === 'number') {
             if (param >= 0 && param < params.size['col']) {
-                return params.arrays[params.keys[param]].clone();
+                //return params.arrays[params.keys[param]].clone();
+                return params.arrays[params.keys[param]];
             } else {
                 dtm.log('data.get(): index out of range');
                 return data;
@@ -7455,8 +7568,16 @@ dtm.synth = function () {
         sr: 44100,
         kr: 4410,
         dur: 1.0,
+        durTest: dtm.array(1.0),
         offset: 0.0,
         repeat: 1, // TODO: design - inclusive?
+
+        baseTime: 0.0, // for offline rendering
+        lookahead: false,
+        autoDur: false,
+        voiceId: Math.random(),
+        startTime: 0.0,
+        phase: 0.0,
 
         wavetable: null,
         rendered: null,
@@ -7474,10 +7595,6 @@ dtm.synth = function () {
         curve: false,
         offline: false,
         clock: null,
-        baseTime: 0.0,
-        lookahead: false,
-        autoDur: false,
-        voiceId: Math.random(),
 
         //useOfflineContext: true,
         rtFxOnly: true,
@@ -7514,7 +7631,9 @@ dtm.synth = function () {
         out: null,
         fx: [{}],
         pFx: [{}],
-        rtSrc: null
+        rtSrc: null,
+
+        phasor: null
     };
 
     if (!!arguments.callee.caller) {
@@ -7588,6 +7707,7 @@ dtm.synth = function () {
     }
 
     var fx = {
+        // TODO: named param mode not complete
         Gain: function (mode) {
             var name = null;
             var post = isBoolean(mode) ? mode : params.rtFxOnly;
@@ -7854,7 +7974,7 @@ dtm.synth = function () {
 
     /**
      * @function module:synth#lookahead
-     * @param lookahead
+     * @param lookahead {bool|}
      * @returns {dtm.synth}
      */
     synth.lookahead = function (lookahead) {
@@ -7877,6 +7997,8 @@ dtm.synth = function () {
             params.autoDur = src;
         } else if (src === 'auto') {
             params.autoDur = true;
+        } else if (isDtmArray(src)) {
+            params.durTest = src;
         }
         return synth;
     };
@@ -7898,7 +8020,7 @@ dtm.synth = function () {
         return synth;
     };
 
-    // TODO: accept dtm.array for time and dur
+    // TODO: accept dtm.array for time and dur - redesign the args
     /**
      * Plays
      * @function module:synth#play
@@ -7920,6 +8042,8 @@ dtm.synth = function () {
         if (isNumber(dur) && dur > 0.0) {
             params.dur = dur;
         }
+
+        params.dur = params.durTest.get('next');
 
         //if (!isEmpty(params.promise)) {
         //    params.promise.then(function () {
@@ -8064,6 +8188,8 @@ dtm.synth = function () {
                     time += params.clock.get('lookahead');
                 }
 
+                params.startTime = time;
+
                 nodes.src = actx.createBufferSource();
                 nodes.amp = actx.createGain();
                 nodes.pFx[0].out = actx.createGain();
@@ -8165,6 +8291,16 @@ dtm.synth = function () {
 
     synth.rep = synth.repeat;
 
+    function getPhase() {
+        params.phase = (actx.currentTime - params.startTime) / params.dur;
+        if (params.phase < 0.0) {
+            params.phase = 0.0;
+        } else if (params.phase > 1.0) {
+            params.phase = 1.0;
+        }
+        return params.phase;
+    }
+
     synth.mod = function (name, val) {
         if (isString(name) && params.named.hasOwnProperty(name)) {
             setTimeout(function () {
@@ -8242,10 +8378,9 @@ dtm.synth = function () {
      * Sets the pitch of the oscillator by a MIDI note number.
      * @function module:synth#notenum
      * @param src
-     * @param [post=false] {boolean}
      * @returns {dtm.synth}
      */
-    synth.notenum = function (src, post) {
+    synth.notenum = function (src) {
         src = typeCheck(src);
         if (src) {
             params.notenum = new Float32Array(src.length);
@@ -8743,6 +8878,8 @@ dtm.synth = function () {
                 return dtm.array(params.wavetable);
             case 'dur':
                 return params.dur;
+            case 'phase':
+                return getPhase();
             case 'nn':
             case 'notenum':
                 return params.notenum;

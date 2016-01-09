@@ -112,7 +112,8 @@ dtm.data = function (arg, cb, type) {
             }
         } else if (typeof(param) === 'number') {
             if (param >= 0 && param < params.size['col']) {
-                return params.arrays[params.keys[param]].clone();
+                //return params.arrays[params.keys[param]].clone();
+                return params.arrays[params.keys[param]];
             } else {
                 dtm.log('data.get(): index out of range');
                 return data;

@@ -99,6 +99,19 @@ describe('isPromise', function () {
     });
 });
 
+describe('isArray', function () {
+    it('should be all-inclusive', function () {
+        expect(isArray([1, 2, 3])).toBe(true);
+        expect(isArray(['foo', 'bar'])).toBe(true);
+        expect(isArray(toFloat32Array([1, 2, 3]))).toBe(true);
+        expect(isArray([dtm.a([1,2,3])])).toBe(true);
+        expect(isArray(dtm.a([1,2,3]))).toBe(false);
+        expect(isArray(1)).toBe(false);
+        expect(isArray(undefined)).toBe(false);
+        expect(isArray({})).toBe(false);
+    });
+});
+
 describe('isNumArray', function () {
     it('should work', function () {
         expect(isNumArray([1, 2, 3])).toBe(true);
@@ -119,7 +132,9 @@ describe('isFloat32Array', function () {
 describe('isNumOrFloat32Array', function () {
     it('should work', function () {
         expect(isNumOrFloat32Array([1, 2, 3])).toBe(true);
-        expect(isNumOrFloat32Array(new Float32Array([1, 2, 3]))).toBe(true);
+        expect(isNumOrFloat32Array(toFloat32Array([1, 2, 3]))).toBe(true);
+        expect(isNumOrFloat32Array(dtm.a([1,2,3]))).toBe(false);
+        expect(isNumOrFloat32Array([dtm.a([1,2,3])])).toBe(false);
     });
 });
 
@@ -127,12 +142,14 @@ describe('isStringArray', function () {
     it('should work', function () {
         expect(isStringArray(['hey', 'ho'])).toBe(true);
         expect(isStringArray(['hey', 1])).toBe(false);
+        expect(isStringArray([dtm.a('hey')])).toBe(false);
     });
 });
 
 describe('isMixedArray', function () {
     it('should work', function () {
         expect(isMixedArray([1, '2'])).toBe(true);
+        expect(isMixedArray([dtm.a([1,2,3])])).toBe(true);
     });
 });
 
@@ -151,6 +168,7 @@ describe('isDtmArray', function () {
         expect(isDtmArray(dtm.a([1,2,3]))).toBe(true);
         expect(isDtmArray(dtm.gen('sine'))).toBe(true);
         expect(isDtmArray([1,2,3])).toBe(false);
+        expect(isDtmArray([dtm.a([1,2,3])])).toBe(false);
     });
 });
 
@@ -158,7 +176,29 @@ describe('argsToArray', function () {
     it('should work', function () {
         expect((function () {
             return argsToArray(arguments)
-            })(1, 2, 3)).toEqual([1, 2, 3]);
+        })(1, 2, 3)).toEqual([1, 2, 3]);
+
+        expect((function () {
+            return argsToArray(arguments)
+        })(1, null, 3)).toEqual([1, null, 3]);
+
+        expect((function () {
+            return argsToArray(arguments)
+        })()).toEqual([]);
+
+        expect((function () {
+            return argsToArray(arguments)
+        })(null)).toEqual([null]);
+    });
+});
+
+describe('argsForEach', function () {
+    it('should work', function () {
+        expect((function () {
+            argsForEach(arguments, function (v, i) {
+                expect(v).toBe(i);
+            });
+        })(0, 1, 2));
     });
 });
 
@@ -175,6 +215,18 @@ describe('argIsSingleArray', function () {
         expect((function () {
             return argIsSingleArray(arguments);
         })([1, 2], 3)).toBe(false);
+
+        expect((function () {
+            return argIsSingleArray(arguments);
+        })([1], 2, 3)).toBe(false);
+
+        expect((function () {
+            return argIsSingleArray(arguments);
+        })(dtm.a(1), 2, 3)).toBe(false);
+
+        expect((function () {
+            return argIsSingleArray(arguments);
+        })()).toBe(false);
     })
 });
 
@@ -190,7 +242,39 @@ describe('argsAreSingleVals', function () {
 
         expect((function () {
             return argsAreSingleVals(arguments);
+        })(toFloat32Array([1, 2, 3]))).toBe(false);
+
+        expect((function () {
+            return argsAreSingleVals(arguments);
         })(1, [2], 3)).toBe(false);
+
+        expect((function () {
+            return argsAreSingleVals(arguments);
+        })(toFloat32Array(1), 2, 3)).toBe(false);
+
+        expect((function () {
+            return argsAreSingleVals(arguments);
+        })(toFloat32Array(1))).toBe(false);
+
+        expect((function () {
+            return argsAreSingleVals(arguments);
+        })(dtm.a(1), 2, 3)).toBe(false);
+
+        expect((function () {
+            return argsAreSingleVals(arguments);
+        })(dtm.a(1))).toBe(false);
+
+        expect((function () {
+            return argsAreSingleVals(arguments);
+        })(1)).toBe(true);
+
+        expect((function () {
+            return argsAreSingleVals(arguments);
+        })('hey')).toBe(true);
+
+        //expect((function () {
+        //    return argsAreSingleVals(arguments);
+        //})()).toBe(false);
     });
 });
 
@@ -230,6 +314,8 @@ describe('concat', function () {
         expect(concat([1, 2], [3, 4])).toEqual([1, 2, 3, 4]);
         expect(concat(toFloat32Array([1, 2]), [3, 4])).toEqual(toFloat32Array([1, 2, 3, 4]));
         expect(concat([1, 2], toFloat32Array([3, 4]))).toEqual(toFloat32Array([1, 2, 3, 4]));
+
+        expect(concat([], toFloat32Array([1, 2]))).toEqual(toFloat32Array([1, 2]));
     });
 });
 
