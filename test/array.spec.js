@@ -139,6 +139,12 @@ describe('array object', function () {
                 expect(dtm.a([1,2,3]).get()).toEqual(toFloat32Array([1,2,3]));
             });
         });
+
+        describe('nested', function () {
+            it ('should return nested non-dtm.arrays', function () {
+                expect(dtm.a([[1], [2], [3]]).get('nested')).toEqual([toFloat32Array(1), toFloat32Array(2), toFloat32Array(3)]);
+            });
+        });
     });
 
     describe('set', function () {
@@ -254,11 +260,15 @@ describe('array object', function () {
         });
 
         describe('reorder', function () {
-            it('should work', function () {
+            it('should work with single array input', function () {
                 expect(dtm.gen('range', 5).reorder([0,2,1,4,4]).get()).toEqual(toFloat32Array([0,2,1,4,4]));
                 expect(dtm.a([1], [2], [3]).reorder([2, 1, 0]).get(0).get()).toEqual(toFloat32Array(3));
                 expect(dtm.gen('range', 5).reorder([0, 4, 3]).get()).toEqual(toFloat32Array([0, 4, 3]));
                 expect(dtm.gen('range', 5).reorder([0, -1, -2]).get()).toEqual(toFloat32Array([0, 4, 3]));
+            });
+
+            it('sould work with single val arguments', function () {
+                expect(dtm.gen('range', 3).reorder(2, 1, 0).get()).toEqual(toFloat32Array([2,1,0]));
             });
         });
     });
@@ -384,5 +394,33 @@ describe('array object', function () {
         it('should start from 2', function () {
             expect(a.get(0)).toBe(2);
         });
+    });
+
+    describe('block', function () {
+        it('should work with no overlap', function () {
+            dtm.gen('range', 5).block(1).forEach(function (v, i) {
+                expect(v.get(0)).toBe(i);
+            });
+
+            dtm.gen('range', 5).block(2).forEach(function (v, i) {
+                expect(v.get()).toEqual(toFloat32Array([i*2,i*2+1]));
+            });
+
+            expect(dtm.gen('range', 8).block(2).get('len')).toBe(4);
+            expect(dtm.gen('range', 9).block(2).get('len')).toBe(4);
+            dtm.gen('range', 9).block(2).forEach(function (v) {
+                expect(v.get('len')).toBe(2);
+            });
+
+            expect(dtm.gen('range', 10).block(3).get('len')).toBe(3);
+
+            expect(dtm.gen('range', 3).block(4).get(0).get()).toEqual(toFloat32Array([0, 1, 2]));
+        });
+
+        it('should work with overlaps', function () {
+            dtm.gen('range', 3).block(2, 1).forEach(function (v, i) {
+                expect(v.get()).toEqual(toFloat32Array([i, i+1]));
+            });
+        })
     });
 });

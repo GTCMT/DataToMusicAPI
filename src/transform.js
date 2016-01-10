@@ -1077,6 +1077,14 @@ dtm.transform = {
     },
 
     window: function (arr, type) {
+        switch (type) {
+            case 'rect':
+            case 'rectangle':
+            case 'rectangular':
+                return arr;
+            default:
+                break;
+        }
         var phase = 0;
         var res = null;
         if (isArray(arr)) {
@@ -1100,6 +1108,8 @@ dtm.transform = {
                     var beta = 0.46;
                     res[i] = arr[i] * (alpha - beta * Math.cos(2 * Math.PI * phase));
                     break;
+
+                // maybe these are redundant
                 case 'rect':
                 case 'rectangle':
                 case 'rectangular':

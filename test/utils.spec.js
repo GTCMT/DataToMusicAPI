@@ -105,6 +105,7 @@ describe('isArray', function () {
         expect(isArray(['foo', 'bar'])).toBe(true);
         expect(isArray(toFloat32Array([1, 2, 3]))).toBe(true);
         expect(isArray([dtm.a([1,2,3])])).toBe(true);
+
         expect(isArray(dtm.a([1,2,3]))).toBe(false);
         expect(isArray(1)).toBe(false);
         expect(isArray(undefined)).toBe(false);

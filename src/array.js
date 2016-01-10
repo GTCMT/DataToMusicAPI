@@ -118,6 +118,14 @@ dtm.array = function () {
                 case 'processed':
                     return params.processed;
 
+                case 'nested':
+                    return params.value.map(function (v) {
+                        if (isDtmArray(v)) {
+                            return v.get();
+                        } else {
+                            return v;
+                        }
+                    });
 
                 /* STATS */
                 case 'minimum':
@@ -1091,34 +1099,28 @@ dtm.array = function () {
 
     array.slice = array.truncate;
 
-    /**
-     * Returns a smaller segment of the array. Similar to get('block', ...), but more destructive.
-     * @function module:array#block
-     * @param start {number|array} The starting index of the block.
-     * @param [size=1] {number} The size of the block.
-     * @param [clone=true] {boolean} This retains the original array object.
-     * @returns {dtm.array}
-     */
-    array.block = function (start, size, clone) {
-        if (clone !== 'boolean') {
-            clone = true;
+    // TODO: accept option as arg? for numBlocks, pad, overlap ratio, etc.
+    array.block = function (len, hop, window, pad) {
+        if (!isInteger(len) || len < 1) {
+            len = 1;
+        } else if (len > params.len) {
+            len = params.len;
+        }
+        if (!isInteger(hop) || hop < 1) {
+            hop = len;
+        }
+        if (isEmpty(window)) {
+            window = 'rectangular';
         }
 
-        var blockArray;
-        if (isArray(start)) {
-            blockArray = dtm.transform.getBlock(params.value, start[0], start[1]);
-        } else if (isNumber(start) && isNumber(size)) {
-            blockArray = dtm.transform.getBlock(params.value, start, size);
-        } else {
-            // CHECK: ???
-            return array;
+        var newArr = [];
+        var numBlocks = Math.floor((params.len - len) / hop) + 1;
+
+        for (var i = 0; i < numBlocks; i++) {
+            newArr[i] = dtm.array(params.value.slice(i*hop, i*hop+len)).window(window).parent(array);
         }
 
-        if (clone) {
-            return array.clone().set(blockArray);
-        } else {
-            return array.set(blockArray);
-        }
+        return array.set(newArr);
     };
 
     /**
@@ -1195,7 +1197,15 @@ dtm.array = function () {
         return array;
     };
 
-    array.reorder = function (indices) {
+    array.reorder = function () {
+        var indices;
+
+        if (argsAreSingleVals(arguments)) {
+            indices = argsToArray(arguments);
+        } else if (argIsSingleArray(arguments)) {
+            indices = arguments[0];
+        }
+
         if (isNumOrFloat32Array(indices)) {
             var newArr = new Array(indices.length);
             indices.forEach(function (v, i) {
