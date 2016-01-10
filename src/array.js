@@ -61,12 +61,14 @@ dtm.array = function () {
     array.get = function (param) {
         if (isNumber(param)) {
             // TODO: support multiple single val arguments
-            if (param < 0 || param >= params.len) {
-                dtm.log('Index out of range');
-                return params.value[dtm.value.mod(param, params.len)];
-            } else {
-                return params.value[param];
-            }
+            return params.value[dtm.value.mod(param, params.len)];
+
+            //if (param < 0 || param >= params.len) {
+            //    dtm.log('Index out of range');
+            //    return params.value[dtm.value.mod(param, params.len)];
+            //} else {
+            //    return params.value[param];
+            //}
         } else if (isNumArray(param) || (isDtmArray(param) && isNumArray(param.get()))) {
             var indices = isDtmArray(param) ? param.get() : param;
             var res = []; // TODO: support typed array?
@@ -329,16 +331,29 @@ dtm.array = function () {
                     params.value = new Float32Array([arguments[0]]);
                 } else if (isNumArray(arguments[0])) {
                     params.value = new Float32Array(arguments[0]);
-                } else if (isFloat32Array(arguments[0])) {
+                } else if (isNestedArray(arguments[0])) {
+                    params.value = new Array(arguments[0].length);
+                    arguments[0].forEach(function (v, i) {
+                        params.value[i] = dtm.array(v).parent(array);
+                    });
+                } else if (isNestedWithDtmArray(arguments[0])) {
                     params.value = arguments[0];
-                } else if (isMixedArray(arguments[0])) {
-                    params.value = arguments[0];
+                    params.value.forEach(function (v) {
+                        v.parent(array);
+                    });
                 } else if (isDtmArray(arguments[0])) {
                     params.value = arguments[0].get();
                     // set parent in the child
+                } else if (isNestedDtmArray(arguments[0])) {
+                    params.value = arguments[0].get();
+                    params.value.forEach(function (v) {
+                        v.parent(array);
+                    });
                 } else if (isString(arguments[0])) {
                     params.value = [arguments[0]]; // no splitting
                     checkType(params.value);
+                } else {
+                    params.value = arguments[0];
                 }
             } else {
                 params.value = new Array(arguments.length);
@@ -501,6 +516,8 @@ dtm.array = function () {
         return array;
     };
 
+    // TODO: array.block (and window) should transform the parent array into nested child array
+
     array.nest = function () {
         if (!isDtmArray(params.value)) {
             array.set([dtm.array(params.value)]);
@@ -581,6 +598,10 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.normalize = function (arg1, arg2) {
+        if (isNestedDtmArray(array)) {
+            return array;
+        }
+
         var min, max, args;
         if (isNumber(arg1) && isNumber(arg2)) {
             min = arg1;
@@ -883,11 +904,11 @@ dtm.array = function () {
 
     // TODO: these should be in the get method
     array.some = function (callback) {
-        return array.set(params.value.some(callback));
+        return params.value.some(callback);
     };
 
     array.every = function (callback) {
-        return array.set(params.value.every(callback));
+        return params.value.every(callback);
     };
 
     array.subarray = function () {
@@ -1170,10 +1191,21 @@ dtm.array = function () {
 
     array.randomize = array.shuffle;
 
-
     array.blockShuffle = function (blockSize) {
         return array;
     };
+
+    array.reorder = function (indices) {
+        if (isNumOrFloat32Array(indices)) {
+            var newArr = new Array(indices.length);
+            indices.forEach(function (v, i) {
+                newArr[i] = array.get(v);
+            });
+        }
+        return array.set(newArr);
+    };
+
+    array.order = array.reorder;
 
     /**
      * Adds new value(s) at the end of the array, and removes the oldest value(s) at the beginning of the array. The size of the array is unchanged.

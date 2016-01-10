@@ -5,7 +5,6 @@ describe('generator', function () {
             expect(g.get('typed')).toBe(true);
             expect(g.get('pack')).toBe(false);
             //expect(g.get()).toEqual(toFloat32Array([]));
-            expect(g.get('len')).toBe(8);
         });
     });
 

@@ -149,7 +149,7 @@ describe('isStringArray', function () {
 describe('isMixedArray', function () {
     it('should work', function () {
         expect(isMixedArray([1, '2'])).toBe(true);
-        expect(isMixedArray([dtm.a([1,2,3])])).toBe(true);
+        expect(isMixedArray([dtm.a([1,2,3])])).toBe(false);
     });
 });
 
@@ -190,6 +190,18 @@ describe('isDtmArray', function () {
         expect(isDtmArray(dtm.gen('sine'))).toBe(true);
         expect(isDtmArray([1,2,3])).toBe(false);
         expect(isDtmArray([dtm.a([1,2,3])])).toBe(false);
+    });
+});
+
+describe('isNestedDtmArray', function () {
+    it('should work', function () {
+        expect(isNestedDtmArray([])).toBe(false);
+        expect(isNestedDtmArray(dtm.a([1,2,3]))).toBe(false);
+        expect(isNestedDtmArray(dtm.a([1,2,3], [4,5,6]))).toBe(true);
+        expect(isNestedDtmArray(dtm.a([[1,2,3], [4,5,6]]))).toBe(true);
+        expect(isNestedDtmArray(dtm.a([dtm.a([1,2,3])]))).toBe(true);
+        expect(isNestedDtmArray(dtm.a([dtm.a([1,2,3]), dtm.a([4,5,6])]))).toBe(true);
+        expect(isNestedDtmArray(dtm.a(dtm.a([1,2,3]), dtm.a([4,5,6])))).toBe(true);
     });
 });
 
@@ -303,6 +315,7 @@ describe('objForEach', function () {
     it('should work', function () {
         objForEach({foo: 123, bar: 456}, function (val, key) {
             expect(isNumber(val)).toBe(true);
+            expect(key === 'foo' || key === 'bar').toBe(true);
         });
     });
 });

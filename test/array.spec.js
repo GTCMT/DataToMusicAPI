@@ -4,6 +4,13 @@ describe('array object', function () {
             it('should return the array value', function () {
                 var a = dtm.array([1,2,3]);
                 expect(a.get()).toEqual(toFloat32Array([1,2,3]));
+
+                expect(a.get(0)).toBe(1);
+                expect(a.get(2)).toBe(3);
+                expect(a.get(-1)).toBe(3);
+                expect(a.get(3)).toBe(1);
+
+                expect(dtm.gen('range', 5).get(-2)).toBe(3);
             });
         });
 
@@ -57,12 +64,13 @@ describe('array object', function () {
         describe('sorted', function () {
             var a = dtm.array([3, 1, 2]);
             it('should return [1, 2, 3]', function () {
-                expect(a.get('sorted').toString()).toBe([1, 2, 3].toString());
+                expect(a.get('sorted')).toEqual(toFloat32Array([1, 2, 3]));
             });
 
             var b = dtm.array('hey').split();
-            it('should return e h y', function () {
-                expect(b.get('sorted').toString()).toBe(['e', 'h', 'y'].toString());
+            it('should work on strings', function () {
+                expect(b.get()).toEqual(['h', 'e', 'y']);
+                expect(b.get('sorted')).toEqual(['e', 'h', 'y']);
             });
         });
 
@@ -144,6 +152,7 @@ describe('array object', function () {
             it('should accept array', function () {
                 expect(dtm.a([1,2,3]).get()).toEqual(toFloat32Array([1,2,3]));
                 expect(dtm.a([1,'hey',3]).get()).toEqual([1,'hey',3]);
+                expect(dtm.a(['foo','bar']).get()).toEqual(['foo','bar']);
             });
 
             it('should accept dtm.array', function () {
@@ -241,6 +250,15 @@ describe('array object', function () {
                 expect(dtm.array([1,2]).concat(dtm.a([3,4])).get()).toEqual(toFloat32Array([1,2,3,4]));
 
                 //expect(dtm.array([1,2]).concat(['foo', 'bar']).get()).toEqual([1,2,'foo','bar']);
+            });
+        });
+
+        describe('reorder', function () {
+            it('should work', function () {
+                expect(dtm.gen('range', 5).reorder([0,2,1,4,4]).get()).toEqual(toFloat32Array([0,2,1,4,4]));
+                expect(dtm.a([1], [2], [3]).reorder([2, 1, 0]).get(0).get()).toEqual(toFloat32Array(3));
+                expect(dtm.gen('range', 5).reorder([0, 4, 3]).get()).toEqual(toFloat32Array([0, 4, 3]));
+                expect(dtm.gen('range', 5).reorder([0, -1, -2]).get()).toEqual(toFloat32Array([0, 4, 3]));
             });
         });
     });

@@ -97,7 +97,7 @@ function isNumOrFloat32Array(val) {
 }
 
 function isMixedArray(val) {
-    return isArray(val) && !isNumOrFloat32Array(val);
+    return isArray(val) && !isStringArray(val) && !isNumOrFloat32Array(val) && !isNestedArray(val) && !isNestedWithDtmArray(val);
 }
 
 function isNestedArray(val) {
@@ -140,11 +140,31 @@ function isDtmArray(val) {
     }
 }
 
+function isNestedDtmArray(val) {
+    if (isDtmArray(val)) {
+        return val.every(function (v) {
+            return isDtmArray(v);
+        });
+    } else {
+        return false;
+    }
+}
+
 function isStringArray(val) {
     var res = false;
     if (isArray(val)) {
         res = val.every(function (v) {
-            return typeof(v) === 'string';
+            return isString(v);
+        });
+    }
+    return res;
+}
+
+function isBoolArray(val) {
+    var res = false;
+    if (isArray(val)) {
+        res = val.every(function (v) {
+            return isBoolean(v);
         });
     }
     return res;
@@ -1482,6 +1502,8 @@ dtm.generator = function () {
             default:
                 break;
         }
+
+        params.len = params.value.length;
     }
 
     /**
@@ -2870,10 +2892,14 @@ dtm.transform = {
      * @returns {array}
      */
     sort: function (arr) {
-        //return arr.sort();
-        return _.sortBy(arr, function (val) {
+        var res = _.sortBy(arr, function (val) {
             return val;
         });
+        if (isFloat32Array(arr)) {
+            return toFloat32Array(res);
+        } else {
+            return res;
+        }
     },
 
     /**
@@ -3374,7 +3400,7 @@ dtm.transform = {
         var res = [];
         if (isArray(input)) {
             input.forEach(function (v) {
-                if (typeof(v) === 'number') {
+                if (isNumber(v)) {
                     v = v.toString();
                 }
                 res = res.concat(v.split(separator));
@@ -3489,12 +3515,14 @@ dtm.array = function () {
     array.get = function (param) {
         if (isNumber(param)) {
             // TODO: support multiple single val arguments
-            if (param < 0 || param >= params.len) {
-                dtm.log('Index out of range');
-                return params.value[dtm.value.mod(param, params.len)];
-            } else {
-                return params.value[param];
-            }
+            return params.value[dtm.value.mod(param, params.len)];
+
+            //if (param < 0 || param >= params.len) {
+            //    dtm.log('Index out of range');
+            //    return params.value[dtm.value.mod(param, params.len)];
+            //} else {
+            //    return params.value[param];
+            //}
         } else if (isNumArray(param) || (isDtmArray(param) && isNumArray(param.get()))) {
             var indices = isDtmArray(param) ? param.get() : param;
             var res = []; // TODO: support typed array?
@@ -3757,16 +3785,29 @@ dtm.array = function () {
                     params.value = new Float32Array([arguments[0]]);
                 } else if (isNumArray(arguments[0])) {
                     params.value = new Float32Array(arguments[0]);
-                } else if (isFloat32Array(arguments[0])) {
+                } else if (isNestedArray(arguments[0])) {
+                    params.value = new Array(arguments[0].length);
+                    arguments[0].forEach(function (v, i) {
+                        params.value[i] = dtm.array(v).parent(array);
+                    });
+                } else if (isNestedWithDtmArray(arguments[0])) {
                     params.value = arguments[0];
-                } else if (isMixedArray(arguments[0])) {
-                    params.value = arguments[0];
+                    params.value.forEach(function (v) {
+                        v.parent(array);
+                    });
                 } else if (isDtmArray(arguments[0])) {
                     params.value = arguments[0].get();
                     // set parent in the child
+                } else if (isNestedDtmArray(arguments[0])) {
+                    params.value = arguments[0].get();
+                    params.value.forEach(function (v) {
+                        v.parent(array);
+                    });
                 } else if (isString(arguments[0])) {
                     params.value = [arguments[0]]; // no splitting
                     checkType(params.value);
+                } else {
+                    params.value = arguments[0];
                 }
             } else {
                 params.value = new Array(arguments.length);
@@ -3929,6 +3970,8 @@ dtm.array = function () {
         return array;
     };
 
+    // TODO: array.block (and window) should transform the parent array into nested child array
+
     array.nest = function () {
         if (!isDtmArray(params.value)) {
             array.set([dtm.array(params.value)]);
@@ -4009,6 +4052,10 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.normalize = function (arg1, arg2) {
+        if (isNestedDtmArray(array)) {
+            return array;
+        }
+
         var min, max, args;
         if (isNumber(arg1) && isNumber(arg2)) {
             min = arg1;
@@ -4311,11 +4358,11 @@ dtm.array = function () {
 
     // TODO: these should be in the get method
     array.some = function (callback) {
-        return array.set(params.value.some(callback));
+        return params.value.some(callback);
     };
 
     array.every = function (callback) {
-        return array.set(params.value.every(callback));
+        return params.value.every(callback);
     };
 
     array.subarray = function () {
@@ -4598,10 +4645,21 @@ dtm.array = function () {
 
     array.randomize = array.shuffle;
 
-
     array.blockShuffle = function (blockSize) {
         return array;
     };
+
+    array.reorder = function (indices) {
+        if (isNumOrFloat32Array(indices)) {
+            var newArr = new Array(indices.length);
+            indices.forEach(function (v, i) {
+                newArr[i] = array.get(v);
+            });
+        }
+        return array.set(newArr);
+    };
+
+    array.order = array.reorder;
 
     /**
      * Adds new value(s) at the end of the array, and removes the oldest value(s) at the beginning of the array. The size of the array is unchanged.
@@ -8046,45 +8104,24 @@ dtm.synth = function () {
         return synth;
     };
 
-    // TODO: accept dtm.array for time and dur - redesign the args
     /**
      * Plays
      * @function module:synth#play
-     * @param [time=0] {number} Delay in seconds that the synth starts playing
-     * @param [dur] {number} Duration in seconds
-     * @param [lookahead] {number} Delay in seconds for the s
+     * @param [bool=true] {boolean}
      * @returns {dtm.synth}
      */
-    synth.play = function (time, dur, lookahead) {
+    synth.play = function (bool) {
         var defer = 0;
         if (params.lookahead) {
             defer = Math.round(params.clock.get('lookahead') * 500);
         }
 
-        if (isNumber(time) && time >= 0.0) {
-            params.offset = time;
-        }
-
-        if (isNumber(dur) && dur > 0.0) {
-            params.dur = dur;
-        }
-
         params.dur = params.durTest.get('next');
-
-        //if (!isEmpty(params.promise)) {
-        //    params.promise.then(function () {
-        //        console.log(params.promise);
-        //        synth.play(time, dur, lookahead);
-        //        return synth;
-        //    });
-        //    params.promise = null;
-        //    return synth;
-        //}
 
         if (params.pending) {
             params.pending = false;
-            params.promise.then(function (v) {
-                synth.play(time, dur, lookahead);
+            params.promise.then(function () {
+                synth.play(params.offset, params.dur, params.lookahead);
                 return synth;
             });
             return synth;
@@ -8093,14 +8130,8 @@ dtm.synth = function () {
         // deferred
         setTimeout(function () {
             //===== type check
-            if (isBoolean(time)) {
-                if (time) {
-                    time = 0.0;
-                } else {
-                    return synth;
-                }
-            } else if (!isNumber(time) || time < 0) {
-                time = 0.0;
+            if (isBoolean(bool) && bool === false) {
+                return synth;
             }
 
             if (params.autoDur) {
@@ -8112,25 +8143,21 @@ dtm.synth = function () {
                 }
             }
 
-            if (!isNumber(dur) || dur <= 0) {
-                dur = params.dur;
-            } else {
-                if (dur > 0) {
-                    params.dur = dur;
-                }
-            }
+            var offset = params.offset;
+            var dur = params.dur;
+
             //===== end of type check
 
             dtm.master.addVoice(synth);
 
             //===============================
             if (dtm.wa.useOfflineContext) {
-                octx = new OfflineAudioContext(1, (time + dur*4) * params.sr, params.sr);
+                octx = new OfflineAudioContext(1, (offset + dur*4) * params.sr, params.sr);
 
-                time += octx.currentTime;
+                offset += octx.currentTime;
 
                 if (params.lookahead) {
-                    time += params.clock.get('lookahead');
+                    offset += params.clock.get('lookahead');
                 }
 
                 nodes.src = octx.createBufferSource();
@@ -8142,7 +8169,7 @@ dtm.synth = function () {
                 nodes.out.connect(octx.destination);
 
                 for (var n = 1; n < nodes.fx.length; n++) {
-                    nodes.fx[n].run(time, dur);
+                    nodes.fx[n].run(offset, dur);
                     nodes.fx[n-1].out.connect(nodes.fx[n].in);
                 }
                 nodes.fx[n-1].out.connect(nodes.out);
@@ -8163,21 +8190,21 @@ dtm.synth = function () {
                 var curves = [];
                 curves.push({param: nodes.src.playbackRate, value: params.pitch});
                 curves.push({param: nodes.amp.gain, value: params.amp});
-                setParamCurve(time, dur, curves);
+                setParamCurve(offset, dur, curves);
 
                 nodes.fx[0].out.gain.value = 1.0;
                 nodes.out.gain.value = 0.3;
 
-                nodes.src.start(time);
-                nodes.src.stop(time + dur);
+                nodes.src.start(offset);
+                nodes.src.stop(offset + dur);
 
                 octx.startRendering();
                 octx.oncomplete = function (e) {
                     params.rendered = e.renderedBuffer.getChannelData(0);
 
-                    time += params.baseTime;
+                    offset += params.baseTime;
                     if (params.lookahead) {
-                        time += params.clock.get('lookahead');
+                        offset += params.clock.get('lookahead');
                     }
 
                     nodes.rtSrc = actx.createBufferSource();
@@ -8186,7 +8213,7 @@ dtm.synth = function () {
                     var out = actx.createGain();
                     nodes.rtSrc.connect(nodes.pFx[0].out);
                     for (var n = 1; n < nodes.pFx.length; n++) {
-                        nodes.pFx[n].run(time, dur);
+                        nodes.pFx[n].run(offset, dur);
                         nodes.pFx[n-1].out.connect(nodes.pFx[n].in);
                     }
                     nodes.pFx[n-1].out.connect(pan);
@@ -8196,10 +8223,10 @@ dtm.synth = function () {
                     nodes.rtSrc.buffer = actx.createBuffer(1, params.rendered.length, params.sr);
                     nodes.rtSrc.buffer.copyToChannel(params.rendered, 0);
                     nodes.rtSrc.loop = false;
-                    nodes.rtSrc.start(time);
-                    nodes.rtSrc.stop(time + nodes.rtSrc.buffer.length);
+                    nodes.rtSrc.start(offset);
+                    nodes.rtSrc.stop(offset + nodes.rtSrc.buffer.length);
 
-                    setParamCurve(time, dur, [{param: pan.pan, value: params.pan}]);
+                    setParamCurve(offset, dur, [{param: pan.pan, value: params.pan}]);
 
                     out.gain.value = 1.0;
 
@@ -8208,13 +8235,13 @@ dtm.synth = function () {
                     };
                 };
             } else {
-                time += actx.currentTime;
+                offset += actx.currentTime;
 
                 if (params.lookahead) {
-                    time += params.clock.get('lookahead');
+                    offset += params.clock.get('lookahead');
                 }
 
-                params.startTime = time;
+                params.startTime = offset;
 
                 nodes.src = actx.createBufferSource();
                 nodes.amp = actx.createGain();
@@ -8224,7 +8251,7 @@ dtm.synth = function () {
                 nodes.src.connect(nodes.amp);
                 nodes.amp.connect(nodes.pFx[0].out);
                 for (var n = 1; n < nodes.pFx.length; n++) {
-                    nodes.pFx[n].run(time, dur);
+                    nodes.pFx[n].run(offset, dur);
                     nodes.pFx[n-1].out.connect(nodes.pFx[n].in);
                 }
                 nodes.pFx[n-1].out.connect(pan);
@@ -8234,14 +8261,14 @@ dtm.synth = function () {
                 nodes.src.buffer = actx.createBuffer(1, params.tabLen, params.sr);
                 nodes.src.buffer.copyToChannel(params.wavetable, 0);
                 nodes.src.loop = (params.type !== 'sample');
-                nodes.src.start(time);
-                nodes.src.stop(time + dur);
+                nodes.src.start(offset);
+                nodes.src.stop(offset + dur);
 
                 var curves = [];
                 curves.push({param: nodes.src.playbackRate, value: params.pitch});
                 curves.push({param: nodes.amp.gain, value: params.amp});
-                setParamCurve(time, dur, curves);
-                setParamCurve(time, dur, [{param: pan.pan, value: params.pan}]);
+                setParamCurve(offset, dur, curves);
+                setParamCurve(offset, dur, [{param: pan.pan, value: params.pan}]);
 
                 nodes.pFx[0].out.gain.value = 1.0; // ?
                 out.gain.value = 1.0;

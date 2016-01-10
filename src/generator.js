@@ -360,6 +360,8 @@ dtm.generator = function () {
             default:
                 break;
         }
+
+        params.len = params.value.length;
     }
 
     /**

@@ -1010,10 +1010,14 @@ dtm.transform = {
      * @returns {array}
      */
     sort: function (arr) {
-        //return arr.sort();
-        return _.sortBy(arr, function (val) {
+        var res = _.sortBy(arr, function (val) {
             return val;
         });
+        if (isFloat32Array(arr)) {
+            return toFloat32Array(res);
+        } else {
+            return res;
+        }
     },
 
     /**
@@ -1514,7 +1518,7 @@ dtm.transform = {
         var res = [];
         if (isArray(input)) {
             input.forEach(function (v) {
-                if (typeof(v) === 'number') {
+                if (isNumber(v)) {
                     v = v.toString();
                 }
                 res = res.concat(v.split(separator));

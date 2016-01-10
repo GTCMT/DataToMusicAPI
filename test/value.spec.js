@@ -42,5 +42,13 @@ describe('single value transformation', function () {
             expect(dtm.value.pq(60, ['mi'])).toBe(64);
             expect(dtm.value.pq(71, ['te'])).toBe(70);
         });
+    });
+
+    describe('modulo', function () {
+        it('should work with negative values', function () {
+            expect(dtm.value.mod(4, 3)).toBe(1);
+            expect(dtm.value.mod(-1, 3)).toBe(2);
+            expect(dtm.value.mod(-2, 3)).toBe(1);
+        })
     })
 });

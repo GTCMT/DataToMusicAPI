@@ -95,7 +95,7 @@ function isNumOrFloat32Array(val) {
 }
 
 function isMixedArray(val) {
-    return isArray(val) && !isNumOrFloat32Array(val);
+    return isArray(val) && !isStringArray(val) && !isNumOrFloat32Array(val) && !isNestedArray(val) && !isNestedWithDtmArray(val);
 }
 
 function isNestedArray(val) {
@@ -138,11 +138,31 @@ function isDtmArray(val) {
     }
 }
 
+function isNestedDtmArray(val) {
+    if (isDtmArray(val)) {
+        return val.every(function (v) {
+            return isDtmArray(v);
+        });
+    } else {
+        return false;
+    }
+}
+
 function isStringArray(val) {
     var res = false;
     if (isArray(val)) {
         res = val.every(function (v) {
-            return typeof(v) === 'string';
+            return isString(v);
+        });
+    }
+    return res;
+}
+
+function isBoolArray(val) {
+    var res = false;
+    if (isArray(val)) {
+        res = val.every(function (v) {
+            return isBoolean(v);
         });
     }
     return res;
