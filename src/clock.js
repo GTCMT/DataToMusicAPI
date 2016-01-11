@@ -225,6 +225,15 @@ dtm.clock = function (bpm, subDiv, autoStart) {
         return clock;
     };
 
+    clock.interval = function (sec) {
+        params.sync = false;
+        params.subDiv = 1.0;
+        params.bpm = 60.0 / sec * 4;
+        return clock;
+    };
+
+    clock.dur = clock.interval;
+
     function getInterval() {
         if (params.sync) {
             return 1.0/(dtm.master.get('clock').get('bpm')/60.0 * params.subDiv/4.0);

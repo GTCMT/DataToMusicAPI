@@ -548,7 +548,8 @@ dtm.array = function () {
         return array.set(flattened);
     };
 
-    array.flatten = array.unnest;
+    array.flatten = array.unblock = array.unnest;
+
     /**
      * Morphs the array values with a target array / dtm.array values. The lengths can be mismatched.
      * @function module:array#morph
@@ -895,12 +896,12 @@ dtm.array = function () {
         return array.set(params.value.map(callback));
     };
 
-    array.forEach = function (callback) {
+    array.foreach = function (callback) {
         params.value.forEach(callback);
         return array;
     };
 
-    array.foreach = array.forEach;
+    array.forEach = array.foreach;
 
     array.filter = function (callback) {
         return array.set(params.value.filter(callback));
@@ -1121,6 +1122,28 @@ dtm.array = function () {
         }
 
         return array.set(newArr);
+    };
+
+    array.ola = function (hop) {
+        if (!isInteger(hop) || hop < 1) {
+            hop = 1;
+        }
+
+        if (isNestedWithDtmArray(params.value)) {
+            var len = hop * (params.len-1) + params.value[0].get('len');
+            var newArr = new Array(len);
+            newArr.fill(0);
+
+            params.value.forEach(function (a, i) {
+                a.foreach(function (v, j) {
+                    newArr[i*hop+j] += v;
+                });
+            });
+
+            return array.set(newArr);
+        } else {
+            return array;
+        }
     };
 
     /**

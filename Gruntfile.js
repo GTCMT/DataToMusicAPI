@@ -1,6 +1,7 @@
 module.exports = function (grunt) {
     grunt.loadNpmTasks('grunt-contrib-concat');
     grunt.loadNpmTasks('grunt-jsdoc');
+    grunt.loadNpmTasks('grunt-docdown');
     grunt.loadNpmTasks('grunt-contrib-uglify');
 
     grunt.initConfig({
@@ -8,8 +9,8 @@ module.exports = function (grunt) {
             target: {
                 src: [
                     'misc/start.js',
-                    'src/utils.js',
                     'src/core.js',
+                    'src/utils.js',
                     'src/osc.js',
                     'src/analyzer.js',
                     'src/generator.js',
@@ -78,6 +79,20 @@ module.exports = function (grunt) {
                     configure: 'conf.json',
                     template: './node_modules/ink-docstrap/template'
                 }
+            }
+        },
+
+        docdown: {
+            default_options: {
+                options: {
+                    assets: 'node_modules/grunt-docdown/test/fixtures/assets'
+                },
+                files: [{
+                    expand: true,
+                    cwd: 'node_modules/grunt-docdown/test/fixtures/content',
+                    src: '**/*.*',
+                    dest: 'tmp/'
+                }]
             }
         },
 

@@ -17,5 +17,9 @@
     "grunt-contrib-uglify": "^0.7.0",
     "grunt-jsdoc": "^0.5.7",
     "ink-docstrap": "^0.4.12"
+  },
+  "dependencies": {
+    "docdown": "^0.3.0",
+    "grunt-docdown": "^0.1.0"
   }
 }

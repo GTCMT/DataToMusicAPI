@@ -423,4 +423,11 @@ describe('array object', function () {
             });
         })
     });
+
+    describe('ola', function () {
+        it('should work', function () {
+            expect(dtm.gen('range', 3).block(1).ola(1).get()).toEqual(toFloat32Array([0,1,2]));
+            //expect(dtm.gen('range', 5).block(2, 1).ola(2).get()).toEqual(toFloat32Array([0,1,2]));
+        });
+    });
 });

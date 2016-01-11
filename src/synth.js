@@ -650,7 +650,7 @@ dtm.synth = function () {
                     // rep(1) would only play once
                     if (params.repeat > 1) {
                         params.repeat--;
-                        synth.play();
+                        synth.play(); // TODO: pass any argument?
                     }
                 };
             }

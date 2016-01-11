@@ -175,6 +175,7 @@ function hasMissingValues(array) {
     });
 }
 
+// TODO: implement
 function arrayCompare(first, second) {
 
 }
@@ -232,6 +233,7 @@ function toFloat32Array(src) {
     }
 }
 
+// TODO: test
 function fromFloat32Array(src) {
     return Array.prototype.slice.call(src);
 }
@@ -315,15 +317,13 @@ function cloneArray(input) {
     }
 }
 
-
-
-function append() {
-
-}
-
-function appendNoDupes() {
-
-}
+//function append() {
+//
+//}
+//
+//function appendNoDupes() {
+//
+//}
 
 function objForEach(obj, callback) {
     var res = [];
@@ -476,3 +476,44 @@ function ajaxGet(url, cb) {
 
     xhr.send();
 }
+
+dtm.util = {};
+dtm.util.isEmpty = isEmpty;
+dtm.util.isNumber = isNumber;
+dtm.util.isInteger = isInteger;
+dtm.util.isString = isString;
+dtm.util.isBoolean = isBoolean;
+dtm.util.isFunction = isFunction;
+dtm.util.isPromise = isPromise;
+dtm.util.isObject = isObject;
+dtm.util.isSingleVal = isSingleVal;
+dtm.util.isArray = isArray;
+dtm.util.isFloat32Array = isFloat32Array;
+dtm.util.isNumArray = isNumArray;
+dtm.util.isNumOrFloat32Array = isNumOrFloat32Array;
+dtm.util.isMixedArray = isMixedArray;
+dtm.util.isNestedArray = isNestedArray;
+dtm.util.isNestedWithDtmArray = isNestedWithDtmArray;
+dtm.util.isDtmObj = isDtmObj;
+dtm.util.isDtmArray = isDtmArray;
+dtm.util.isNestedDtmArray = isNestedDtmArray;
+dtm.util.isStringArray = isStringArray;
+dtm.util.isBoolArray = isBoolArray;
+dtm.util.hasMissingValues = hasMissingValues;
+dtm.util.arrayCompare = arrayCompare;
+dtm.util.argsToArray = argsToArray;
+dtm.util.argsForEach = argsForEach;
+dtm.util.argIsSingleArray = argIsSingleArray;
+dtm.util.argsAreSingleVals = argsAreSingleVals;
+dtm.util.toFloat32Array = toFloat32Array;
+dtm.util.fromFloat32Array = fromFloat32Array;
+dtm.util.Float32Concat = Float32Concat;
+dtm.util.concat = concat;
+dtm.util.Float32splice = Float32Splice;
+dtm.util.splice = splice;
+dtm.util.truncateDigits = truncateDigits;
+dtm.util.Float32Map = Float32Map;
+dtm.util.deferCallback = deferCallback;
+dtm.util.cloneArray = cloneArray;
+dtm.util.objForEach = objForEach;
+dtm.util.numProperties = numProperties;
