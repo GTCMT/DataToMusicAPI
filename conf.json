@@ -10,11 +10,14 @@
         },
         "systemName"      : "DTM API",
         "footer"          : "",
-        "copyright"       : "DTM API | Copyright © 2014 Me",
+        "copyright"       : "DTM API | Copyright © 2016 Takahiko Tsuchiya",
         "navType"         : "vertical",
         "theme"           : "cerulean",
         "linenums"        : true,
         "collapseSymbols" : false,
         "inverseNav"      : true
+    },
+    "opts": {
+        "tutorials": ["tutorials"]
     }
 }

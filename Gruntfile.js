@@ -55,7 +55,7 @@ module.exports = function (grunt) {
                     //'src/instr/clave.js',
                     //'src/instr/tamborim.js',
 
-                    //'src/instr/default.js',
+                    'src/instr/default.js',
                     //'src/instr/testInstr.js',
                     //'src/instr/testNotation.js',
                     //'src/instr/decatur.js',
