@@ -3,20 +3,22 @@
  * @module synth
  */
 
-/**
- * Creates a new instance of synthesizer object.
- * @function module:synth.synth
- * @returns {dtm.synth}
- */
+///**
+// * Creates a new instance of synthesizer object.
+// * @function module:synth.synth
+// * @returns {dtm.synth}
+// */
 dtm.synth = function () {
-    var synth = {
-        type: 'dtm.synth',
-        //rendered: null,
-        //promise: null,
+    //var synth = {
+    //    type: 'dtm.synth',
+    //
+    //    meta: {
+    //        type: 'dtm.synth'
+    //    }
+    //};
 
-        meta: {
-            type: 'dtm.synth'
-        }
+    var synth = function () {
+        return synth.clone();
     };
 
     var params = {
@@ -25,7 +27,8 @@ dtm.synth = function () {
         dur: 1.0,
         durTest: dtm.array(1.0),
         offset: 0.0,
-        repeat: 1, // TODO: design - inclusive?
+        repeat: 1,
+        autoRep: true,
 
         baseTime: 0.0, // for offline rendering
         lookahead: false,
@@ -56,6 +59,29 @@ dtm.synth = function () {
         named: []
     };
 
+    var nodes = {
+        src: null,
+        amp: null,
+        out: null,
+        fx: [{}],
+        pFx: [{}],
+        rtSrc: null,
+
+        phasor: null
+    };
+
+    synth.meta = {
+        type: 'dtm.synth',
+        setParams: function (newParams) {
+            params = newParams;
+            return synth;
+        },
+        setNodes: function (newNodes) {
+            nodes = newNodes;
+            return synth;
+        }
+    };
+
     synth.get = function (param) {
         switch (param) {
             case 'clock':
@@ -78,17 +104,6 @@ dtm.synth = function () {
             default:
                 return synth;
         }
-    };
-
-    var nodes = {
-        src: null,
-        amp: null,
-        out: null,
-        fx: [{}],
-        pFx: [{}],
-        rtSrc: null,
-
-        phasor: null
     };
 
     if (!!arguments.callee.caller) {
@@ -122,9 +137,9 @@ dtm.synth = function () {
 
         params.baseTime = actx.currentTime;
 
-        params.amp = new Float32Array([1]);
-        params.notenum = new Float32Array([69]);
-        params.freq = new Float32Array([440]);
+        params.amp = toFloat32Array([1]);
+        params.notenum = toFloat32Array([69]);
+        params.freq = toFloat32Array([440]);
         params.pitch = freqToPitch(params.freq);
         params.wavetable = new Float32Array(params.tabLen);
         params.wavetable.forEach(function (v, i) {
@@ -343,6 +358,10 @@ dtm.synth = function () {
             }
         },
 
+        Convolver: function () {
+
+        },
+
         BitQuantizer: function () {
             this.bit = new Float32Array([16]);
             var self = this;
@@ -429,7 +448,7 @@ dtm.synth = function () {
 
     /**
      * @function module:synth#lookahead
-     * @param lookahead {bool|}
+     * @param lookahead {bool|number}
      * @returns {dtm.synth}
      */
     synth.lookahead = function (lookahead) {
@@ -454,14 +473,14 @@ dtm.synth = function () {
             params.autoDur = true;
         } else if (isDtmArray(src)) {
             params.durTest = src;
+        } else if (isFunction(src)) {
+            params.dur = src(dtm.a(params.dur), synth, params.clock);
         }
         return synth;
     };
 
     synth.offset = function (src) {
-        if (isNumber(src) && src >= 0.0) {
-            params.offset = src;
-        }
+        params.offset = toFloat32Array(src)[0];
         return synth;
     };
 
@@ -487,12 +506,16 @@ dtm.synth = function () {
             defer = Math.round(params.clock.get('lookahead') * 500);
         }
 
-        params.dur = params.durTest.get('next');
+        // if playSwitch is a function
+
+
+
+        //params.dur = params.durTest.get('next');
 
         if (params.pending) {
             params.pending = false;
             params.promise.then(function () {
-                synth.play(params.offset, params.dur, params.lookahead);
+                synth.play(bool);
                 return synth;
             });
             return synth;
@@ -725,6 +748,17 @@ dtm.synth = function () {
         return params.phase;
     }
 
+    function map(src, param) {
+        src = typeCheck(src);
+
+        var arr;
+        if (isFloat32Array(src)) {
+            arr = src;
+        } else if (isFunction(src)) {
+            arr = toFloat32Array(src(dtm.a(param), synth, params.clock));
+        }
+    }
+
     synth.mod = function (name, val) {
         if (isString(name) && params.named.hasOwnProperty(name)) {
             setTimeout(function () {
@@ -753,7 +787,6 @@ dtm.synth = function () {
         return synth;
     };
 
-    // TODO: support function for src, s and c as the argument
     synth.freq.add = function (src, interp) {
         src = typeCheck(src);
         if (!isString(interp)) {
@@ -806,10 +839,18 @@ dtm.synth = function () {
      */
     synth.notenum = function (src) {
         src = typeCheck(src);
-        if (src) {
-            params.notenum = new Float32Array(src.length);
-            params.freq = new Float32Array(src.length);
-            src.forEach(function (v, i) {
+
+        var arr;
+        if (isFloat32Array(src)) {
+            arr = src;
+        } else if (isFunction(src)) {
+            arr = toFloat32Array(src(dtm.a(params.notenum), synth, params.clock)); // TODO: what args to pass?
+        }
+
+        if (isNumOrFloat32Array(arr)) {
+            params.notenum = new Float32Array(arr.length);
+            params.freq = new Float32Array(arr.length);
+            arr.forEach(function (v, i) {
                 params.notenum[i] = v;
                 params.freq[i] = dtm.value.mtof(v);
             });
@@ -830,7 +871,9 @@ dtm.synth = function () {
         if (isFloat32Array(src)) {
             arr = src;
         } else if (isFunction(src)) {
-            arr = toFloat32Array(src(synth, params.clock, dtm.a(params.notenum))); // TODO: what args to pass?
+            arr = toFloat32Array(src(dtm.a(params.notenum), synth, params.clock)); // TODO: what args to pass?
+        } else if (isNestedDtmArray(src)) {
+            arr = src.get('next');
         }
 
         if (isNumOrFloat32Array(arr)) {
@@ -885,13 +928,24 @@ dtm.synth = function () {
     /**
      * @function module:synth#amp
      * @param src
-     * @param post
      * @returns {dtm.synth}
      */
-    synth.amp = function (src, post) {
+    synth.amp = function (src) {
+        if (isDtmArray(src) && src.get('autolen')) {
+            src.size(Math.round(params.dur * params.sr));
+        }
+
         src = typeCheck(src);
-        if (src) {
-            params.amp = src;
+
+        var arr;
+        if (isFloat32Array(src)) {
+            arr = src;
+        } else if (isFunction(src)) {
+            arr = toFloat32Array(src(dtm.a(params.amp), synth, params.clock));
+        }
+
+        if (isFloat32Array(arr)) {
+            params.amp = arr;
         }
         return synth;
     };
@@ -906,7 +960,7 @@ dtm.synth = function () {
         if (isFloat32Array(src)) {
             arr = src;
         } else if (isFunction(src)) {
-            arr = toFloat32Array(src(synth, params.clock, dtm.a(params.amp))); // TODO: what args to pass?
+            arr = toFloat32Array(src(dtm.a(params.amp), synth, params.clock)); // TODO: what args to pass?
         }
 
         if (isFloat32Array(arr)) {
@@ -1241,12 +1295,16 @@ dtm.synth = function () {
 
     synth.verb = synth.reverb;
 
+    synth.conv = function (src) {
+        return synth;
+    };
+
     synth.waveshape = function (src) {
         return synth;
     };
 
     /**
-     * @function module:synth#bq | bitquantize | crush
+     * @function module:synth#bq
      * @param bit
      * @returns {dtm.synth}
      */
@@ -1261,7 +1319,11 @@ dtm.synth = function () {
         return synth;
     };
 
-    synth.crush = synth.bitquantize = synth.bq;
+    /**
+     * @see {@link module:synth#bq}
+     * @type {synth.bq|*}
+     */
+    synth.bitquantize = synth.bq;
 
     /**
      * @function module:synth#sh | samphold | samplehold
@@ -1282,7 +1344,10 @@ dtm.synth = function () {
     synth.samplehold = synth.samphold = synth.sh;
 
     function typeCheck(src) {
-        if (isFunction(src)) {
+        if (isNestedDtmArray(src)) {
+            //return toFloat32Array(src);
+            return src;
+        } else if (isFunction(src)) {
             //return deferCallback(src);
             return src;
         } else {
@@ -1290,6 +1355,7 @@ dtm.synth = function () {
         }
     }
 
+    // TODO: return value type not consistent!
     /**
      * @function module:synth#get
      * @param param
@@ -1301,17 +1367,28 @@ dtm.synth = function () {
             case 'wavetable':
                 return dtm.array(params.wavetable);
             case 'dur':
-                return params.dur;
+                return dtm.array(params.dur);
             case 'phase':
                 return getPhase();
             case 'nn':
             case 'notenum':
-                return params.notenum;
+                return dtm.array(params.notenum);
+            case 'freq':
+            case 'frequency':
+                return dtm.array(params.freq);
+            case 'pitch':
+                return dtm.array(params.pitch);
             case 'fx':
                 return nodes.fx;
             default:
                 return synth;
         }
+    };
+
+    synth.clone = function () {
+        return dtm.synth()
+            .meta.setParams(clone(params))
+            .meta.setNodes(clone(nodes));
     };
 
     synth.load.apply(this, arguments);

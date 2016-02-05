@@ -10,11 +10,12 @@
  * @returns array object {{value: null, normalized: null, length: null, min: null, max: null, mean: null}}
  */
 dtm.array = function () {
-    // private
     var params = {
         name: '',
         type: null, // number, string, boolean, coll, mixed, date
-        length: null,
+        len: null,
+        autolen: false,
+
         min: null,
         max: null,
         mean: null,
@@ -36,8 +37,10 @@ dtm.array = function () {
         processed: 0
     };
 
-    var array = {};
-    //var array = function () {};
+    //var array = {};
+    var array = function () {
+        return array.clone();
+    }; // this would make .name() not overridable
 
     array.meta = {
         type: 'dtm.array',
@@ -51,6 +54,8 @@ dtm.array = function () {
         }
     };
 
+    array.value = [];
+
     // TODO: list different query params in detail in the documentation
     /**
      * Returns the array contents or an analyzed value
@@ -60,15 +65,8 @@ dtm.array = function () {
      */
     array.get = function (param) {
         if (isNumber(param)) {
-            // TODO: support multiple single val arguments
-            return params.value[dtm.value.mod(param, params.len)];
-
-            //if (param < 0 || param >= params.len) {
-            //    dtm.log('Index out of range');
-            //    return params.value[dtm.value.mod(param, params.len)];
-            //} else {
-            //    return params.value[param];
-            //}
+            // TODO: support multiple single val arguments?
+            return array.value[dtm.value.mod(param, params.len)];
         } else if (isNumArray(param) || (isDtmArray(param) && isNumArray(param.get()))) {
             var indices = isDtmArray(param) ? param.get() : param;
             var res = []; // TODO: support typed array?
@@ -76,7 +74,7 @@ dtm.array = function () {
             // TODO: only accept integers
 
             indices.forEach(function (i) {
-                res.push(params.value[dtm.value.mod(i, params.len)]);
+                res.push(array.value[dtm.value.mod(i, params.len)]);
             });
 
             return res;
@@ -94,12 +92,24 @@ dtm.array = function () {
 
                 case 'name':
                 case 'key':
+                case 'label':
                     return params.name;
 
+                case 'names':
+                case 'keys':
+                case 'labels':
+                    if (isNestedWithDtmArray(array.value)) {
+                        return array.value.map(function (a) {
+                            return a.get('name');
+                        });
+                    } else {
+                        return params.name;
+                    }
+
                 case 'type':
-                    if (isNumArray(params.value)) {
+                    if (isNumArray(array.value)) {
                         return 'number';
-                    } else if (isStringArray(params.value)) {
+                    } else if (isStringArray(array.value)) {
                         return 'string';
                     } else {
                         return params.type;
@@ -110,7 +120,11 @@ dtm.array = function () {
 
                 case 'len':
                 case 'length':
+                case 'size':
                     return params.len;
+
+                case 'autolen':
+                    return params.autolen;
 
                 case 'hash':
                     return params.hash;
@@ -119,7 +133,7 @@ dtm.array = function () {
                     return params.processed;
 
                 case 'nested':
-                    return params.value.map(function (v) {
+                    return array.value.map(function (v) {
                         if (isDtmArray(v)) {
                             return v.get();
                         } else {
@@ -127,51 +141,66 @@ dtm.array = function () {
                         }
                     });
 
+                case 'row':
+                    if (isInteger(arguments[1]) && isNestedWithDtmArray(array.value)) {
+                        var idx = arguments[1];
+                        var res = [];
+                        array.value.forEach(function (a) {
+                            res.push(a.get(idx));
+                        });
+                        if (isNumArray(res)) {
+                            res = toFloat32Array(res);
+                        }
+                        return res;
+                    } else {
+                        break;
+                    }
+
                 /* STATS */
                 case 'minimum':
                 case 'min':
-                    return dtm.analyzer.min(params.value);
+                    return dtm.analyzer.min(array.value);
 
                 case 'maximum':
                 case 'max':
-                    return dtm.analyzer.max(params.value);
+                    return dtm.analyzer.max(array.value);
 
                 case 'extent':
                 case 'minmax':
                 case 'range':
-                    return [dtm.analyzer.min(params.value), dtm.analyzer.max(params.value)];
+                    return [dtm.analyzer.min(array.value), dtm.analyzer.max(array.value)];
 
                 case 'mean':
                 case 'average':
                 case 'avg':
-                    return dtm.analyzer.mean(params.value);
+                    return dtm.analyzer.mean(array.value);
 
                 case 'mode':
-                    return dtm.analyzer.mode(params.value);
+                    return dtm.analyzer.mode(array.value);
                 case 'median':
-                    return dtm.analyzer.median(params.value);
+                    return dtm.analyzer.median(array.value);
                 case 'midrange':
-                    return dtm.analyzer.midrange(params.value);
+                    return dtm.analyzer.midrange(array.value);
 
                 case 'standardDeviation':
                 case 'std':
-                    return dtm.analyzer.std(params.value);
+                    return dtm.analyzer.std(array.value);
                 case 'pstd':
-                    return dtm.analyzer.pstd(params.value);
+                    return dtm.analyzer.pstd(array.value);
 
                 case 'variance':
                 case 'var':
-                    return dtm.analyzer.var(params.value);
+                    return dtm.analyzer.var(array.value);
                 case 'populationVariance':
                 case 'pvar':
-                    return dtm.analyzer.pvar(params.value);
+                    return dtm.analyzer.pvar(array.value);
 
                 case 'sumAll':
                 case 'sum':
-                    return dtm.analyzer.sum(params.value);
+                    return dtm.analyzer.sum(array.value);
 
                 case 'rms':
-                    return dtm.analyzer.rms(params.value);
+                    return dtm.analyzer.rms(array.value);
 
                 case 'pdf':
                     break;
@@ -183,17 +212,17 @@ dtm.array = function () {
                 case 'cur':
                 case 'now':
                 case 'moment':
-                    return params.value[params.index];
+                    return array.value[params.index];
 
                 case 'next':
                     // TODO: increment after return
                     if (isEmpty(arguments[1])) {
                         params.index = dtm.value.mod(params.index + params.step, params.len);
-                        return params.value[params.index];
+                        return array.value[params.index];
                     } else if (isNumber(arguments[1]) && arguments[1] >= 1) {
                         // TODO: incr w/ the step size AFTER RETURN
                         params.index = dtm.value.mod(params.index + params.step, params.len);
-                        blockArray = dtm.transform.getBlock(params.value, params.index, arguments[1]);
+                        blockArray = dtm.transform.getBlock(array.value, params.index, arguments[1]);
                         return dtm.array(blockArray);
                     } else {
                         return array;
@@ -202,7 +231,7 @@ dtm.array = function () {
                 case 'prev':
                 case 'previous':
                     params.index = dtm.value.mod(params.index - params.step, params.len);
-                    return params.value[params.index];
+                    return array.value[params.index];
 
                 case 'palindrome':
                     break;
@@ -210,7 +239,7 @@ dtm.array = function () {
                 case 'rand':
                 case 'random':
                     params.index = dtm.val.randi(0, params.len);
-                    return params.value[params.index];
+                    return array.value[params.index];
 
                 case 'urn':
                     break;
@@ -235,22 +264,22 @@ dtm.array = function () {
                     if (isArray(arguments[1])) {
                         start = arguments[1][0];
                         size = arguments[1][1];
-                        blockArray = dtm.transform.getBlock(params.value, start, size);
+                        blockArray = dtm.transform.getBlock(array.value, start, size);
                         return dtm.array(blockArray);
                     } else if (isNumber(arguments[1]) && isNumber(arguments[2])) {
                         start = arguments[1];
                         size = arguments[2];
-                        blockArray = dtm.transform.getBlock(params.value, start, size);
+                        blockArray = dtm.transform.getBlock(array.value, start, size);
                         return dtm.array(blockArray);
                     } else {
                         // CHECK: ???
-                        return params.value;
+                        return array.value;
                     }
 
                 case 'blockNext':
                     // TODO: incr w/ the step size AFTER RETURN
                     params.index = dtm.value.mod(params.index + params.step, params.len);
-                    blockArray = dtm.transform.getBlock(params.value, params.index, arguments[1]);
+                    blockArray = dtm.transform.getBlock(array.value, params.index, arguments[1]);
                     return dtm.array(blockArray);
 
                 /* TRANSFORMED LIST */
@@ -262,7 +291,7 @@ dtm.array = function () {
                 case 'normalize':
                 case 'normalized':
                     if (isEmpty(params.normalized)) {
-                        params.normalized = dtm.transform.normalize(params.value);
+                        params.normalized = dtm.transform.normalize(array.value);
                     }
                     if (isInteger(arguments[1])) {
                         return params.normalized[dtm.value.mod(arguments[1], params.len)];
@@ -272,46 +301,82 @@ dtm.array = function () {
 
                 case 'sorted':
                 case 'sort':
-                    return dtm.transform.sort(params.value);
+                    return dtm.transform.sort(array.value);
 
                 case 'uniques':
                 case 'unique':
                 case 'uniq':
-                    return dtm.transform.unique(params.value);
+                    return dtm.transform.unique(array.value);
 
                 case 'classes':
-                    return dtm.analyzer.classes(params.value);
+                    return dtm.analyzer.classes(array.value);
 
                 case 'classID':
                 case 'classId':
-                    return dtm.transform.classId(params.value);
+                    return dtm.transform.classId(array.value);
 
                 case 'string':
                 case 'stringify':
-                    return dtm.transform.stringify(params.value);
+                    return dtm.transform.stringify(array.value);
 
                 case 'numClasses':
                 case 'numUniques':
                 case 'numUniqs':
-                    return dtm.analyzer.classes(params.value).length;
+                    return dtm.analyzer.classes(array.value).length;
 
                 case 'unif':
                 case 'uniformity':
-                    return dtm.analyzer.uniformity(params.value);
+                    return dtm.analyzer.uniformity(array.value);
 
                 case 'histogram':
                 case 'histo':
-                    return dtm.analyzer.histo(params.value);
+                    return dtm.analyzer.histo(array.value);
+
+                // TODO: implement
+                case 'distribution':
+                case 'dist':
+                    return [];
 
                 default:
                     if (params.hasOwnProperty(param)) {
                         return params[param];
                     } else {
-                        return params.value;
+                        return array.value;
                     }
             }
         } else {
-            return params.value;
+            return array.value;
+        }
+    };
+
+    array.col = function (num) {
+        return array.set(array.get(num));
+    };
+
+    array.column = array.col;
+
+    array.row = function (num) {
+        var newArray = [];
+        array.forEach(function (a) {
+            newArray.push(a.get(num));
+        });
+        return array.set(newArray);
+    };
+
+    // TODO: conflicts with gen.transpose()
+    array.transp = function () {
+        if (isNestedDtmArray(array)) {
+            var newArray = [];
+            var i = 0;
+            while (array.value.some(function (a) {
+                return i < a.get('len');
+            })) {
+                newArray.push(array().row(i));
+                i++;
+            }
+            return array.set(newArray);
+        } else {
+            return array.block(1);
         }
     };
 
@@ -328,65 +393,65 @@ dtm.array = function () {
         if (argsAreSingleVals(arguments)) {
             var args = argsToArray(arguments);
             if (isNumArray(args)) {
-                params.value = new Float32Array(args);
+                array.value = new Float32Array(args);
             } else {
-                params.value = args;
+                array.value = args;
             }
         } else {
             // if set arguments include any array-like object
             if (arguments.length === 1) {
                 if (isNumber(arguments[0])) {
-                    params.value = new Float32Array([arguments[0]]);
+                    array.value = new Float32Array([arguments[0]]);
                 } else if (isNumArray(arguments[0])) {
-                    params.value = new Float32Array(arguments[0]);
+                    array.value = new Float32Array(arguments[0]);
                 } else if (isNestedArray(arguments[0])) {
-                    params.value = new Array(arguments[0].length);
+                    array.value = new Array(arguments[0].length);
                     arguments[0].forEach(function (v, i) {
-                        params.value[i] = dtm.array(v).parent(array);
+                        array.value[i] = dtm.array(v).parent(array);
                     });
                 } else if (isNestedWithDtmArray(arguments[0])) {
-                    params.value = arguments[0];
-                    params.value.forEach(function (v) {
+                    array.value = arguments[0];
+                    array.value.forEach(function (v) {
                         v.parent(array);
                     });
                 } else if (isDtmArray(arguments[0])) {
-                    params.value = arguments[0].get();
+                    array.value = arguments[0].get();
                     // set parent in the child
                 } else if (isNestedDtmArray(arguments[0])) {
-                    params.value = arguments[0].get();
-                    params.value.forEach(function (v) {
+                    array.value = arguments[0].get();
+                    array.value.forEach(function (v) {
                         v.parent(array);
                     });
                 } else if (isString(arguments[0])) {
-                    params.value = [arguments[0]]; // no splitting
-                    checkType(params.value);
+                    array.value = [arguments[0]]; // no splitting
+                    checkType(array.value);
                 } else {
-                    params.value = arguments[0];
+                    array.value = arguments[0];
                 }
             } else {
-                params.value = new Array(arguments.length);
+                array.value = new Array(arguments.length);
 
                 argsForEach(arguments, function (v, i) {
                     if (isDtmArray(v)) {
-                        params.value[i] = v;
+                        array.value[i] = v;
                     } else {
-                        params.value[i] = dtm.array(v);
+                        array.value[i] = dtm.array(v);
                     }
-                    params.value[i].parent(array);
+                    array.value[i].parent(array);
                 });
             }
         }
 
         if (isEmpty(params.original)) {
-            params.original = params.value;
+            params.original = array.value;
 
             // CHECK: type checking - may be redundant
-            checkType(params.value);
+            checkType(array.value);
         } else {
             params.processed++;
         }
 
-        params.len = params.value.length;
+        params.len = array.value.length;
         params.index = params.len - 1;
 
         return array;
@@ -398,7 +463,7 @@ dtm.array = function () {
      * @param name {string}
      * @returns {dtm.array}
      */
-    array.name = function (name) {
+    array.label = function (name) {
         if (isString(name)) {
             params.name = name;
         }
@@ -480,13 +545,20 @@ dtm.array = function () {
 
     /* GENERATORS */
     /**
-     * Returns a clone of the array object. It can be used when you don't want to reference the same array object from different places.
+     * Returns a copy of the array object. It can be used when you don't want to reference the same array object from different places. For convenience, you can also do arrObj() instead of arrObj.clone() to quickly return a copy.
      * @function module:array#clone
-     //* @memberOf module:array
      * @returns {dtm.array}
      */
     array.clone = function () {
-        var newArr = dtm.array(params.value).name(params.name);
+        var newValue = [];
+        if (isNestedWithDtmArray(array.value)) {
+            newValue = array.value.map(function (a) {
+                return a.clone();
+            });
+        } else {
+            newValue = array.value;
+        }
+        var newArr = dtm.array(newValue).label(params.name);
 
         // CHECK: this may cause troubles!
         newArr.index(params.index);
@@ -494,7 +566,7 @@ dtm.array = function () {
 
         if (params.type === 'string') {
             newArr.classes = params.classes;
-            newArr.setType('string');
+            //newArr.setType('string');
         }
         return newArr;
     };
@@ -514,8 +586,10 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     function clonetest() {
-
+        return array;
     }
+
+    array.clonetest = clonetest;
 
     array.parent = function (obj) {
         if (isDtmArray(obj)) {
@@ -527,22 +601,22 @@ dtm.array = function () {
     // TODO: array.block (and window) should transform the parent array into nested child array
 
     array.nest = function () {
-        if (!isDtmArray(params.value)) {
-            array.set([dtm.array(params.value)]);
-            params.value[0].parent(array);
+        if (!isDtmArray(array.value)) {
+            array.set([dtm.array(array.value)]);
+            array.value[0].parent(array);
         }
         return array;
     };
 
     array.unnest = function () {
         var flattened = [];
-        params.value.forEach(function (v) {
+        array.value.forEach(function (v) {
             if (isDtmArray(v)) {
                 flattened = concat(flattened, v.get());
             }
         });
 
-        if (isNumOrFloat32Array(flattened)) {
+        if (isNumArray(flattened)) {
             flattened = toFloat32Array(flattened);
         }
         return array.set(flattened);
@@ -569,8 +643,8 @@ dtm.array = function () {
             morphIdx = 0.5;
         }
 
-        if (isNumArray(params.value) && isNumArray(tgtArr)) {
-            array.set(dtm.transform.morph(params.value, tgtArr, morphIdx, interp));
+        if (isNumArray(array.value) && isNumArray(tgtArr)) {
+            array.set(dtm.transform.morph(array.value, tgtArr, morphIdx, interp));
         }
         return array;
     };
@@ -583,8 +657,6 @@ dtm.array = function () {
     array.reset = function () {
         return array.set(params.original);
     };
-
-    array.r = array.reset;
 
     /**
      * Clears all the contents of the array object.
@@ -633,7 +705,7 @@ dtm.array = function () {
             }
         }
 
-        return array.set(dtm.transform.normalize(params.value, min, max));
+        return array.set(dtm.transform.normalize(array.value, min, max));
     };
 
     array.n = array.normalize;
@@ -705,9 +777,10 @@ dtm.array = function () {
             dmax = arg4;
         }
 
-        return array.set(dtm.transform.rescale(params.value, min, max, dmin, dmax));
+        return array.set(dtm.transform.rescale(array.value, min, max, dmin, dmax));
     };
-    array.sc = array.scale;
+
+    array.r = array.range = array.sc = array.scale;
 
     /**
      * Caps the array value range at the min and max values. Only works with a numerical array.
@@ -792,7 +865,7 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.fit = function (len, interp) {
-        return array.set(dtm.transform.fit(params.value, len, interp));
+        return array.set(dtm.transform.fit(array.value, len, interp));
     };
 
     array.f = array.fit;
@@ -805,13 +878,41 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.stretch = function (factor, interp) {
-        return array.set(dtm.transform.stretch(params.value, factor, interp));
+        return array.set(dtm.transform.stretch(array.value, factor, interp));
     };
 
     array.str = array.stretch;
 
     array.summarize = function () {
         return array;
+    };
+
+    array.sum = function () {
+        if (isNestedWithDtmArray(array.value)) {
+            var maxLen = 0;
+            array.value.forEach(function (a) {
+                if (a.get('len') > maxLen) {
+                    maxLen = a.get('len');
+                }
+            });
+
+            var res = new Float32Array(maxLen);
+
+            for (var i = 0; i < maxLen; i++) {
+                array.value.forEach(function (a) {
+                    if (i < a.get('len') && isNumber(a.get(i))) {
+                        res[i] += a.get(i);
+                    }
+                });
+            }
+
+            return array.set(res);
+        } else {
+            var sum = array.value.reduce(function (a, b) {
+                return a + b;
+            });
+            return array.set(sum);
+        }
     };
 
     /**
@@ -822,7 +923,7 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.fitsum = function (tgt, round, min) {
-        return array.set(dtm.transform.fitSum(params.value, tgt, round));
+        return array.set(dtm.transform.fitSum(array.value, tgt, round));
     };
 
     /**
@@ -831,12 +932,14 @@ dtm.array = function () {
      * @param factor {number|array|dtm.array}
      * @param [interp='linear'] {string}
      * @returns {dtm.array}
+     * @example
+     * <div> hey </div>
      */
     array.add = function (factor, interp) {
         if (isDtmArray(factor)) {
             factor = factor.get();
         }
-        return array.set(dtm.transform.add(params.value, factor, interp));
+        return array.set(dtm.transform.add(array.value, factor, interp));
     };
 
     /**
@@ -850,7 +953,7 @@ dtm.array = function () {
         if (isDtmArray(factor)) {
             factor = factor.get();
         }
-        return array.set(dtm.transform.mult(params.value, factor, interp));
+        return array.set(dtm.transform.mult(array.value, factor, interp));
     };
 
     array.dot = array.mult;
@@ -865,7 +968,7 @@ dtm.array = function () {
         if (isDtmArray(factor)) {
             factor = factor.get();
         }
-        return array.set(dtm.transform.pow(params.value, factor, interp));
+        return array.set(dtm.transform.pow(array.value, factor, interp));
     };
 
     /**
@@ -879,7 +982,7 @@ dtm.array = function () {
         if (isDtmArray(factor)) {
             factor = factor.get();
         }
-        return array.set(dtm.transform.powof(params.value, factor, interp));
+        return array.set(dtm.transform.powof(array.value, factor, interp));
     };
 
 
@@ -893,31 +996,32 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.map = function (callback) {
-        return array.set(params.value.map(callback));
+        //return array.set(array.value.map(callback));
+        return array.set(fromFloat32Array(array.value).map(callback));
     };
 
     array.foreach = function (callback) {
-        params.value.forEach(callback);
+        array.value.forEach(callback);
         return array;
     };
 
     array.forEach = array.foreach;
 
     array.filter = function (callback) {
-        return array.set(params.value.filter(callback));
+        return array.set(array.value.filter(callback));
     };
 
     array.reduce = function (callback) {
-        return array.set(params.value.reduce(callback));
+        return array.set(array.value.reduce(callback));
     };
 
     // TODO: these should be in the get method
     array.some = function (callback) {
-        return params.value.some(callback);
+        return array.value.some(callback);
     };
 
     array.every = function (callback) {
-        return params.value.every(callback);
+        return array.value.every(callback);
     };
 
     array.subarray = function () {
@@ -934,7 +1038,7 @@ dtm.array = function () {
         // TODO: if val is an array-ish, fill the tgt w/ the array elements
         if (isSingleVal(val)) {
             if (isSingleVal(tgt)) {
-                return array.set(params.value.map(function (v) {
+                return array.set(array.value.map(function (v) {
                     if (v === tgt) {
                         return val;
                     } else {
@@ -942,7 +1046,7 @@ dtm.array = function () {
                     }
                 }));
             } else if (isArray(tgt)) {
-                return array.set(params.value.map(function (v) {
+                return array.set(array.value.map(function (v) {
                     if (tgt.some(function (w) {
                             return w === v;
                         })) {
@@ -952,7 +1056,7 @@ dtm.array = function () {
                     }
                 }));
             } else if (isDtmArray(tgt)) {
-                return array.set(params.value.map(function (v) {
+                return array.set(array.value.map(function (v) {
                     if (tgt.get().some(function (w) {
                             return w === v;
                         })) {
@@ -962,7 +1066,7 @@ dtm.array = function () {
                     }
                 }));
             } else if (isFunction(tgt)) {
-                return array.set(params.value.map(function (v) {
+                return array.set(array.value.map(function (v) {
                     if (tgt(v)) {
                         return val;
                     } else {
@@ -995,7 +1099,7 @@ dtm.array = function () {
             return array;
         } else {
             indices.forEach(function (i) {
-                res.push(params.value[dtm.value.mod(i, params.len)]);
+                res.push(array.value[dtm.value.mod(i, params.len)]);
             });
             return array.set(res);
         }
@@ -1009,7 +1113,7 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.sort = function () {
-        return array.set(dtm.transform.sort(params.value));
+        return array.set(dtm.transform.sort(array.value));
     };
 
     // TODO: nested array and concat?
@@ -1025,11 +1129,11 @@ dtm.array = function () {
         }
 
         if (isDtmArray(arr)) {
-            params.value = concat(params.value, arr.get());
+            array.value = concat(array.value, arr.get());
         } else {
-            params.value = concat(params.value, arr);
+            array.value = concat(array.value, arr);
         }
-        return array.set(params.value);
+        return array.set(array.value);
     };
 
     array.append = array.concat;
@@ -1049,7 +1153,7 @@ dtm.array = function () {
             count = 1;
         }
 
-        return array.set(dtm.transform.repeat(params.value, count));
+        return array.set(dtm.transform.repeat(array.value, count));
     };
 
     array.rep = array.repeat;
@@ -1067,7 +1171,7 @@ dtm.array = function () {
             interp = 'step';
         }
 
-        return array.set(dtm.transform.fit(dtm.transform.repeat(params.value, count), params.len, interp));
+        return array.set(dtm.transform.fit(dtm.transform.repeat(array.value, count), params.len, interp));
     };
 
     array.frep = array.fitrep;
@@ -1095,7 +1199,7 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.truncate = function (arg1, arg2) {
-        return array.set(dtm.transform.truncate(params.value, arg1, arg2));
+        return array.set(dtm.transform.truncate(array.value, arg1, arg2));
     };
 
     array.slice = array.truncate;
@@ -1118,23 +1222,25 @@ dtm.array = function () {
         var numBlocks = Math.floor((params.len - len) / hop) + 1;
 
         for (var i = 0; i < numBlocks; i++) {
-            newArr[i] = dtm.array(params.value.slice(i*hop, i*hop+len)).window(window).parent(array);
+            newArr[i] = dtm.array(array.value.slice(i*hop, i*hop+len)).window(window).parent(array);
         }
 
         return array.set(newArr);
     };
+
+    array.nest = array.block;
 
     array.ola = function (hop) {
         if (!isInteger(hop) || hop < 1) {
             hop = 1;
         }
 
-        if (isNestedWithDtmArray(params.value)) {
-            var len = hop * (params.len-1) + params.value[0].get('len');
+        if (isNestedWithDtmArray(array.value)) {
+            var len = hop * (params.len-1) + array.value[0].get('len');
             var newArr = new Array(len);
             newArr.fill(0);
 
-            params.value.forEach(function (a, i) {
+            array.value.forEach(function (a, i) {
                 a.foreach(function (v, j) {
                     newArr[i*hop+j] += v;
                 });
@@ -1153,7 +1259,7 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.window = function (type) {
-        return array.set(dtm.transform.window(params.value, type));
+        return array.set(dtm.transform.window(array.value, type));
     };
 
     /**
@@ -1163,7 +1269,7 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.shift = function (amount) {
-        return array.set(dtm.transform.shift(params.value, amount));
+        return array.set(dtm.transform.shift(array.value, amount));
     };
 
     /**
@@ -1172,7 +1278,7 @@ dtm.array = function () {
      * @returns {{type: string}}
      */
     array.mirror = function () {
-        return array.concat(dtm.transform.reverse(params.value));
+        return array.concat(dtm.transform.reverse(array.value));
     };
 
     array.mir = array.mirror;
@@ -1183,7 +1289,7 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.reverse = function () {
-        return array.set(dtm.transform.reverse(params.value));
+        return array.set(dtm.transform.reverse(array.value));
     };
 
     array.rev = array.reverse;
@@ -1195,7 +1301,7 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.invert = function (center) {
-        return array.set(dtm.transform.invert(params.value, center));
+        return array.set(dtm.transform.invert(array.value, center));
     };
 
     /**
@@ -1211,7 +1317,7 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.shuffle = function () {
-        return array.set(dtm.transform.shuffle(params.value));
+        return array.set(dtm.transform.shuffle(array.value));
     };
 
     array.randomize = array.shuffle;
@@ -1223,7 +1329,9 @@ dtm.array = function () {
     array.reorder = function () {
         var indices;
 
-        if (argsAreSingleVals(arguments)) {
+        if (isDtmArray(arguments[0])) {
+            indices = toFloat32Array(arguments[0]);
+        } else if (argsAreSingleVals(arguments)) {
             indices = argsToArray(arguments);
         } else if (argIsSingleArray(arguments)) {
             indices = arguments[0];
@@ -1248,24 +1356,24 @@ dtm.array = function () {
      */
     array.queue = function (input) {
         if (isNumber(input)) {
-            params.value.push(input);
-            params.value.shift();
+            array.value.push(input);
+            array.value.shift();
         } else if (isFloat32Array(input)) {
-            params.value = Float32Concat(params.value, input);
-            params.value = params.value.splice(input.length);
+            array.value = Float32Concat(array.value, input);
+            array.value = array.value.splice(input.length);
         } else if (isArray(input)) {
-            if (isFloat32Array(params.value)) {
-                params.value = Float32Concat(params.value, input);
-                params.value = Float32Splice(params.value, input.length);
+            if (isFloat32Array(array.value)) {
+                array.value = Float32Concat(array.value, input);
+                array.value = Float32Splice(array.value, input.length);
             } else {
-                params.value = params.value.concat(input);
-                params.value = params.value.splice(input.length);
+                array.value = array.value.concat(input);
+                array.value = array.value.splice(input.length);
             }
         } else if (isDtmArray(input)) {
-            params.value = params.value.concat(input.get());
-            params.value = params.value.splice(input.get('len'));
+            array.value = array.value.concat(input.get());
+            array.value = array.value.splice(input.get('len'));
         }
-        return array.set(params.value);
+        return array.set(array.value);
     };
 
     array.fifo = array.queue;
@@ -1279,7 +1387,7 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.round = function (to) {
-        return array.set(dtm.transform.round(params.value, to));
+        return array.set(dtm.transform.round(array.value, to));
     };
 
     /**
@@ -1288,7 +1396,7 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.floor = function () {
-        return array.set(dtm.transform.floor(params.value));
+        return array.set(dtm.transform.floor(array.value));
     };
 
     /**
@@ -1297,7 +1405,7 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.ceil = function () {
-        return array.set(dtm.transform.ceil(params.value));
+        return array.set(dtm.transform.ceil(array.value));
     };
 
     /**
@@ -1306,7 +1414,7 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.hwr = function () {
-        return array.set(dtm.transform.hwr(params.value));
+        return array.set(dtm.transform.hwr(array.value));
     };
 
     /**
@@ -1315,7 +1423,7 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.fwr = function () {
-        return array.set(dtm.transform.fwr(params.value));
+        return array.set(dtm.transform.fwr(array.value));
     };
 
     array.abs = array.fwr;
@@ -1333,15 +1441,15 @@ dtm.array = function () {
             order = 1;
         }
         for (var i = 0; i < order; i++) {
-            params.value = dtm.transform.diff(params.value);
+            array.value = dtm.transform.diff(array.value);
         }
 
         if (isSingleVal(pad)) {
             for (var i = 0; i < order; i++) {
-                params.value = concat(params.value, pad);
+                array.value = concat(array.value, pad);
             }
         }
-        return array.set(params.value);
+        return array.set(array.value);
     };
 
     /**
@@ -1350,7 +1458,7 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.removezeros = function () {
-        return array.set(dtm.transform.removeZeros(params.value));
+        return array.set(dtm.transform.removeZeros(array.value));
     };
 
     /* NOMINAL */
@@ -1363,7 +1471,7 @@ dtm.array = function () {
     array.histogram = function () {
         // CHECK: this is hacky
         params.type = 'string'; // re-set the type to string from number
-        return array.set(toFloat32Array(dtm.analyzer.histo(params.value)));
+        return array.set(toFloat32Array(dtm.analyzer.histo(array.value)));
     };
     /**
      * Overwrites the contents with unsorted unique values of the array.
@@ -1371,7 +1479,7 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.unique = function () {
-        return array.set(dtm.transform.unique(params.value));
+        return array.set(dtm.transform.unique(array.value));
     };
 
     // TODO: id by occurrence / rarity, etc.
@@ -1381,7 +1489,7 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.classify = function (by) {
-        return array.set(dtm.transform.classId(params.value));
+        return array.set(dtm.transform.classId(array.value));
     };
 
     /**
@@ -1390,7 +1498,7 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.stringify = function () {
-        return array.set(dtm.transform.stringify(params.value));
+        return array.set(dtm.transform.stringify(array.value));
     };
 
     /**
@@ -1399,12 +1507,12 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.tonumber = function () {
-        return array.set(toFloat32Array(dtm.transform.tonumber(params.value)));
+        return array.set(toFloat32Array(dtm.transform.tonumber(array.value)));
     };
 
     array.toFloat32 = function () {
-        if (isNumArray(params.value)) {
-            array.set(toFloat32Array(params.value));
+        if (isNumArray(array.value)) {
+            array.set(toFloat32Array(array.value));
         }
         return array;
     };
@@ -1426,7 +1534,7 @@ dtm.array = function () {
      * @returns dtm.array
      */
     array.split = function (separator) {
-        return array.set(dtm.transform.split(params.value, separator));
+        return array.set(dtm.transform.split(array.value, separator));
     };
 
     /* MUSICAL */
@@ -1446,20 +1554,16 @@ dtm.array = function () {
 
         }
 
-        return array.set(dtm.transform.pq(params.value, scale));
+        return array.set(dtm.transform.pq(array.value, scale));
     };
 
     array.mtof = function () {
-        return array.set(dtm.transform.mtof(params.value));
+        return array.set(dtm.transform.mtof(array.value));
     };
 
     array.ftom = function () {
-        return array.set(dtm.transform.ftom(params.value));
+        return array.set(dtm.transform.ftom(array.value));
     };
-
-    //array.transpose = function (val) {
-    //    return array;
-    //};
 
 
 
@@ -1473,7 +1577,7 @@ dtm.array = function () {
      */
     array.notesToBeats = function (resolution) {
         resolution = resolution || 4;
-        return array.set(dtm.transform.notesToBeats(params.value, resolution));
+        return array.set(dtm.transform.notesToBeats(array.value, resolution));
     };
 
     /**
@@ -1484,7 +1588,7 @@ dtm.array = function () {
      */
     array.beatsToNotes = function (resolution) {
         resolution = resolution || 4;
-        return array.set(dtm.transform.beatsToNotes(params.value, resolution));
+        return array.set(dtm.transform.beatsToNotes(array.value, resolution));
     };
 
     /**
@@ -1493,7 +1597,7 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.intervalsToBeats = function () {
-        return array.set(dtm.transform.intervalsToBeats(params.value));
+        return array.set(dtm.transform.intervalsToBeats(array.value));
     };
 
     /**
@@ -1502,7 +1606,7 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.beatsToIntervals = function () {
-        return array.set(dtm.transform.beatsToIntervals(params.value));
+        return array.set(dtm.transform.beatsToIntervals(array.value));
     };
     /**
      * Converts beat sequence into an array of indices (or delays or onset-coordinate vectors.) Useful for creating time delay-based events.
@@ -1510,7 +1614,7 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.beatsToIndices = function () {
-        return array.set(dtm.transform.beatsToIndices(params.value));
+        return array.set(dtm.transform.beatsToIndices(array.value));
     };
 
     /**
@@ -1519,7 +1623,7 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.indicesToBeats = function (len) {
-        return array.set(dtm.transform.indicesToBeats(params.value, len));
+        return array.set(dtm.transform.indicesToBeats(array.value, len));
     };
 
 

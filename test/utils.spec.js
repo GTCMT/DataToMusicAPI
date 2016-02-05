@@ -207,6 +207,21 @@ describe('isNestedDtmArray', function () {
     });
 });
 
+describe('isNumDtmArray', function () {
+    it('should work', function () {
+        expect(isNumDtmArray(dtm.a())).toBe(false);
+        expect(isNumDtmArray(dtm.a([1,2,3]))).toBe(true);
+        expect(isNumDtmArray(dtm.a([1,2,3], [4,5,6]))).toBe(false);
+    });
+});
+
+describe('isNestedDtmArray', function () {
+    it('should work', function () {
+        expect(isNestedNumDtmArray(dtm.a([1,2,3]))).toBe(false);
+        expect(isNestedNumDtmArray(dtm.a([1,2,3], [4,5,6]))).toBe(true);
+    });
+});
+
 describe('argsToArray', function () {
     it('should work', function () {
         expect((function () {
@@ -389,9 +404,19 @@ describe('deferCallback', function () {
     });
 });
 
+describe('clone', function () {
+    //it('should work with dtm.array', function () {
+    //    var src = dtm.a([1,2,3]);
+    //    var cloned = clone(src);
+    //    src.mult(2);
+    //    expect(cloned.get()).toEqual(toFloat32Array([1,2,3]));
+    //    expect(src.get()).toEqual(toFloat32Array([2,4,6]));
+    //});
+});
+
 describe('cloneArray', function () {
     it('should work', function () {
         expect(cloneArray([1,2,3])).toEqual([1,2,3]);
-        expect(cloneArray(new Float32Array([1,2,3]))).toEqual(new Float32Array([1,2,3]));
+        expect(cloneArray(toFloat32Array([1,2,3]))).toEqual(toFloat32Array([1,2,3]));
     });
 });

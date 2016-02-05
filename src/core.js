@@ -25,6 +25,7 @@ var dtm = {
         }
     },
 
+    // TODO: put these in dtm.master
     modelColl: [],
     modelCallers: {},
     clocks: [],
@@ -111,6 +112,14 @@ var dtm = {
     startOsc: function () {
         dtm.osc.isOn = true;
         dtm.osc.start();
+    },
+
+    export: function () {
+        objForEach(dtm, function (v, k) {
+            if (isEmpty(window[k])) {
+                window[k] = v;
+            }
+        });
     }
 };
 

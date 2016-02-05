@@ -135,10 +135,6 @@ dtm.value = {
         return ((n % m) + m) % m;
     },
 
-    incr: function incr() {
-
-    },
-
     randi: function (arg1, arg2) {
         var min, max;
         if (!isNumber(arg1) && !isNumber(arg2)) {

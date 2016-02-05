@@ -6,30 +6,6 @@
 dtm.analyzer = {
     type: 'dtm.analyzer',
 
-    // TODO: deprecate
-    ///**
-    // * Checks the data type of the input array.
-    // * @function module:analyzer#checkType
-    // * @param arr {array}
-    // * @returns type {string}
-    // */
-    //checkType: function (arr) {
-    //    var sum = arr.reduce(function (num, sum) {
-    //        return num + sum;
-    //    });
-    //
-    //    if (isNaN(sum) || isString(sum)) {
-    //        return 'string';
-    //    } else {
-    //        // TODO: won't work in cases like [0.7, 0.3]
-    //        if (sum.toString().indexOf('.') > -1) {
-    //            return 'float';
-    //        } else {
-    //            return 'int';
-    //        }
-    //    }
-    //},
-
     /**
      * Returns the minimum value of numeric array.
      * @function module:analyzer#min

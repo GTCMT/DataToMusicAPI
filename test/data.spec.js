@@ -1,4 +1,4 @@
-describe('data object', function () {
+xdescribe('data object', function () {
     var dummyArray = dtm.gen('noise', 8, 0, 10).get();
 
     describe('creating a data object', function () {

@@ -1,4 +1,14 @@
+/**
+ * @module utils
+ */
+
 /* TYPE CHECKING */
+
+/**
+ * Returns true for undefined, null, and NaN values
+ * @param value
+ * @returns {boolean}
+ */
 function isEmpty(value) {
     if (typeof(value) === 'undefined') {
         return true;
@@ -11,10 +21,20 @@ function isEmpty(value) {
     }
 }
 
+/**
+ * Returns true if the value is a number and is not NaN
+ * @param value
+ * @returns {boolean}
+ */
 function isNumber(value) {
     return !!(typeof(value) === 'number' && !isNaN(value));
 }
 
+/**
+ * Checks if the value is a number and is an integer value
+ * @param value
+ * @returns {boolean}
+ */
 function isInteger(value) {
     if (isNumber(value)) {
         return Number.isInteger(value);
@@ -31,18 +51,38 @@ function isInteger(value) {
 //    }
 //}
 
+/**
+ * Checks if the value is a string
+ * @param value
+ * @returns {boolean}
+ */
 function isString(value) {
     return typeof(value) === 'string';
 }
 
+/**
+ * Checks if the value is a boolean value
+ * @param value
+ * @returns {boolean}
+ */
 function isBoolean(value) {
     return typeof(value) === 'boolean';
 }
 
+/**
+ * Checks if the value is a function
+ * @param value
+ * @returns {boolean}
+ */
 function isFunction(value) {
     return typeof(value) === 'function';
 }
 
+/**
+ * Checks if the value is an instance of Promise
+ * @param obj
+ * @returns {boolean}
+ */
 function isPromise(obj) {
     if (isObject(obj)) {
         if (obj.constructor === Promise) {
@@ -53,15 +93,26 @@ function isPromise(obj) {
     }
 }
 
+/**
+ * Checks if the value is an object and not null object
+ * @param val
+ * @returns {boolean}
+ */
 function isObject(val) {
     return (typeof(val) === 'object' && val !== null);
 }
 
+/**
+ * Checks if the value is primitive single value
+ * @param val
+ * @returns {boolean}
+ */
 function isSingleVal(val) {
     return !!(!isArray(val) && !isDtmObj(val) && !isFunction(val) && !isEmpty(val));
 }
 
 /**
+ * Checks if a value is any kind of array
  * @private
  * @param val
  * @returns {boolean}
@@ -70,6 +121,11 @@ function isArray(val) {
     return Array.isArray(val) || isFloat32Array(val);
 }
 
+/**
+ * Checks if the value is a Float32Array
+ * @param val
+ * @returns {boolean}
+ */
 function isFloat32Array(val) {
     var res = false;
     if (!isEmpty(val)) {
@@ -80,6 +136,11 @@ function isFloat32Array(val) {
     return res;
 }
 
+/**
+ * Checks if the value is a regular number array
+ * @param val
+ * @returns {boolean}
+ */
 function isNumArray(val) {
     var res = false;
     if (isArray(val) && !isFloat32Array(val) && val.length > 0) {
@@ -90,14 +151,29 @@ function isNumArray(val) {
     return res;
 }
 
+/**
+ * Checks if the value is either a regular or typed number array
+ * @param val
+ * @returns {boolean}
+ */
 function isNumOrFloat32Array(val) {
     return isNumArray(val) || isFloat32Array(val);
 }
 
+/**
+ * Checks if the value is an array with mixed value types (e.g., numbers and strings mixed)
+ * @param val
+ * @returns {boolean}
+ */
 function isMixedArray(val) {
-    return isArray(val) && !isStringArray(val) && !isNumOrFloat32Array(val) && !isNestedArray(val) && !isNestedWithDtmArray(val);
+    return isArray(val) && !isStringArray(val) && !isBoolArray(val) && !isNumOrFloat32Array(val) && !isNestedArray(val) && !isNestedWithDtmArray(val);
 }
 
+/**
+ * Checks if the value is a multi-dimensional array
+ * @param val
+ * @returns {boolean}
+ */
 function isNestedArray(val) {
     var res = false;
     if (isArray(val)) {
@@ -108,6 +184,11 @@ function isNestedArray(val) {
     return res;
 }
 
+/**
+ * Checks if the value is a nested (regular) array consist of the dtm.array instances
+ * @param val
+ * @returns {boolean}
+ */
 function isNestedWithDtmArray(val) {
     var res = false;
     if (isArray(val)) {
@@ -118,6 +199,11 @@ function isNestedWithDtmArray(val) {
     return res;
 }
 
+/**
+ * Checks if the value is an instance of DTM object
+ * @param val
+ * @returns {boolean}
+ */
 function isDtmObj(val) {
     if (isObject(val) || isFunction(val)) {
         return val.hasOwnProperty('meta');
@@ -126,6 +212,11 @@ function isDtmObj(val) {
     }
 }
 
+/**
+ * Checks if the value is an instance of dtm.array
+ * @param val
+ * @returns {boolean}
+ */
 function isDtmArray(val) {
     if (isObject(val) || isFunction(val)) {
         if (val.hasOwnProperty('meta')) {
@@ -138,6 +229,11 @@ function isDtmArray(val) {
     }
 }
 
+/**
+ * Checks if the value is an instance of dtm.array with children dtm.arrays
+ * @param val
+ * @returns {boolean}
+ */
 function isNestedDtmArray(val) {
     if (isDtmArray(val)) {
         return val.every(function (v) {
@@ -148,6 +244,19 @@ function isNestedDtmArray(val) {
     }
 }
 
+function isNumDtmArray(obj) {
+    return isDtmArray(obj) && isNumOrFloat32Array(obj.value);
+}
+
+function isNestedNumDtmArray(obj) {
+    return isNestedDtmArray(obj) && obj.value.every(function (a) { return isNumDtmArray(a)});
+}
+
+/**
+ * Checks if the value is a string array
+ * @param val
+ * @returns {boolean}
+ */
 function isStringArray(val) {
     var res = false;
     if (isArray(val)) {
@@ -158,6 +267,11 @@ function isStringArray(val) {
     return res;
 }
 
+/**
+ * Checks if the value is a boolean array
+ * @param val
+ * @returns {boolean}
+ */
 function isBoolArray(val) {
     var res = false;
     if (isArray(val)) {
@@ -168,6 +282,11 @@ function isBoolArray(val) {
     return res;
 }
 
+/**
+ * Checks if the given array has any "empty" values
+ * @param array
+ * @returns {boolean}
+ */
 function hasMissingValues(array) {
     // assuming the input is an array with length > 0
     return array.some(function (v) {
@@ -180,6 +299,11 @@ function arrayCompare(first, second) {
 
 }
 
+/**
+ * Converts the arguments object into a regular array
+ * @param args {object} The arguments object of the caller function
+ * @returns {Array}
+ */
 function argsToArray(args) {
     var res = [];
     for (var i = 0; i < args.length; i++) {
@@ -188,12 +312,22 @@ function argsToArray(args) {
     return res;
 }
 
+/**
+ * Iterates over the arguments object of the caller function
+ * @param args {object} The arguments object
+ * @param fn {function} A callback function with same arguments of Array.forEach
+ */
 function argsForEach(args, fn) {
     argsToArray(args).forEach(function () {
         fn.apply(this, arguments);
     });
 }
 
+/**
+ * Checks if the arguments object consist of a single array item
+ * @param args {object} The arguments object
+ * @returns {boolean}
+ */
 function argIsSingleArray(args) {
     return !!(args.length === 1 && isArray(args[0]));
 }
@@ -218,6 +352,8 @@ function toFloat32Array(src) {
                 return new Float32Array(src.get());
             } else if (isFloat32Array(src.get())) {
                 return src.get();
+            } else if (isNestedWithDtmArray(src.get())) {
+                return toFloat32Array(src.get('next')); // TODO: may not be ideal
             }
         } else if (src.meta.type === 'dtm.model') {
             return new Float32Array(src.get());
@@ -358,55 +494,51 @@ function loadBuffer(arrayBuf) {
     return buffer;
 }
 
-
 //function clone(obj) {
-//return JSON.parse(JSON.stringify(obj));
-//return _.cloneDeep(obj); // CHECK: broken????????
+//    var copy;
+//
+//    // Handle the 3 simple types, and null or undefined
+//    if (null == obj || "object" != typeof obj) {
+//        return obj;
+//    }
+//
+//    // Handle Date
+//    if (obj instanceof Date) {
+//        copy = new Date();
+//        copy.setTime(obj.getTime());
+//        return copy;
+//    }
+//
+//    // Handle Array
+//    if (obj instanceof Array) {
+//        copy = [];
+//        for (var i = 0, len = obj.length; i < len; i++) {
+//            copy[i] = clone(obj[i]);
+//        }
+//        return copy;
+//    }
+//
+//    // Handle Object
+//    if (obj instanceof Object) {
+//        if (isDtmArray(obj)) {
+//            return obj.clone();
+//        } else {
+//            copy = {};
+//            for (var attr in obj) {
+//                if (obj.hasOwnProperty(attr)) {
+//                    copy[attr] = clone(obj[attr]);
+//                }
+//            }
+//            return copy;
+//        }
+//    }
+//
+//    throw new Error("Unable to copy obj! Its type isn't supported.");
 //}
 
-
-function clone(obj) {
-    var copy;
-
-    // Handle the 3 simple types, and null or undefined
-    if (null == obj || "object" != typeof obj) {
-        return obj;
-    }
-
-    // Handle Date
-    if (obj instanceof Date) {
-        copy = new Date();
-        copy.setTime(obj.getTime());
-        return copy;
-    }
-
-    // Handle Array
-    if (obj instanceof Array) {
-        copy = [];
-        for (var i = 0, len = obj.length; i < len; i++) {
-            copy[i] = clone(obj[i]);
-        }
-        return copy;
-    }
-
-    // Handle Object
-    if (obj instanceof Object) {
-        if (isDtmArray(obj)) {
-            return obj.clone();
-        } else {
-            copy = {};
-            for (var attr in obj) {
-                if (obj.hasOwnProperty(attr)) {
-                    copy[attr] = clone(obj[attr]);
-                }
-            }
-            return copy;
-        }
-    }
-
-    throw new Error("Unable to copy obj! Its type isn't supported.");
+function clone(src) {
+    return Object.assign({}, src);
 }
-
 
 function jsonp(url, cb) {
     var cbName = 'jsonp_callback_' + Math.round(100000 * Math.random());

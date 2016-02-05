@@ -14,16 +14,15 @@ describe('array object', function () {
             });
         });
 
-        describe('name', function () {
+        describe('label', function () {
             var name = 'hello';
-            var a = dtm.array([1, 2, 3]).name(name);
+            var a = dtm.array([1, 2, 3]).label(name);
             it('should return the given name', function () {
                 expect(a.get('name')).toBe(name);
             });
 
-            a.name(123);
             it('should not change the name', function () {
-                expect(a.get('name')).toBe(name);
+                expect(a.label(123).get('name')).toBe(name);
             });
         });
 
@@ -145,6 +144,12 @@ describe('array object', function () {
                 expect(dtm.a([[1], [2], [3]]).get('nested')).toEqual([toFloat32Array(1), toFloat32Array(2), toFloat32Array(3)]);
             });
         });
+
+        describe('query multi-dimensional array by row', function () {
+            it('should work', function () {
+                expect(dtm.gen('range', 15).block(5).get('row', 0)).toEqual(toFloat32Array([0,5,10]));
+            });
+        });
     });
 
     describe('set', function () {
@@ -180,6 +185,16 @@ describe('array object', function () {
 
                 expect(dtm.a([1],[2],[3]).get(0).get('parent').get('len')).toBe(3);
             })
+        });
+    });
+
+    describe('basic array operations', function () {
+        describe('map', function () {
+            it('should work', function () {
+                expect(dtm.a([1,2,3]).map(function (v) {
+                    return dtm.a([1]);
+                }).flatten().get()).toEqual(toFloat32Array([1,1,1]));
+            });
         });
     });
 
@@ -267,8 +282,12 @@ describe('array object', function () {
                 expect(dtm.gen('range', 5).reorder([0, -1, -2]).get()).toEqual(toFloat32Array([0, 4, 3]));
             });
 
-            it('sould work with single val arguments', function () {
+            it('should work with single val arguments', function () {
                 expect(dtm.gen('range', 3).reorder(2, 1, 0).get()).toEqual(toFloat32Array([2,1,0]));
+            });
+
+            it('should work with dtm.array input', function () {
+                expect(dtm.gen('range', 3).reorder(dtm.a([2,1,0])).get()).toEqual(toFloat32Array([2,1,0]));
             });
         });
     });
@@ -421,13 +440,46 @@ describe('array object', function () {
             dtm.gen('range', 3).block(2, 1).forEach(function (v, i) {
                 expect(v.get()).toEqual(toFloat32Array([i, i+1]));
             });
-        })
+        });
     });
 
     describe('ola', function () {
         it('should work', function () {
             expect(dtm.gen('range', 3).block(1).ola(1).get()).toEqual(toFloat32Array([0,1,2]));
             //expect(dtm.gen('range', 5).block(2, 1).ola(2).get()).toEqual(toFloat32Array([0,1,2]));
+        });
+    });
+
+    describe('sum', function () {
+        it('should work with nested arrays', function () {
+            expect(dtm.gen('const', dtm.a([1, 1])).size(5).sum().get()).toEqual(toFloat32Array([5, 5]));
+            expect(dtm.a([[1],[1,1],[1,1,1]]).sum().get()).toEqual(toFloat32Array([3,2,1]));
+        });
+
+        it('should work with regular arrays', function () {
+            expect(dtm.gen('const', 1).size(5).sum().get()).toEqual(toFloat32Array(5));
+        });
+    });
+
+    describe('row', function () {
+        it('should work', function () {
+            var a = dtm.gen('range', 9).block(3);
+            expect(a.row(0).value).toEqual(toFloat32Array([0,3,6]));
+        });
+    });
+
+    describe('col', function () {
+        it('should work with number or list query', function () {
+
+        });
+    });
+
+    describe('transpose', function () {
+        it('should work', function () {
+            var a = dtm.gen('range', 9).block(3).transp();
+            expect(a().col(0).value).toEqual(toFloat32Array([0,3,6]));
+            expect(a().col(1).value).toEqual(toFloat32Array([1,4,7]));
+            expect(a().row(1).value).toEqual(toFloat32Array([3,4,5]));
         });
     });
 });

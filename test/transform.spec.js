@@ -397,7 +397,7 @@ describe('array helper functions', function () {
                 var len = 8;
                 var out = dtm.transform.indicesToBeats(input, len);
 
-                expect(out).toEqual(new Float32Array([1, 0, 0, 1, 1, 0, 1, 1]));
+                expect(out).toEqual(toFloat32Array([1, 0, 0, 1, 1, 0, 1, 1]));
             });
 
             it('should work w/ unsorted indices too', function () {
@@ -405,7 +405,7 @@ describe('array helper functions', function () {
                 var len = 8;
                 var out = dtm.transform.indicesToBeats(input, len);
 
-                expect(out).toEqual(new Float32Array([1, 0, 0, 1, 1, 0, 1, 1]));
+                expect(out).toEqual(toFloat32Array([1, 0, 0, 1, 1, 0, 1, 1]));
             });
 
             it('should terminate if the length is smaller', function () {
@@ -413,14 +413,14 @@ describe('array helper functions', function () {
                 var len = 6;
                 var out = dtm.transform.indicesToBeats(input, len);
 
-                expect(out).toEqual(new Float32Array([1, 0, 0, 1, 1, 0]));
+                expect(out).toEqual(toFloat32Array([1, 0, 0, 1, 1, 0]));
             });
 
             it('should automatically set the length', function () {
                 var input = [3, 0, 7, 6, 4];
                 var out = dtm.transform.indicesToBeats(input);
 
-                expect(out).toEqual(new Float32Array([1, 0, 0, 1, 1, 0, 1, 1]));
+                expect(out).toEqual(toFloat32Array([1, 0, 0, 1, 1, 0, 1, 1]));
             });
 
             it('should have length of 16', function () {

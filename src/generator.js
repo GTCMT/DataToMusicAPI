@@ -26,7 +26,6 @@ dtm.generator = function () {
         phase: 0.0,
         const: 0.0,
         string: '',
-        value: [],
         pack: false, // into dtm.array
         typed: true // Float32Array
     };
@@ -74,7 +73,7 @@ dtm.generator = function () {
             'zeros', 'zeroes', 'ones',
             'constant', 'constants', 'const', 'consts',
             'repeat',
-            'string', 'str', 's', 'text',
+            'string', 'str', 's', 'text', 'split',
             'character', 'characters', 'chars', 'char', 'c'
         ],
         oscil: ['sin', 'sine', 'cos', 'cosine', 'tri', 'triangle', 'saw', 'invSaw', 'noise', 'square', 'sq', 'harm', 'harmonic'],
@@ -85,10 +84,10 @@ dtm.generator = function () {
         noMinMax: [],
         noMinMaxDir: ['rise', 'decay', 'fall', 'noise'],
         random: ['random', 'rand', 'randi'],
-        string: ['string', 'str', 's', 'character', 'characters', 'chars', 'char', 'c', 'text']
+        string: ['string', 'split', 'str', 's', 'character', 'characters', 'chars', 'char', 'c', 'text']
     };
 
-    function isTypeOf(type) {
+    function isTypeCategOf(type) {
         return types[type].indexOf(params.type) > -1;
     }
 
@@ -152,9 +151,20 @@ dtm.generator = function () {
         }
 
         function constant(len, val) {
-            var res = new Float32Array(len);
+            var res;
+            if (isNumber(val)) {
+                res = new Float32Array(len);
+            } else {
+                res = new Array(len);
+            }
             for (var i = 0; i < len; i++) {
-                res[i] = val;
+                if (isNumOrFloat32Array(val)) {
+                    res[i] = toFloat32Array(val);
+                } else if (isDtmArray(val)) {
+                    res[i] = val.parent(generator);
+                } else {
+                    res[i] = val;
+                }
             }
             return res;
         }
@@ -259,10 +269,10 @@ dtm.generator = function () {
             return res;
         }
 
-        params.value = [];
+        generator.value = [];
 
         var sorted;
-        if (isTypeOf('noMinMaxDir') || isTypeOf('random')) {
+        if (isTypeCategOf('noMinMaxDir') || isTypeCategOf('random')) {
             sorted = dtm.transform.sort([params.min, params.max]);
         }
 
@@ -270,16 +280,16 @@ dtm.generator = function () {
         switch (params.type) {
             case 'line':
             case 'saw':
-                params.value = line(params.len, params.min, params.max);
+                generator.value = line(params.len, params.min, params.max);
                 break;
 
             case 'rise':
-                params.value = line(params.len, sorted[0], sorted[1]);
+                generator.value = line(params.len, sorted[0], sorted[1]);
                 break;
 
             case 'decay':
             case 'fall':
-                params.value = line(params.len, sorted[1], sorted[0]);
+                generator.value = line(params.len, sorted[1], sorted[0]);
                 break;
 
             case 'adsr':
@@ -288,12 +298,12 @@ dtm.generator = function () {
 
             case 'sin':
             case 'sine':
-                params.value = sin(params.len, params.min, params.max, params.amp, params.cycle, paramsExt.phase);
+                generator.value = sin(params.len, params.min, params.max, params.amp, params.cycle, paramsExt.phase);
                 break;
 
             case 'cos':
             case 'cosine':
-                params.value = cos(params.len, params.min, params.max, params.amp, params.cycle, 0.00);
+                generator.value = cos(params.len, params.min, params.max, params.amp, params.cycle, 0.00);
                 break;
 
             case 'tri':
@@ -306,44 +316,44 @@ dtm.generator = function () {
 
             case 'rand':
             case 'random':
-                params.value = random(params.len, sorted[0], sorted[1], 1.0, false);
+                generator.value = random(params.len, sorted[0], sorted[1], 1.0, false);
                 break;
 
             case 'noise':
-                params.value = random(params.len, sorted[0], sorted[1], params.amp, false);
+                generator.value = random(params.len, sorted[0], sorted[1], params.amp, false);
                 break;
 
             case 'randi':
-                params.value = random(params.len, sorted[0], sorted[1], 1.0, true);
+                generator.value = random(params.len, sorted[0], sorted[1], 1.0, true);
                 break;
 
             case 'range':
-                params.value = range(paramsExt.start, paramsExt.end, paramsExt.interval);
+                generator.value = range(paramsExt.start, paramsExt.end, paramsExt.interval);
                 break;
 
             case 'seq':
-                params.value = sequence(params.min, params.max);
+                generator.value = sequence(params.min, params.max);
                 break;
 
             case 'scale':
-                params.value = scale(paramsExt.scale, paramsExt.transpose);
+                generator.value = scale(paramsExt.scale, paramsExt.transpose);
                 break;
 
             case 'fibonacci':
-                params.value = fibonacci(params.len);
+                generator.value = fibonacci(params.len);
                 break;
 
             case 'zeros':
             case 'zeroes':
-                params.value = constant(params.len, 0);
+                generator.value = constant(params.len, 0);
                 break;
 
             case 'ones':
-                params.value = constant(params.len, 1);
+                generator.value = constant(params.len, 1);
                 break;
 
             case 'const':
-                params.value = constant(params.len, params.const);
+                generator.value = constant(params.len, params.const);
                 break;
 
             case 'string':
@@ -354,14 +364,14 @@ dtm.generator = function () {
             case 'chars':
             case 'char':
             case 'c':
-                params.value = params.string.split('');
+                generator.value = params.string.split('');
                 break;
 
             default:
                 break;
         }
 
-        params.len = params.value.length;
+        params.len = generator.value.length;
     }
 
     /**
@@ -387,6 +397,11 @@ dtm.generator = function () {
      * @returns {array}
      */
     generator.len = function (length) {
+        if (isString(length) && length[0] === 'a') {
+            params.autolen = true;
+            return generator;
+        }
+
         var len = parseInt(length);
         if (!isNaN(len) && len > 0) {
             params.len = len;
@@ -426,35 +441,35 @@ dtm.generator = function () {
         return generator;
     };
 
-    /**
-     * @function module:generator#range
-     * @param arg1 {number|array|dtm.array} A min value or an array of min and max values
-     * @param [arg2] {number} A max value
-     * @returns {array}
-     */
-    generator.range = function (arg1, arg2) {
-        var args;
-
-        if (isDtmObj(arg1)) {
-            args = arg1.get();
-        } else if (argIsSingleArray(arguments)) {
-            args = arguments[0];
-        } else if (argsAreSingleVals(arguments)) {
-            args = argsToArray(arguments);
-        }
-
-        if (isNumOrFloat32Array(args)) {
-            if (args.length === 2) {
-                generator.min(args[0]);
-                generator.max(args[1]);
-            } else if (args.length > 2) {
-                generator.min(dtm.analyzer.min(args));
-                generator.max(dtm.analyzer.max(args));
-            }
-            process();
-        }
-        return generator;
-    };
+    ///**
+    // * @function module:generator#range
+    // * @param arg1 {number|array|dtm.array} A min value or an array of min and max values
+    // * @param [arg2] {number} A max value
+    // * @returns {array}
+    // */
+    //generator.range = function (arg1, arg2) {
+    //    var args;
+    //
+    //    if (isDtmObj(arg1)) {
+    //        args = arg1.get();
+    //    } else if (argIsSingleArray(arguments)) {
+    //        args = arguments[0];
+    //    } else if (argsAreSingleVals(arguments)) {
+    //        args = argsToArray(arguments);
+    //    }
+    //
+    //    if (isNumOrFloat32Array(args)) {
+    //        if (args.length === 2) {
+    //            generator.min(args[0]);
+    //            generator.max(args[1]);
+    //        } else if (args.length > 2) {
+    //            generator.min(dtm.analyzer.min(args));
+    //            generator.max(dtm.analyzer.max(args));
+    //        }
+    //        process();
+    //    }
+    //    return generator;
+    //};
 
     generator.start = function (val) {
         if (isNumber(val)) {
@@ -573,18 +588,20 @@ dtm.generator = function () {
     }
 
     if (arguments.length <= 2) {
-        if (isTypeOf('oscil')) {
-            generator.range(-1.0, 1.0);
+        if (isTypeCategOf('oscil')) {
+            params.min = -1.0;
+            params.max = 1.0;
         } else {
-            generator.range(0.0, 1.0);
+            params.min = 0.0;
+            params.max = 1.0;
         }
     }
 
-    if (isTypeOf('envelope')) {
+    if (isTypeCategOf('envelope')) {
         params.len = 128;
     }
 
-    if (isTypeOf('random')) {
+    if (isTypeCategOf('random')) {
         params.len = 1;
         params.min = 0.0;
 
@@ -604,7 +621,7 @@ dtm.generator = function () {
                 params.max = arguments[2];
             }
         }
-    } else if (isTypeOf('oscil')) {
+    } else if (isTypeCategOf('oscil')) {
         params.len = 4096;
 
         if (arguments.length >= 3) {
@@ -612,8 +629,8 @@ dtm.generator = function () {
                 if (arguments[2].length === 1) {
                     generator.amp(arguments[2][0]);
                 } else if (arguments[2].length === 2) {
-                    generator.min(arguments[2][0]);
-                    generator.max(arguments[2][1]);
+                    params.min = arguments[2][0];
+                    params.max = arguments[2][1];
                 }
             } else {
                 generator.amp(arguments[2]);
@@ -622,7 +639,8 @@ dtm.generator = function () {
 
         if (arguments.length === 3) {
             // set as amplitude
-            generator.range(-1.0, 1.0);
+            params.min = -1.0;
+            params.max = 1.0;
             generator.amp(arguments[2]);
         }
 
@@ -633,95 +651,100 @@ dtm.generator = function () {
                     generator.max(arguments[3][1]);
                 }
             } else {
-                generator.range(-1.0, 1.0);
+                params.min = -1.0;
+                params.max = 1.0;
                 generator.cycle(arguments[3]);
             }
         }
     } else if (arguments.length >= 2) {
-        if (isTypeOf('noLength')) {
-            if (isTypeOf('string')) {
-                if (isString(arguments[1])) {
-                    params.string = arguments[1];
-                    params.typed = false;
-                } else {
-                    params.string = String(arguments[1]);
+        if (isTypeCategOf('string')) {
+            if (isString(arguments[1])) {
+                params.string = arguments[1];
+                params.typed = false;
+            } else {
+                params.string = String(arguments[1]);
+            }
+        } else if (params.type === 'range') {
+            if (isNumArray(arguments[1])) {
+                if (arguments[1].length === 1) {
+                    // TODO: reduce the redundant process()
+                    generator.start(0.0);
+                    generator.end(arguments[1][0]);
+                } else if (arguments[1].length >= 2) {
+                    generator.start(arguments[1][0]);
+                    generator.end(arguments[1][1]);
                 }
-            } else if (params.type === 'range') {
-                if (isNumArray(arguments[1])) {
-                    if (arguments[1].length === 1) {
-                        // TODO: reduce the redundant process()
-                        generator.start(0.0);
-                        generator.end(arguments[1][0]);
-                    } else if (arguments[1].length >= 2) {
-                        generator.start(arguments[1][0]);
-                        generator.end(arguments[1][1]);
-                    }
 
-                    if (arguments[1].length === 3) {
-                        generator.interval(arguments[1][2]);
+                if (arguments[1].length === 3) {
+                    generator.interval(arguments[1][2]);
+                }
+            } else {
+                if (arguments.length === 2 && isNumber(arguments[1])) {
+                    generator.start(0.0);
+                    generator.end(arguments[1]);
+                } else if (arguments.length >= 3) {
+                    if (isNumber(arguments[1])) {
+                        generator.start(arguments[1]);
                     }
-                } else {
-                    if (arguments.length === 2 && isNumber(arguments[1])) {
-                        generator.start(0.0);
-                        generator.end(arguments[1]);
-                    } else if (arguments.length >= 3) {
-                        if (isNumber(arguments[1])) {
-                            generator.start(arguments[1]);
-                        }
-                        if (isNumber(arguments[2])) {
-                            generator.end(arguments[2]);
-                        }
+                    if (isNumber(arguments[2])) {
+                        generator.end(arguments[2]);
                     }
+                }
 
-                    if (arguments.length === 4) {
-                        generator.interval(arguments[3]);
-                    }
+                if (arguments.length === 4) {
+                    generator.interval(arguments[3]);
                 }
-            } else if (params.type === 'seq') {
-                // TODO: incomplete
-                generator.range(arguments[1], arguments[2]);
-            } else if (params.type === 'scale') {
-                if (isString(arguments[1])) {
-                    paramsExt.scale = arguments[1];
-                }
-                if (isInteger(arguments[2])) {
-                    paramsExt.transpose = arguments[2];
-                }
-                //process();
+            }
+        } else if (params.type === 'seq') {
+            // TODO: incomplete
+            params.min = arguments[1];
+            params.max = arguments[2];
+        } else if (params.type === 'scale') {
+            if (isString(arguments[1])) {
+                paramsExt.scale = arguments[1];
+            }
+            if (isInteger(arguments[2])) {
+                paramsExt.transpose = arguments[2];
+            }
+            //process();
+        } else if (isTypeCategOf('const')) {
+            if (!isEmpty(arguments[1])) {
+                params.const = arguments[1];
+                params.len = 1;
             }
         } else {
             // set the length from arg 1
             generator.len(arguments[1]);
 
-            if (isTypeOf('const')) {
-                if (isSingleVal(arguments[2])) {
-                    params.const = arguments[2];
-                }
-            } else {
-                if (arguments.length >= 3) {
-                    if (isArray(arguments[2])) {
-                        if (arguments[2].length === 1) {
-                            generator.max(arguments[2][0]);
-                        } else if (arguments[2].length === 2) {
-                            generator.min(arguments[2][0]);
-                            generator.max(arguments[2][1]);
-                        }
-                    } else {
-                        if (arguments.length === 3) {
-                            // set as 0 - max
-                            generator.min(0);
-                            generator.max(arguments[2]);
-                            generator.amp(1.0);
-                        }
+            if (arguments.length >= 3) {
+                if (isArray(arguments[2])) {
+                    if (arguments[2].length === 1) {
+                        generator.max(arguments[2][0]);
+                    } else if (arguments[2].length === 2) {
+                        generator.min(arguments[2][0]);
+                        generator.max(arguments[2][1]);
+                    }
+                } else {
+                    if (arguments.length === 3) {
+                        // set as 0 - max
+                        generator.min(0);
+                        generator.max(arguments[2]);
+                        generator.amp(1.0);
+                    }
 
-                        if (arguments.length >= 4) {
-                            generator.min(arguments[2]);
-                            generator.max(arguments[3]);
-                        }
+                    if (arguments.length >= 4) {
+                        generator.min(arguments[2]);
+                        generator.max(arguments[3]);
                     }
                 }
             }
         }
+
+        //if (isTypeCategOf('noLength')) {
+        //
+        //} else {
+        //
+        //}
     }
 
     process();

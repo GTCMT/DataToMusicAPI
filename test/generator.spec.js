@@ -196,9 +196,20 @@ describe('generator', function () {
 
 
     describe('constant', function () {
-        it('should return the same value anywhere', function () {
-            var a = dtm.gen('const', 4, 3);
-            expect(a.get(dtm.val.randi(0, 3))).toBe(3);
+        it('should work with single values', function () {
+            var a = dtm.gen('const', 3).size(4);
+            expect(a.get('len')).toBe(4);
+            a.forEach(function (v) {
+                expect(v).toBe(3);
+            });
+
+            expect(dtm.gen('const', 'foo').get('len')).toBe(1);
+        });
+
+        it('should work with array-ish values', function () {
+            dtm.gen('const', [1,2]).size(2).forEach(function (v) {
+                expect(v).toEqual(toFloat32Array([1,2]));
+            });
         });
     });
 

@@ -1325,7 +1325,7 @@ dtm.transform = {
             len = seqLen;
         }
 
-        var res = dtm.gen('zeros', len).get();
+        var res = dtm.gen('const', 0).size(len).get();
 
         for (var i = 0; i < input.length; i++) {
             if (input[i] >= seqLen) {
@@ -1535,6 +1535,10 @@ dtm.transform = {
             });
         }
         return res;
+    },
+    
+    convolve: function () {
+        
     }
 };
 
