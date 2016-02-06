@@ -156,42 +156,6 @@ dtm.model = function (name, categ) {
         return model;
     };
 
-    //model.load = function (name, categ) {
-        //console.log(model.load.caller.toString());
-        //if (typeof(name) === 'string') {
-        //    var load;
-        //    for (var key in dtm.modelCallers) {
-        //        if (key === name) {
-        //            //if (model.load.caller.arguments[0] !== name) {
-        //            if (params.loading) {
-        //                console.log(name);
-        //                load = dtm.modelCallers[name]();
-        //            }
-        //        }
-        //    }
-        //
-        //    if (load === undefined) {
-        //        for (var key in dtm.modelColl) {
-        //            if (key === name && model.load.caller.arguments[0] !== name) {
-        //                load = dtm.modelColl[name].clone();
-        //            }
-        //        }
-        //    }
-        //
-        //    if (load !== undefined) {
-        //        dtm.log('loading a registered / saved model: ' + name);
-        //        model = load;
-        //    } else {
-        //        if (typeof(categ) === 'string') {
-        //            params.categ = categ;
-        //        }
-        //
-        //        params.name = name;
-        //    }
-        //}
-    //    return model;
-    //};
-
     /**
      * Call this when creating a new model, which you want to reuse later by newly instantiating.
      * @function module:model#register
@@ -384,7 +348,9 @@ dtm.model = function (name, categ) {
     };
 
     if (isString(name)) {
-        params.loading = arguments.callee.caller.arguments[0];
+        if (!isEmpty(dtm.model.caller)) {
+            params.loading = dtm.model.caller.arguments[0];
+        }
 
         var modelLoaded, key;
         for (key in dtm.modelCallers) {

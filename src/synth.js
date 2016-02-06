@@ -920,7 +920,7 @@ dtm.synth = function () {
     synth.pitch = function (src, post) {
         src = typeCheck(src);
         if (src) {
-            params.pitch =src;
+            params.pitch = src;
         }
         return synth;
     };
@@ -1054,6 +1054,9 @@ dtm.synth = function () {
     synth.load = function (name) {
         if (isString(name)) {
             params.pending = true;
+            params.source = name;
+            params.type = 'sample';
+            params.pitch = toFloat32Array(1.0);
 
             var xhr = new XMLHttpRequest();
             xhr.open('GET', name, true);
@@ -1066,10 +1069,6 @@ dtm.synth = function () {
                             params.autoDur = true;
                             resolve(synth);
                         });
-
-                        params.source = name;
-                        params.type = 'sample';
-                        params.pitch = toFloat32Array(1.0);
                     }
                 };
             });
@@ -1380,6 +1379,15 @@ dtm.synth = function () {
                 return dtm.array(params.pitch);
             case 'fx':
                 return nodes.fx;
+
+            case 'samplerate':
+            case 'sr':
+            case 'fs':
+                return params.sr;
+
+            case 'numsamps':
+                return Math.round(params.sr * params.dur);
+
             default:
                 return synth;
         }

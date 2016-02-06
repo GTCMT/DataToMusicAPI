@@ -146,7 +146,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
         }
 
         if (!isEmpty(subDiv)) {
-            clock.subDiv(subDiv);
+            clock.subdiv(subDiv);
         }
 
         if (isBoolean(autoStart)) {
@@ -201,7 +201,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
      * @param [val=4] {number|string} Note quality value. E.g. 4 = quarter note, 8 = eighth note.
      * @returns {dtm.clock}
      */
-    clock.subDiv = function (val) {
+    clock.subdiv = function (val) {
         if (isNumber(val)) {
             params.subDiv = val;
         } else if (isString(val)) {
@@ -216,7 +216,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
         return clock;
     };
 
-    clock.div = clock.subdiv = clock.subDiv;
+    clock.div = clock.subdiv;
 
     clock.time = function (val) {
         if (isNumber(val) && val !== 0) {

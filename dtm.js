@@ -15,7 +15,7 @@ var params = {
  * @type {object}
  */
 var dtm = {
-    version: '0.0.4',
+    version: '0.0.5',
 
     log: function (arg) {
         if (params.isLogging) {
@@ -239,14 +239,6 @@ function isInteger(value) {
         return false;
     }
 }
-
-//function isFloat(value) {
-//    if (isNumber(value)) {
-//        return !Number.isInteger(value);
-//    } else {
-//        return false;
-//    }
-//}
 
 /**
  * Checks if the value is a string
@@ -2052,11 +2044,11 @@ dtm.generator = function () {
 
 dtm.g = dtm.gen = dtm.generator;
 
-var generators = ['line', 'rise', 'decay', 'fall', 'seq', 'sequence', 'series', 'range', 'noise', 'random', 'rand', 'randi', 'gaussian', 'gaussCurve', 'gauss', 'normal', 'zeros', 'zeroes', 'ones', 'constant', 'constants', 'const', 'consts', 'repeat', 'string', 'str', 'sin', 'sine', 'cos', 'cosine', 'tri', 'triangle', 'saw', 'fibonacci'];
+var generators = ['line', 'rise', 'decay', 'fall', 'seq', 'sequence', 'series', 'range', 'noise', 'random', 'rand', 'randi', 'gaussian', 'gaussCurve', 'gauss', 'normal', 'zeros', 'zeroes', 'ones', 'constant', 'constants', 'const', 'consts', 'repeat', 'string', 'str', 'sin', 'sine', 'cos', 'cosine', 'tri', 'triangle', 'saw', 'fibonacci', 'decay'];
 
 generators.forEach(function (type) {
     dtm[type] = function () {
-        var args = argsToArray(arguments);
+        var args = [type, argsToArray(arguments)];
         return dtm.generator.apply(this, args);
     }
 });
@@ -3664,12 +3656,6 @@ dtm.array = function () {
         len: null,
         autolen: false,
 
-        min: null,
-        max: null,
-        mean: null,
-        std: null,
-        mode: null,
-
         value: [],
         original: null,
         normalized: null,
@@ -3685,10 +3671,9 @@ dtm.array = function () {
         processed: 0
     };
 
-    //var array = {};
     var array = function () {
         return array.clone();
-    }; // this would make .name() not overridable
+    }; // this makes .name() not overridable
 
     array.meta = {
         type: 'dtm.array',
@@ -3703,6 +3688,10 @@ dtm.array = function () {
     };
 
     array.value = [];
+
+    function init () {
+
+    }
 
     // TODO: list different query params in detail in the documentation
     /**
@@ -5525,196 +5514,6 @@ dtm.value.rand = dtm.value.random;
 
 dtm.v = dtm.val = dtm.value;
 /**
- * @fileOverview Array iterator.
- * @module iterator
- */
-
-// CHECK: iterator may have its own clock??? run() function...
-
-/**
- * Creates a new instance of iterator. A dtm.array object or JavaScript array (single dimension) can be loaded.
- *
- * @function module:iterator.iterator
- * @param [arg] {dtm.array|array}
- * @returns {{className: string, value: Array, idx: number, len: number}}
- */
-dtm.iterator = function (arg) {
-    var iter = {
-        type: 'dtm.iterator',
-
-        /**
-         * The stored array object.
-         * @name module:iterator#array
-         * @type {dtm.array}
-         */
-        array: null,
-        //value: [],
-
-        /**
-         * The current index of the iterrator.
-         * @name module:iterator#idx
-         * @type {integer}
-         */
-        idx: 0,
-
-        // CHECK: this might not be the case.
-        /**
-         * The length of the iterator. It should be the same as the array length.
-         * @name module:iterator#len
-         * @type {integer}
-         */
-        len: 0,
-
-        order: null,
-        range: {},
-        modIdx: []
-    };
-
-    /**
-     * Sets a dtm.array or a plain array object (which gets converted to a dtm.array) as the content of the iterator.
-     * @function module:iterator#set
-     * @param input {dtm.array | array}
-     * @returns {dtm.iter}
-     */
-    iter.set = function (input) {
-        if (typeof(input) !== 'undefined') {
-            iter.len = input.length; // CHECK: may need update this frequently
-
-            if (isDtmArray(input)) {
-                iter.array = input;
-                //iter.value = input.value;
-            } else {
-                iter.array = dtm.array(input);
-                //iter.value = input;
-            }
-        }
-
-        return iter;
-    };
-
-    iter.set(arg);
-
-    /**
-     * Moves the current index forward and returns a content of the array.
-     * @function module:iterator#next
-     * @param [arrayParam=value] {string} Choices: 'value', 'classes', etc.
-     * @returns {value}
-     */
-    iter.next = function (arrayParam) {
-        if (typeof(arrayParam) === 'undefined') {
-            arrayParam = 'value'
-        }
-        var out = iter.array[arrayParam][iter.idx];
-        iter.idx = dtm.value.mod(iter.idx + 1, iter.array.length);
-        return out;
-    };
-
-    /**
-     * Goes to the previous index and returns an array content.
-     * @function module:iterator#prev
-     * @param [arrayParam=value] {string}
-     * @returns {value}
-     */
-    iter.prev = function (arrayParam) {
-        if (typeof(arrayParam) === 'undefined') {
-            arrayParam = 'value'
-        }
-        var out = iter.array[arrayParam][iter.idx];
-        iter.idx = dtm.value.mod(iter.idx - 1, iter.array.length);
-        return out;
-    };
-
-    // CHECK: the order of the iter and return, other methods too
-    /**
-     * Jumps to a specified index and returns a value.
-     * @function module:iterator#jump
-     * @param idx {integer}
-     * @param [arrayParam=value] {string}
-     * @returns {value}
-     */
-    iter.jump = function (idx, arrayParam) {
-        if (typeof(arrayParam) === 'undefined') {
-            arrayParam = 'value'
-        }
-
-        var out = iter.array[arrayParam][iter.idx];
-        iter.idx = dtm.value.mod(idx, iter.array.length);
-        return out;
-    };
-
-    /**
-     * Goes to a random position and returns the value.
-     * @function module:iterator#random
-     * @param [arrayParam=value] {string}
-     * @returns {value}
-     */
-    iter.random = function (arrayParam) {
-        if (typeof(arrayParam) === 'undefined') {
-            arrayParam = 'value'
-        }
-
-        // CHECK: would it spill out?
-        iter.idx = Math.floor(Math.random() * iter.array.length);
-        return iter.array[arrayParam][iter.idx];
-    };
-
-    // TODO: ...
-    iter.urn = function () {
-        var range = dtm.gen('range', iter.array.length - 1).get();
-        iter.modIdx = dtm.transform.shuffle(range);
-    };
-
-    /**
-     * Does a step-wise random walk.
-     * @function module:iterator#drunk
-     * @param [stepSize=1] {integer}
-     * @param [repeat=false] {boolean} If set true, it can sometimes repeat the same value.
-     * @param [arrayParam='value'] {string}
-     * @returns {value}
-     */
-    iter.drunk = function (stepSize, repeat, arrayParam) {
-        if (typeof(stepSize) === 'undefined') {
-            stepSize = 1;
-        }
-
-        if (typeof(repeat) === 'undefined') {
-            repeat = false;
-        }
-
-        if (typeof(arrayParam) === 'undefined') {
-            arrayParam = 'value'
-        }
-
-        var min = 1;
-        if (repeat) { min = 0; }
-
-        var val = dtm.value.randi(min, stepSize);
-        if (dtm.value.randi(0, 1)) {
-            val = -val;
-        }
-
-        iter.idx = dtm.value.mod(iter.idx + val, iter.array.length);
-        return iter.array[arrayParam][iter.idx];
-    };
-
-    iter.setRange = function () {
-
-    };
-
-    iter.previous = iter.prev;
-
-    return iter;
-};
-
-/**
- * Creates a new instance of iterator.
- *
- * @function module:iterator.iter
- * @param [arg] {dtm.array|array}
- * @returns {{className: string, value: Array, idx: number, len: number}}
- */
-dtm.it = dtm.iter = dtm.iterator;
-/**
  * @fileOverview Parses random stuff. Singleton.
  * @module parser
  */
@@ -6552,7 +6351,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
         }
 
         if (!isEmpty(subDiv)) {
-            clock.subDiv(subDiv);
+            clock.subdiv(subDiv);
         }
 
         if (isBoolean(autoStart)) {
@@ -6607,7 +6406,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
      * @param [val=4] {number|string} Note quality value. E.g. 4 = quarter note, 8 = eighth note.
      * @returns {dtm.clock}
      */
-    clock.subDiv = function (val) {
+    clock.subdiv = function (val) {
         if (isNumber(val)) {
             params.subDiv = val;
         } else if (isString(val)) {
@@ -6622,7 +6421,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
         return clock;
     };
 
-    clock.div = clock.subdiv = clock.subDiv;
+    clock.div = clock.subdiv;
 
     clock.time = function (val) {
         if (isNumber(val) && val !== 0) {
@@ -7185,7 +6984,7 @@ dtm.instr = function (arg) {
             var tr = params.models.transp.get('next');
             var ct = params.models.chord.get();
             var div = params.models.subdiv.get('next');
-            params.clock.subDiv(div);
+            params.clock.subdiv(div);
 
             var wt = params.models.wavetable;
             var lpf = params.models.lpf;
@@ -7715,42 +7514,6 @@ dtm.model = function (name, categ) {
         return model;
     };
 
-    //model.load = function (name, categ) {
-        //console.log(model.load.caller.toString());
-        //if (typeof(name) === 'string') {
-        //    var load;
-        //    for (var key in dtm.modelCallers) {
-        //        if (key === name) {
-        //            //if (model.load.caller.arguments[0] !== name) {
-        //            if (params.loading) {
-        //                console.log(name);
-        //                load = dtm.modelCallers[name]();
-        //            }
-        //        }
-        //    }
-        //
-        //    if (load === undefined) {
-        //        for (var key in dtm.modelColl) {
-        //            if (key === name && model.load.caller.arguments[0] !== name) {
-        //                load = dtm.modelColl[name].clone();
-        //            }
-        //        }
-        //    }
-        //
-        //    if (load !== undefined) {
-        //        dtm.log('loading a registered / saved model: ' + name);
-        //        model = load;
-        //    } else {
-        //        if (typeof(categ) === 'string') {
-        //            params.categ = categ;
-        //        }
-        //
-        //        params.name = name;
-        //    }
-        //}
-    //    return model;
-    //};
-
     /**
      * Call this when creating a new model, which you want to reuse later by newly instantiating.
      * @function module:model#register
@@ -7943,7 +7706,9 @@ dtm.model = function (name, categ) {
     };
 
     if (isString(name)) {
-        params.loading = arguments.callee.caller.arguments[0];
+        if (!isEmpty(dtm.model.caller)) {
+            params.loading = dtm.model.caller.arguments[0];
+        }
 
         var modelLoaded, key;
         for (key in dtm.modelCallers) {
@@ -8904,7 +8669,7 @@ dtm.synth = function () {
     synth.pitch = function (src, post) {
         src = typeCheck(src);
         if (src) {
-            params.pitch =src;
+            params.pitch = src;
         }
         return synth;
     };
@@ -9038,6 +8803,9 @@ dtm.synth = function () {
     synth.load = function (name) {
         if (isString(name)) {
             params.pending = true;
+            params.source = name;
+            params.type = 'sample';
+            params.pitch = toFloat32Array(1.0);
 
             var xhr = new XMLHttpRequest();
             xhr.open('GET', name, true);
@@ -9050,10 +8818,6 @@ dtm.synth = function () {
                             params.autoDur = true;
                             resolve(synth);
                         });
-
-                        params.source = name;
-                        params.type = 'sample';
-                        params.pitch = toFloat32Array(1.0);
                     }
                 };
             });
@@ -9364,6 +9128,15 @@ dtm.synth = function () {
                 return dtm.array(params.pitch);
             case 'fx':
                 return nodes.fx;
+
+            case 'samplerate':
+            case 'sr':
+            case 'fs':
+                return params.sr;
+
+            case 'numsamps':
+                return Math.round(params.sr * params.dur);
+
             default:
                 return synth;
         }
@@ -9966,7 +9739,7 @@ dtm.inscore = function () {
             wavetable: null,
             volume: dtm.array(1),
             pan: dtm.array(0.5),
-            scale: dtm.array().fill('seq', 12),
+            scale: dtm.gen('range', 12),
             rhythm: dtm.array(1),
             pitch: dtm.array(69),
             transp: dtm.array(0),

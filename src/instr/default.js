@@ -16,7 +16,7 @@
             wavetable: null,
             volume: dtm.array(1),
             pan: dtm.array(0.5),
-            scale: dtm.array().fill('seq', 12),
+            scale: dtm.gen('range', 12),
             rhythm: dtm.array(1),
             pitch: dtm.array(69),
             transp: dtm.array(0),

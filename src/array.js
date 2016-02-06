@@ -16,12 +16,6 @@ dtm.array = function () {
         len: null,
         autolen: false,
 
-        min: null,
-        max: null,
-        mean: null,
-        std: null,
-        mode: null,
-
         value: [],
         original: null,
         normalized: null,
@@ -37,10 +31,9 @@ dtm.array = function () {
         processed: 0
     };
 
-    //var array = {};
     var array = function () {
         return array.clone();
-    }; // this would make .name() not overridable
+    }; // this makes .name() not overridable
 
     array.meta = {
         type: 'dtm.array',
@@ -55,6 +48,10 @@ dtm.array = function () {
     };
 
     array.value = [];
+
+    function init () {
+
+    }
 
     // TODO: list different query params in detail in the documentation
     /**

@@ -43,14 +43,6 @@ function isInteger(value) {
     }
 }
 
-//function isFloat(value) {
-//    if (isNumber(value)) {
-//        return !Number.isInteger(value);
-//    } else {
-//        return false;
-//    }
-//}
-
 /**
  * Checks if the value is a string
  * @param value

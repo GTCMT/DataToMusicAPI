@@ -37,7 +37,7 @@ dtm.instr = function (arg) {
             var tr = params.models.transp.get('next');
             var ct = params.models.chord.get();
             var div = params.models.subdiv.get('next');
-            params.clock.subDiv(div);
+            params.clock.subdiv(div);
 
             var wt = params.models.wavetable;
             var lpf = params.models.lpf;
