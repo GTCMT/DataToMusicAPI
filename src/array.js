@@ -927,30 +927,76 @@ dtm.array = function () {
      * Adds a value to all the array elements.
      * @function module:array#add
      * @param factor {number|array|dtm.array}
-     * @param [interp='linear'] {string}
+     * @param [interp='step'] {string}
      * @returns {dtm.array}
      * @example
      * <div> hey </div>
      */
     array.add = function (factor, interp) {
-        if (isDtmArray(factor)) {
-            factor = factor.get();
+        if (!isString(interp)) {
+            interp = 'step';
         }
-        return array.set(dtm.transform.add(array.value, factor, interp));
+        if (isNestedNumDtmArray(array)) {
+            return array.map(function (a) {
+                if (isNestedNumDtmArray(factor)) {
+                    return a.add(factor.get('next'));
+                } else {
+                    return a.add(factor);
+                }
+            });
+        } else {
+            if (isNumDtmArray(factor)) {
+                factor = factor.get();
+            } else if (isNestedNumDtmArray(factor)) {
+                var newArr = [];
+                factor.forEach(function () {
+                    newArr.push(array.get());
+                });
+                array.set(newArr);
+                return array.map(function (a) {
+                    return a.add(factor.get('next'));
+                })
+            }
+
+            return array.set(dtm.transform.add(array.value, factor, interp));
+        }
     };
 
     /**
      * Scales the numerical array contents.
      * @function module:array#mult
      * @param factor {number|array|dtm.array}
-     * @param [interp='linear'] {string}
+     * @param [interp='step'] {string}
      * @returns {dtm.array}
      */
     array.mult = function (factor, interp) {
-        if (isDtmArray(factor)) {
-            factor = factor.get();
+        if (!isString(interp)) {
+            interp = 'step';
         }
-        return array.set(dtm.transform.mult(array.value, factor, interp));
+        if (isNestedNumDtmArray(array)) {
+            return array.map(function (a) {
+                if (isNestedNumDtmArray(factor)) {
+                    return a.mult(factor.get('next'));
+                } else {
+                    return a.mult(factor);
+                }
+            });
+        } else {
+            if (isNumDtmArray(factor)) {
+                factor = factor.get();
+            } else if (isNestedNumDtmArray(factor)) {
+                var newArr = [];
+                factor.forEach(function () {
+                    newArr.push(array.get());
+                });
+                array.set(newArr);
+                return array.map(function (a) {
+                    return a.mult(factor.get('next'));
+                })
+            }
+
+            return array.set(dtm.transform.mult(array.value, factor, interp));
+        }
     };
 
     array.dot = array.mult;

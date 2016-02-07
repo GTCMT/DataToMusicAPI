@@ -362,17 +362,35 @@ describe('array object', function () {
         });
 
         describe('add', function () {
-            it('should do element-wise operation', function () {
-                var a = dtm.a([1, 2, 3]).add([2, 3, 4]);
-                expect(a.get()).toEqual(toFloat32Array([3, 5, 7]));
+            describe('single dimension', function () {
+                it('should do element-wise operation', function () {
+                    var a = dtm.a([1, 2, 3]).add([2, 3, 4]);
+                    expect(a.get()).toEqual(toFloat32Array([3, 5, 7]));
+                });
+
+                it('should do element-wise operation between array objects', function () {
+                    var a = dtm.a([1, 2, 3]);
+                    var b = dtm.a([2, 3, 4]);
+                    a.add(b);
+                    expect(a.get()).toEqual(toFloat32Array([3, 5, 7]));
+                });
+
+                it('should auto-fit to the longest array object', function () {
+                    expect(dtm.a(1).add([1,2,3]).get()).toEqual(toFloat32Array([2,3,4]));
+                });
             });
 
-            it('should do element-wise operation between array objs', function () {
-                var a = dtm.a([1, 2, 3]);
-                var b = dtm.a([2, 3, 4]);
-                a.add(b);
-                expect(a.get()).toEqual(toFloat32Array([3, 5, 7]));
+            describe('nested', function () {
+                it('should work', function () {
+                    expect(dtm.a([1],[2],[3]).add(1).unnest().get()).toEqual(toFloat32Array([2, 3, 4]));
+                    expect(dtm.a([1],[2],[3]).add(1).unnest().get()).toEqual(toFloat32Array([2, 3, 4]));
+                    expect(dtm.a([1],[2],[3]).add(dtm.a([1],[1],[1])).unnest().get()).toEqual(toFloat32Array([2, 3, 4]));
+
+                    expect(dtm.a(1).add(dtm.a([1],[2],[3])).unnest().get()).toEqual(toFloat32Array([2,3,4]));
+                    //expect(dtm.a([1, 2],[3]).add(dtm.a([1],[2],[3])).unnest().get()).toEqual(toFloat32Array([2,3,4]));
+                });
             });
+
         });
 
         describe('mult', function () {

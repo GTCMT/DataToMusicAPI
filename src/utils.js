@@ -67,7 +67,7 @@ function isBoolean(value) {
  * @returns {boolean}
  */
 function isFunction(value) {
-    return typeof(value) === 'function';
+    return typeof(value) === 'function' && !value.hasOwnProperty('meta');
 }
 
 /**
@@ -197,7 +197,7 @@ function isNestedWithDtmArray(val) {
  * @returns {boolean}
  */
 function isDtmObj(val) {
-    if (isObject(val) || isFunction(val)) {
+    if (isObject(val) || typeof(val) === 'function') {
         return val.hasOwnProperty('meta');
     } else {
         return false;
@@ -210,7 +210,7 @@ function isDtmObj(val) {
  * @returns {boolean}
  */
 function isDtmArray(val) {
-    if (isObject(val) || isFunction(val)) {
+    if (isObject(val) || typeof(val) === 'function') {
         if (val.hasOwnProperty('meta')) {
             return (val.meta.type === 'dtm.array' || val.meta.type === 'dtm.generator');
         } else {
@@ -335,6 +335,11 @@ function argsAreSingleVals(args) {
     return res;
 }
 
+/**
+ * Converts various number or array types into a Float32Array. Returns null if not convertible.
+ * @param src
+ * @returns {Float32Array|null}
+ */
 function toFloat32Array(src) {
     if (isNumber(src)) {
         return new Float32Array([src]);
@@ -357,7 +362,7 @@ function toFloat32Array(src) {
             return new Float32Array(src);
         }
     } else {
-        return src;
+        return null;
     }
 }
 

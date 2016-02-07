@@ -350,7 +350,7 @@ describe('toFloat32Array', function () {
         expect(toFloat32Array([1, 2, 3])).toEqual(new Float32Array([1, 2, 3]));
         expect(toFloat32Array(dtm.a([1, 2, 3]))).toEqual(new Float32Array([1, 2, 3]));
         expect(toFloat32Array(dtm.gen('range', 1, 4))).toEqual(new Float32Array([1, 2, 3]));
-        expect(toFloat32Array(undefined)).toBe(undefined);
+        expect(toFloat32Array(undefined)).toBe(null);
     });
 });
 

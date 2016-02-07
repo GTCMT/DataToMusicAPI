@@ -674,8 +674,10 @@ dtm.transform = {
                 res[idx] = val + factor;
             });
         } else if (isNumOrFloat32Array(factor)) {
-            if (input.length !== factor.length) {
+            if (input.length > factor.length) {
                 factor = dtm.transform.fit(factor, input.length, interp);
+            } else if (input.length < factor.length) {
+                input = dtm.transform.fit(input, factor.length, interp);
             }
 
             for (var i = 0; i < input.length; i++) {
@@ -715,8 +717,10 @@ dtm.transform = {
                 res[idx] = val * factor;
             });
         } else if (isNumOrFloat32Array(factor)) {
-            if (input.length !== factor.length) {
+            if (input.length > factor.length) {
                 factor = dtm.transform.fit(factor, input.length, interp);
+            } else if (input.length < factor.length) {
+                input = dtm.transform.fit(input, factor.length, interp);
             }
 
             for (var i = 0; i < input.length; i++) {
@@ -756,8 +760,10 @@ dtm.transform = {
                 res[idx] = Math.pow(val, factor);
             });
         } else if (isNumOrFloat32Array(factor)) {
-            if (input.length !== factor.length) {
+            if (input.length > factor.length) {
                 factor = dtm.transform.fit(factor, input.length, interp);
+            } else if (input.length < factor.length) {
+                input = dtm.transform.fit(input, factor.length, interp);
             }
 
             for (var i = 0; i < input.length; i++) {
@@ -796,8 +802,10 @@ dtm.transform = {
                 res[idx] = Math.pow(factor, val);
             });
         } else if (isNumOrFloat32Array(factor)) {
-            if (input.length !== factor.length) {
+            if (input.length > factor.length) {
                 factor = dtm.transform.fit(factor, input.length, interp);
+            } else if (input.length < factor.length) {
+                input = dtm.transform.fit(input, factor.length, interp);
             }
 
             for (var i = 0; i < input.length; i++) {

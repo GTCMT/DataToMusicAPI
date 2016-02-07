@@ -9,14 +9,6 @@
 // * @returns {dtm.synth}
 // */
 dtm.synth = function () {
-    //var synth = {
-    //    type: 'dtm.synth',
-    //
-    //    meta: {
-    //        type: 'dtm.synth'
-    //    }
-    //};
-
     var synth = function () {
         return synth.clone();
     };
@@ -45,11 +37,22 @@ dtm.synth = function () {
         promise: null,
         pending: false,
 
-        amp: null,
-        notenum: null,
-        freq: null,
-        pitch: null,
-        pan: null,
+        amp: { base: dtm.array([[1]]) },
+
+        notenum: {
+            base: dtm.array([[69]]),
+            isFinal: true
+        },
+        freq: {
+            base: dtm.array([[440]]),
+            isFinal: false
+        },
+        pitch: {
+            base: dtm.array([[1]]),
+            isFinal: false
+        },
+
+        pan: { base: dtm.array([[0]]) },
         curve: false,
         offline: false,
         clock: null,
@@ -62,6 +65,7 @@ dtm.synth = function () {
     var nodes = {
         src: null,
         amp: null,
+        pan: null,
         out: null,
         fx: [{}],
         pFx: [{}],
@@ -137,25 +141,24 @@ dtm.synth = function () {
 
         params.baseTime = actx.currentTime;
 
-        params.amp = toFloat32Array([1]);
-        params.notenum = toFloat32Array([69]);
-        params.freq = toFloat32Array([440]);
-        params.pitch = freqToPitch(params.freq);
         params.wavetable = new Float32Array(params.tabLen);
         params.wavetable.forEach(function (v, i) {
             params.wavetable[i] = Math.sin(2 * Math.PI * i / params.tabLen);
         });
-        params.pan = new Float32Array([0.0]);
     };
 
     init.apply(this, arguments);
 
-    function freqToPitch(freqArr) {
-        var res = new Float32Array(freqArr.length);
-        freqArr.forEach(function (v, i) {
-            res[i] = v * params.tabLen / params.sr;
-        });
-        return res;
+    function freqToPitch(freq) {
+        if (isFloat32Array(freq)) {
+            var res = new Float32Array(freq.length);
+            freq.forEach(function (v, i) {
+                res[i] = v * params.tabLen / params.sr;
+            });
+            return res;
+        } else if (isNumber(freq)) {
+            return freq * params.tabLen / params.sr;
+        }
     }
 
     function pitchToFreq(pitchArr) {
@@ -501,7 +504,7 @@ dtm.synth = function () {
      * @returns {dtm.synth}
      */
     synth.play = function (bool) {
-        var defer = 0;
+        var defer = 0.01;
         if (params.lookahead) {
             defer = Math.round(params.clock.get('lookahead') * 500);
         }
@@ -541,6 +544,33 @@ dtm.synth = function () {
             var dur = params.dur;
 
             //===== end of type check
+
+            function process(param) {
+                var temp = param.base.get('next').clone();
+                if (!isEmpty(param.add)) {
+                    temp.add(param.add.get('next'));
+                }
+                if (!isEmpty(param.mult)) {
+                    temp.mult(param.mult.get('next'));
+                }
+                return temp.value;
+            }
+
+            var amp = process(params.amp);
+            var pan = process(params.pan);
+            var pitch;
+
+            if (params.notenum.isFinal) {
+                pitch = process(params.notenum).map(function (v) {
+                    return freqToPitch(dtm.val.mtof(v));
+                });
+            } else if (params.freq.isFinal) {
+                pitch = process(params.freq).map(function (v) {
+                    return freqToPitch(v);
+                });
+            } else {
+                pitch = process(params.pitch);
+            }
 
             dtm.master.addVoice(synth);
 
@@ -582,8 +612,8 @@ dtm.synth = function () {
                 }
 
                 var curves = [];
-                curves.push({param: nodes.src.playbackRate, value: params.pitch});
-                curves.push({param: nodes.amp.gain, value: params.amp});
+                curves.push({param: nodes.src.playbackRate, value: pitch});
+                curves.push({param: nodes.amp.gain, value: amp});
                 setParamCurve(offset, dur, curves);
 
                 nodes.fx[0].out.gain.value = 1.0;
@@ -603,15 +633,15 @@ dtm.synth = function () {
 
                     nodes.rtSrc = actx.createBufferSource();
                     nodes.pFx[0].out = actx.createGain();
-                    var pan = actx.createStereoPanner();
+                    nodes.pan = actx.createStereoPanner();
                     var out = actx.createGain();
                     nodes.rtSrc.connect(nodes.pFx[0].out);
                     for (var n = 1; n < nodes.pFx.length; n++) {
                         nodes.pFx[n].run(offset, dur);
                         nodes.pFx[n-1].out.connect(nodes.pFx[n].in);
                     }
-                    nodes.pFx[n-1].out.connect(pan);
-                    pan.connect(out);
+                    nodes.pFx[n-1].out.connect(nodes.pan);
+                    nodes.pan.connect(out);
                     out.connect(actx.destination);
 
                     nodes.rtSrc.buffer = actx.createBuffer(1, params.rendered.length, params.sr);
@@ -620,7 +650,7 @@ dtm.synth = function () {
                     nodes.rtSrc.start(offset);
                     nodes.rtSrc.stop(offset + nodes.rtSrc.buffer.length);
 
-                    setParamCurve(offset, dur, [{param: pan.pan, value: params.pan}]);
+                    setParamCurve(offset, dur, [{param: nodes.pan.pan, value: pan}]);
 
                     out.gain.value = 1.0;
 
@@ -640,16 +670,18 @@ dtm.synth = function () {
                 nodes.src = actx.createBufferSource();
                 nodes.amp = actx.createGain();
                 nodes.pFx[0].out = actx.createGain();
-                var pan = actx.createStereoPanner();
+                nodes.pan = actx.createStereoPanner();
+                var declipper = actx.createGain();
                 var out = actx.createGain();
                 nodes.src.connect(nodes.amp);
-                nodes.amp.connect(nodes.pFx[0].out);
+                nodes.amp.connect(declipper);
+                declipper.connect(nodes.pFx[0].out);
                 for (var n = 1; n < nodes.pFx.length; n++) {
                     nodes.pFx[n].run(offset, dur);
                     nodes.pFx[n-1].out.connect(nodes.pFx[n].in);
                 }
-                nodes.pFx[n-1].out.connect(pan);
-                pan.connect(out);
+                nodes.pFx[n-1].out.connect(nodes.pan);
+                nodes.pan.connect(out);
                 out.connect(actx.destination);
 
                 nodes.src.buffer = actx.createBuffer(1, params.tabLen, params.sr);
@@ -659,13 +691,18 @@ dtm.synth = function () {
                 nodes.src.stop(offset + dur);
 
                 var curves = [];
-                curves.push({param: nodes.src.playbackRate, value: params.pitch});
-                curves.push({param: nodes.amp.gain, value: params.amp});
+                curves.push({param: nodes.src.playbackRate, value: pitch});
+                curves.push({param: nodes.amp.gain, value: amp});
                 setParamCurve(offset, dur, curves);
-                setParamCurve(offset, dur, [{param: pan.pan, value: params.pan}]);
+                setParamCurve(offset, dur, [{param: nodes.pan.pan, value: pan}]);
 
                 nodes.pFx[0].out.gain.value = 1.0; // ?
                 out.gain.value = 1.0;
+
+                var ramp = 0.005;
+                declipper.gain.setValueAtTime(0.0, offset);
+                declipper.gain.linearRampToValueAtTime(1.0, offset + ramp);
+                declipper.gain.setTargetAtTime(0.0, offset + dur - ramp, ramp * 0.3);
 
                 nodes.src.onended = function () {
                     dtm.master.removeVoice(synth);
@@ -732,6 +769,8 @@ dtm.synth = function () {
     synth.repeat = function (times, interval) {
         if (isInteger(times) && times > 0) {
             params.repeat = times;
+        } else if (isEmpty(times) || times === Infinity || times === true) {
+            params.repeat = Infinity;
         }
         return synth;
     };
@@ -748,17 +787,6 @@ dtm.synth = function () {
         return params.phase;
     }
 
-    function map(src, param) {
-        src = typeCheck(src);
-
-        var arr;
-        if (isFloat32Array(src)) {
-            arr = src;
-        } else if (isFunction(src)) {
-            arr = toFloat32Array(src(dtm.a(param), synth, params.clock));
-        }
-    }
-
     synth.mod = function (name, val) {
         if (isString(name) && params.named.hasOwnProperty(name)) {
             setTimeout(function () {
@@ -771,6 +799,12 @@ dtm.synth = function () {
 
     synth.modulate = synth.mod;
 
+    function setFinal(param) {
+        ['notenum', 'freq', 'pitch'].forEach(function (v) {
+            params[v].isFinal = v === param;
+        });
+    }
+
     /**
      * Sets the frequency of the oscillator
      * @function module:synth#freq
@@ -779,54 +813,30 @@ dtm.synth = function () {
      * @returns {dtm.synth}
      */
     synth.freq = function (src, post) {
-        src = typeCheck(src);
-        if (src) {
-            params.freq = src;
-            params.pitch = freqToPitch(params.freq);
-        }
+        params.freq.base = map(src, params.freq.base);
+        setFinal('freq');
+
         return synth;
     };
 
     synth.freq.add = function (src, interp) {
-        src = typeCheck(src);
-        if (!isString(interp)) {
-            interp = 'step';
+        if (isEmpty(params.freq.add)) {
+            params.freq.add = map(src, params.freq.add);
+        } else {
+            params.freq.add.add(map(src, params.freq.add), interp);
         }
-
-        if (src) {
-            if (src.length > params.freq.length) {
-                params.freq = dtm.a(params.freq).fit(src.length, interp).get();
-            } else if (src.length < params.freq.length) {
-                src = dtm.a(src).fit(params.freq.length, interp).get();
-            }
-            src.forEach(function (v, i) {
-                params.freq[i] += v;
-            });
-
-            params.pitch = freqToPitch(params.freq);
-        }
+        setFinal('freq');
 
         return synth;
     };
 
     synth.freq.mult = function (src, interp) {
-        src = typeCheck(src);
-        if (!isString(interp)) {
-            interp = 'step';
+        if (isEmpty(params.freq.mult)) {
+            params.freq.mult = map(src, params.freq.mult);
+        } else {
+            params.freq.mult.mult(map(src, params.freq.mult), interp);
         }
-
-        if (src) {
-            if (src.length > params.freq.length) {
-                params.freq = dtm.a(params.freq).fit(src.length, interp).get();
-            } else if (src.length < params.freq.length) {
-                src = dtm.a(src).fit(params.freq.length, interp).get();
-            }
-            src.forEach(function (v, i) {
-                params.freq[i] *= v;
-            });
-
-            params.pitch = freqToPitch(params.freq);
-        }
+        setFinal('freq');
 
         return synth;
     };
@@ -838,92 +848,87 @@ dtm.synth = function () {
      * @returns {dtm.synth}
      */
     synth.notenum = function (src) {
-        src = typeCheck(src);
+        params.notenum.base = map(src, params.notenum.base);
+        setFinal('notenum');
 
-        var arr;
-        if (isFloat32Array(src)) {
-            arr = src;
-        } else if (isFunction(src)) {
-            arr = toFloat32Array(src(dtm.a(params.notenum), synth, params.clock)); // TODO: what args to pass?
-        }
-
-        if (isNumOrFloat32Array(arr)) {
-            params.notenum = new Float32Array(arr.length);
-            params.freq = new Float32Array(arr.length);
-            arr.forEach(function (v, i) {
-                params.notenum[i] = v;
-                params.freq[i] = dtm.value.mtof(v);
-            });
-            params.pitch = freqToPitch(params.freq);
-        }
         return synth;
     };
 
     synth.nn = synth.notenum;
 
     synth.notenum.add = function (src, interp) {
-        src = typeCheck(src);
-        if (!isString(interp)) {
-            interp = 'step';
+        if (isEmpty(params.notenum.add)) {
+            params.notenum.add = map(src, params.notenum.add);
+        } else {
+            params.notenum.add.add(map(src, params.notenum.add), interp);
         }
-
-        var arr;
-        if (isFloat32Array(src)) {
-            arr = src;
-        } else if (isFunction(src)) {
-            arr = toFloat32Array(src(dtm.a(params.notenum), synth, params.clock)); // TODO: what args to pass?
-        } else if (isNestedDtmArray(src)) {
-            arr = src.get('next');
-        }
-
-        if (isNumOrFloat32Array(arr)) {
-            if (arr.length > params.notenum.length) {
-                params.notenum = dtm.a(params.notenum).fit(arr.length, interp).get();
-            } else if (arr.length < params.notenum.length) {
-                arr = dtm.a(arr).fit(params.notenum.length, interp).get();
-            }
-            arr.forEach(function (v, i) {
-                params.notenum[i] += v;
-            });
-
-            params.freq = dtm.transform.mtof(params.notenum);
-            params.pitch = freqToPitch(params.freq);
-        }
+        setFinal('notenum');
 
         return synth;
     };
 
     synth.notenum.mult = function (src, interp) {
-        src = typeCheck(src);
-        if (!isString(interp)) {
-            interp = 'step';
+        if (isEmpty(params.notenum.mult)) {
+            params.notenum.mult = map(src, params.notenum.mult);
+        } else {
+            params.notenum.mult.mult(map(src, params.notenum.mult), interp);
         }
-
-        if (src) {
-            if (src.length > params.notenum.length) {
-                params.notenum = dtm.a(params.notenum).fit(src.length, interp).get();
-            } else if (src.length < params.notenum.length) {
-                src = dtm.a(src).fit(params.notenum.length, interp).get();
-            }
-            src.forEach(function (v, i) {
-                params.notenum[i] *= v;
-            });
-
-            params.freq = dtm.transform.mtof(params.notenum);
-            params.pitch = freqToPitch(params.freq);
-        }
+        setFinal('notenum');
 
         return synth;
     };
 
     // for longer sample playback
-    synth.pitch = function (src, post) {
-        src = typeCheck(src);
-        if (src) {
-            params.pitch = src;
-        }
+    synth.pitch = function (src) {
+        params.pitch.base = map(src, params.pitch.base);
+        setFinal('pitch');
         return synth;
     };
+
+    synth.pitch.add = function (src, interp) {
+        if (isEmpty(params.pitch.add)) {
+            params.pitch.add = map(src, params.pitch.add);
+        } else {
+            params.pitch.add.add(map(src, params.pitch.add), interp);
+        }
+        setFinal('pitch');
+        return synth;
+    };
+
+    synth.pitch.mult = function (src, interp) {
+        if (isEmpty(params.pitch.mult)) {
+            params.pitch.mult = map(src, params.pitch.mult);
+        } else {
+            params.pitch.mult.mult(map(src, params.pitch.mult), interp);
+        }
+        setFinal('pitch');
+        return synth;
+    };
+
+    function check(src) {
+        return isNumber(src) || isNumOrFloat32Array(src) || isNumDtmArray(src) || isNestedNumDtmArray(src);
+    }
+
+    function convert(src) {
+        if (isNestedNumDtmArray(src)) {
+            return src;
+        } else if (isNumDtmArray(src)) {
+            return dtm.array([src]);
+        } else if (isNestedArray(src)) {
+            return dtm.array([src]);
+        } else {
+            return dtm.array([toFloat32Array(src)]);
+        }
+    }
+
+    function map(src, param) {
+        if (isFunction(src)) {
+            var res = src(param, synth, params.clock);
+            return check(res) ? convert(res) : param;
+        } else {
+            return check(src) ? convert(src) : param;
+        }
+    }
 
     /**
      * @function module:synth#amp
@@ -931,66 +936,29 @@ dtm.synth = function () {
      * @returns {dtm.synth}
      */
     synth.amp = function (src) {
+        params.amp.base = map(src, params.amp.base);
+
         if (isDtmArray(src) && src.get('autolen')) {
             src.size(Math.round(params.dur * params.sr));
         }
 
-        src = typeCheck(src);
-
-        var arr;
-        if (isFloat32Array(src)) {
-            arr = src;
-        } else if (isFunction(src)) {
-            arr = toFloat32Array(src(dtm.a(params.amp), synth, params.clock));
-        }
-
-        if (isFloat32Array(arr)) {
-            params.amp = arr;
-        }
         return synth;
     };
 
     synth.amp.add = function (src, interp) {
-        src = typeCheck(src);
-        if (!isString(interp)) {
-            interp = 'step';
-        }
-
-        var arr;
-        if (isFloat32Array(src)) {
-            arr = src;
-        } else if (isFunction(src)) {
-            arr = toFloat32Array(src(dtm.a(params.amp), synth, params.clock)); // TODO: what args to pass?
-        }
-
-        if (isFloat32Array(arr)) {
-            if (arr.length > params.amp.length) {
-                params.amp = dtm.a(params.amp).fit(arr.length, interp).get();
-            } else if (arr.length < params.amp.length) {
-                arr = dtm.a(arr).fit(params.amp.length, interp).get();
-            }
-            arr.forEach(function (v, i) {
-                params.amp[i] += v;
-            });
+        if (isEmpty(params.amp.add)) {
+            params.amp.add = map(src, params.amp.add);
+        } else {
+            params.amp.add.add(map(src, params.amp.add), interp);
         }
         return synth;
     };
 
     synth.amp.mult = function (src, interp) {
-        src = typeCheck(src);
-        if (!isString(interp)) {
-            interp = 'step';
-        }
-
-        if (src) {
-            if (src.length > params.amp.length) {
-                params.amp = dtm.a(params.amp).fit(src.length, interp).get();
-            } else if (src.length < params.amp.length) {
-                src = dtm.a(src).fit(params.amp.length, interp).get();
-            }
-            src.forEach(function (v, i) {
-                params.amp[i] *= v;
-            });
+        if (isEmpty(params.amp.mult)) {
+            params.amp.mult = map(src, params.amp.mult);
+        } else {
+            params.amp.mult.mult(map(src, params.amp.mult), interp);
         }
         return synth;
     };
@@ -1001,9 +969,24 @@ dtm.synth = function () {
      * @returns {dtm.synth}
      */
     synth.pan = function (src) {
-        src = typeCheck(src);
-        if (src) {
-            params.pan = src;
+        params.pan.base = map(src, params.pan.base);
+        return synth;
+    };
+
+    synth.pan.add = function (src, interp) {
+        if (isEmpty(params.pan.add)) {
+            params.pan.add = map(src, params.pan.add);
+        } else {
+            params.pan.add.add(map(src, params.pan.add), interp);
+        }
+        return synth;
+    };
+
+    synth.pan.mult = function (src, interp) {
+        if (isEmpty(params.pan.mult)) {
+            params.pan.mult = map(src, params.pan.mult);
+        } else {
+            params.pan.mult.mult(map(src, params.pan.mult), interp);
         }
         return synth;
     };
