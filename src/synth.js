@@ -562,7 +562,11 @@ dtm.synth = function () {
             if (params.autoDur) {
                 if (params.type === 'sample') {
                     params.tabLen = params.wavetable.length;
-                    params.dur = params.tabLen / params.sr / pitch;
+                    
+                    params.dur = 0;
+                    pitch.forEach(function (v) {
+                        params.dur += params.tabLen / params.sr / v / pitch.length;
+                    })
                 } else if (params.clock) {
                     params.dur = params.clock.get('dur');
                 }
