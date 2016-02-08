@@ -176,6 +176,33 @@ describe('isNestedWithDtmArray', function () {
     });
 });
 
+describe('getMaxArrayDepth', function () {
+    it('should work', function () {
+        expect(getMaxArrayDepth(0)).toBe(0);
+        expect(getMaxArrayDepth([0])).toBe(1);
+        expect(getMaxArrayDepth([0, 1])).toBe(1);
+        expect(getMaxArrayDepth([[0], 1])).toBe(2);
+        expect(getMaxArrayDepth([[0], [1]])).toBe(2);
+        expect(getMaxArrayDepth([[0], [1, [2]]])).toBe(3);
+        expect(getMaxArrayDepth([[0], [1, [2, [3]]]])).toBe(4);
+        expect(getMaxArrayDepth([[0], [1, [2, [3, 4]]]])).toBe(4);
+    });
+});
+
+describe('getMaxDepth', function () {
+    it('should work with mixed Array and dtm.array', function () {
+        expect(getMaxDepth(0)).toBe(0);
+        expect(getMaxDepth(dtm.a(0))).toBe(1);
+        expect(getMaxDepth([0])).toBe(1);
+        expect(getMaxDepth([dtm.a(0)])).toBe(2);
+        expect(getMaxDepth(dtm.a([0], [1]))).toBe(2);
+        expect(getMaxDepth(dtm.a(dtm.a(0), [1]))).toBe(2);
+        expect(getMaxDepth([dtm.a([0], [1])])).toBe(3);
+        expect(getMaxDepth(dtm.a(dtm.a([0], [1]), [1]))).toBe(3);
+        expect(getMaxDepth(dtm.a(dtm.a(dtm.a([0], [1]), [1]), [1]))).toBe(4);
+    });
+});
+
 describe('hasMissingValues', function () {
     it('should work', function () {
         expect(hasMissingValues([1, 2, 3])).toBe(false);

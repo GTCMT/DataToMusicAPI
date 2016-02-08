@@ -191,6 +191,63 @@ function isNestedWithDtmArray(val) {
     return res;
 }
 
+function getMaxArrayDepth(val) {
+    if (isArray(val)) {
+        var depth = 1;
+        var list = [];
+        val.forEach(function (v) {
+            if (isArray(v)) {
+                list.push(getMaxArrayDepth(v));
+            }
+        });
+
+        if (list.length > 0) {
+            depth += Math.max.apply(this, list);
+        }
+        return depth;
+    } else {
+        return 0;
+    }
+}
+
+function getMaxDtmArrayDepth(val) {
+    if (isDtmArray(val)) {
+        var depth = 1;
+        var list = [];
+        val.forEach(function (v) {
+            if (isDtmArray(v)) {
+                list.push(getMaxDtmArrayDepth(v));
+            }
+        });
+
+        if (list.length > 0) {
+            depth += Math.max.apply(this, list);
+        }
+        return depth;
+    } else {
+        return 0;
+    }
+}
+
+function getMaxDepth(val) {
+    if (isArray(val) || isDtmArray(val)) {
+        var depth = 1;
+        var list = [];
+        val.forEach(function (v) {
+            if (isArray(v) || isDtmArray(v)) {
+                list.push(getMaxDepth(v));
+            }
+        });
+
+        if (list.length > 0) {
+            depth += Math.max.apply(this, list);
+        }
+        return depth;
+    } else {
+        return 0;
+    }
+}
+
 /**
  * Checks if the value is an instance of DTM object
  * @param val
@@ -626,6 +683,11 @@ dtm.util.isNestedWithDtmArray = isNestedWithDtmArray;
 dtm.util.isDtmObj = isDtmObj;
 dtm.util.isDtmArray = isDtmArray;
 dtm.util.isNestedDtmArray = isNestedDtmArray;
+dtm.util.isNumDtmArray = isNumDtmArray;
+dtm.util.isNestedNumDtmArray = isNestedNumDtmArray;
+dtm.util.getMaxArrayDepth = getMaxArrayDepth;
+dtm.util.getMaxDtmArrayDepth = getMaxDtmArrayDepth;
+dtm.util.getMaxDepth = getMaxDepth;
 dtm.util.isStringArray = isStringArray;
 dtm.util.isBoolArray = isBoolArray;
 dtm.util.hasMissingValues = hasMissingValues;
