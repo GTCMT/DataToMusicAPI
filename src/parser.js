@@ -6,11 +6,6 @@
 dtm.parser = {
     type: 'dtm.parser',
 
-    parseCsv: function (data) {
-        return parser;
-    },
-
-
     /**
      * @function module:parser#csvToJson
      * @category Parser
@@ -55,7 +50,8 @@ dtm.parser = {
     },
 
     csvToCols: function (csvText) {
-        var lines = csvText.split("\n"); // \r for Macs
+        var linebreak = csvText.indexOf('\n') > -1 ? '\n' : '\r';
+        var lines = csvText.split(linebreak);
         var headers = lines[0].split(",");
         var obj = {};
         headers.forEach(function (v, i) {

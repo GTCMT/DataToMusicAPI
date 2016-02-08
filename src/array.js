@@ -117,8 +117,14 @@ dtm.array = function () {
 
                 case 'len':
                 case 'length':
-                case 'size':
                     return params.len;
+
+                case 'size':
+                    if (isNestedDtmArray(array)) {
+                        return { row: array.value[0].get('len'), col: params.len };
+                    } else {
+                        return params.len;
+                    }
 
                 case 'autolen':
                     return params.autolen;
@@ -346,8 +352,25 @@ dtm.array = function () {
         }
     };
 
-    array.col = function (num) {
-        return array.set(array.get(num));
+    array.col = function (which) {
+        if (isNestedDtmArray(array)) {
+            if (isString(which)) {
+                var res;
+                array.value.forEach(function (a) {
+                    if (a.get('name') === which) {
+                        res = a;
+                    }
+                });
+                if (isEmpty(res)) {
+                    res = array;
+                }
+                return res;
+            } else {
+                return array.get(which);
+            }
+        } else {
+            return array.set(array.get(which)).label(array.get('name'));
+        }
     };
 
     array.column = array.col;
