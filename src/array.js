@@ -622,7 +622,7 @@ dtm.array = function () {
         return array.set(flattened);
     };
 
-    array.flatten = array.unblock = array.unnest;
+    array.flatten = array.ub = array.unblock = array.unnest;
 
     /**
      * Morphs the array values with a target array / dtm.array values. The lengths can be mismatched.
@@ -734,6 +734,12 @@ dtm.array = function () {
      * -> [2, 4, 6]
      */
     array.scale = function (arg1, arg2, arg3, arg4) {
+        if (isNestedDtmArray(array)) {
+            return array.map(function (a) {
+                return a.scale(arg1, arg2, arg3, arg4);
+            });
+        }
+
         var min, max, dmin, dmax;
 
         // TODO: better typecheck order
@@ -1288,7 +1294,7 @@ dtm.array = function () {
         return array.set(newArr);
     };
 
-    array.nest = array.block;
+    array.nest = array.b = array.block;
 
     array.ola = function (hop) {
         if (!isInteger(hop) || hop < 1) {

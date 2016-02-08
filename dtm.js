@@ -4269,7 +4269,7 @@ dtm.array = function () {
         return array.set(flattened);
     };
 
-    array.flatten = array.unblock = array.unnest;
+    array.flatten = array.ub = array.unblock = array.unnest;
 
     /**
      * Morphs the array values with a target array / dtm.array values. The lengths can be mismatched.
@@ -4381,6 +4381,12 @@ dtm.array = function () {
      * -> [2, 4, 6]
      */
     array.scale = function (arg1, arg2, arg3, arg4) {
+        if (isNestedDtmArray(array)) {
+            return array.map(function (a) {
+                return a.scale(arg1, arg2, arg3, arg4);
+            });
+        }
+
         var min, max, dmin, dmax;
 
         // TODO: better typecheck order
@@ -4935,7 +4941,7 @@ dtm.array = function () {
         return array.set(newArr);
     };
 
-    array.nest = array.block;
+    array.nest = array.b = array.block;
 
     array.ola = function (hop) {
         if (!isInteger(hop) || hop < 1) {
@@ -5895,14 +5901,22 @@ dtm.data = function (input, fn) {
                         } else if (xhr.responseType === 'blob') {
                             var img = new Image();
                             img.onload = function () {
-                                //params.size.col = img.width;
-                                //params.size.row = img.height;
+                                var canvas = document.createElement('canvas');
+                                canvas.width = img.width;
+                                canvas.height = img.height;
 
-                                for (var i = 0; i < img.width; i++) {
-                                    for (var j = 0; j < img.height; j++) {
-                                        // TODO: WIP
-                                    }
+                                var context = canvas.getContext('2d');
+                                context.drawImage(img, 0, 0);
+
+                                var res = [];
+
+                                var imageData = context.getImageData(0, 0, img.width, img.height).data;
+                                for (var c = 0; c < img.width; c++) {
+                                    res.push(imageData.filter(function (v, i) {
+                                        return i % (img.width*4) === c;
+                                    }));
                                 }
+                                console.log(res);
                             };
                             img.src = window.URL.createObjectURL(xhr.response);
 
@@ -7577,6 +7591,8 @@ dtm.synth = function () {
         repeat: 1,
         autoRep: true,
 
+        interp: 'step',
+
         baseTime: 0.0, // for offline rendering
         lookahead: false,
         autoDur: false,
@@ -8036,7 +8052,7 @@ dtm.synth = function () {
         return synth;
     };
 
-    synth.interval = synth.dur;
+    synth.int = synth.interval = synth.dur;
 
     synth.offset = function (src) {
         params.offset = toFloat32Array(src)[0];
@@ -8367,32 +8383,31 @@ dtm.synth = function () {
      * Sets the frequency of the oscillator
      * @function module:synth#freq
      * @param src
-     * @param [post=false] boolean
      * @returns {dtm.synth}
      */
-    synth.freq = function (src, post) {
-        params.freq.base = map(src, params.freq.base);
+    synth.freq = function () {
+        params.freq.base = map(arguments, params.freq.base);
         setFinal('freq');
 
         return synth;
     };
 
-    synth.freq.add = function (src, interp) {
+    synth.freq.add = function () {
         if (isEmpty(params.freq.add)) {
-            params.freq.add = map(src, params.freq.add);
+            params.freq.add = map(arguments, params.freq.add);
         } else {
-            params.freq.add.add(map(src, params.freq.add), interp);
+            params.freq.add.add(map(arguments, params.freq.add), params.interp);
         }
         setFinal('freq');
 
         return synth;
     };
 
-    synth.freq.mult = function (src, interp) {
+    synth.freq.mult = function () {
         if (isEmpty(params.freq.mult)) {
-            params.freq.mult = map(src, params.freq.mult);
+            params.freq.mult = map(arguments, params.freq.mult);
         } else {
-            params.freq.mult.mult(map(src, params.freq.mult), interp);
+            params.freq.mult.mult(map(arguments, params.freq.mult), params.interp);
         }
         setFinal('freq');
 
@@ -8405,8 +8420,8 @@ dtm.synth = function () {
      * @param src
      * @returns {dtm.synth}
      */
-    synth.notenum = function (src) {
-        params.notenum.base = map(src, params.notenum.base);
+    synth.notenum = function () {
+        params.notenum.base = map(arguments, params.notenum.base);
         setFinal('notenum');
 
         return synth;
@@ -8414,22 +8429,22 @@ dtm.synth = function () {
 
     synth.nn = synth.notenum;
 
-    synth.notenum.add = function (src, interp) {
+    synth.notenum.add = function () {
         if (isEmpty(params.notenum.add)) {
-            params.notenum.add = map(src, params.notenum.add);
+            params.notenum.add = map(arguments, params.notenum.add);
         } else {
-            params.notenum.add.add(map(src, params.notenum.add), interp);
+            params.notenum.add.add(map(arguments, params.notenum.add), params.interp);
         }
         setFinal('notenum');
 
         return synth;
     };
 
-    synth.notenum.mult = function (src, interp) {
+    synth.notenum.mult = function () {
         if (isEmpty(params.notenum.mult)) {
-            params.notenum.mult = map(src, params.notenum.mult);
+            params.notenum.mult = map(arguments, params.notenum.mult);
         } else {
-            params.notenum.mult.mult(map(src, params.notenum.mult), interp);
+            params.notenum.mult.mult(map(arguments, params.notenum.mult), params.interp);
         }
         setFinal('notenum');
 
@@ -8437,27 +8452,27 @@ dtm.synth = function () {
     };
 
     // for longer sample playback
-    synth.pitch = function (src) {
-        params.pitch.base = map(src, params.pitch.base);
+    synth.pitch = function () {
+        params.pitch.base = map(arguments, params.pitch.base);
         setFinal('pitch');
         return synth;
     };
 
-    synth.pitch.add = function (src, interp) {
+    synth.pitch.add = function () {
         if (isEmpty(params.pitch.add)) {
-            params.pitch.add = map(src, params.pitch.add);
+            params.pitch.add = map(arguments, params.pitch.add);
         } else {
-            params.pitch.add.add(map(src, params.pitch.add), interp);
+            params.pitch.add.add(map(arguments, params.pitch.add), params.interp);
         }
         setFinal('pitch');
         return synth;
     };
 
-    synth.pitch.mult = function (src, interp) {
+    synth.pitch.mult = function () {
         if (isEmpty(params.pitch.mult)) {
-            params.pitch.mult = map(src, params.pitch.mult);
+            params.pitch.mult = map(arguments, params.pitch.mult);
         } else {
-            params.pitch.mult.mult(map(src, params.pitch.mult), interp);
+            params.pitch.mult.mult(map(arguments, params.pitch.mult), params.interp);
         }
         setFinal('pitch');
         return synth;
@@ -8468,8 +8483,8 @@ dtm.synth = function () {
      * @param src
      * @returns {dtm.synth}
      */
-    synth.amp = function (src) {
-        params.amp.base = map(src, params.amp.base);
+    synth.amp = function () {
+        params.amp.base = map(arguments, params.amp.base);
 
         if (isDtmArray(src) && src.get('autolen')) {
             src.size(Math.round(params.dur * params.sr));
@@ -8478,20 +8493,20 @@ dtm.synth = function () {
         return synth;
     };
 
-    synth.amp.add = function (src, interp) {
+    synth.amp.add = function () {
         if (isEmpty(params.amp.add)) {
-            params.amp.add = map(src, params.amp.add);
+            params.amp.add = map(arguments, params.amp.add);
         } else {
-            params.amp.add.add(map(src, params.amp.add), interp);
+            params.amp.add.add(map(arguments, params.amp.add), params.interp);
         }
         return synth;
     };
 
-    synth.amp.mult = function (src, interp) {
+    synth.amp.mult = function () {
         if (isEmpty(params.amp.mult)) {
-            params.amp.mult = map(src, params.amp.mult);
+            params.amp.mult = map(arguments, params.amp.mult);
         } else {
-            params.amp.mult.mult(map(src, params.amp.mult), interp);
+            params.amp.mult.mult(map(arguments, params.amp.mult), params.interp);
         }
         return synth;
     };
@@ -8501,25 +8516,25 @@ dtm.synth = function () {
      * @param src
      * @returns {dtm.synth}
      */
-    synth.pan = function (src) {
-        params.pan.base = map(src, params.pan.base);
+    synth.pan = function () {
+        params.pan.base = map(arguments, params.pan.base);
         return synth;
     };
 
-    synth.pan.add = function (src, interp) {
+    synth.pan.add = function () {
         if (isEmpty(params.pan.add)) {
-            params.pan.add = map(src, params.pan.add);
+            params.pan.add = map(arguments, params.pan.add);
         } else {
-            params.pan.add.add(map(src, params.pan.add), interp);
+            params.pan.add.add(map(arguments, params.pan.add), params.interp);
         }
         return synth;
     };
 
-    synth.pan.mult = function (src, interp) {
+    synth.pan.mult = function () {
         if (isEmpty(params.pan.mult)) {
-            params.pan.mult = map(src, params.pan.mult);
+            params.pan.mult = map(arguments, params.pan.mult);
         } else {
-            params.pan.mult.mult(map(src, params.pan.mult), interp);
+            params.pan.mult.mult(map(arguments, params.pan.mult), params.interp);
         }
         return synth;
     };
@@ -8871,7 +8886,12 @@ dtm.synth = function () {
     }
 
     function check(src) {
-        return isNumber(src) || isNumOrFloat32Array(src) || isNumDtmArray(src) || isNestedNumDtmArray(src);
+        return isNumber(src) ||
+            isNumArray(src) ||
+            isNestedArray(src) ||
+            isNumOrFloat32Array(src) ||
+            isNumDtmArray(src) ||
+            isNestedNumDtmArray(src);
     }
 
     function convert(src) {
@@ -8880,18 +8900,19 @@ dtm.synth = function () {
         } else if (isNumDtmArray(src)) {
             return dtm.array([src]);
         } else if (isNestedArray(src)) {
-            return dtm.array([src]);
+            return dtm.array(src);
         } else {
             return dtm.array([toFloat32Array(src)]);
         }
     }
 
-    function map(src, param) {
-        if (isFunction(src)) {
-            var res = src(param, synth, params.clock);
+    function map(args, param) {
+        if (isFunction(args[0])) {
+            var res = args[0](param, synth, params.clock);
             return check(res) ? convert(res) : param;
         } else {
-            return check(src) ? convert(src) : param;
+            var argList = argsToArray(args);
+            return check(argList) ? convert(argList) : param;
         }
     }
 

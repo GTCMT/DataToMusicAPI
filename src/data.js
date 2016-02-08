@@ -191,14 +191,22 @@ dtm.data = function (input, fn) {
                         } else if (xhr.responseType === 'blob') {
                             var img = new Image();
                             img.onload = function () {
-                                //params.size.col = img.width;
-                                //params.size.row = img.height;
+                                var canvas = document.createElement('canvas');
+                                canvas.width = img.width;
+                                canvas.height = img.height;
 
-                                for (var i = 0; i < img.width; i++) {
-                                    for (var j = 0; j < img.height; j++) {
-                                        // TODO: WIP
-                                    }
+                                var context = canvas.getContext('2d');
+                                context.drawImage(img, 0, 0);
+
+                                var res = [];
+
+                                var imageData = context.getImageData(0, 0, img.width, img.height).data;
+                                for (var c = 0; c < img.width; c++) {
+                                    res.push(imageData.filter(function (v, i) {
+                                        return i % (img.width*4) === c;
+                                    }));
                                 }
+                                console.log(res);
                             };
                             img.src = window.URL.createObjectURL(xhr.response);
 
