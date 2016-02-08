@@ -183,8 +183,14 @@ For such cases, similar to dtm.array, you may want to clone the object before se
 ## Other common parameters
 The dtm.synth has several stationary parameters as well as dynamically generated parameters. The stationary parameters include the following: amp, notenum (nn), freq, pitch, pan, wavetable (wt), dur, offset, and play. 
 
+Amplitude and rhythm modulation
 
-Amplitude envelope
+    dtm.syn().play().dur(2.5)
+        .amp([1,0,0,0.5, 0,0,1,0, 0,0,0.5,0, 1,0,0,0])
+
+<button onclick="playPrev(this)">Listen</button>
+
+Continuous amplitude envelope
 
 	// Using dtm.generator -- This creates a dtm.array with the values of decaying ramp going from 1 to 0.
 	env = dtm.gen('decay')
@@ -236,7 +242,7 @@ The dynamically generated parameters are typically audio effects, such as the fo
 Although you can use the default number or array types in JavaScript in dtm.synth, the dtm.array is the basic unit for many operations in dtm.synth, allowing dynamic transformations.
 
     var saw = dtm.gen('saw');
-    dtm.syn().wt(saw).play();
+    dtm.syn().wt(saw).amp(0.5).play();
 
 <button onclick="playPrev(this)">Listen</button>
 

@@ -739,12 +739,6 @@ dtm.generator = function () {
                 }
             }
         }
-
-        //if (isTypeCategOf('noLength')) {
-        //
-        //} else {
-        //
-        //}
     }
 
     process();
@@ -753,11 +747,11 @@ dtm.generator = function () {
 
 dtm.g = dtm.gen = dtm.generator;
 
-var generators = ['line', 'rise', 'decay', 'fall', 'seq', 'sequence', 'series', 'range', 'noise', 'random', 'rand', 'randi', 'gaussian', 'gaussCurve', 'gauss', 'normal', 'zeros', 'zeroes', 'ones', 'constant', 'constants', 'const', 'consts', 'repeat', 'string', 'str', 'sin', 'sine', 'cos', 'cosine', 'tri', 'triangle', 'saw', 'fibonacci', 'decay'];
+var generators = ['line', 'rise', 'decay', 'fall', 'seq', 'sequence', 'series', 'range', 'noise', 'random', 'rand', 'randi', 'gaussian', 'gaussCurve', 'gauss', 'normal', 'zeros', 'zeroes', 'ones', 'constant', 'constants', 'const', 'consts', 'repeat', 'string', 'str', 'sin', 'sine', 'cos', 'cosine', 'tri', 'triangle', 'saw', 'fibonacci', 'decay', 'scale'];
 
 generators.forEach(function (type) {
     dtm[type] = function () {
-        var args = [type, argsToArray(arguments)];
+        var args = [type].concat(argsToArray(arguments));
         return dtm.generator.apply(this, args);
     }
 });

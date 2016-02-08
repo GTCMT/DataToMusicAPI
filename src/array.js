@@ -568,26 +568,6 @@ dtm.array = function () {
         return newArr;
     };
 
-    ///**
-    // * @alias module:array#clone
-    // * @memberOf module:array
-    // */
-    array.c = array.clone;
-
-    /**
-     * blah blah
-     * @instance
-     * @memberOf module:array
-     * @name clonetest
-     * @alias c, cl
-     * @returns {dtm.array}
-     */
-    function clonetest() {
-        return array;
-    }
-
-    array.clonetest = clonetest;
-
     array.parent = function (obj) {
         if (isDtmArray(obj)) {
             params.parent = obj;
@@ -677,7 +657,9 @@ dtm.array = function () {
      */
     array.normalize = function (arg1, arg2) {
         if (isNestedDtmArray(array)) {
-            return array;
+            return array.map(function (a) {
+                return a.normalize(arg1, arg2);
+            });
         }
 
         var min, max, args;
@@ -862,6 +844,12 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.fit = function (len, interp) {
+        if (isNestedDtmArray(array)) {
+            return array.map(function (a) {
+                return a.fit(len, interp);
+            })
+        }
+
         return array.set(dtm.transform.fit(array.value, len, interp));
     };
 
@@ -875,6 +863,12 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.stretch = function (factor, interp) {
+        if (isNestedDtmArray(array)) {
+            return array.map(function (a) {
+                return a.stretch(factor, interp);
+            })
+        }
+
         return array.set(dtm.transform.stretch(array.value, factor, interp));
     };
 

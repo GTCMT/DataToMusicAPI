@@ -213,6 +213,15 @@ describe('array object', function () {
             expect(a.get()).toEqual(toFloat32Array([1,2,3]));
             expect(b.get()).toEqual(toFloat32Array([2,3,4]));
         });
+
+        it('should work with nested arrays', function () {
+            var a = dtm.a([1,2,3]).block(1);
+            var b = a.clone().unnest().add(1);
+            a.unnest();
+
+            expect(a.get()).toEqual(toFloat32Array([1,2,3]));
+            expect(b.get()).toEqual(toFloat32Array([2,3,4]));
+        })
     });
 
     describe('select', function () {

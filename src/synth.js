@@ -140,7 +140,6 @@ dtm.synth = function () {
         }
 
         params.baseTime = actx.currentTime;
-
         params.wavetable = new Float32Array(params.tabLen);
         params.wavetable.forEach(function (v, i) {
             params.wavetable[i] = Math.sin(2 * Math.PI * i / params.tabLen);
@@ -482,6 +481,8 @@ dtm.synth = function () {
         return synth;
     };
 
+    synth.interval = synth.dur;
+
     synth.offset = function (src) {
         params.offset = toFloat32Array(src)[0];
         return synth;
@@ -531,20 +532,6 @@ dtm.synth = function () {
                 return synth;
             }
 
-            if (params.autoDur) {
-                if (params.type === 'sample') {
-                    params.tabLen = params.wavetable.length;
-                    params.dur = params.tabLen / params.sr / params.pitch;
-                } else if (params.clock) {
-                    params.dur = params.clock.get('dur');
-                }
-            }
-
-            var offset = params.offset;
-            var dur = params.dur;
-
-            //===== end of type check
-
             function process(param) {
                 var temp = param.base.get('next').clone();
                 if (!isEmpty(param.add)) {
@@ -571,6 +558,18 @@ dtm.synth = function () {
             } else {
                 pitch = process(params.pitch);
             }
+
+            if (params.autoDur) {
+                if (params.type === 'sample') {
+                    params.tabLen = params.wavetable.length;
+                    params.dur = params.tabLen / params.sr / pitch;
+                } else if (params.clock) {
+                    params.dur = params.clock.get('dur');
+                }
+            }
+
+            var offset = params.offset;
+            var dur = params.dur;
 
             dtm.master.addVoice(synth);
 
@@ -905,31 +904,6 @@ dtm.synth = function () {
         return synth;
     };
 
-    function check(src) {
-        return isNumber(src) || isNumOrFloat32Array(src) || isNumDtmArray(src) || isNestedNumDtmArray(src);
-    }
-
-    function convert(src) {
-        if (isNestedNumDtmArray(src)) {
-            return src;
-        } else if (isNumDtmArray(src)) {
-            return dtm.array([src]);
-        } else if (isNestedArray(src)) {
-            return dtm.array([src]);
-        } else {
-            return dtm.array([toFloat32Array(src)]);
-        }
-    }
-
-    function map(src, param) {
-        if (isFunction(src)) {
-            var res = src(param, synth, params.clock);
-            return check(res) ? convert(res) : param;
-        } else {
-            return check(src) ? convert(src) : param;
-        }
-    }
-
     /**
      * @function module:synth#amp
      * @param src
@@ -1039,7 +1013,7 @@ dtm.synth = function () {
             params.pending = true;
             params.source = name;
             params.type = 'sample';
-            params.pitch = toFloat32Array(1.0);
+            synth.pitch(1);
 
             var xhr = new XMLHttpRequest();
             xhr.open('GET', name, true);
@@ -1337,6 +1311,32 @@ dtm.synth = function () {
         }
     }
 
+    function check(src) {
+        return isNumber(src) || isNumOrFloat32Array(src) || isNumDtmArray(src) || isNestedNumDtmArray(src);
+    }
+
+    function convert(src) {
+        if (isNestedNumDtmArray(src)) {
+            return src;
+        } else if (isNumDtmArray(src)) {
+            return dtm.array([src]);
+        } else if (isNestedArray(src)) {
+            return dtm.array([src]);
+        } else {
+            return dtm.array([toFloat32Array(src)]);
+        }
+    }
+
+    function map(src, param) {
+        if (isFunction(src)) {
+            var res = src(param, synth, params.clock);
+            return check(res) ? convert(res) : param;
+        } else {
+            return check(src) ? convert(src) : param;
+        }
+    }
+
+
     // TODO: return value type not consistent!
     /**
      * @function module:synth#get
@@ -1377,9 +1377,23 @@ dtm.synth = function () {
     };
 
     synth.clone = function () {
-        return dtm.synth()
-            .meta.setParams(clone(params))
-            .meta.setNodes(clone(nodes));
+        var newParams = {};
+
+        objForEach(params, function (v, k) {
+            if (['amp', 'notenum', 'freq', 'pitch', 'pan'].indexOf(k) > -1) {
+                newParams[k] = {};
+                newParams[k].base = v.base.clone();
+                newParams[k].add = isDtmArray(v.add) ? v.add.clone() : undefined;
+                newParams[k].mult = isDtmArray(v.mult) ? v.mult.clone() : undefined;
+                newParams[k].isFinal = v.isFinal;
+            } else {
+                newParams[k] = v;
+            }
+
+        });
+
+        newParams.voiceId = Math.random();
+        return dtm.synth().meta.setParams(newParams);
     };
 
     synth.load.apply(this, arguments);
