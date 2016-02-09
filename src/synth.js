@@ -16,7 +16,7 @@ dtm.synth = function () {
     var params = {
         sr: 44100,
         kr: 4410,
-        dur: 1.0,
+        dur: { base: dtm.array([[1]]) },
         durTest: dtm.array(1.0),
         offset: 0.0,
         repeat: 1,
@@ -170,7 +170,7 @@ dtm.synth = function () {
         curves.forEach(function (curve) {
             // if the curve length exceeds the set duration * this
             var maxDurRatioForSVAT = 0.25;
-            if (params.curve || (curve.value.length / params.sr) > (params.dur * maxDurRatioForSVAT)) {
+            if (params.curve || (curve.value.length / params.sr) > (dur * maxDurRatioForSVAT)) {
                 curve.param.setValueCurveAtTime(curve.value, time, dur);
             } else {
                 curve.value.forEach(function (v, i) {
@@ -464,22 +464,10 @@ dtm.synth = function () {
 
     /**
      * @function module:synth#dur
-     * @param src
      * @returns {dtm.synth}
      */
-    synth.dur = function (src) {
-        if (isNumber(src) && src > 0) {
-            params.autoDur = false;
-            params.dur = src;
-        } else if (isBoolean(src)) {
-            params.autoDur = src;
-        } else if (src === 'auto') {
-            params.autoDur = true;
-        } else if (isDtmArray(src)) {
-            params.durTest = src;
-        } else if (isFunction(src)) {
-            params.dur = src(dtm.a(params.dur), synth, params.clock);
-        }
+    synth.dur = function () {
+        params.dur.base = map(arguments, params.dur.base);
         return synth;
     };
 
@@ -514,9 +502,6 @@ dtm.synth = function () {
 
         // if playSwitch is a function
 
-
-
-        //params.dur = params.durTest.get('next');
 
         if (params.pending) {
             params.pending = false;
@@ -561,21 +546,28 @@ dtm.synth = function () {
                 pitch = process(params.pitch);
             }
 
+            var dur;
+
             if (params.autoDur) {
                 if (params.type === 'sample') {
                     params.tabLen = params.wavetable.length;
 
-                    params.dur = 0;
+                    dur = 0;
                     pitch.forEach(function (v) {
-                        params.dur += params.tabLen / params.sr / v / pitch.length;
+                        dur += params.tabLen / params.sr / v / pitch.length;
                     })
                 } else if (params.clock) {
-                    params.dur = params.clock.get('dur');
+                    dur = params.clock.get('dur');
                 }
+            } else {
+                dur = process(params.dur)[0];
+            }
+
+            if (dur <= 0) {
+                dur = 0.001;
             }
 
             var offset = params.offset;
-            var dur = params.dur;
 
             dtm.master.addVoice(synth);
 
@@ -916,11 +908,6 @@ dtm.synth = function () {
      */
     synth.amp = function () {
         params.amp.base = map(arguments, params.amp.base);
-
-        if (isDtmArray(src) && src.get('autolen')) {
-            src.size(Math.round(params.dur * params.sr));
-        }
-
         return synth;
     };
 
@@ -1318,22 +1305,38 @@ dtm.synth = function () {
 
     function check(src) {
         return isNumber(src) ||
-            isNumArray(src) ||
+            ((isNumArray(src) ||
             isNestedArray(src) ||
+            isNestedWithDtmArray(src) ||
             isNumOrFloat32Array(src) ||
             isNumDtmArray(src) ||
-            isNestedNumDtmArray(src);
+            isNestedNumDtmArray(src)) && getMaxDepth(src) <= 3);
     }
 
     function convert(src) {
-        if (isNestedNumDtmArray(src)) {
-            return src;
-        } else if (isNumDtmArray(src)) {
-            return dtm.array([src]);
-        } else if (isNestedArray(src)) {
-            return dtm.array(src);
+        if (src.length === 1) {
+            return convert(src[0]);
         } else {
-            return dtm.array([toFloat32Array(src)]);
+            if (isNestedNumDtmArray(src)) {
+                return src;
+            } else if (isNestedWithDtmArray(src)) {
+                return dtm.array(src);
+            } else if (isNumDtmArray(src)) {
+                return dtm.array([src]);
+            } else if (isNestedArray(src)) {
+                return dtm.array(src);
+            } else if (isNumOrFloat32Array(src)) {
+                //var res = src.map(function (v) {
+                //    if (isNumber(v)) {
+                //        return toFloat32Array(v);
+                //    } else {
+                //        return v;
+                //    }
+                //});
+                return dtm.array([src]);
+            } else {
+                return dtm.array([toFloat32Array(src)]);
+            }
         }
     }
 

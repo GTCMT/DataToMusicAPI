@@ -172,6 +172,7 @@ describe('isNestedArray', function () {
 describe('isNestedWithDtmArray', function () {
     it('should work', function () {
         expect(isNestedWithDtmArray([dtm.array([1,2,3])])).toBe(true);
+        //expect(isNestedWithDtmArray([[dtm.array([1,2,3])]])).toBe(true);
         expect(isNestedWithDtmArray([[1,2,3]])).toBe(false);
     });
 });

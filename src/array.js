@@ -432,7 +432,9 @@ dtm.array = function () {
                 } else if (isNestedWithDtmArray(arguments[0])) {
                     array.value = arguments[0];
                     array.value.forEach(function (v) {
-                        v.parent(array);
+                        if (isDtmArray(v)) {
+                            v.parent(array);
+                        }
                     });
                 } else if (isDtmArray(arguments[0])) {
                     array.value = arguments[0].get();
