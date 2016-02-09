@@ -463,11 +463,41 @@ dtm.synth = function () {
     };
 
     /**
+     * Takes array types with only up to the max depth of 1.
      * @function module:synth#dur
      * @returns {dtm.synth}
      */
     synth.dur = function () {
-        params.dur.base = map(arguments, params.dur.base);
+        var depth = 2;
+        function convertShallow(src) {
+            if (src.length === 1) {
+                return convertShallow(src[0]);
+            } else {
+                if (isNestedNumDtmArray(src)) {
+                    return src;
+                } else if (isNestedWithDtmArray(src)) {
+                    return dtm.array.apply(this, src);
+                } else if (isNumDtmArray(src)) {
+                    return src().block(1);
+                } else if (isNestedArray(src)) {
+                    return dtm.array(src);
+                } else if (isNumOrFloat32Array(src)) {
+                    return dtm.array(src).block(1);
+                } else {
+                    return dtm.array([toFloat32Array(src)]);
+                }
+            }
+        }
+
+        if (isFunction(arguments[0])) {
+            var res = arguments[0](params.dur.base, synth, params.clock);
+            params.dur.base = check(res, depth) ? convertShallow(res) : params.dur.base;
+        } else {
+            var argList = argsToArray(arguments);
+            params.dur.base = check(argList) ? convertShallow(argList) : param;
+
+        }
+
         return synth;
     };
 
@@ -1303,14 +1333,17 @@ dtm.synth = function () {
         }
     }
 
-    function check(src) {
+    function check(src, depth) {
+        if (!isInteger(depth)) {
+            depth = 3;
+        }
         return isNumber(src) ||
             ((isNumArray(src) ||
             isNestedArray(src) ||
             isNestedWithDtmArray(src) ||
             isNumOrFloat32Array(src) ||
             isNumDtmArray(src) ||
-            isNestedNumDtmArray(src)) && getMaxDepth(src) <= 3);
+            isNestedNumDtmArray(src)) && getMaxDepth(src) <= depth);
     }
 
     function convert(src) {
@@ -1326,13 +1359,6 @@ dtm.synth = function () {
             } else if (isNestedArray(src)) {
                 return dtm.array(src);
             } else if (isNumOrFloat32Array(src)) {
-                //var res = src.map(function (v) {
-                //    if (isNumber(v)) {
-                //        return toFloat32Array(v);
-                //    } else {
-                //        return v;
-                //    }
-                //});
                 return dtm.array([src]);
             } else {
                 return dtm.array([toFloat32Array(src)]);
