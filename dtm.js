@@ -211,11 +211,7 @@ function isEmpty(value) {
         return true;
     } else if (value === null) {
         return true;
-    } else if (typeof(value) === 'number' && isNaN(value)) {
-        return true;
-    } else {
-        return false;
-    }
+    } else return !!(typeof(value) === 'number' && isNaN(value));
 }
 
 /**
@@ -613,7 +609,14 @@ function toFloat32Array(src) {
         if (isFloat32Array(src)) {
             return src;
         } else {
-            return new Float32Array(src);
+            //return new Float32Array(src);
+            var typedArray = new Float32Array(src.length);
+            src.forEach(function (v, i) {
+                typedArray[i] = v;
+                //typedArray[i] = v.toFixed(7);
+                //typedArray[i] = v.toPrecision();
+            });
+            return typedArray;
         }
     } else {
         return null;
@@ -861,6 +864,8 @@ function ajaxGet(url, cb) {
 }
 
 dtm.util = {};
+
+/* TYPE CHECKING */
 dtm.util.isEmpty = isEmpty;
 dtm.util.isNumber = isNumber;
 dtm.util.isInteger = isInteger;
@@ -875,6 +880,8 @@ dtm.util.isFloat32Array = isFloat32Array;
 dtm.util.isNumArray = isNumArray;
 dtm.util.isNumOrFloat32Array = isNumOrFloat32Array;
 dtm.util.isMixedArray = isMixedArray;
+dtm.util.isStringArray = isStringArray;
+dtm.util.isBoolArray = isBoolArray;
 dtm.util.isNestedArray = isNestedArray;
 dtm.util.isNestedWithDtmArray = isNestedWithDtmArray;
 dtm.util.isDtmObj = isDtmObj;
@@ -882,29 +889,38 @@ dtm.util.isDtmArray = isDtmArray;
 dtm.util.isNestedDtmArray = isNestedDtmArray;
 dtm.util.isNumDtmArray = isNumDtmArray;
 dtm.util.isNestedNumDtmArray = isNestedNumDtmArray;
+dtm.util.argIsSingleArray = argIsSingleArray;
+dtm.util.argsAreSingleVals = argsAreSingleVals;
+
+/* ANALYSIS */
 dtm.util.getMaxArrayDepth = getMaxArrayDepth;
 dtm.util.getMaxDtmArrayDepth = getMaxDtmArrayDepth;
 dtm.util.getMaxDepth = getMaxDepth;
-dtm.util.isStringArray = isStringArray;
-dtm.util.isBoolArray = isBoolArray;
 dtm.util.hasMissingValues = hasMissingValues;
-dtm.util.arrayCompare = arrayCompare;
+//dtm.util.arrayCompare = arrayCompare;
+dtm.util.numProperties = numProperties;
+
+/* CONVERSION */
 dtm.util.argsToArray = argsToArray;
-dtm.util.argsForEach = argsForEach;
-dtm.util.argIsSingleArray = argIsSingleArray;
-dtm.util.argsAreSingleVals = argsAreSingleVals;
 dtm.util.toFloat32Array = toFloat32Array;
 dtm.util.fromFloat32Array = fromFloat32Array;
+
+/* LIST OPERATION */
 dtm.util.Float32Concat = Float32Concat;
 dtm.util.concat = concat;
 dtm.util.Float32splice = Float32Splice;
 dtm.util.splice = splice;
-dtm.util.truncateDigits = truncateDigits;
+
+/* ITERATION */
+dtm.util.argsForEach = argsForEach;
+dtm.util.objForEach = objForEach;
 dtm.util.Float32Map = Float32Map;
+
+/* MISC */
+dtm.util.truncateDigits = truncateDigits;
 dtm.util.deferCallback = deferCallback;
 dtm.util.cloneArray = cloneArray;
-dtm.util.objForEach = objForEach;
-dtm.util.numProperties = numProperties;
+
 //dtm.osc = function () {
 //    var params = {};
 //
@@ -1354,7 +1370,6 @@ dtm.analyzer = {
     }
 };
 
-//dtm.analyzer.pvariance = dtm.analyzer.pvar;
 dtm.anal = dtm.analyzer;
 /**
  * @fileOverview A module for generating array object with certain shapes, extends the dtm.array module
@@ -2122,233 +2137,230 @@ generators.forEach(function (type) {
 dtm.transform = {
     type: 'dtm.transform',
 
-    /* GENERTORS */
-
-    // TODO: deprecate this
-    /**
-     * Generates values for a new array.
-     * @function module:transform#generate
-     * @param type {string} Choices: 'line', 'noise'/'random', 'gaussian'/'gauss'/'normal', 'sin'/'sine', 'cos'/'cosine', 'zeroes', 'ones'
-     * @param [len=8] {number}
-     * @param [min=0] {number}
-     * @param [max=1] {number}
-     * @returns {Array}
-     *
-     * @example
-     * dtm.transform.generate('line', 8, -4, 3);
-     * -> [-4, -3, -2, -1, 0, 1, 2, 3]
-     *
-     * @example
-     * dtm.transform.generate('random', 8, 3, 5);
-     * -> [0.775, 0.864, 0.394, 0.280, 0.921, 0.827, 0.230, 0.066]
-     *
-     * @example
-     * dtm.transform.generate('sine', 8, 0, 10);
-     * -> [5, 8.909, 9.874, 7.169, 2.830, 0.125, 1.090, 5]
-     */
-    generator: function () {
-        var type, len, min, max, cycle;
-        var params = {
-            type: '',
-            len: 8,
-            min: -1,
-            max: 1,
-            cycle: 1
-        };
-
-        if (typeof(arguments[0]) === 'string') {
-            type = arguments[0];
-        } else if (typeof(arguments[0]) === 'object') {
-            for (var key in arguments[0]) {
-                if (arguments[0].hasOwnProperty(key)) {
-                    params[key] = arguments[0][key];
-                }
-            }
-        }
-
-        if (isEmpty(arguments[1])) {
-            len = 8;
-        } else if (typeof(arguments[1]) === 'number') {
-            len = arguments[1];
-        }
-
-        var oscil = ['sin', 'sine', 'cos', 'cosine', 'tri', 'triangle', 'saw'];
-
-        if (typeof(arguments[2]) !== 'number') {
-            if (oscil.indexOf(type) > -1) {
-                min = -1;
-            } else {
-                min = 0;
-            }
-        } else {
-            min = arguments[2];
-        }
-
-        if (typeof(arguments[3]) !== 'number') {
-            max = 1;
-        } else {
-            max = arguments[3];
-        }
-
-        if (typeof(arguments[2] === 'number' && typeof(arguments[3] !== 'number'))) {
-            cycle = arguments[2];
-        }
-
-        var res = [], incr = 0, val = 0, i = 0;
-        var sorted = [];
-
-        switch (type) {
-            case 'rise':
-            case 'decay':
-            case 'fall':
-            case 'noise':
-            case 'random':
-            case 'rand':
-            case 'randi':
-                sorted = dtm.transform.sort([min, max]);
-                max = sorted[1];
-                min = sorted[0];
-        }
-
-        switch (type) {
-            case 'line':
-            case 'saw':
-                incr = (max - min) / (len-1);
-
-                for (i = 0; i < len; i++) {
-                    res[i] = min + incr * i;
-                }
-                break;
-
-            case 'rise':
-                incr = (max - min) / (len-1);
-
-                for (i = 0; i < len; i++) {
-                    res[i] = min + incr * i;
-                }
-                break;
-
-            case 'decay':
-            case 'fall':
-                incr = (max - min) / (len-1);
-
-                for (i = 0; i < len; i++) {
-                    res[i] = min + incr * (len-1-i);
-                }
-                break;
-
-            case 'seq':
-            case 'sequence':
-            case 'series':
-                max = max || 1;
-
-                for (i = 0; i < len; i++) {
-                    res[i] = i * max + min;
-                }
-                break;
-
-            // TODO: args: start, stop, interval
-            case 'range':
-                min = Math.round(min);
-                max = Math.round(max);
-                for (i = 0; i < max-min; i++) {
-                    res[i] = i + min;
-                }
-                break;
-
-            case 'noise':
-            case 'random':
-            case 'rand':
-                for (i = 0; i < len; i++) {
-                    res[i] = dtm.val.random(min, max);
-                }
-                break;
-
-            case 'randi':
-                for (i = 0; i < len; i++) {
-                    res[i] = dtm.val.randi(min, max);
-                }
-                break;
-
-            case 'gaussian':
-            case 'gauss':
-            case 'gaussCurve':
-            case 'normal':
-                for (i = 0; i < len; i++) {
-                    var x = -Math.PI + (Math.PI * 2 / len) * i;
-                    res[i] = Math.pow(Math.E, -0.5 * Math.pow(x, 2)) / Math.sqrt(2 * Math.PI) / 0.4 * (max-min) + min;
-                }
-                break;
-
-            case 'sin':
-            case 'sine':
-                for (i = 0; i < len; i++) {
-                    incr = Math.PI * 2 / (len-1);
-                    val = Math.sin(incr * i);
-                    val = (val+1)/2 * (max-min) + min;
-                    res[i] = val;
-                }
-                break;
-
-            case 'cos':
-            case 'cosine':
-                for (i = 0; i < len; i++) {
-                    incr = Math.PI * 2 / (len-1);
-                    val = Math.cos(incr * i);
-                    val = (val+1)/2 * (max-min) + min;
-                    res[i] = val;
-                }
-                break;
-
-            case 'tri':
-                break;
-
-            case 'zeros':
-            case 'zeroes':
-                for (i = 0; i < len; i++) {
-                    res[i] = 0;
-                }
-                break;
-
-            case 'ones':
-                for (i = 0; i < len; i++) {
-                    res[i] = 1;
-                }
-                break;
-
-            case 'constant':
-            case 'constants':
-            case 'const':
-            case 'consts':
-                //min = min || 0;
-                for (i = 0; i < len; i++) {
-                    res[i] = min;
-                }
-                break;
-
-            case 'repeat':
-                for (i = 0; i < len; i++) {
-                    res[i] = arguments[2];
-                }
-                break;
-
-            case 'string':
-            case 'str':
-            case 's':
-            case 'characters':
-            case 'character':
-            case 'chars':
-            case 'char':
-            case 'c':
-                res = arguments[1].split('');
-                break;
-
-            default:
-                break;
-        }
-
-        return res;
-    },
+    ///**
+    // * Generates values for a new array.
+    // * @function module:transform#generate
+    // * @param type {string} Choices: 'line', 'noise'/'random', 'gaussian'/'gauss'/'normal', 'sin'/'sine', 'cos'/'cosine', 'zeroes', 'ones'
+    // * @param [len=8] {number}
+    // * @param [min=0] {number}
+    // * @param [max=1] {number}
+    // * @returns {Array}
+    // *
+    // * @example
+    // * dtm.transform.generate('line', 8, -4, 3);
+    // * -> [-4, -3, -2, -1, 0, 1, 2, 3]
+    // *
+    // * @example
+    // * dtm.transform.generate('random', 8, 3, 5);
+    // * -> [0.775, 0.864, 0.394, 0.280, 0.921, 0.827, 0.230, 0.066]
+    // *
+    // * @example
+    // * dtm.transform.generate('sine', 8, 0, 10);
+    // * -> [5, 8.909, 9.874, 7.169, 2.830, 0.125, 1.090, 5]
+    // */
+    //generator: function () {
+    //    var type, len, min, max, cycle;
+    //    var params = {
+    //        type: '',
+    //        len: 8,
+    //        min: -1,
+    //        max: 1,
+    //        cycle: 1
+    //    };
+    //
+    //    if (typeof(arguments[0]) === 'string') {
+    //        type = arguments[0];
+    //    } else if (typeof(arguments[0]) === 'object') {
+    //        for (var key in arguments[0]) {
+    //            if (arguments[0].hasOwnProperty(key)) {
+    //                params[key] = arguments[0][key];
+    //            }
+    //        }
+    //    }
+    //
+    //    if (isEmpty(arguments[1])) {
+    //        len = 8;
+    //    } else if (typeof(arguments[1]) === 'number') {
+    //        len = arguments[1];
+    //    }
+    //
+    //    var oscil = ['sin', 'sine', 'cos', 'cosine', 'tri', 'triangle', 'saw'];
+    //
+    //    if (typeof(arguments[2]) !== 'number') {
+    //        if (oscil.indexOf(type) > -1) {
+    //            min = -1;
+    //        } else {
+    //            min = 0;
+    //        }
+    //    } else {
+    //        min = arguments[2];
+    //    }
+    //
+    //    if (typeof(arguments[3]) !== 'number') {
+    //        max = 1;
+    //    } else {
+    //        max = arguments[3];
+    //    }
+    //
+    //    if (typeof(arguments[2] === 'number' && typeof(arguments[3] !== 'number'))) {
+    //        cycle = arguments[2];
+    //    }
+    //
+    //    var res = [], incr = 0, val = 0, i = 0;
+    //    var sorted = [];
+    //
+    //    switch (type) {
+    //        case 'rise':
+    //        case 'decay':
+    //        case 'fall':
+    //        case 'noise':
+    //        case 'random':
+    //        case 'rand':
+    //        case 'randi':
+    //            sorted = dtm.transform.sort([min, max]);
+    //            max = sorted[1];
+    //            min = sorted[0];
+    //    }
+    //
+    //    switch (type) {
+    //        case 'line':
+    //        case 'saw':
+    //            incr = (max - min) / (len-1);
+    //
+    //            for (i = 0; i < len; i++) {
+    //                res[i] = min + incr * i;
+    //            }
+    //            break;
+    //
+    //        case 'rise':
+    //            incr = (max - min) / (len-1);
+    //
+    //            for (i = 0; i < len; i++) {
+    //                res[i] = min + incr * i;
+    //            }
+    //            break;
+    //
+    //        case 'decay':
+    //        case 'fall':
+    //            incr = (max - min) / (len-1);
+    //
+    //            for (i = 0; i < len; i++) {
+    //                res[i] = min + incr * (len-1-i);
+    //            }
+    //            break;
+    //
+    //        case 'seq':
+    //        case 'sequence':
+    //        case 'series':
+    //            max = max || 1;
+    //
+    //            for (i = 0; i < len; i++) {
+    //                res[i] = i * max + min;
+    //            }
+    //            break;
+    //
+    //        // TODO: args: start, stop, interval
+    //        case 'range':
+    //            min = Math.round(min);
+    //            max = Math.round(max);
+    //            for (i = 0; i < max-min; i++) {
+    //                res[i] = i + min;
+    //            }
+    //            break;
+    //
+    //        case 'noise':
+    //        case 'random':
+    //        case 'rand':
+    //            for (i = 0; i < len; i++) {
+    //                res[i] = dtm.val.random(min, max);
+    //            }
+    //            break;
+    //
+    //        case 'randi':
+    //            for (i = 0; i < len; i++) {
+    //                res[i] = dtm.val.randi(min, max);
+    //            }
+    //            break;
+    //
+    //        case 'gaussian':
+    //        case 'gauss':
+    //        case 'gaussCurve':
+    //        case 'normal':
+    //            for (i = 0; i < len; i++) {
+    //                var x = -Math.PI + (Math.PI * 2 / len) * i;
+    //                res[i] = Math.pow(Math.E, -0.5 * Math.pow(x, 2)) / Math.sqrt(2 * Math.PI) / 0.4 * (max-min) + min;
+    //            }
+    //            break;
+    //
+    //        case 'sin':
+    //        case 'sine':
+    //            for (i = 0; i < len; i++) {
+    //                incr = Math.PI * 2 / (len-1);
+    //                val = Math.sin(incr * i);
+    //                val = (val+1)/2 * (max-min) + min;
+    //                res[i] = val;
+    //            }
+    //            break;
+    //
+    //        case 'cos':
+    //        case 'cosine':
+    //            for (i = 0; i < len; i++) {
+    //                incr = Math.PI * 2 / (len-1);
+    //                val = Math.cos(incr * i);
+    //                val = (val+1)/2 * (max-min) + min;
+    //                res[i] = val;
+    //            }
+    //            break;
+    //
+    //        case 'tri':
+    //            break;
+    //
+    //        case 'zeros':
+    //        case 'zeroes':
+    //            for (i = 0; i < len; i++) {
+    //                res[i] = 0;
+    //            }
+    //            break;
+    //
+    //        case 'ones':
+    //            for (i = 0; i < len; i++) {
+    //                res[i] = 1;
+    //            }
+    //            break;
+    //
+    //        case 'constant':
+    //        case 'constants':
+    //        case 'const':
+    //        case 'consts':
+    //            //min = min || 0;
+    //            for (i = 0; i < len; i++) {
+    //                res[i] = min;
+    //            }
+    //            break;
+    //
+    //        case 'repeat':
+    //            for (i = 0; i < len; i++) {
+    //                res[i] = arguments[2];
+    //            }
+    //            break;
+    //
+    //        case 'string':
+    //        case 'str':
+    //        case 's':
+    //        case 'characters':
+    //        case 'character':
+    //        case 'chars':
+    //        case 'char':
+    //        case 'c':
+    //            res = arguments[1].split('');
+    //            break;
+    //
+    //        default:
+    //            break;
+    //    }
+    //
+    //    return res;
+    //},
 
 
     /* SCALERS */
@@ -2803,6 +2815,41 @@ dtm.transform = {
         return res;
     },
 
+    subtract: function (input, factor, interp) {
+        var res = null;
+        if (isArray(input)) {
+            res = new Array(input.length);
+        } else if (isFloat32Array(input)) {
+            res = new Float32Array(input.length);
+        }
+
+        if (isEmpty(factor)) {
+            factor = 1;
+        }
+
+        if (!isString(interp)) {
+            interp = 'step';
+        }
+
+        if (isNumber(factor)) {
+            input.forEach(function (val, idx) {
+                res[idx] = val + factor;
+            });
+        } else if (isNumOrFloat32Array(factor)) {
+            if (input.length > factor.length) {
+                factor = dtm.transform.fit(factor, input.length, interp);
+            } else if (input.length < factor.length) {
+                input = dtm.transform.fit(input, factor.length, interp);
+            }
+
+            for (var i = 0; i < input.length; i++) {
+                res[i] = input[i] - factor[i];
+            }
+        }
+
+        return res;
+    },
+
     /**
      * Multiplies the array contents. If the second argument is a number, it acts as a scalar value. If it is an array, it is first stretched with linear or specified interpolation method, then the dot product is returned.
      * @function module:transform#mult
@@ -3031,6 +3078,21 @@ dtm.transform = {
         return res;
     },
 
+    mod: function (input, divisor) {
+        var res = null;
+        if (isArray(input)) {
+            res = new Array(input.length);
+        } else if (isFloat32Array(input)) {
+            res = new Float32Array(input.length);
+        }
+
+        input.forEach(function (v, i) {
+            res[i] = dtm.value.mod(v, divisor);
+        });
+
+        return res;
+    },
+
     removeZeros: function (input) {
         var res = [];
 
@@ -3043,7 +3105,7 @@ dtm.transform = {
         if (isArray(input)) {
             return res;
         } else if (isFloat32Array(input)) {
-            return new Float32Array(res);
+            return toFloat32Array(res);
         }
     },
 
@@ -3057,7 +3119,7 @@ dtm.transform = {
         if (isArray(input)) {
             return res;
         } else if (isFloat32Array(input)) {
-            return new Float32Array(res);
+            return toFloat32Array(res);
         }
     },
 
@@ -3083,7 +3145,7 @@ dtm.transform = {
         if (isArray(input)) {
             return res;
         } else if (isFloat32Array(input)) {
-            return new Float32Array(res);
+            return toFloat32Array(res);
         }
     },
 
@@ -3112,7 +3174,7 @@ dtm.transform = {
         if (isArray(input)) {
             return res;
         } else if (isFloat32Array(input)) {
-            return new Float32Array(res);
+            return toFloat32Array(res);
         }
     },
 
@@ -3753,6 +3815,9 @@ dtm.array = function () {
             objForEach(paramsExt, function (val, key) {
                 params[key] = val;
             });
+        },
+        setOriginal: function (arr) {
+            params.original = arr;
         }
     };
 
@@ -3815,10 +3880,14 @@ dtm.array = function () {
                 case 'type':
                     if (isNumArray(array.value)) {
                         return 'number';
+                    } else if (isFloat32Array(array.value)) {
+                        return 'Float32Array'
                     } else if (isStringArray(array.value)) {
                         return 'string';
+                    } else if (isNestedWithDtmArray(array.value)) {
+                        return 'nested';
                     } else {
-                        return params.type;
+                        return 'mixed';
                     }
 
                 case 'parent':
@@ -4130,9 +4199,9 @@ dtm.array = function () {
             // if set arguments include any array-like object
             if (arguments.length === 1) {
                 if (isNumber(arguments[0])) {
-                    array.value = new Float32Array([arguments[0]]);
+                    array.value = toFloat32Array(arguments[0]);
                 } else if (isNumArray(arguments[0])) {
-                    array.value = new Float32Array(arguments[0]);
+                    array.value = toFloat32Array(arguments[0]);
                 } else if (isNestedArray(arguments[0])) {
                     array.value = new Array(arguments[0].length);
                     arguments[0].forEach(function (v, i) {
@@ -4177,7 +4246,7 @@ dtm.array = function () {
             params.original = array.value;
 
             // CHECK: type checking - may be redundant
-            checkType(array.value);
+            //checkType(array.value);
         } else {
             params.processed++;
         }
@@ -4290,6 +4359,7 @@ dtm.array = function () {
             newValue = array.value;
         }
         var newArr = dtm.array(newValue).label(params.name);
+        newArr.meta.setOriginal(params.original);
 
         // CHECK: this may cause troubles!
         newArr.index(params.index);
@@ -4368,6 +4438,12 @@ dtm.array = function () {
     array.reset = function () {
         return array.set(params.original);
     };
+
+    array.residue = function () {
+        return array.set(dtm.transform.subtract(params.original, array.value));
+    };
+
+    array.res = array.residue;
 
     /**
      * Clears all the contents of the array object.
@@ -4509,7 +4585,7 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.limit = function (min, max) {
-        if (params.type === 'number') {
+        if (isNumOrFloat32Array(array.value)) {
             min = min || 0;
             max = max || 1;
             return array.set(dtm.transform.limit(array.get(), min, max));
@@ -4540,11 +4616,11 @@ dtm.array = function () {
         return array.set(dtm.transform.rescale(arr, min, max));
     };
 
-    array.exp = array.expcurve;
+    array.expc = array.expcurve;
 
     /**
      * Applies a logarithmic scaling to the array.
-     * @function module:array#log | logCurve
+     * @function module:array#logc | logcurve
      * @param factor {number}
      * @param [min=array.get('min')] {number}
      * @param [max=array.get('max')] {number}
@@ -4562,7 +4638,7 @@ dtm.array = function () {
         return array.set(dtm.transform.rescale(arr, min, max));
     };
 
-    array.log = array.logcurve;
+    array.logc = array.logcurve;
 
     // TODO: design & implement
     /**
@@ -4587,7 +4663,7 @@ dtm.array = function () {
         if (isNestedDtmArray(array)) {
             return array.map(function (a) {
                 return a.fit(len, interp);
-            })
+            });
         }
 
         return array.set(dtm.transform.fit(array.value, len, interp));
@@ -4689,10 +4765,40 @@ dtm.array = function () {
                 array.set(newArr);
                 return array.map(function (a) {
                     return a.add(factor.get('next'));
-                })
+                });
             }
 
             return array.set(dtm.transform.add(array.value, factor, interp));
+        }
+    };
+
+    array.subtract = function (factor, interp) {
+        if (!isString(interp)) {
+            interp = 'step';
+        }
+        if (isNestedNumDtmArray(array)) {
+            return array.map(function (a) {
+                if (isNestedNumDtmArray(factor)) {
+                    return a.add(factor.get('next'));
+                } else {
+                    return a.add(factor);
+                }
+            });
+        } else {
+            if (isNumDtmArray(factor)) {
+                factor = factor.get();
+            } else if (isNestedNumDtmArray(factor)) {
+                var newArr = [];
+                factor.forEach(function () {
+                    newArr.push(array.get());
+                });
+                array.set(newArr);
+                return array.map(function (a) {
+                    return a.add(factor.get('next'));
+                });
+            }
+
+            return array.set(dtm.transform.subtract(array.value, factor, interp));
         }
     };
 
@@ -4726,7 +4832,7 @@ dtm.array = function () {
                 array.set(newArr);
                 return array.map(function (a) {
                     return a.mult(factor.get('next'));
-                })
+                });
             }
 
             return array.set(dtm.transform.mult(array.value, factor, interp));
@@ -5205,6 +5311,12 @@ dtm.array = function () {
 
     array.abs = array.fwr;
 
+    array.modulo = function (divisor) {
+        return array.set(dtm.transform.mod(array.value, divisor));
+    };
+
+    array.mod = array.modulo;
+
     //array.derivative = function (order) {
     //    return array;
     //};
@@ -5323,6 +5435,12 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.pitchquantize = function (scale) {
+        if (isNestedDtmArray(array)) {
+            return array.map(function (a) {
+                return a.pitchquantize(scale);
+            });
+        }
+
         if (isEmpty(scale)) {
             scale = dtm.gen('range', 12).get();
         } else if (isDtmArray(scale) && isNumOrFloat32Array(scale.get())) {
@@ -7648,9 +7766,9 @@ dtm.synth = function () {
 
     var params = {
         sr: 44100,
-        kr: 4410,
+        //kr: 4410,
         dur: { base: dtm.array([[1]]) },
-        durTest: dtm.array(1.0),
+        play: { base: dtm.array([[true]]) },
         offset: 0.0,
         repeat: 1,
         autoRep: true,
@@ -8131,6 +8249,8 @@ dtm.synth = function () {
 
         }
 
+        params.autoDur = false;
+
         return synth;
     };
 
@@ -8468,33 +8588,24 @@ dtm.synth = function () {
     /**
      * Sets the frequency of the oscillator
      * @function module:synth#freq
-     * @param src
      * @returns {dtm.synth}
      */
     synth.freq = function () {
-        params.freq.base = map(arguments, params.freq.base);
+        mapParam(arguments, params.freq);
         setFinal('freq');
 
         return synth;
     };
 
     synth.freq.add = function () {
-        if (isEmpty(params.freq.add)) {
-            params.freq.add = map(arguments, params.freq.add);
-        } else {
-            params.freq.add.add(map(arguments, params.freq.add), params.interp);
-        }
+        mapParam(arguments, params.freq, 'add');
         setFinal('freq');
 
         return synth;
     };
 
     synth.freq.mult = function () {
-        if (isEmpty(params.freq.mult)) {
-            params.freq.mult = map(arguments, params.freq.mult);
-        } else {
-            params.freq.mult.mult(map(arguments, params.freq.mult), params.interp);
-        }
+        mapParam(arguments, params.freq, 'mult');
         setFinal('freq');
 
         return synth;
@@ -8503,11 +8614,10 @@ dtm.synth = function () {
     /**
      * Sets the pitch of the oscillator by a MIDI note number.
      * @function module:synth#notenum
-     * @param src
      * @returns {dtm.synth}
      */
     synth.notenum = function () {
-        params.notenum.base = map(arguments, params.notenum.base);
+        mapParam(arguments, params.notenum);
         setFinal('notenum');
 
         return synth;
@@ -8516,22 +8626,14 @@ dtm.synth = function () {
     synth.nn = synth.notenum;
 
     synth.notenum.add = function () {
-        if (isEmpty(params.notenum.add)) {
-            params.notenum.add = map(arguments, params.notenum.add);
-        } else {
-            params.notenum.add.add(map(arguments, params.notenum.add), params.interp);
-        }
+        mapParam(arguments, params.notenum, 'add');
         setFinal('notenum');
 
         return synth;
     };
 
     synth.notenum.mult = function () {
-        if (isEmpty(params.notenum.mult)) {
-            params.notenum.mult = map(arguments, params.notenum.mult);
-        } else {
-            params.notenum.mult.mult(map(arguments, params.notenum.mult), params.interp);
-        }
+        mapParam(arguments, params.notenum, 'mult');
         setFinal('notenum');
 
         return synth;
@@ -8539,84 +8641,58 @@ dtm.synth = function () {
 
     // for longer sample playback
     synth.pitch = function () {
-        params.pitch.base = map(arguments, params.pitch.base);
+        mapParam(arguments, params.pitch);
         setFinal('pitch');
         return synth;
     };
 
     synth.pitch.add = function () {
-        if (isEmpty(params.pitch.add)) {
-            params.pitch.add = map(arguments, params.pitch.add);
-        } else {
-            params.pitch.add.add(map(arguments, params.pitch.add), params.interp);
-        }
+        mapParam(arguments, params.pitch, 'add');
         setFinal('pitch');
         return synth;
     };
 
     synth.pitch.mult = function () {
-        if (isEmpty(params.pitch.mult)) {
-            params.pitch.mult = map(arguments, params.pitch.mult);
-        } else {
-            params.pitch.mult.mult(map(arguments, params.pitch.mult), params.interp);
-        }
+        mapParam(arguments, params.pitch, 'mult');
         setFinal('pitch');
         return synth;
     };
 
     /**
      * @function module:synth#amp
-     * @param src
      * @returns {dtm.synth}
      */
     synth.amp = function () {
-        params.amp.base = map(arguments, params.amp.base);
+        mapParam(arguments, params.amp);
         return synth;
     };
 
     synth.amp.add = function () {
-        if (isEmpty(params.amp.add)) {
-            params.amp.add = map(arguments, params.amp.add);
-        } else {
-            params.amp.add.add(map(arguments, params.amp.add), params.interp);
-        }
+        mapParam(arguments, params.amp, 'add');
         return synth;
     };
 
     synth.amp.mult = function () {
-        if (isEmpty(params.amp.mult)) {
-            params.amp.mult = map(arguments, params.amp.mult);
-        } else {
-            params.amp.mult.mult(map(arguments, params.amp.mult), params.interp);
-        }
+        mapParam(arguments, params.amp, 'mult');
         return synth;
     };
 
     /**
      * @function module:synth#pan
-     * @param src
      * @returns {dtm.synth}
      */
     synth.pan = function () {
-        params.pan.base = map(arguments, params.pan.base);
+        mapParam(arguments, params.pan);
         return synth;
     };
 
     synth.pan.add = function () {
-        if (isEmpty(params.pan.add)) {
-            params.pan.add = map(arguments, params.pan.add);
-        } else {
-            params.pan.add.add(map(arguments, params.pan.add), params.interp);
-        }
+        mapParam(arguments, params.pan, 'add');
         return synth;
     };
 
     synth.pan.mult = function () {
-        if (isEmpty(params.pan.mult)) {
-            params.pan.mult = map(arguments, params.pan.mult);
-        } else {
-            params.pan.mult.mult(map(arguments, params.pan.mult), params.interp);
-        }
+        mapParam(arguments, params.pan, 'mult');
         return synth;
     };
 
@@ -8628,7 +8704,7 @@ dtm.synth = function () {
 
     };
 
-    synth.wavetable = function (src, mode) {
+    synth.wavetable = function (src) {
         src = typeCheck(src);
         if (isFloat32Array(src)) {
             params.wavetable = src;
@@ -8653,7 +8729,7 @@ dtm.synth = function () {
         return synth;
     };
 
-    synth.table = synth.wt = synth.wavetable;
+    synth.wt = synth.wavetable;
 
     synth.source = function (src) {
         if (isString(src)) {
@@ -9000,12 +9076,45 @@ dtm.synth = function () {
     }
 
     function map(args, param) {
+        // TODO: if the param is empty (for .add, etc.) this would break
         if (isFunction(args[0])) {
             var res = args[0](param, synth, params.clock);
             return check(res) ? convert(res) : param;
         } else {
             var argList = argsToArray(args);
             return check(argList) ? convert(argList) : param;
+        }
+    }
+
+    function mapParam(args, param, mod) {
+        var res, argList;
+
+        if (mod === 'base' || mod === undefined) {
+            if (isFunction(args[0])) {
+                res = args[0](param['base'], synth, params.clock);
+                param['base'] = check(res) ? convert(res) : param;
+            } else {
+                argList = argsToArray(args);
+                param['base'] = check(argList) ? convert(argList) : param;
+            }
+        } else {
+            if (isEmpty(param[mod])) {
+                if (isFunction(args[0])) {
+                    res = args[0](param['base'], synth, params.clock);
+                    param[mod] = check(res) ? convert(res) : param;
+                } else {
+                    argList = argsToArray(args);
+                    param[mod] = check(argList) ? convert(argList) : param;
+                }
+            } else {
+                if (isFunction(args[0])) {
+                    res = args[0](param[mod], synth, params.clock);
+                    param[mod] = check(res) ? convert(res) : param;
+                } else {
+                    argList = argsToArray(args);
+                    param[mod][mod](check(argList) ? convert(argList) : param);
+                }
+            }
         }
     }
 
@@ -9529,22 +9638,22 @@ dtm.inscore = function () {
             } else if (typeof(arg) === 'string') {
                 a.set(arg).split().histo();
             } else if (isArray(arg)) {
-                if (isNumArray(arg)) {
+                if (isNumOrFloat32Array(arg)) {
                     a.set(arg);
                 } else {
                     a.set(arg).split().histo();
                 }
-            } else if (isDtmObj(arg)) {
-                a.set(arg);
+            } else if (isDtmArray(arg)) {
+                a = arg.clone();
 
-                if (a.get('type') !== 'number') {
+                if (a.get('type') === 'string') {
                     a.histo();
                 }
             }
         } else if (arguments.length > 1) {
             var args = argsToArray(arguments);
 
-            if (isNumArray(args)) {
+            if (isNumOrFloat32Array(args)) {
                 a.set(args);
             } else if (isStringArray(args)) {
                 a.set(args).split().histo();
@@ -9557,12 +9666,12 @@ dtm.inscore = function () {
     m.domain = function () {
         if (argsAreSingleVals(arguments) && arguments.length == 2) {
             var args = argsToArray(arguments);
-            if (isNumArray(args)) {
+            if (isNumOrFloat32Array(args)) {
                 min = args[0];
                 max = args[1];
             }
         } else if (argIsSingleArray(arguments)) {
-            if (isNumArray(arguments[0]) && arguments[0].length == 2) {
+            if (isNumOrFloat32Array(arguments[0]) && arguments[0].length == 2) {
                 min = arguments[0][0];
                 max = arguments[0][1];
             }

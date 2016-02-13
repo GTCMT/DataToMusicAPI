@@ -247,5 +247,4 @@ dtm.analyzer = {
     }
 };
 
-//dtm.analyzer.pvariance = dtm.analyzer.pvar;
 dtm.anal = dtm.analyzer;

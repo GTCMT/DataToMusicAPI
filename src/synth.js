@@ -15,9 +15,9 @@ dtm.synth = function () {
 
     var params = {
         sr: 44100,
-        kr: 4410,
+        //kr: 4410,
         dur: { base: dtm.array([[1]]) },
-        durTest: dtm.array(1.0),
+        play: { base: dtm.array([[true]]) },
         offset: 0.0,
         repeat: 1,
         autoRep: true,
@@ -498,6 +498,8 @@ dtm.synth = function () {
 
         }
 
+        params.autoDur = false;
+
         return synth;
     };
 
@@ -835,33 +837,24 @@ dtm.synth = function () {
     /**
      * Sets the frequency of the oscillator
      * @function module:synth#freq
-     * @param src
      * @returns {dtm.synth}
      */
     synth.freq = function () {
-        params.freq.base = map(arguments, params.freq.base);
+        mapParam(arguments, params.freq);
         setFinal('freq');
 
         return synth;
     };
 
     synth.freq.add = function () {
-        if (isEmpty(params.freq.add)) {
-            params.freq.add = map(arguments, params.freq.add);
-        } else {
-            params.freq.add.add(map(arguments, params.freq.add), params.interp);
-        }
+        mapParam(arguments, params.freq, 'add');
         setFinal('freq');
 
         return synth;
     };
 
     synth.freq.mult = function () {
-        if (isEmpty(params.freq.mult)) {
-            params.freq.mult = map(arguments, params.freq.mult);
-        } else {
-            params.freq.mult.mult(map(arguments, params.freq.mult), params.interp);
-        }
+        mapParam(arguments, params.freq, 'mult');
         setFinal('freq');
 
         return synth;
@@ -870,11 +863,10 @@ dtm.synth = function () {
     /**
      * Sets the pitch of the oscillator by a MIDI note number.
      * @function module:synth#notenum
-     * @param src
      * @returns {dtm.synth}
      */
     synth.notenum = function () {
-        params.notenum.base = map(arguments, params.notenum.base);
+        mapParam(arguments, params.notenum);
         setFinal('notenum');
 
         return synth;
@@ -883,22 +875,14 @@ dtm.synth = function () {
     synth.nn = synth.notenum;
 
     synth.notenum.add = function () {
-        if (isEmpty(params.notenum.add)) {
-            params.notenum.add = map(arguments, params.notenum.add);
-        } else {
-            params.notenum.add.add(map(arguments, params.notenum.add), params.interp);
-        }
+        mapParam(arguments, params.notenum, 'add');
         setFinal('notenum');
 
         return synth;
     };
 
     synth.notenum.mult = function () {
-        if (isEmpty(params.notenum.mult)) {
-            params.notenum.mult = map(arguments, params.notenum.mult);
-        } else {
-            params.notenum.mult.mult(map(arguments, params.notenum.mult), params.interp);
-        }
+        mapParam(arguments, params.notenum, 'mult');
         setFinal('notenum');
 
         return synth;
@@ -906,84 +890,58 @@ dtm.synth = function () {
 
     // for longer sample playback
     synth.pitch = function () {
-        params.pitch.base = map(arguments, params.pitch.base);
+        mapParam(arguments, params.pitch);
         setFinal('pitch');
         return synth;
     };
 
     synth.pitch.add = function () {
-        if (isEmpty(params.pitch.add)) {
-            params.pitch.add = map(arguments, params.pitch.add);
-        } else {
-            params.pitch.add.add(map(arguments, params.pitch.add), params.interp);
-        }
+        mapParam(arguments, params.pitch, 'add');
         setFinal('pitch');
         return synth;
     };
 
     synth.pitch.mult = function () {
-        if (isEmpty(params.pitch.mult)) {
-            params.pitch.mult = map(arguments, params.pitch.mult);
-        } else {
-            params.pitch.mult.mult(map(arguments, params.pitch.mult), params.interp);
-        }
+        mapParam(arguments, params.pitch, 'mult');
         setFinal('pitch');
         return synth;
     };
 
     /**
      * @function module:synth#amp
-     * @param src
      * @returns {dtm.synth}
      */
     synth.amp = function () {
-        params.amp.base = map(arguments, params.amp.base);
+        mapParam(arguments, params.amp);
         return synth;
     };
 
     synth.amp.add = function () {
-        if (isEmpty(params.amp.add)) {
-            params.amp.add = map(arguments, params.amp.add);
-        } else {
-            params.amp.add.add(map(arguments, params.amp.add), params.interp);
-        }
+        mapParam(arguments, params.amp, 'add');
         return synth;
     };
 
     synth.amp.mult = function () {
-        if (isEmpty(params.amp.mult)) {
-            params.amp.mult = map(arguments, params.amp.mult);
-        } else {
-            params.amp.mult.mult(map(arguments, params.amp.mult), params.interp);
-        }
+        mapParam(arguments, params.amp, 'mult');
         return synth;
     };
 
     /**
      * @function module:synth#pan
-     * @param src
      * @returns {dtm.synth}
      */
     synth.pan = function () {
-        params.pan.base = map(arguments, params.pan.base);
+        mapParam(arguments, params.pan);
         return synth;
     };
 
     synth.pan.add = function () {
-        if (isEmpty(params.pan.add)) {
-            params.pan.add = map(arguments, params.pan.add);
-        } else {
-            params.pan.add.add(map(arguments, params.pan.add), params.interp);
-        }
+        mapParam(arguments, params.pan, 'add');
         return synth;
     };
 
     synth.pan.mult = function () {
-        if (isEmpty(params.pan.mult)) {
-            params.pan.mult = map(arguments, params.pan.mult);
-        } else {
-            params.pan.mult.mult(map(arguments, params.pan.mult), params.interp);
-        }
+        mapParam(arguments, params.pan, 'mult');
         return synth;
     };
 
@@ -995,7 +953,7 @@ dtm.synth = function () {
 
     };
 
-    synth.wavetable = function (src, mode) {
+    synth.wavetable = function (src) {
         src = typeCheck(src);
         if (isFloat32Array(src)) {
             params.wavetable = src;
@@ -1020,7 +978,7 @@ dtm.synth = function () {
         return synth;
     };
 
-    synth.table = synth.wt = synth.wavetable;
+    synth.wt = synth.wavetable;
 
     synth.source = function (src) {
         if (isString(src)) {
@@ -1367,12 +1325,45 @@ dtm.synth = function () {
     }
 
     function map(args, param) {
+        // TODO: if the param is empty (for .add, etc.) this would break
         if (isFunction(args[0])) {
             var res = args[0](param, synth, params.clock);
             return check(res) ? convert(res) : param;
         } else {
             var argList = argsToArray(args);
             return check(argList) ? convert(argList) : param;
+        }
+    }
+
+    function mapParam(args, param, mod) {
+        var res, argList;
+
+        if (mod === 'base' || mod === undefined) {
+            if (isFunction(args[0])) {
+                res = args[0](param['base'], synth, params.clock);
+                param['base'] = check(res) ? convert(res) : param;
+            } else {
+                argList = argsToArray(args);
+                param['base'] = check(argList) ? convert(argList) : param;
+            }
+        } else {
+            if (isEmpty(param[mod])) {
+                if (isFunction(args[0])) {
+                    res = args[0](param['base'], synth, params.clock);
+                    param[mod] = check(res) ? convert(res) : param;
+                } else {
+                    argList = argsToArray(args);
+                    param[mod] = check(argList) ? convert(argList) : param;
+                }
+            } else {
+                if (isFunction(args[0])) {
+                    res = args[0](param[mod], synth, params.clock);
+                    param[mod] = check(res) ? convert(res) : param;
+                } else {
+                    argList = argsToArray(args);
+                    param[mod][mod](check(argList) ? convert(argList) : param);
+                }
+            }
         }
     }
 

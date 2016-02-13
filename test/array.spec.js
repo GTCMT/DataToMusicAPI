@@ -29,7 +29,7 @@ describe('array object', function () {
         describe('type', function () {
             it('should return the type number', function () {
                 var a = dtm.array([1, 2, 3]);
-                expect(a.get('type')).toBe('number');
+                expect(a.get('type')).toBe('Float32Array');
             });
 
             it('should return the type string', function () {
@@ -410,7 +410,7 @@ describe('array object', function () {
 
         describe('expCurve', function () {
             it('should be less than the original value(s)', function () {
-                expect(dtm.a([0.5]).exp(10, 0, 1).get()[0]).toBeLessThan(0.5);
+                expect(dtm.a([0.5]).expc(10, 0, 1).get()[0]).toBeLessThan(0.5);
             });
         });
     });
@@ -507,6 +507,17 @@ describe('array object', function () {
             expect(a().col(0).value).toEqual(toFloat32Array([0,3,6]));
             expect(a().col(1).value).toEqual(toFloat32Array([1,4,7]));
             expect(a().row(1).value).toEqual(toFloat32Array([3,4,5]));
+        });
+    });
+
+    describe('reset', function () {
+
+    });
+
+    xdescribe('residue', function () {
+        it('should work', function () {
+            // precision error
+            expect(dtm.a([0.1, 0.9, 1.3]).round().residue().get()).toEqual(toFloat32Array([0.1, -0.1, 0.3]));
         });
     });
 });

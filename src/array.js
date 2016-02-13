@@ -44,6 +44,9 @@ dtm.array = function () {
             objForEach(paramsExt, function (val, key) {
                 params[key] = val;
             });
+        },
+        setOriginal: function (arr) {
+            params.original = arr;
         }
     };
 
@@ -106,10 +109,14 @@ dtm.array = function () {
                 case 'type':
                     if (isNumArray(array.value)) {
                         return 'number';
+                    } else if (isFloat32Array(array.value)) {
+                        return 'Float32Array'
                     } else if (isStringArray(array.value)) {
                         return 'string';
+                    } else if (isNestedWithDtmArray(array.value)) {
+                        return 'nested';
                     } else {
-                        return params.type;
+                        return 'mixed';
                     }
 
                 case 'parent':
@@ -421,9 +428,9 @@ dtm.array = function () {
             // if set arguments include any array-like object
             if (arguments.length === 1) {
                 if (isNumber(arguments[0])) {
-                    array.value = new Float32Array([arguments[0]]);
+                    array.value = toFloat32Array(arguments[0]);
                 } else if (isNumArray(arguments[0])) {
-                    array.value = new Float32Array(arguments[0]);
+                    array.value = toFloat32Array(arguments[0]);
                 } else if (isNestedArray(arguments[0])) {
                     array.value = new Array(arguments[0].length);
                     arguments[0].forEach(function (v, i) {
@@ -468,7 +475,7 @@ dtm.array = function () {
             params.original = array.value;
 
             // CHECK: type checking - may be redundant
-            checkType(array.value);
+            //checkType(array.value);
         } else {
             params.processed++;
         }
@@ -581,6 +588,7 @@ dtm.array = function () {
             newValue = array.value;
         }
         var newArr = dtm.array(newValue).label(params.name);
+        newArr.meta.setOriginal(params.original);
 
         // CHECK: this may cause troubles!
         newArr.index(params.index);
@@ -659,6 +667,12 @@ dtm.array = function () {
     array.reset = function () {
         return array.set(params.original);
     };
+
+    array.residue = function () {
+        return array.set(dtm.transform.subtract(params.original, array.value));
+    };
+
+    array.res = array.residue;
 
     /**
      * Clears all the contents of the array object.
@@ -800,7 +814,7 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.limit = function (min, max) {
-        if (params.type === 'number') {
+        if (isNumOrFloat32Array(array.value)) {
             min = min || 0;
             max = max || 1;
             return array.set(dtm.transform.limit(array.get(), min, max));
@@ -831,11 +845,11 @@ dtm.array = function () {
         return array.set(dtm.transform.rescale(arr, min, max));
     };
 
-    array.exp = array.expcurve;
+    array.expc = array.expcurve;
 
     /**
      * Applies a logarithmic scaling to the array.
-     * @function module:array#log | logCurve
+     * @function module:array#logc | logcurve
      * @param factor {number}
      * @param [min=array.get('min')] {number}
      * @param [max=array.get('max')] {number}
@@ -853,7 +867,7 @@ dtm.array = function () {
         return array.set(dtm.transform.rescale(arr, min, max));
     };
 
-    array.log = array.logcurve;
+    array.logc = array.logcurve;
 
     // TODO: design & implement
     /**
@@ -878,7 +892,7 @@ dtm.array = function () {
         if (isNestedDtmArray(array)) {
             return array.map(function (a) {
                 return a.fit(len, interp);
-            })
+            });
         }
 
         return array.set(dtm.transform.fit(array.value, len, interp));
@@ -980,10 +994,40 @@ dtm.array = function () {
                 array.set(newArr);
                 return array.map(function (a) {
                     return a.add(factor.get('next'));
-                })
+                });
             }
 
             return array.set(dtm.transform.add(array.value, factor, interp));
+        }
+    };
+
+    array.subtract = function (factor, interp) {
+        if (!isString(interp)) {
+            interp = 'step';
+        }
+        if (isNestedNumDtmArray(array)) {
+            return array.map(function (a) {
+                if (isNestedNumDtmArray(factor)) {
+                    return a.add(factor.get('next'));
+                } else {
+                    return a.add(factor);
+                }
+            });
+        } else {
+            if (isNumDtmArray(factor)) {
+                factor = factor.get();
+            } else if (isNestedNumDtmArray(factor)) {
+                var newArr = [];
+                factor.forEach(function () {
+                    newArr.push(array.get());
+                });
+                array.set(newArr);
+                return array.map(function (a) {
+                    return a.add(factor.get('next'));
+                });
+            }
+
+            return array.set(dtm.transform.subtract(array.value, factor, interp));
         }
     };
 
@@ -1017,7 +1061,7 @@ dtm.array = function () {
                 array.set(newArr);
                 return array.map(function (a) {
                     return a.mult(factor.get('next'));
-                })
+                });
             }
 
             return array.set(dtm.transform.mult(array.value, factor, interp));
@@ -1496,6 +1540,12 @@ dtm.array = function () {
 
     array.abs = array.fwr;
 
+    array.modulo = function (divisor) {
+        return array.set(dtm.transform.mod(array.value, divisor));
+    };
+
+    array.mod = array.modulo;
+
     //array.derivative = function (order) {
     //    return array;
     //};
@@ -1614,6 +1664,12 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.pitchquantize = function (scale) {
+        if (isNestedDtmArray(array)) {
+            return array.map(function (a) {
+                return a.pitchquantize(scale);
+            });
+        }
+
         if (isEmpty(scale)) {
             scale = dtm.gen('range', 12).get();
         } else if (isDtmArray(scale) && isNumOrFloat32Array(scale.get())) {

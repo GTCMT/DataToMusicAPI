@@ -9,11 +9,11 @@ describe('generator', function () {
     });
 
     describe('basic', function () {
-        it('should return the set type', function () {
-            var g = dtm.gen('saw');
-            expect(g.get('type')).toBe('saw');
-            expect(g.type('line').get('type')).toBe('line');
-        });
+        //it('should return the set type', function () {
+        //    var g = dtm.gen('saw');
+        //    expect(g.get('type')).toBe('saw');
+        //    expect(g.type('line').get('type')).toBe('line');
+        //});
 
         it('should return the set length', function () {
             var g = dtm.gen('line', 16);

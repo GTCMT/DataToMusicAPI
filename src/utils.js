@@ -14,11 +14,7 @@ function isEmpty(value) {
         return true;
     } else if (value === null) {
         return true;
-    } else if (typeof(value) === 'number' && isNaN(value)) {
-        return true;
-    } else {
-        return false;
-    }
+    } else return !!(typeof(value) === 'number' && isNaN(value));
 }
 
 /**
@@ -416,7 +412,14 @@ function toFloat32Array(src) {
         if (isFloat32Array(src)) {
             return src;
         } else {
-            return new Float32Array(src);
+            //return new Float32Array(src);
+            var typedArray = new Float32Array(src.length);
+            src.forEach(function (v, i) {
+                typedArray[i] = v;
+                //typedArray[i] = v.toFixed(7);
+                //typedArray[i] = v.toPrecision();
+            });
+            return typedArray;
         }
     } else {
         return null;
@@ -664,6 +667,8 @@ function ajaxGet(url, cb) {
 }
 
 dtm.util = {};
+
+/* TYPE CHECKING */
 dtm.util.isEmpty = isEmpty;
 dtm.util.isNumber = isNumber;
 dtm.util.isInteger = isInteger;
@@ -678,6 +683,8 @@ dtm.util.isFloat32Array = isFloat32Array;
 dtm.util.isNumArray = isNumArray;
 dtm.util.isNumOrFloat32Array = isNumOrFloat32Array;
 dtm.util.isMixedArray = isMixedArray;
+dtm.util.isStringArray = isStringArray;
+dtm.util.isBoolArray = isBoolArray;
 dtm.util.isNestedArray = isNestedArray;
 dtm.util.isNestedWithDtmArray = isNestedWithDtmArray;
 dtm.util.isDtmObj = isDtmObj;
@@ -685,26 +692,34 @@ dtm.util.isDtmArray = isDtmArray;
 dtm.util.isNestedDtmArray = isNestedDtmArray;
 dtm.util.isNumDtmArray = isNumDtmArray;
 dtm.util.isNestedNumDtmArray = isNestedNumDtmArray;
+dtm.util.argIsSingleArray = argIsSingleArray;
+dtm.util.argsAreSingleVals = argsAreSingleVals;
+
+/* ANALYSIS */
 dtm.util.getMaxArrayDepth = getMaxArrayDepth;
 dtm.util.getMaxDtmArrayDepth = getMaxDtmArrayDepth;
 dtm.util.getMaxDepth = getMaxDepth;
-dtm.util.isStringArray = isStringArray;
-dtm.util.isBoolArray = isBoolArray;
 dtm.util.hasMissingValues = hasMissingValues;
-dtm.util.arrayCompare = arrayCompare;
+//dtm.util.arrayCompare = arrayCompare;
+dtm.util.numProperties = numProperties;
+
+/* CONVERSION */
 dtm.util.argsToArray = argsToArray;
-dtm.util.argsForEach = argsForEach;
-dtm.util.argIsSingleArray = argIsSingleArray;
-dtm.util.argsAreSingleVals = argsAreSingleVals;
 dtm.util.toFloat32Array = toFloat32Array;
 dtm.util.fromFloat32Array = fromFloat32Array;
+
+/* LIST OPERATION */
 dtm.util.Float32Concat = Float32Concat;
 dtm.util.concat = concat;
 dtm.util.Float32splice = Float32Splice;
 dtm.util.splice = splice;
-dtm.util.truncateDigits = truncateDigits;
+
+/* ITERATION */
+dtm.util.argsForEach = argsForEach;
+dtm.util.objForEach = objForEach;
 dtm.util.Float32Map = Float32Map;
+
+/* MISC */
+dtm.util.truncateDigits = truncateDigits;
 dtm.util.deferCallback = deferCallback;
 dtm.util.cloneArray = cloneArray;
-dtm.util.objForEach = objForEach;
-dtm.util.numProperties = numProperties;
