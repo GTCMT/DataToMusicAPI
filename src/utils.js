@@ -344,6 +344,15 @@ function arrayCompare(first, second) {
 
 }
 
+function objCompare(first, second) {
+    var res = false;
+    objForEach(first, function (v, k) {
+
+    });
+
+    return res;
+}
+
 /**
  * Converts the arguments object into a regular array
  * @param args {object} The arguments object of the caller function
@@ -540,8 +549,6 @@ function numProperties(obj) {
     return count;
 }
 
-
-
 function loadBuffer(arrayBuf) {
     var buffer = {};
     actx.decodeAudioData(arrayBuf, function (buf) {
@@ -549,6 +556,230 @@ function loadBuffer(arrayBuf) {
     });
 
     return buffer;
+}
+
+/**
+ * Returns the minimum value of numeric array.
+ * @param arr {number}
+ * @returns {number}
+ */
+function getMin(arr) {
+    if (isNumOrFloat32Array(arr)) {
+        return Math.min.apply(this, arr);
+    }
+}
+
+/**
+ * Returns the maximum value of numeric array.
+ * @param arr {number}
+ * @returns {number}
+ */
+function getMax(arr) {
+    if (isNumOrFloat32Array(arr)) {
+        return Math.max.apply(this, arr);
+    }
+}
+
+/**
+ * Returns the mean of a numeric array.
+ * @param arr {array} Input numerical array.
+ * @returns val {number} Single mean value.
+ * @example
+ *
+ * dtm.transform.mean([8, 9, 4, 0, 9, 2, 1, 6]);
+ * -> 4.875
+ */
+function mean(arr) {
+    if (isNumOrFloat32Array(arr)) {
+        return sum(arr) / arr.length;
+    }
+}
+
+/**
+ * Returns the most frequent value of the array.
+ * @param arr {array}
+ * @returns {value}
+ */
+function mode(arr) {
+    var uniqs = unique(arr);
+    var max = 0;
+    var num = 0;
+    var res = null;
+
+    var histo = countBy(arr);
+
+    uniqs.forEach(function (val) {
+        num = histo[val];
+
+        if (num > max) {
+            res = val;
+            max = num;
+        }
+    });
+
+    return res;
+}
+
+/**
+ * Returns the median of numerical array.
+ * @param arr
+ * @returns {number}
+ */
+function median(arr) {
+    var sorted = arr.sort();
+    var len = arr.length;
+
+    if (len % 2 === 0) {
+        return (sorted[len/2 - 1] + sorted[len/2]) / 2
+    } else {
+        return sorted[Math.floor(len/2)];
+    }
+}
+
+/**
+ * Returns the midrange of numerical array.
+ * @param arr
+ * @return {number}
+ */
+function midrange(arr) {
+    var max = getMax(arr);
+    var min = getMin(arr);
+    return (max + min) / 2;
+}
+
+/**
+ * Simple summation.
+ * @param arr
+ * @returns {number}
+ */
+function sum(arr) {
+    return arr.reduce(function (num, sum) {
+        return num + sum;
+    });
+}
+
+/**
+ * Variance.
+ * @param arr
+ * @returns {*}
+ */
+function variance(arr) {
+    var meanVal = mean(arr);
+
+    var res = [];
+    arr.forEach(function (val, idx) {
+        res[idx] = Math.pow((meanVal - val), 2);
+    });
+
+    // TODO: divide-by-zero error
+    return sum(res) / (arr.length-1);
+}
+
+/**
+ * Standard Deviation.
+ * @param arr
+ * @returns {*}
+ */
+function std(arr) {
+    return Math.sqrt(variance(arr));
+}
+
+/**
+ * Population Variance.
+ * @param arr
+ * @returns {*}
+ */
+function pvar(arr) {
+    var meanVal = mean(arr);
+
+    var res = [];
+    arr.forEach(function (val, idx) {
+        res[idx] = Math.pow((meanVal - val), 2);
+    });
+
+    return mean(res);
+}
+
+/**
+ * Population Standard Deviation.
+ * @param arr
+ * @returns {number}
+ */
+function pstd(arr) {
+    return Math.sqrt(pvar(arr));
+}
+
+/**
+ * Root-Mean-Square value of given numerical array.
+ * @param arr {array}
+ * @returns rms {number}
+ */
+function rms(arr) {
+    var res = [];
+    arr.forEach(function (val, idx) {
+        res[idx] = Math.pow(val, 2);
+    });
+
+    return Math.sqrt(mean(res));
+}
+
+function unique(input) {
+    var res = [];
+    input.forEach(function (v) {
+        if (res.indexOf(v) === -1) {
+            res.push(v);
+        }
+    });
+
+    return res;
+}
+
+/**
+ * Counts occurrences of each class in the list.
+ * @param input {array}
+ * @returns {array}
+ */
+function histo(input) {
+    var res = [];
+    var classes = cloneArray(input);
+    var histogram = countBy(input);
+
+    classes.forEach(function (val, idx) {
+        res[idx] = histogram[val];
+    });
+
+    return res;
+}
+
+function countBy(input) {
+    var res = {};
+    input.forEach(function (v) {
+        if (!res.hasOwnProperty(v)) {
+            res[v] = 1;
+        } else {
+            res[v]++;
+        }
+    });
+    return res;
+}
+
+/**
+ * List unique items as "class" in sorted order.
+ * @param input {array}
+ * @returns {array}
+ */
+function listClasses(input) {
+    return unique(input).sort();
+}
+
+function uniformity(input) {
+    return listClasses(input).length / input.length;
+}
+
+function intersection(arr1, arr2) {
+    return arr1.filter(function (n) {
+        return arr2.indexOf(n) !== -1;
+    });
 }
 
 //function clone(obj) {
@@ -702,6 +933,24 @@ dtm.util.getMaxDepth = getMaxDepth;
 dtm.util.hasMissingValues = hasMissingValues;
 //dtm.util.arrayCompare = arrayCompare;
 dtm.util.numProperties = numProperties;
+
+dtm.util.getMin = getMin;
+dtm.util.getMax = getMax;
+dtm.util.mean = mean;
+dtm.util.mode = mode;
+dtm.util.midrange = midrange;
+dtm.util.sum = sum;
+dtm.util.variance = variance;
+dtm.util.pvar = pvar;
+dtm.util.std = std;
+dtm.util.pstd = pstd;
+dtm.util.rms = rms;
+dtm.util.unique = unique;
+dtm.util.histo = histo;
+dtm.util.countBy = countBy;
+dtm.util.listClasses = listClasses;
+dtm.util.uniformity = uniformity;
+dtm.util.intersection = intersection;
 
 /* CONVERSION */
 dtm.util.argsToArray = argsToArray;

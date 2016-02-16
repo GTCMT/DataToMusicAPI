@@ -213,7 +213,7 @@ describe('hasMissingValues', function () {
     });
 });
 
-describe('objCompare', function () {
+xdescribe('objCompare', function () {
     it('should work with shallow objects', function () {
         expect(objCompare({}, {})).toBe(true);
     });
@@ -452,5 +452,98 @@ describe('cloneArray', function () {
     it('should work', function () {
         expect(cloneArray([1,2,3])).toEqual([1,2,3]);
         expect(cloneArray(toFloat32Array([1,2,3]))).toEqual(toFloat32Array([1,2,3]));
+    });
+});
+
+
+describe('analysis functions', function () {
+    var input = [0, 2, 2, 3, 4, 4, 4, 5];
+
+    describe('mean', function () {
+        it('should be 2', function () {
+            expect(mean([1, 2, 3])).toBe(2);
+        });
+    });
+
+    describe('mode', function () {
+        var numOut = mode([0, 2, 2, 3, 4, 4, 4, 5]);
+
+        it('should return 4', function () {
+            expect(numOut).toBe(4);
+        });
+
+        var strOut = mode(['foo', 'bar', 'buz', 'buz']);
+
+        it('should return buz', function () {
+            expect(strOut).toBe('buz');
+        });
+    });
+
+    describe('median', function () {
+        it('should return 3.5', function () {
+            var output = median(input);
+            expect(output).toBe(3.5);
+        });
+    });
+
+    describe('midrange', function () {
+        it('should return 2.5', function () {
+            var output = midrange(input);
+            expect(output).toBe(2.5);
+        });
+    });
+
+    describe('variance', function () {
+        var output = variance(input);
+    });
+
+    describe('standard deviation', function () {
+        var output = std(input);
+    });
+
+    describe('population variance', function () {
+        var output = pvar(input);
+    });
+
+    describe('population standard deviation', function () {
+        var output = pstd(input);
+    });
+
+    describe('rms', function () {
+        var output = rms(input);
+    });
+
+    describe('unique', function () {
+        it('should work', function () {
+            expect(unique([0, 1, 2, 3, 2, 1, 0])).toEqual([0, 1, 2, 3]);
+        });
+    });
+
+    describe('listClasses', function () {
+        it('should work', function () {
+            expect(listClasses([3, 2, 1, 0, -1, 0, 1, 2, 3])).toEqual([-1, 0, 1, 2, 3]);
+            expect(listClasses(['c', 'b', 'a', 'b', 'c'])).toEqual(['a', 'b', 'c']);
+        });
+    });
+
+    describe('histogram', function () {
+        it('should work', function () {
+            expect(histo([1, 2, 2, 3, 4, 4, 4])).toEqual([1, 2, 2, 1, 3, 3, 3]);
+        });
+    });
+
+    describe('countBy', function () {
+        it('should work', function () {
+            expect(countBy([1, 2, 2, 3, 4, 4, 4])).toEqual({
+                '1': 1,
+                '2': 2,
+                '3': 1,
+                '4': 3
+            });
+        });
+    });
+
+    describe('uniformity', function () {
+        var output = uniformity(input);
     });
 });

@@ -169,48 +169,48 @@ dtm.array = function () {
                 /* STATS */
                 case 'minimum':
                 case 'min':
-                    return dtm.analyzer.min(array.value);
+                    return getMin(array.value);
 
                 case 'maximum':
                 case 'max':
-                    return dtm.analyzer.max(array.value);
+                    return getMax(array.value);
 
                 case 'extent':
                 case 'minmax':
                 case 'range':
-                    return [dtm.analyzer.min(array.value), dtm.analyzer.max(array.value)];
+                    return [getMin(array.value), getMax(array.value)];
 
                 case 'mean':
                 case 'average':
                 case 'avg':
-                    return dtm.analyzer.mean(array.value);
+                    return mean(array.value);
 
                 case 'mode':
-                    return dtm.analyzer.mode(array.value);
+                    return mode(array.value);
                 case 'median':
-                    return dtm.analyzer.median(array.value);
+                    return median(array.value);
                 case 'midrange':
-                    return dtm.analyzer.midrange(array.value);
+                    return midrange(array.value);
 
                 case 'standardDeviation':
                 case 'std':
-                    return dtm.analyzer.std(array.value);
+                    return std(array.value);
                 case 'pstd':
-                    return dtm.analyzer.pstd(array.value);
+                    return pstd(array.value);
 
                 case 'variance':
                 case 'var':
-                    return dtm.analyzer.var(array.value);
+                    return variance(array.value);
                 case 'populationVariance':
                 case 'pvar':
-                    return dtm.analyzer.pvar(array.value);
+                    return pvar(array.value);
 
                 case 'sumAll':
                 case 'sum':
-                    return dtm.analyzer.sum(array.value);
+                    return sum(array.value);
 
                 case 'rms':
-                    return dtm.analyzer.rms(array.value);
+                    return rms(array.value);
 
                 case 'pdf':
                     break;
@@ -319,7 +319,7 @@ dtm.array = function () {
                     return dtm.transform.unique(array.value);
 
                 case 'classes':
-                    return dtm.analyzer.classes(array.value);
+                    return listClasses(array.value);
 
                 case 'classID':
                 case 'classId':
@@ -332,15 +332,15 @@ dtm.array = function () {
                 case 'numClasses':
                 case 'numUniques':
                 case 'numUniqs':
-                    return dtm.analyzer.classes(array.value).length;
+                    return listClasses(array.value).length;
 
                 case 'unif':
                 case 'uniformity':
-                    return dtm.analyzer.uniformity(array.value);
+                    return uniformity(array.value);
 
                 case 'histogram':
                 case 'histo':
-                    return dtm.analyzer.histo(array.value);
+                    return histo(array.value);
 
                 // TODO: implement
                 case 'distribution':
@@ -517,7 +517,7 @@ dtm.array = function () {
     }
 
     function checkType(arr) {
-        //var summed = dtm.analyzer.sum(arr);
+        //var summed = sum(arr);
         //var res;
         //
         //if (isNaN(summed)) {
@@ -717,8 +717,8 @@ dtm.array = function () {
                     min = args[0];
                     max = args[1];
                 } else if (args.length > 2) {
-                    min = dtm.analyzer.min(args);
-                    max = dtm.analyzer.max(args);
+                    min = getMin(args);
+                    max = getMax(args);
                 }
             }
         }
@@ -768,8 +768,8 @@ dtm.array = function () {
                 max = arg1[1];
             }
             if (arg1.length > 2) {
-                min = dtm.analyzer.min(arg1);
-                max = dtm.analyzer.max(arg1);
+                min = getMin(arg1);
+                max = getMax(arg1);
             }
         } else if (isDtmArray(arg1) && isNumOrFloat32Array(arg1.get())) {
             if (arg1.get('len') === 2) {
@@ -1589,7 +1589,7 @@ dtm.array = function () {
     array.histogram = function () {
         // CHECK: this is hacky
         params.type = 'string'; // re-set the type to string from number
-        return array.set(toFloat32Array(dtm.analyzer.histo(array.value)));
+        return array.set(toFloat32Array(histo(array.value)));
     };
     /**
      * Overwrites the contents with unsorted unique values of the array.

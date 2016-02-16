@@ -44,8 +44,8 @@ describe('generator', function () {
 
         it('should have the range of 0 to 1', function () {
             var g = dtm.gen('line', 20);
-            var min = dtm.analyzer.min(g.get());
-            var max = dtm.analyzer.max(g.get());
+            var min = getMin(g.get());
+            var max = getMax(g.get());
             expect(min).toBe(0);
             expect(max).toBe(1);
         });
@@ -72,14 +72,14 @@ describe('generator', function () {
 
         xit('should be within the range', function () {
             var res = dtm.gen('random', 5, -3, 3).get();
-            expect(dtm.analyzer.min(res)).not.toBeLessThan(-3);
-            expect(dtm.analyzer.max(res)).not.toBeGreaterThan(3);
+            expect(getMin(res)).not.toBeLessThan(-3);
+            expect(getMax(res)).not.toBeGreaterThan(3);
         });
 
         xit('should be work with negatives', function () {
             var res = dtm.gen('random', 5, -3, 0).get();
-            expect(dtm.analyzer.min(res)).not.toBeLessThan(-3);
-            expect(dtm.analyzer.max(res)).not.toBeGreaterThan(0);
+            expect(getMin(res)).not.toBeLessThan(-3);
+            expect(getMax(res)).not.toBeGreaterThan(0);
         });
     });
 

@@ -746,8 +746,6 @@ function numProperties(obj) {
     return count;
 }
 
-
-
 function loadBuffer(arrayBuf) {
     var buffer = {};
     actx.decodeAudioData(arrayBuf, function (buf) {
@@ -755,6 +753,230 @@ function loadBuffer(arrayBuf) {
     });
 
     return buffer;
+}
+
+/**
+ * Returns the minimum value of numeric array.
+ * @param arr {number}
+ * @returns {number}
+ */
+function getMin(arr) {
+    if (isNumOrFloat32Array(arr)) {
+        return Math.min.apply(this, arr);
+    }
+}
+
+/**
+ * Returns the maximum value of numeric array.
+ * @param arr {number}
+ * @returns {number}
+ */
+function getMax(arr) {
+    if (isNumOrFloat32Array(arr)) {
+        return Math.max.apply(this, arr);
+    }
+}
+
+/**
+ * Returns the mean of a numeric array.
+ * @param arr {array} Input numerical array.
+ * @returns val {number} Single mean value.
+ * @example
+ *
+ * dtm.transform.mean([8, 9, 4, 0, 9, 2, 1, 6]);
+ * -> 4.875
+ */
+function mean(arr) {
+    if (isNumOrFloat32Array(arr)) {
+        return sum(arr) / arr.length;
+    }
+}
+
+/**
+ * Returns the most frequent value of the array.
+ * @param arr {array}
+ * @returns {value}
+ */
+function mode(arr) {
+    var uniqs = unique(arr);
+    var max = 0;
+    var num = 0;
+    var res = null;
+
+    var histo = countBy(arr);
+
+    uniqs.forEach(function (val) {
+        num = histo[val];
+
+        if (num > max) {
+            res = val;
+            max = num;
+        }
+    });
+
+    return res;
+}
+
+/**
+ * Returns the median of numerical array.
+ * @param arr
+ * @returns {number}
+ */
+function median(arr) {
+    var sorted = arr.sort();
+    var len = arr.length;
+
+    if (len % 2 === 0) {
+        return (sorted[len/2 - 1] + sorted[len/2]) / 2
+    } else {
+        return sorted[Math.floor(len/2)];
+    }
+}
+
+/**
+ * Returns the midrange of numerical array.
+ * @param arr
+ * @return {number}
+ */
+function midrange(arr) {
+    var max = getMax(arr);
+    var min = getMin(arr);
+    return (max + min) / 2;
+}
+
+/**
+ * Simple summation.
+ * @param arr
+ * @returns {number}
+ */
+function sum(arr) {
+    return arr.reduce(function (num, sum) {
+        return num + sum;
+    });
+}
+
+/**
+ * Variance.
+ * @param arr
+ * @returns {*}
+ */
+function variance(arr) {
+    var meanVal = mean(arr);
+
+    var res = [];
+    arr.forEach(function (val, idx) {
+        res[idx] = Math.pow((meanVal - val), 2);
+    });
+
+    // TODO: divide-by-zero error
+    return sum(res) / (arr.length-1);
+}
+
+/**
+ * Standard Deviation.
+ * @param arr
+ * @returns {*}
+ */
+function std(arr) {
+    return Math.sqrt(variance(arr));
+}
+
+/**
+ * Population Variance.
+ * @param arr
+ * @returns {*}
+ */
+function pvar(arr) {
+    var meanVal = mean(arr);
+
+    var res = [];
+    arr.forEach(function (val, idx) {
+        res[idx] = Math.pow((meanVal - val), 2);
+    });
+
+    return mean(res);
+}
+
+/**
+ * Population Standard Deviation.
+ * @param arr
+ * @returns {number}
+ */
+function pstd(arr) {
+    return Math.sqrt(pvar(arr));
+}
+
+/**
+ * Root-Mean-Square value of given numerical array.
+ * @param arr {array}
+ * @returns rms {number}
+ */
+function rms(arr) {
+    var res = [];
+    arr.forEach(function (val, idx) {
+        res[idx] = Math.pow(val, 2);
+    });
+
+    return Math.sqrt(mean(res));
+}
+
+function unique(input) {
+    var res = [];
+    input.forEach(function (v) {
+        if (res.indexOf(v) === -1) {
+            res.push(v);
+        }
+    });
+
+    return res;
+}
+
+/**
+ * Counts occurrences of each class in the list.
+ * @param input {array}
+ * @returns {array}
+ */
+function histo(input) {
+    var res = [];
+    var classes = cloneArray(input);
+    var histogram = countBy(input);
+
+    classes.forEach(function (val, idx) {
+        res[idx] = histogram[val];
+    });
+
+    return res;
+}
+
+function countBy(input) {
+    var res = {};
+    input.forEach(function (v) {
+        if (!res.hasOwnProperty(v)) {
+            res[v] = 1;
+        } else {
+            res[v]++;
+        }
+    });
+    return res;
+}
+
+/**
+ * List unique items as "class" in sorted order.
+ * @param input {array}
+ * @returns {array}
+ */
+function listClasses(input) {
+    return unique(input).sort();
+}
+
+function uniformity(input) {
+    return listClasses(input).length / input.length;
+}
+
+function intersection(arr1, arr2) {
+    return arr1.filter(function (n) {
+        return arr2.indexOf(n) !== -1;
+    });
 }
 
 //function clone(obj) {
@@ -909,6 +1131,24 @@ dtm.util.hasMissingValues = hasMissingValues;
 //dtm.util.arrayCompare = arrayCompare;
 dtm.util.numProperties = numProperties;
 
+dtm.util.getMin = getMin;
+dtm.util.getMax = getMax;
+dtm.util.mean = mean;
+dtm.util.mode = mode;
+dtm.util.midrange = midrange;
+dtm.util.sum = sum;
+dtm.util.variance = variance;
+dtm.util.pvar = pvar;
+dtm.util.std = std;
+dtm.util.pstd = pstd;
+dtm.util.rms = rms;
+dtm.util.unique = unique;
+dtm.util.histo = histo;
+dtm.util.countBy = countBy;
+dtm.util.listClasses = listClasses;
+dtm.util.uniformity = uniformity;
+dtm.util.intersection = intersection;
+
 /* CONVERSION */
 dtm.util.argsToArray = argsToArray;
 dtm.util.toFloat32Array = toFloat32Array;
@@ -1026,252 +1266,251 @@ dtm.osc.close = dtm.osc.stop;
 
 
 /**
- * @fileOverview Analyze a thing or two about an array. Singleton.
+ * @fileOverview Analyzer placeholder
  * @module analyzer
  */
 
 dtm.analyzer = {
-    type: 'dtm.analyzer',
-
-    /**
-     * Returns the minimum value of numeric array.
-     * @function module:analyzer#min
-     * @param arr {number}
-     * @returns {number}
-     */
-    min: function (arr) {
-        if (isNumOrFloat32Array(arr)) {
-            return Math.min.apply(this, arr);
-        }
-    },
-
-    /**
-     * Returns the maximum value of numeric array.
-     * @function module:analyzer#max
-     * @param arr {number}
-     * @returns {number}
-     */
-    max: function (arr) {
-        if (isNumOrFloat32Array(arr)) {
-            return Math.max.apply(this, arr);
-        }
-    },
-
-    /**
-     * Returns the mean of a numeric array.
-     * @function module:analyzer#mean
-     * @param arr {array} Input numerical array.
-     * @returns val {number} Single mean value.
-     * @example
-     *
-     * dtm.transform.mean([8, 9, 4, 0, 9, 2, 1, 6]);
-     * -> 4.875
-     */
-    mean: function (arr) {
-        if (isNumOrFloat32Array(arr)) {
-            return dtm.analyzer.sum(arr) / arr.length;
-        }
-    },
-
-    /**
-     * Returns the most frequent value of the array.
-     * @function module:analyzer#mode
-     * @param arr {array}
-     * @returns {value}
-     */
-    mode: function (arr) {
-        var uniqs = dtm.analyzer.unique(arr);
-        var max = 0;
-        var num = 0;
-        var res = null;
-
-        var histo = dtm.anal.countBy(arr);
-
-        uniqs.forEach(function (val) {
-            num = histo[val];
-
-            if (num > max) {
-                res = val;
-                max = num;
-            }
-        });
-
-        return res;
-    },
-
-    /**
-     * Returns the median of numerical array.
-     * @function module:analyzer#median
-     * @param arr
-     * @returns {number}
-     */
-    median: function (arr) {
-        var sorted = arr.sort();
-        var len = arr.length;
-
-        if (len % 2 === 0) {
-            return (sorted[len/2 - 1] + sorted[len/2]) / 2
-        } else {
-            return sorted[Math.floor(len/2)];
-        }
-    },
-
-    /**
-     * Returns the midrange of numerical array.
-     * @function module:analyzer#midrange
-     * @param arr
-     * @return {number}
-     */
-    midrange: function (arr) {
-        var max = dtm.analyzer.max(arr);
-        var min = dtm.analyzer.min(arr);
-        return (max + min) / 2;
-    },
-
-    // TODO: num string parsing
-    /**
-     * Simple summation.
-     * @function module:analyzer#sum
-     * @param arr
-     * @returns {number}
-     */
-    sum: function (arr) {
-        return arr.reduce(function (num, sum) {
-            return num + sum;
-        });
-    },
-
-    /**
-     * Variance.
-     * @function module:analyzer#var
-     * @param arr
-     * @returns {*}
-     */
-    var: function (arr) {
-        var mean = dtm.analyzer.mean(arr);
-
-        var res = [];
-        arr.forEach(function (val, idx) {
-            res[idx] = Math.pow((mean - val), 2);
-        });
-
-        // TODO: divide-by-zero error
-        return dtm.analyzer.sum(res) / (arr.length-1);
-    },
-
-    /**
-     * Standard Deviation.
-     * @function module:analyzer#std
-     * @param arr
-     * @returns {*}
-     */
-    std: function (arr) {
-        return Math.sqrt(dtm.analyzer.var(arr));
-    },
-
-    /**
-     * Population Variance.
-     * @function module:analyzer#pvar
-     * @param arr
-     * @returns {*}
-     */
-    pvar: function (arr) {
-        var mean = dtm.analyzer.mean(arr);
-
-        var res = [];
-        arr.forEach(function (val, idx) {
-            res[idx] = Math.pow((mean - val), 2);
-        });
-
-        return dtm.analyzer.mean(res);
-    },
-
-    /**
-     * Population Standard Deviation.
-     * @function module:analyzer#pstd
-     * @param arr
-     * @returns {number}
-     */
-    pstd: function (arr) {
-        return Math.sqrt(dtm.analyzer.pvar(arr));
-    },
-
-    /**
-     * Root-Mean-Square value of given numerical array.
-     * @function module:analyzer#rms
-     * @param arr {array}
-     * @returns rms {number}
-     */
-    rms: function (arr) {
-        var res = [];
-        arr.forEach(function (val, idx) {
-            res[idx] = Math.pow(val, 2);
-        });
-
-        return Math.sqrt(dtm.analyzer.mean(res));
-    },
-
-    unique: function (input) {
-        var res = [];
-        input.forEach(function (v) {
-            if (res.indexOf(v) === -1) {
-                res.push(v);
-            }
-        });
-
-        return res;
-    },
-
-    /**
-     * Counts occurrences of each class in the list.
-     * @function module:analyzer#histo
-     * @param input {array}
-     * @returns {array}
-     */
-    histo: function (input) {
-        var res = [];
-        var classes = cloneArray(input);
-        var histogram = dtm.anal.countBy(input);
-
-        classes.forEach(function (val, idx) {
-            res[idx] = histogram[val];
-        });
-
-        return res;
-    },
-
-    countBy: function (input) {
-        var res = {};
-        input.forEach(function (v) {
-            if (!res.hasOwnProperty(v)) {
-                res[v] = 1;
-            } else {
-                res[v]++;
-            }
-        });
-        return res;
-    },
-
-    /**
-     * List unique items as "class" in sorted order.
-     * @function module:analyzer#classes
-     * @param input {array}
-     * @returns {array}
-     */
-    classes: function (input) {
-        return dtm.analyzer.unique(input).sort();
-    },
-
-
-    uniformity: function (input) {
-        return dtm.analyzer.classes(input).length / input.length;
-    },
-
-    intersection: function (arr1, arr2) {
-        return arr1.filter(function (n) {
-            return arr2.indexOf(n) !== -1;
-        });
-    }
+    //type: 'dtm.analyzer',
+    //
+    ///**
+    // * Returns the minimum value of numeric array.
+    // * @function module:analyzer#min
+    // * @param arr {number}
+    // * @returns {number}
+    // */
+    //min: function (arr) {
+    //    if (isNumOrFloat32Array(arr)) {
+    //        return Math.min.apply(this, arr);
+    //    }
+    //},
+    //
+    ///**
+    // * Returns the maximum value of numeric array.
+    // * @function module:analyzer#max
+    // * @param arr {number}
+    // * @returns {number}
+    // */
+    //max: function (arr) {
+    //    if (isNumOrFloat32Array(arr)) {
+    //        return Math.max.apply(this, arr);
+    //    }
+    //},
+    //
+    ///**
+    // * Returns the mean of a numeric array.
+    // * @function module:analyzer#mean
+    // * @param arr {array} Input numerical array.
+    // * @returns val {number} Single mean value.
+    // * @example
+    // *
+    // * dtm.transform.mean([8, 9, 4, 0, 9, 2, 1, 6]);
+    // * -> 4.875
+    // */
+    //mean: function (arr) {
+    //    if (isNumOrFloat32Array(arr)) {
+    //        return dtm.analyzer.sum(arr) / arr.length;
+    //    }
+    //},
+    //
+    ///**
+    // * Returns the most frequent value of the array.
+    // * @function module:analyzer#mode
+    // * @param arr {array}
+    // * @returns {value}
+    // */
+    //mode: function (arr) {
+    //    var uniqs = dtm.analyzer.unique(arr);
+    //    var max = 0;
+    //    var num = 0;
+    //    var res = null;
+    //
+    //    var histo = dtm.anal.countBy(arr);
+    //
+    //    uniqs.forEach(function (val) {
+    //        num = histo[val];
+    //
+    //        if (num > max) {
+    //            res = val;
+    //            max = num;
+    //        }
+    //    });
+    //
+    //    return res;
+    //},
+    //
+    ///**
+    // * Returns the median of numerical array.
+    // * @function module:analyzer#median
+    // * @param arr
+    // * @returns {number}
+    // */
+    //median: function (arr) {
+    //    var sorted = arr.sort();
+    //    var len = arr.length;
+    //
+    //    if (len % 2 === 0) {
+    //        return (sorted[len/2 - 1] + sorted[len/2]) / 2
+    //    } else {
+    //        return sorted[Math.floor(len/2)];
+    //    }
+    //},
+    //
+    ///**
+    // * Returns the midrange of numerical array.
+    // * @function module:analyzer#midrange
+    // * @param arr
+    // * @return {number}
+    // */
+    //midrange: function (arr) {
+    //    var max = dtm.analyzer.max(arr);
+    //    var min = dtm.analyzer.min(arr);
+    //    return (max + min) / 2;
+    //},
+    //
+    //// TODO: num string parsing
+    ///**
+    // * Simple summation.
+    // * @function module:analyzer#sum
+    // * @param arr
+    // * @returns {number}
+    // */
+    //sum: function (arr) {
+    //    return arr.reduce(function (num, sum) {
+    //        return num + sum;
+    //    });
+    //},
+    //
+    ///**
+    // * Variance.
+    // * @function module:analyzer#var
+    // * @param arr
+    // * @returns {*}
+    // */
+    //var: function (arr) {
+    //    var mean = dtm.analyzer.mean(arr);
+    //
+    //    var res = [];
+    //    arr.forEach(function (val, idx) {
+    //        res[idx] = Math.pow((mean - val), 2);
+    //    });
+    //
+    //    // TODO: divide-by-zero error
+    //    return dtm.analyzer.sum(res) / (arr.length-1);
+    //},
+    //
+    ///**
+    // * Standard Deviation.
+    // * @function module:analyzer#std
+    // * @param arr
+    // * @returns {*}
+    // */
+    //std: function (arr) {
+    //    return Math.sqrt(dtm.analyzer.var(arr));
+    //},
+    //
+    ///**
+    // * Population Variance.
+    // * @function module:analyzer#pvar
+    // * @param arr
+    // * @returns {*}
+    // */
+    //pvar: function (arr) {
+    //    var mean = dtm.analyzer.mean(arr);
+    //
+    //    var res = [];
+    //    arr.forEach(function (val, idx) {
+    //        res[idx] = Math.pow((mean - val), 2);
+    //    });
+    //
+    //    return dtm.analyzer.mean(res);
+    //},
+    //
+    ///**
+    // * Population Standard Deviation.
+    // * @function module:analyzer#pstd
+    // * @param arr
+    // * @returns {number}
+    // */
+    //pstd: function (arr) {
+    //    return Math.sqrt(dtm.analyzer.pvar(arr));
+    //},
+    //
+    ///**
+    // * Root-Mean-Square value of given numerical array.
+    // * @function module:analyzer#rms
+    // * @param arr {array}
+    // * @returns rms {number}
+    // */
+    //rms: function (arr) {
+    //    var res = [];
+    //    arr.forEach(function (val, idx) {
+    //        res[idx] = Math.pow(val, 2);
+    //    });
+    //
+    //    return Math.sqrt(dtm.analyzer.mean(res));
+    //},
+    //
+    //unique: function (input) {
+    //    var res = [];
+    //    input.forEach(function (v) {
+    //        if (res.indexOf(v) === -1) {
+    //            res.push(v);
+    //        }
+    //    });
+    //
+    //    return res;
+    //},
+    //
+    ///**
+    // * Counts occurrences of each class in the list.
+    // * @function module:analyzer#histo
+    // * @param input {array}
+    // * @returns {array}
+    // */
+    //histo: function (input) {
+    //    var res = [];
+    //    var classes = cloneArray(input);
+    //    var histogram = dtm.analyzer.countBy(input);
+    //
+    //    classes.forEach(function (val, idx) {
+    //        res[idx] = histogram[val];
+    //    });
+    //
+    //    return res;
+    //},
+    //
+    //countBy: function (input) {
+    //    var res = {};
+    //    input.forEach(function (v) {
+    //        if (!res.hasOwnProperty(v)) {
+    //            res[v] = 1;
+    //        } else {
+    //            res[v]++;
+    //        }
+    //    });
+    //    return res;
+    //},
+    //
+    ///**
+    // * List unique items as "class" in sorted order.
+    // * @function module:analyzer#classes
+    // * @param input {array}
+    // * @returns {array}
+    // */
+    //classes: function (input) {
+    //    return dtm.analyzer.unique(input).sort();
+    //},
+    //
+    //uniformity: function (input) {
+    //    return dtm.analyzer.classes(input).length / input.length;
+    //},
+    //
+    //intersection: function (arr1, arr2) {
+    //    return arr1.filter(function (n) {
+    //        return arr2.indexOf(n) !== -1;
+    //    });
+    //}
 };
 
 dtm.anal = dtm.analyzer;
@@ -2049,8 +2288,6 @@ generators.forEach(function (type) {
 
 // singleton helper functions
 dtm.transform = {
-    type: 'dtm.transform',
-
     /* SCALERS */
 
     /**
@@ -2070,11 +2307,11 @@ dtm.transform = {
     normalize: function (arr, min, max) {
         if (isNumOrFloat32Array(arr)) {
             if (!isNumber(min)) {
-                min = dtm.analyzer.min(arr);
+                min = getMin(arr);
             }
 
             if (!isNumber(max)) {
-                max = dtm.analyzer.max(arr);
+                max = getMax(arr);
             }
 
             var denom = 1;
@@ -2416,25 +2653,25 @@ dtm.transform = {
             round = false;
         }
 
-        var sum = dtm.analyzer.sum(arr);
+        var summed = sum(arr);
 
-        if (sum === 0) {
+        if (summed === 0) {
             arr = dtm.transform.add(arr, 0.000001);
-            sum = dtm.analyzer.sum(arr);
+            summed = sum(arr);
         }
 
         if (round) {
             tgt = Math.round(tgt);
         }
 
-        var res = dtm.transform.mult(arr, 1/sum * tgt);
+        var res = dtm.transform.mult(arr, 1/summed * tgt);
 
         if (round) {
             res = dtm.transform.round(res);
 
-            if (dtm.analyzer.sum(res) !== tgt) {
+            if (sum(res) !== tgt) {
                 var n = 1;
-                var rem = dtm.analyzer.sum(res) - tgt;
+                var rem = sum(res) - tgt;
                 var add = rem < 0;
 
                 if (add) {
@@ -2852,7 +3089,7 @@ dtm.transform = {
      */
     invert: function (input, center) {
         if (!isNumber(center)) {
-            center = dtm.analyzer.mean(input);
+            center = mean(input);
         }
 
         var res = [];
@@ -3315,12 +3552,12 @@ dtm.transform = {
 
     // CHECK: redundant with analyzer.unique
     unique: function (input) {
-        return dtm.analyzer.unique(input);
+        return unique(input);
     },
 
     classId: function (input) {
         var res = [];
-        var sortedClasses = dtm.analyzer.classes(input).sort();
+        var sortedClasses = listClasses(input).sort();
         var classIds = {};
 
         sortedClasses.forEach(function (val, id) {
@@ -3457,16 +3694,6 @@ function morphFixed (srcArr, tgtArr, morphIdx) {
 }
 
 dtm.tr = dtm.transform;
-
-var blob = new Blob(['onmessage = function(e) { postMessage("testing"); };']);
-var blobURL = window.URL.createObjectURL(blob);
-
-var worker = new Worker(blobURL);
-worker.onmessage = function (e) {
-    console.log(e.data);
-};
-
-worker.postMessage('hey');
 /**
  * @fileOverview Single dimensional array with built-in transformation functions.
  * @module array
@@ -3638,48 +3865,48 @@ dtm.array = function () {
                 /* STATS */
                 case 'minimum':
                 case 'min':
-                    return dtm.analyzer.min(array.value);
+                    return getMin(array.value);
 
                 case 'maximum':
                 case 'max':
-                    return dtm.analyzer.max(array.value);
+                    return getMax(array.value);
 
                 case 'extent':
                 case 'minmax':
                 case 'range':
-                    return [dtm.analyzer.min(array.value), dtm.analyzer.max(array.value)];
+                    return [getMin(array.value), getMax(array.value)];
 
                 case 'mean':
                 case 'average':
                 case 'avg':
-                    return dtm.analyzer.mean(array.value);
+                    return mean(array.value);
 
                 case 'mode':
-                    return dtm.analyzer.mode(array.value);
+                    return mode(array.value);
                 case 'median':
-                    return dtm.analyzer.median(array.value);
+                    return median(array.value);
                 case 'midrange':
-                    return dtm.analyzer.midrange(array.value);
+                    return midrange(array.value);
 
                 case 'standardDeviation':
                 case 'std':
-                    return dtm.analyzer.std(array.value);
+                    return std(array.value);
                 case 'pstd':
-                    return dtm.analyzer.pstd(array.value);
+                    return pstd(array.value);
 
                 case 'variance':
                 case 'var':
-                    return dtm.analyzer.var(array.value);
+                    return variance(array.value);
                 case 'populationVariance':
                 case 'pvar':
-                    return dtm.analyzer.pvar(array.value);
+                    return pvar(array.value);
 
                 case 'sumAll':
                 case 'sum':
-                    return dtm.analyzer.sum(array.value);
+                    return sum(array.value);
 
                 case 'rms':
-                    return dtm.analyzer.rms(array.value);
+                    return rms(array.value);
 
                 case 'pdf':
                     break;
@@ -3788,7 +4015,7 @@ dtm.array = function () {
                     return dtm.transform.unique(array.value);
 
                 case 'classes':
-                    return dtm.analyzer.classes(array.value);
+                    return listClasses(array.value);
 
                 case 'classID':
                 case 'classId':
@@ -3801,15 +4028,15 @@ dtm.array = function () {
                 case 'numClasses':
                 case 'numUniques':
                 case 'numUniqs':
-                    return dtm.analyzer.classes(array.value).length;
+                    return listClasses(array.value).length;
 
                 case 'unif':
                 case 'uniformity':
-                    return dtm.analyzer.uniformity(array.value);
+                    return uniformity(array.value);
 
                 case 'histogram':
                 case 'histo':
-                    return dtm.analyzer.histo(array.value);
+                    return histo(array.value);
 
                 // TODO: implement
                 case 'distribution':
@@ -3986,7 +4213,7 @@ dtm.array = function () {
     }
 
     function checkType(arr) {
-        //var summed = dtm.analyzer.sum(arr);
+        //var summed = sum(arr);
         //var res;
         //
         //if (isNaN(summed)) {
@@ -4186,8 +4413,8 @@ dtm.array = function () {
                     min = args[0];
                     max = args[1];
                 } else if (args.length > 2) {
-                    min = dtm.analyzer.min(args);
-                    max = dtm.analyzer.max(args);
+                    min = getMin(args);
+                    max = getMax(args);
                 }
             }
         }
@@ -4237,8 +4464,8 @@ dtm.array = function () {
                 max = arg1[1];
             }
             if (arg1.length > 2) {
-                min = dtm.analyzer.min(arg1);
-                max = dtm.analyzer.max(arg1);
+                min = getMin(arg1);
+                max = getMax(arg1);
             }
         } else if (isDtmArray(arg1) && isNumOrFloat32Array(arg1.get())) {
             if (arg1.get('len') === 2) {
@@ -5058,7 +5285,7 @@ dtm.array = function () {
     array.histogram = function () {
         // CHECK: this is hacky
         params.type = 'string'; // re-set the type to string from number
-        return array.set(toFloat32Array(dtm.analyzer.histo(array.value)));
+        return array.set(toFloat32Array(histo(array.value)));
     };
     /**
      * Overwrites the contents with unsorted unique values of the array.

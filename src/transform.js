@@ -24,11 +24,11 @@ dtm.transform = {
     normalize: function (arr, min, max) {
         if (isNumOrFloat32Array(arr)) {
             if (!isNumber(min)) {
-                min = dtm.analyzer.min(arr);
+                min = getMin(arr);
             }
 
             if (!isNumber(max)) {
-                max = dtm.analyzer.max(arr);
+                max = getMax(arr);
             }
 
             var denom = 1;
@@ -370,25 +370,25 @@ dtm.transform = {
             round = false;
         }
 
-        var sum = dtm.analyzer.sum(arr);
+        var summed = sum(arr);
 
-        if (sum === 0) {
+        if (summed === 0) {
             arr = dtm.transform.add(arr, 0.000001);
-            sum = dtm.analyzer.sum(arr);
+            summed = sum(arr);
         }
 
         if (round) {
             tgt = Math.round(tgt);
         }
 
-        var res = dtm.transform.mult(arr, 1/sum * tgt);
+        var res = dtm.transform.mult(arr, 1/summed * tgt);
 
         if (round) {
             res = dtm.transform.round(res);
 
-            if (dtm.analyzer.sum(res) !== tgt) {
+            if (sum(res) !== tgt) {
                 var n = 1;
-                var rem = dtm.analyzer.sum(res) - tgt;
+                var rem = sum(res) - tgt;
                 var add = rem < 0;
 
                 if (add) {
@@ -806,7 +806,7 @@ dtm.transform = {
      */
     invert: function (input, center) {
         if (!isNumber(center)) {
-            center = dtm.analyzer.mean(input);
+            center = mean(input);
         }
 
         var res = [];
@@ -1269,12 +1269,12 @@ dtm.transform = {
 
     // CHECK: redundant with analyzer.unique
     unique: function (input) {
-        return dtm.analyzer.unique(input);
+        return unique(input);
     },
 
     classId: function (input) {
         var res = [];
-        var sortedClasses = dtm.analyzer.classes(input).sort();
+        var sortedClasses = listClasses(input).sort();
         var classIds = {};
 
         sortedClasses.forEach(function (val, id) {
@@ -1411,13 +1411,3 @@ function morphFixed (srcArr, tgtArr, morphIdx) {
 }
 
 dtm.tr = dtm.transform;
-
-var blob = new Blob(['onmessage = function(e) { postMessage("testing"); };']);
-var blobURL = window.URL.createObjectURL(blob);
-
-var worker = new Worker(blobURL);
-worker.onmessage = function (e) {
-    console.log(e.data);
-};
-
-worker.postMessage('hey');

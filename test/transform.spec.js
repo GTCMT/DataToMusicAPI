@@ -9,8 +9,8 @@ describe('array helper functions', function () {
                 var norm = dtm.transform.normalize(input);
 
                 it('should have 0 as min, 1 as max', function () {
-                    expect(dtm.analyzer.min(norm)).toBe(0);
-                    expect(dtm.analyzer.max(norm)).toBe(1);
+                    expect(getMin(norm)).toBe(0);
+                    expect(getMax(norm)).toBe(1);
                 });
             });
 
@@ -21,7 +21,7 @@ describe('array helper functions', function () {
 
                 var norm = dtm.transform.normalize(input, dmin, dmax);
                 it('should have the max val of 0.25', function () {
-                    expect(dtm.analyzer.max(norm)).toBe(0.25);
+                    expect(getMax(norm)).toBe(0.25);
                 })
             });
         });
@@ -40,8 +40,8 @@ describe('array helper functions', function () {
 
                 var output = dtm.transform.rescale(input, min, max);
                 it('should have corresponding min & max', function () {
-                    expect(dtm.analyzer.max(output)).toBe(max);
-                    expect(dtm.analyzer.min(output)).toBe(min);
+                    expect(getMax(output)).toBe(max);
+                    expect(getMin(output)).toBe(min);
                 });
             });
 
@@ -56,8 +56,8 @@ describe('array helper functions', function () {
                 var output = dtm.transform.rescale(input, min, max, dmin, dmax);
 
                 it('should have max of ...', function () {
-                    expect(dtm.analyzer.max(output)).toBe(0);
-                    expect(dtm.analyzer.min(output)).toBe(-1);
+                    expect(getMax(output)).toBe(0);
+                    expect(getMin(output)).toBe(-1);
                 })
             })
         });
@@ -67,16 +67,16 @@ describe('array helper functions', function () {
                 var input = [3, 5, 2, 4.5, 1, 7, 9];
                 var tgt = 30;
                 var fracOut = dtm.transform.fitSum(input, tgt, false);
-                expect(dtm.analyzer.sum(fracOut)).toBe(tgt);
+                expect(sum(fracOut)).toBe(tgt);
 
                 var roundedOut = dtm.transform.fitSum(input, tgt, true);
-                expect(dtm.analyzer.sum(roundedOut)).toBe(Math.round(tgt));
+                expect(sum(roundedOut)).toBe(Math.round(tgt));
             });
 
             it('should return 32', function () {
                 var input = [2, 2, 0, 0, 1, 1, 2, 2];
                 var out = dtm.transform.fitSum(input, 32, true);
-                expect(dtm.analyzer.sum(out)).toBe(32);
+                expect(sum(out)).toBe(32);
             });
         });
 
@@ -231,7 +231,7 @@ describe('array helper functions', function () {
             input[i] = dtm.value.randi(0, 10);
         }
 
-        var output = dtm.analyzer.mean(input);
+        var output = mean(input);
     });
 
     describe('mirror', function () {
@@ -286,7 +286,7 @@ describe('array helper functions', function () {
         var output = dtm.transform.shuffle(input);
 
         it('should have same summed value as the input', function () {
-            expect(dtm.analyzer.sum(output)).toBe(dtm.analyzer.sum(input));
+            expect(sum(output)).toBe(sum(input));
         })
     });
 
