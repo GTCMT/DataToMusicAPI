@@ -91,30 +91,30 @@ dtm.master = {
         return dtm.master;
     },
 
-    /**
-     * Pitch quantize all the voices that are synced to the master.
-     * @function module:master#pq
-     * @returns {*}
-     */
-    pq: function () {
-        var scale;
-
-        if (arguments.length === 0) {
-            scale = dtm.gen('range', 12).get();
-        } else if (isArray(arguments[0])) {
-            scale = arguments[0];
-        } else if (isString(arguments[0])) {
-            scale = dtm.scales[arguments[0].toLowerCase()];
-        } else {
-            scale = arguments;
-        }
-
-        dtm.master.scale = scale;
-
-        // TODO: update all the voices as well?
-
-        return dtm.master;
-    },
+    ///**
+    // * Pitch quantize all the voices that are synced to the master.
+    // * @function module:master#pq
+    // * @returns {*}
+    // */
+    //pq: function () {
+    //    var scale;
+    //
+    //    if (arguments.length === 0) {
+    //        scale = dtm.gen('range', 12).get();
+    //    } else if (isArray(arguments[0])) {
+    //        scale = arguments[0];
+    //    } else if (isString(arguments[0])) {
+    //        scale = dtm.scales[arguments[0].toLowerCase()];
+    //    } else {
+    //        scale = arguments;
+    //    }
+    //
+    //    dtm.master.scale = scale;
+    //
+    //    // TODO: update all the voices as well?
+    //
+    //    return dtm.master;
+    //},
 
     data: function (d) {
         if (!isEmpty(d)) {
@@ -122,10 +122,6 @@ dtm.master = {
         }
 
         return dtm.master;
-    },
-
-    form: function () {
-
     },
 
     model: function () {

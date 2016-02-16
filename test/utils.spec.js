@@ -213,6 +213,12 @@ describe('hasMissingValues', function () {
     });
 });
 
+describe('objCompare', function () {
+    it('should work with shallow objects', function () {
+        expect(objCompare({}, {})).toBe(true);
+    });
+});
+
 describe('isDtmArray', function () {
     it('should work', function () {
         expect(isDtmArray(dtm.a())).toBe(true);

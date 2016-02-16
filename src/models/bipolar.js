@@ -12,19 +12,17 @@
                 a.set(arg);
             } else if (isString(arg)) {
                 a.set(arg).split().histo();
-            } else if (isObject(arg)) {
-                if (isArray(arg)) {
-                    if (isNumArray(arg)) {
-                        a.set(arg);
-                    } else {
-                        a.set(arg).split().histo();
-                    }
-                } else if (isDtmObj(arg)) {
+            } else if (isArray(arg)) {
+                if (isNumOrFloat32Array(arg)) {
                     a.set(arg);
+                } else {
+                    a.set(arg).split().histo();
+                }
+            } else if (isDtmArray(arg)) {
+                a = arg.clone();
 
-                    if (a.get('type') !== 'number') {
-                        a.histo();
-                    }
+                if (a.get('type') === 'string') {
+                    a.histo();
                 }
             }
         } else if (arguments.length > 1) {

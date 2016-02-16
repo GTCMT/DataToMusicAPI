@@ -431,12 +431,12 @@ dtm.clock = function (bpm, subDiv, autoStart) {
                 clockSrc = actx.createBufferSource();
                 clockBuf = dtm.wa.clockBuf;
                 clockSrc.buffer = clockBuf;
-                clockSrc.connect(out());
+                clockSrc.connect(actx.destination());
 
                 freq = params.bpm / 60.0 * (params.subDiv / 4.0);
                 //var pbRate = 1/(1/freq - Math.abs(timeErr));
 
-                clockSrc.playbackRate.value = freq * clMult;
+                clockSrc.playbackRate.value = freq * dtm.wa.clMult;
                 clockSrc.playbackRate.value += clockSrc.playbackRate.value * params.random * _.sample([1, -1]);
 
                 if (clock.beat % 2 == 0) {
@@ -445,14 +445,14 @@ dtm.clock = function (bpm, subDiv, autoStart) {
                     clockSrc.playbackRate.value *= params.swing / 0.5;
                 }
 
-                clockSrc.start(now() + 0.0000001);
+                clockSrc.start(actx.currentTime + 0.0000001);
 
                 clockSrc.onended = function () {
                     curTime += 1/freq;
-                    //var error = now() - curTime;
+                    //var error = actx.currentTime - curTime;
                     //clock.tick(error);
                     clock.tick();
-//                curTime = now();
+//                curTime = actx.currentTime;
                 };
 
                 clock.callbacks.forEach(function (cb) {
@@ -488,11 +488,11 @@ dtm.clock = function (bpm, subDiv, autoStart) {
                 clockSrc = actx.createBufferSource();
                 clockBuf = dtm.wa.clockBuf;
                 clockSrc.buffer = clockBuf;
-                clockSrc.connect(out());
+                clockSrc.connect(actx.destination);
 
                 freq = params.bpm / 60.0 * (params.subDiv / 4.0);
 
-                clockSrc.playbackRate.value = freq * clMult;
+                clockSrc.playbackRate.value = freq * dtm.wa.clMult;
                 clockSrc.playbackRate.value += clockSrc.playbackRate.value * params.random * _.sample([1, -1]);
 
                 if (clock.beat % 2 == 0) {
@@ -501,11 +501,11 @@ dtm.clock = function (bpm, subDiv, autoStart) {
                     clockSrc.playbackRate.value *= params.swing / 0.5;
                 }
 
-                clockSrc.start(now() + 0.0000001);
+                clockSrc.start(actx.currentTime + 0.0000001);
 
                 clockSrc.onended = function () {
                     curTime += 1/freq;
-                    var error = now() - curTime;
+                    var error = actx.currentTime - curTime;
 
                     clock.tick(error);
 

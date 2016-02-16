@@ -386,14 +386,25 @@ dtm.synth = function () {
                     self.bit[i] = v;
                 });
 
-                params.rendered.forEach(function (v, i) {
-                    var blockNum = Math.floor(i / interval);
-                    if (blockNum > self.bit.length-1) {
-                        blockNum = self.bit.length-1;
-                    }
-                    var res = Math.pow(2, self.bit[blockNum]);
-                    params.rendered[i] = Math.round(v * res) / res;
-                });
+                if (dtm.wa.useOfflineContext) {
+                    params.rendered.forEach(function (v, i) {
+                        var blockNum = Math.floor(i / interval);
+                        if (blockNum > self.bit.length-1) {
+                            blockNum = self.bit.length-1;
+                        }
+                        var res = Math.pow(2, self.bit[blockNum]);
+                        params.rendered[i] = Math.round(v * res) / res;
+                    });
+                } else {
+                    params.wavetable.forEach(function (v, i) {
+                        var blockNum = Math.floor(i / interval);
+                        if (blockNum > self.bit.length-1) {
+                            blockNum = self.bit.length-1;
+                        }
+                        var res = Math.pow(2, self.bit[blockNum]);
+                        params.wavetable[i] = Math.round(v * res) / res;
+                    });
+                }
             };
         },
 
@@ -415,18 +426,33 @@ dtm.synth = function () {
                     self.samps[i] = v;
                 });
 
-                params.rendered.forEach(function (v, i) {
-                    var blockNum = Math.floor(i / interval);
-                    if (blockNum > self.samps.length-1) {
-                        blockNum = self.samps.length-1;
-                    }
-                    var samps = self.samps[blockNum];
-                    var hold = 0;
-                    if (i % samps === 0) {
-                        hold = v;
-                    }
-                    params.rendered[i] = hold;
-                })
+                if (dtm.wa.useOfflineContext) {
+                    params.rendered.forEach(function (v, i) {
+                        var blockNum = Math.floor(i / interval);
+                        if (blockNum > self.samps.length - 1) {
+                            blockNum = self.samps.length - 1;
+                        }
+                        var samps = self.samps[blockNum];
+                        var hold = 0;
+                        if (i % samps === 0) {
+                            hold = v;
+                        }
+                        params.rendered[i] = hold;
+                    });
+                } else {
+                    params.wavetable.forEach(function (v, i) {
+                        var blockNum = Math.floor(i / interval);
+                        if (blockNum > self.samps.length - 1) {
+                            blockNum = self.samps.length - 1;
+                        }
+                        var samps = self.samps[blockNum];
+                        var hold = 0;
+                        if (i % samps === 0) {
+                            hold = v;
+                        }
+                        params.wavetable[i] = hold;
+                    });
+                }
             }
         },
 
@@ -958,7 +984,7 @@ dtm.synth = function () {
         if (isFloat32Array(src)) {
             params.wavetable = src;
             params.tabLen = src.length;
-            params.pitch = freqToPitch(params.freq); // ?
+            //params.pitch = freqToPitch(params.freq); // ?
         } else if (isFunction(src)) {
             if (params.promise) {
                 params.promise.then(function () {
@@ -967,7 +993,7 @@ dtm.synth = function () {
             } else {
                 params.wavetable = toFloat32Array(src(dtm.array(params.wavetable)));
                 params.tabLen = params.wavetable.length;
-                params.pitch = freqToPitch(params.freq); // ?
+                //params.pitch = freqToPitch(params.freq); // ?
             }
         } else {
             params.wavetable = new Float32Array(params.tabLen);
@@ -1324,17 +1350,6 @@ dtm.synth = function () {
         }
     }
 
-    function map(args, param) {
-        // TODO: if the param is empty (for .add, etc.) this would break
-        if (isFunction(args[0])) {
-            var res = args[0](param, synth, params.clock);
-            return check(res) ? convert(res) : param;
-        } else {
-            var argList = argsToArray(args);
-            return check(argList) ? convert(argList) : param;
-        }
-    }
-
     function mapParam(args, param, mod) {
         var res, argList;
 
@@ -1410,18 +1425,21 @@ dtm.synth = function () {
     synth.clone = function () {
         var newParams = {};
 
-        objForEach(params, function (v, k) {
-            if (['amp', 'notenum', 'freq', 'pitch', 'pan'].indexOf(k) > -1) {
-                newParams[k] = {};
-                newParams[k].base = v.base.clone();
-                newParams[k].add = isDtmArray(v.add) ? v.add.clone() : undefined;
-                newParams[k].mult = isDtmArray(v.mult) ? v.mult.clone() : undefined;
-                newParams[k].isFinal = v.isFinal;
-            } else {
-                newParams[k] = v;
-            }
-
-        });
+        try {
+            objForEach(params, function (v, k) {
+                if (['amp', 'notenum', 'freq', 'pitch', 'pan'].indexOf(k) > -1) {
+                    newParams[k] = {};
+                    newParams[k].base = v.base.clone();
+                    newParams[k].add = isDtmArray(v.add) ? v.add.clone() : undefined;
+                    newParams[k].mult = isDtmArray(v.mult) ? v.mult.clone() : undefined;
+                    newParams[k].isFinal = v.isFinal;
+                } else {
+                    newParams[k] = v;
+                }
+            });
+        } catch (e) {
+            console.log(e);
+        }
 
         newParams.voiceId = Math.random();
         return dtm.synth().meta.setParams(newParams);

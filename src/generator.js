@@ -79,6 +79,7 @@ dtm.generator = function () {
         oscil: ['sin', 'sine', 'cos', 'cosine', 'tri', 'triangle', 'saw', 'invSaw', 'noise', 'square', 'sq', 'harm', 'harmonic'],
         const: ['zeros', 'zeroes', 'ones', 'constant', 'constants', 'const', 'consts'],
         envelope: ['rise', 'decay', 'fall', 'ahr'],
+        sequence: [],
         noLength: ['string', 'str', 's', 'character', 'characters', 'chars', 'char', 'c', 'range', 'seq', 'scale', 'mode', 'chord'],
         noRange: [],
         noMinMax: [],
@@ -253,6 +254,15 @@ dtm.generator = function () {
             });
 
             return res ? res : new Float32Array();
+        }
+
+        function chord(name, transpose) {
+            var chords = {
+                major: {
+                    names: ['major', 'maj'],
+                    values: [0, 4, 7, 11, 14, 18, 21]
+                }
+            };
         }
 
         // TODO: typed?

@@ -274,8 +274,6 @@ dtm.instr = function (arg) {
         return instr;
     };
 
-    instr.start = instr.print = instr.run = instr.play;
-
     instr.stop = function () {
         if (params.isPlaying === true) {
             params.isPlaying = false;
@@ -408,4 +406,3 @@ dtm.instr = function (arg) {
 };
 
 dtm.i = dtm.instrument = dtm.instr;
-dtm.voice = dtm.instr;
