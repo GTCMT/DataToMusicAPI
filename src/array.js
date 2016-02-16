@@ -66,7 +66,7 @@ dtm.array = function () {
     array.get = function (param) {
         if (isNumber(param)) {
             // TODO: support multiple single val arguments?
-            return array.value[dtm.value.mod(param, params.len)];
+            return array.value[mod(param, params.len)];
         } else if (isNumArray(param) || (isDtmArray(param) && isNumArray(param.get()))) {
             var indices = isDtmArray(param) ? param.get() : param;
             var res = []; // TODO: support typed array?
@@ -74,7 +74,7 @@ dtm.array = function () {
             // TODO: only accept integers
 
             indices.forEach(function (i) {
-                res.push(array.value[dtm.value.mod(i, params.len)]);
+                res.push(array.value[mod(i, params.len)]);
             });
 
             return res;
@@ -227,11 +227,11 @@ dtm.array = function () {
                 case 'next':
                     // TODO: increment after return
                     if (isEmpty(arguments[1])) {
-                        params.index = dtm.value.mod(params.index + params.step, params.len);
+                        params.index = mod(params.index + params.step, params.len);
                         return array.value[params.index];
                     } else if (isNumber(arguments[1]) && arguments[1] >= 1) {
                         // TODO: incr w/ the step size AFTER RETURN
-                        params.index = dtm.value.mod(params.index + params.step, params.len);
+                        params.index = mod(params.index + params.step, params.len);
                         blockArray = dtm.transform.getBlock(array.value, params.index, arguments[1]);
                         return dtm.array(blockArray);
                     } else {
@@ -240,7 +240,7 @@ dtm.array = function () {
 
                 case 'prev':
                 case 'previous':
-                    params.index = dtm.value.mod(params.index - params.step, params.len);
+                    params.index = mod(params.index - params.step, params.len);
                     return array.value[params.index];
 
                 case 'palindrome':
@@ -248,7 +248,7 @@ dtm.array = function () {
 
                 case 'rand':
                 case 'random':
-                    params.index = dtm.val.randi(0, params.len);
+                    params.index = randi(0, params.len);
                     return array.value[params.index];
 
                 case 'urn':
@@ -288,7 +288,7 @@ dtm.array = function () {
 
                 case 'blockNext':
                     // TODO: incr w/ the step size AFTER RETURN
-                    params.index = dtm.value.mod(params.index + params.step, params.len);
+                    params.index = mod(params.index + params.step, params.len);
                     blockArray = dtm.transform.getBlock(array.value, params.index, arguments[1]);
                     return dtm.array(blockArray);
 
@@ -304,7 +304,7 @@ dtm.array = function () {
                         params.normalized = dtm.transform.normalize(array.value);
                     }
                     if (isInteger(arguments[1])) {
-                        return params.normalized[dtm.value.mod(arguments[1], params.len)];
+                        return params.normalized[mod(arguments[1], params.len)];
                     } else {
                         return params.normalized;
                     }
@@ -566,7 +566,7 @@ dtm.array = function () {
      */
     array.index = function (val) {
         if (isNumber(val)) {
-            params.index = dtm.value.mod(Math.round(val), params.len);
+            params.index = mod(Math.round(val), params.len);
         }
         return array;
     };
@@ -1211,7 +1211,7 @@ dtm.array = function () {
             return array;
         } else {
             indices.forEach(function (i) {
-                res.push(array.value[dtm.value.mod(i, params.len)]);
+                res.push(array.value[mod(i, params.len)]);
             });
             return array.set(res);
         }
@@ -1678,7 +1678,7 @@ dtm.array = function () {
 
         }
 
-        return array.set(dtm.transform.pq(array.value, scale));
+        return array.set(dtm.transform.pitchQuantize(array.value, scale));
     };
 
     array.mtof = function () {

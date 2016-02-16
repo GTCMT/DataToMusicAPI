@@ -10,7 +10,7 @@
         osc.connect(amp);
         amp.connect(out());
 
-        osc.frequency.value = dtm.val.mtof(nn);
+        osc.frequency.value = mtof(nn);
         osc.start(now());
         osc.stop(now() + 0.15);
 

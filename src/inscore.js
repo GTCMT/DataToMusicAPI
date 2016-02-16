@@ -22,7 +22,7 @@ dtm.inscore = function () {
         for (var i = 0; i < beats.length; i++) {
             var foo;
 
-            if (dtm.value.mod(i, 2) === 0) {
+            if (mod(i, 2) === 0) {
                 var down, up;
                 down = beats[i];
             } else {

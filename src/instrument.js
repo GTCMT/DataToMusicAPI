@@ -71,7 +71,7 @@ dtm.instr = function (arg) {
                     }
 
                     v.dur(dur).decay(dur);
-                    v.nn(dtm.val.pq(p + val, sc, params.pqRound) + tr).amp(vol).play();
+                    v.nn(pq(p + val, sc, params.pqRound) + tr).amp(vol).play();
                 });
             }
         }

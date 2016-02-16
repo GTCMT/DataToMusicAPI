@@ -52,8 +52,8 @@
 
 
         for (var i = 0; i < 8; i++) {
-            pc[i] = g.pitchClass[dtm.val.mod(p[i], 12)];
-            oct[i] = (p[i] - dtm.val.mod(p[i], 12)) / 12 - 4;
+            pc[i] = g.pitchClass[mod(p[i], 12)];
+            oct[i] = (p[i] - mod(p[i], 12)) / 12 - 4;
             res[i] = pc[i] + oct[i].toString() + '*' + dur[i] + '/' + div[0];
         }
 

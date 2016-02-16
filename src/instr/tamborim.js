@@ -36,10 +36,10 @@
                 dtm.syn('noise').decay(0.02).lpf(1000).amp(1.2).play();
             }
 
-            curNote = dtm.value.mod(curNote + 1, 4);
+            curNote = mod(curNote + 1, 4);
         }
 
-        idx = dtm.value.mod(idx + 1, subDiv);
+        idx = mod(idx + 1, subDiv);
 
         return m;
     };

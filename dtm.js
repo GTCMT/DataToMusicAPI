@@ -77,7 +77,7 @@ var dtm = {
             var buffer = actx.createBuffer(1, bufLen, dtm.wa.actx.sampleRate);
             var contents = buffer.getChannelData(0);
             dtm.gen('range', bufLen).get().forEach(function (idx) {
-                contents[idx] = dtm.value.random(-1, 1);
+                contents[idx] = random(-1, 1);
             });
 
             return buffer;
@@ -94,8 +94,8 @@ var dtm = {
 
             var exp = 10;
             dtm.gen('range', bufLen).get().forEach(function (idx) {
-                left[idx] = dtm.val.rescale(dtm.val.expCurve(dtm.value.random(0, 1) * (bufLen - idx) / bufLen, exp), -1, 1);
-                right[idx] = dtm.val.rescale(dtm.val.expCurve(dtm.value.random(0, 1) * (bufLen - idx) / bufLen, exp), -1, 1);
+                left[idx] = rescale(expCurve(random(0, 1) * (bufLen - idx) / bufLen, exp), -1, 1);
+                right[idx] = rescale(expCurve(random(0, 1) * (bufLen - idx) / bufLen, exp), -1, 1);
             });
 
             return buffer;
@@ -979,6 +979,162 @@ function intersection(arr1, arr2) {
     });
 }
 
+/* SINGLE-VALUE CALCULATION */
+/**
+ * Rescales a single normalized (0-1) value.
+ *
+ * @param val {float} Value between 0-1.
+ * @param min {number} Target range minimum.
+ * @param max {number} Target range maximum.
+ * @param [round=false] {boolean} If true, the output will be rounded to an integer.
+ * @returns {number}
+ */
+function rescale(val, min, max, round) {
+    round = round || false;
+
+    var res = val * (max - min) + min;
+
+    if (round) {
+        res = Math.round(res);
+    }
+
+    return res;
+}
+
+/**
+ * @param val {float} Value between 0-1.
+ * @param factor {float} Steepness. It should be above 1.
+ * @returns {number}
+ */
+function expCurve(val, factor) {
+    factor = factor <= 1 ? 1.000001 : factor;
+    return (Math.exp(val * Math.log(factor)) - 1.) / (factor - 1.);
+}
+
+/**
+ * @param val {float} Value between 0-1.
+ * @param factor {float} Steepness. It should be above 1.
+ * @returns {number}
+ */
+function logCurve(val, factor) {
+    factor = factor <= 1 ? 1.000001 : factor;
+    return (Math.log(val * (factor - 1.) + 1.)) / (Math.log(factor));
+}
+
+/**
+ * MIDI note number to frequency conversion.
+ * @param nn {number} Note number
+ * @returns {number}
+ */
+function mtof(nn) {
+    return 440.0 * Math.pow(2, (nn - 69) / 12.);
+}
+
+/**
+ * Frequency to MIDI note number conversion.
+ * @param freq {number} Note number
+ * @returns {number}
+ */
+function ftom(freq) {
+    return Math.log2(freq / 440.0) * 12 + 69;
+}
+
+/**
+ * Scale or pitch-quantizes the input value to the given models.scales.
+ * @param nn {number} Note number
+ * @param scale {array} An array of either number or string
+ * @param [round=false] {boolean}
+ * @returns {*}
+ */
+function pq(nn, scale, round) {
+    var solfa = {
+        0: ['do', 'd'],
+        1: ['di', 'ra'],
+        2: ['re', 'r'],
+        3: ['ri', 'me'],
+        4: ['mi', 'm', 'fe'],
+        5: ['fa', 'f'],
+        6: ['fi', 'se'],
+        7: ['sol', 's'],
+        8: ['si', 'le'],
+        9: ['la', 'l'],
+        10: ['li', 'te'],
+        11: ['ti', 't', 'de']
+    };
+
+    var sc = [];
+
+    if (isNumOrFloat32Array(scale)) {
+        sc = scale;
+    } else if (isStringArray(scale)) {
+        scale.forEach(function (v) {
+            objForEach(solfa, function (deg, key) {
+                if (deg.indexOf(v.toLowerCase()) > -1) {
+                    sc.push(parseInt(key));
+                }
+            });
+        })
+    } else if (!isArray(scale)) {
+        sc = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+    }
+
+    if (isEmpty(round)) {
+        round = false;
+    }
+
+    var pc = nn % 12;
+    var oct = nn - pc;
+    var idx = Math.floor(pc / 12. * sc.length);
+    var frac = 0.0;
+
+    if (!round) {
+        frac = nn % 1;
+    }
+    return oct + sc[idx] + frac;
+}
+
+/**
+ * A modulo (remainder) function.
+ * @param n {number} Divident
+ * @param m {number} Divisor
+ * @returns {number}
+ */
+function mod(n, m) {
+    return ((n % m) + m) % m;
+}
+
+function randi(arg1, arg2) {
+    var min, max;
+    if (!isNumber(arg1) && !isNumber(arg2)) {
+        min = 0.0;
+        max = 1.0;
+    } else if (isNumber(arg1) && !isNumber(arg2)) {
+        min = 0.0;
+        max = arg1;
+    } else if (isNumber(arg1) && isNumber(arg2)) {
+        min = arg1;
+        max = arg2;
+    }
+
+    return Math.floor(Math.random() * (max - min) + min);
+}
+
+function random(arg1, arg2) {
+    var min, max;
+    if (!isNumber(arg1) && !isNumber(arg2)) {
+        min = 0.0;
+        max = 1.0;
+    } else if (isNumber(arg1) && !isNumber(arg2)) {
+        min = 0.0;
+        max = arg1;
+    } else if (isNumber(arg1) && isNumber(arg2)) {
+        min = arg1;
+        max = arg2;
+    }
+
+    return Math.random() * (max - min) + min;
+}
+
 //function clone(obj) {
 //    var copy;
 //
@@ -1153,6 +1309,9 @@ dtm.util.intersection = intersection;
 dtm.util.argsToArray = argsToArray;
 dtm.util.toFloat32Array = toFloat32Array;
 dtm.util.fromFloat32Array = fromFloat32Array;
+
+/* SINGLE-VALUE CALCULATION */
+
 
 /* LIST OPERATION */
 dtm.util.Float32Concat = Float32Concat;
@@ -1627,7 +1786,7 @@ dtm.generator = function () {
         function sin(len, min, max, amp, cycle, offset) {
             var res = new Float32Array(len);
             for (var i = 0; i < len; i++) {
-                var phase = dtm.value.mod(i/(len-1) + offset / cycle, 1.0);
+                var phase = mod(i/(len-1) + offset / cycle, 1.0);
                 var val = Math.sin(Math.PI * 2.0 * phase * cycle) * amp;
                 val = (val+1)/2 * (max - min) + min;
                 res[i] = val;
@@ -1639,7 +1798,7 @@ dtm.generator = function () {
         function cos(len, min, max, amp, cycle, offset) {
             var res = new Float32Array(len);
             for (var i = 0; i < len; i++) {
-                var phase = dtm.value.mod(i/(len-1) + offset, 1.0);
+                var phase = mod(i/(len-1) + offset, 1.0);
                 var val = Math.cos(Math.PI * 2.0 * phase * cycle) * amp;
                 val = (val+1)/2 * (max - min) + min;
                 res[i] = val;
@@ -1731,7 +1890,7 @@ dtm.generator = function () {
 
         function transposeScale(scale, factor) {
             var shifted = scale.map(function (v) {
-                return dtm.val.mod(v + factor, 12);
+                return mod(v + factor, 12);
             });
 
             return dtm.transform.sort(shifted);
@@ -2361,7 +2520,7 @@ dtm.transform = {
         var res = [];
 
         normalized.forEach(function (val, idx) {
-            res[idx] = truncateDigits(dtm.value.rescale(val, min, max));
+            res[idx] = truncateDigits(rescale(val, min, max));
         });
 
         return res;
@@ -2379,7 +2538,7 @@ dtm.transform = {
         var res = [];
 
         arr.forEach(function (val, idx) {
-            res[idx] = dtm.value.expCurve(val, factor);
+            res[idx] = expCurve(val, factor);
         });
         return res;
     },
@@ -2396,7 +2555,7 @@ dtm.transform = {
         var res = [];
 
         arr.forEach(function (val, idx) {
-            res[idx] = dtm.value.logCurve(val, factor);
+            res[idx] = logCurve(val, factor);
         });
         return res;
     },
@@ -2676,14 +2835,14 @@ dtm.transform = {
 
                 if (add) {
                     while (rem < 0) {
-                        res[dtm.val.mod(arr.length-n, arr.length)]++;
+                        res[mod(arr.length-n, arr.length)]++;
                         rem++;
                         n++;
                     }
                 } else {
                     while (rem > 0) {
                         if (res[arr.length-n] > 0) {
-                            res[dtm.val.mod(arr.length-n, arr.length)]--;
+                            res[mod(arr.length-n, arr.length)]--;
                             rem--;
                             n++;
                         } else {
@@ -3012,7 +3171,7 @@ dtm.transform = {
         }
 
         input.forEach(function (v, i) {
-            res[i] = dtm.value.mod(v, divisor);
+            res[i] = mod(v, divisor);
         });
 
         return res;
@@ -3179,7 +3338,7 @@ dtm.transform = {
 
         // TODO: non-wrapping zero-padded version
         for (var i = 0; i < size; i++) {
-            idx = dtm.val.mod(i + start, arr.length);
+            idx = mod(i + start, arr.length);
             res[i] = arr[idx];
         }
 
@@ -3264,7 +3423,7 @@ dtm.transform = {
         var res = [];
 
         for (var i = 0; i < arr.length; i++) {
-            var j = dtm.value.mod((i + amount), arr.length);
+            var j = mod((i + amount), arr.length);
             res[i] = arr[j];
         }
         return res;
@@ -3541,10 +3700,10 @@ dtm.transform = {
         return res;
     },
 
-    pq: function (input, scale, round) {
+    pitchQuantize: function (input, scale, round) {
         var res = [];
         input.forEach(function (val, idx) {
-            res[idx] = dtm.value.pq(val, scale, round);
+            res[idx] = pq(val, scale, round);
         });
 
         return res;
@@ -3609,7 +3768,7 @@ dtm.transform = {
         }
 
         input.forEach(function (v, i) {
-            res[i] = dtm.value.mtof(v);
+            res[i] = mtof(v);
         });
         return res;
     },
@@ -3624,7 +3783,7 @@ dtm.transform = {
         }
 
         input.forEach(function (v, i) {
-            res[i] = dtm.value.ftom(v);
+            res[i] = ftom(v);
         });
 
         return res;
@@ -3762,7 +3921,7 @@ dtm.array = function () {
     array.get = function (param) {
         if (isNumber(param)) {
             // TODO: support multiple single val arguments?
-            return array.value[dtm.value.mod(param, params.len)];
+            return array.value[mod(param, params.len)];
         } else if (isNumArray(param) || (isDtmArray(param) && isNumArray(param.get()))) {
             var indices = isDtmArray(param) ? param.get() : param;
             var res = []; // TODO: support typed array?
@@ -3770,7 +3929,7 @@ dtm.array = function () {
             // TODO: only accept integers
 
             indices.forEach(function (i) {
-                res.push(array.value[dtm.value.mod(i, params.len)]);
+                res.push(array.value[mod(i, params.len)]);
             });
 
             return res;
@@ -3923,11 +4082,11 @@ dtm.array = function () {
                 case 'next':
                     // TODO: increment after return
                     if (isEmpty(arguments[1])) {
-                        params.index = dtm.value.mod(params.index + params.step, params.len);
+                        params.index = mod(params.index + params.step, params.len);
                         return array.value[params.index];
                     } else if (isNumber(arguments[1]) && arguments[1] >= 1) {
                         // TODO: incr w/ the step size AFTER RETURN
-                        params.index = dtm.value.mod(params.index + params.step, params.len);
+                        params.index = mod(params.index + params.step, params.len);
                         blockArray = dtm.transform.getBlock(array.value, params.index, arguments[1]);
                         return dtm.array(blockArray);
                     } else {
@@ -3936,7 +4095,7 @@ dtm.array = function () {
 
                 case 'prev':
                 case 'previous':
-                    params.index = dtm.value.mod(params.index - params.step, params.len);
+                    params.index = mod(params.index - params.step, params.len);
                     return array.value[params.index];
 
                 case 'palindrome':
@@ -3944,7 +4103,7 @@ dtm.array = function () {
 
                 case 'rand':
                 case 'random':
-                    params.index = dtm.val.randi(0, params.len);
+                    params.index = randi(0, params.len);
                     return array.value[params.index];
 
                 case 'urn':
@@ -3984,7 +4143,7 @@ dtm.array = function () {
 
                 case 'blockNext':
                     // TODO: incr w/ the step size AFTER RETURN
-                    params.index = dtm.value.mod(params.index + params.step, params.len);
+                    params.index = mod(params.index + params.step, params.len);
                     blockArray = dtm.transform.getBlock(array.value, params.index, arguments[1]);
                     return dtm.array(blockArray);
 
@@ -4000,7 +4159,7 @@ dtm.array = function () {
                         params.normalized = dtm.transform.normalize(array.value);
                     }
                     if (isInteger(arguments[1])) {
-                        return params.normalized[dtm.value.mod(arguments[1], params.len)];
+                        return params.normalized[mod(arguments[1], params.len)];
                     } else {
                         return params.normalized;
                     }
@@ -4262,7 +4421,7 @@ dtm.array = function () {
      */
     array.index = function (val) {
         if (isNumber(val)) {
-            params.index = dtm.value.mod(Math.round(val), params.len);
+            params.index = mod(Math.round(val), params.len);
         }
         return array;
     };
@@ -4907,7 +5066,7 @@ dtm.array = function () {
             return array;
         } else {
             indices.forEach(function (i) {
-                res.push(array.value[dtm.value.mod(i, params.len)]);
+                res.push(array.value[mod(i, params.len)]);
             });
             return array.set(res);
         }
@@ -5374,7 +5533,7 @@ dtm.array = function () {
 
         }
 
-        return array.set(dtm.transform.pq(array.value, scale));
+        return array.set(dtm.transform.pitchQuantize(array.value, scale));
     };
 
     array.mtof = function () {
@@ -5523,179 +5682,6 @@ dtm.collection = function () {
 dtm.coll = dtm.collection;
 
 // TODO: transformation module for this???
-/**
- * @fileOverview Utility functions for single value input. Singleton.
- * @module value
- */
-
-dtm.value = {
-    type: 'dtm.value',
-
-    /**
-     * Rescales a single normalized (0-1) value.
-     *
-     * @function module:value#rescale
-     * @param val {float} Value between 0-1.
-     * @param min {number} Target range minimum.
-     * @param max {number} Target range maximum.
-     * @param [round=false] {boolean} If true, the output will be rounded to an integer.
-     * @returns {number}
-     */
-    rescale: function (val, min, max, round) {
-        round = round || false;
-
-        var res = val * (max - min) + min;
-
-        if (round) {
-            res = Math.round(res);
-        }
-
-        return res;
-    },
-
-    /**
-     * @function module:value#expCurve
-     * @param val {float} Value between 0-1.
-     * @param factor {float} Steepness. It should be above 1.
-     * @returns {number}
-     */
-    expCurve: function (val, factor) {
-        factor = factor <= 1 ? 1.000001 : factor;
-        return (Math.exp(val * Math.log(factor)) - 1.) / (factor - 1.);
-    },
-
-    /**
-     * @function module:value#logCurve
-     * @param val {float} Value between 0-1.
-     * @param factor {float} Steepness. It should be above 1.
-     * @returns {number}
-     */
-    logCurve: function (val, factor) {
-        factor = factor <= 1 ? 1.000001 : factor;
-        return (Math.log(val * (factor - 1.) + 1.)) / (Math.log(factor));
-    },
-
-    /**
-     * MIDI note number to frequency conversion.
-     * @function module:value#mtof
-     * @param nn {number} Note number
-     * @returns {number}
-     */
-    mtof: function (nn) {
-        return 440.0 * Math.pow(2, (nn - 69) / 12.);
-    },
-
-    /**
-     * Frequency to MIDI note number conversion.
-     * @function module:value#mtof
-     * @param freq {number} Note number
-     * @returns {number}
-     */
-    ftom: function (freq) {
-        return Math.log2(freq / 440.0) * 12 + 69;
-    },
-
-    /**
-     * Scale or pitch-quantizes the input value to the given models.scales.
-     * @function module:value#pq
-     * @param nn {number} Note number
-     * @param scale {array} An array of either number or string
-     * @param [round=false] {boolean}
-     * @returns {*}
-     */
-    pq: function (nn, scale, round) {
-        var solfa = {
-            0: ['do', 'd'],
-            1: ['di', 'ra'],
-            2: ['re', 'r'],
-            3: ['ri', 'me'],
-            4: ['mi', 'm', 'fe'],
-            5: ['fa', 'f'],
-            6: ['fi', 'se'],
-            7: ['sol', 's'],
-            8: ['si', 'le'],
-            9: ['la', 'l'],
-            10: ['li', 'te'],
-            11: ['ti', 't', 'de']
-        };
-
-        var sc = [];
-
-        if (isNumOrFloat32Array(scale)) {
-            sc = scale;
-        } else if (isStringArray(scale)) {
-            scale.forEach(function (v) {
-                objForEach(solfa, function (deg, key) {
-                    if (deg.indexOf(v.toLowerCase()) > -1) {
-                        sc.push(parseInt(key));
-                    }
-                });
-            })
-        } else if (!isArray(scale)) {
-            sc = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
-        }
-
-        if (isEmpty(round)) {
-            round = false;
-        }
-
-        var pc = nn % 12;
-        var oct = nn - pc;
-        var idx = Math.floor(pc / 12. * sc.length);
-        var frac = 0.0;
-
-        if (!round) {
-            frac = nn % 1;
-        }
-        return oct + sc[idx] + frac;
-    },
-
-    /**
-     * A modulo (remainder) function that is not broken like the JS implementation.
-     * @param n {number} Divident
-     * @param m {number} Divisor
-     * @returns {number}
-     */
-    mod: function mod(n, m) {
-        return ((n % m) + m) % m;
-    },
-
-    randi: function (arg1, arg2) {
-        var min, max;
-        if (!isNumber(arg1) && !isNumber(arg2)) {
-            min = 0.0;
-            max = 1.0;
-        } else if (isNumber(arg1) && !isNumber(arg2)) {
-            min = 0.0;
-            max = arg1;
-        } else if (isNumber(arg1) && isNumber(arg2)) {
-            min = arg1;
-            max = arg2;
-        }
-
-        return Math.floor(Math.random() * (max - min) + min);
-    },
-
-    random: function (arg1, arg2) {
-        var min, max;
-        if (!isNumber(arg1) && !isNumber(arg2)) {
-            min = 0.0;
-            max = 1.0;
-        } else if (isNumber(arg1) && !isNumber(arg2)) {
-            min = 0.0;
-            max = arg1;
-        } else if (isNumber(arg1) && isNumber(arg2)) {
-            min = arg1;
-            max = arg2;
-        }
-
-        return Math.random() * (max - min) + min;
-    }
-};
-
-dtm.value.rand = dtm.value.random;
-
-dtm.v = dtm.val = dtm.value;
 /**
  * @fileOverview Parses random stuff. Singleton.
  * @module parser
@@ -6856,7 +6842,7 @@ dtm.instr = function (arg) {
                     }
 
                     v.dur(dur).decay(dur);
-                    v.nn(dtm.val.pq(p + val, sc, params.pqRound) + tr).amp(vol).play();
+                    v.nn(pq(p + val, sc, params.pqRound) + tr).amp(vol).play();
                 });
             }
         }
@@ -8123,7 +8109,7 @@ dtm.synth = function () {
     // maybe not good to have this in synth, instead should be in a model?
     synth.time = function (src) {
         if (isNumber(src) && (src > 0) && !isEmpty(params.clock)) {
-            if (dtm.val.mod(params.clock.get('beat'), params.clock.get('time') * src) === 0) {
+            if (mod(params.clock.get('beat'), params.clock.get('time') * src) === 0) {
                 // TODO: implement
             }
         }
@@ -8178,7 +8164,7 @@ dtm.synth = function () {
 
             if (params.notenum.isFinal) {
                 pitch = process(params.notenum).map(function (v) {
-                    return freqToPitch(dtm.val.mtof(v));
+                    return freqToPitch(mtof(v));
                 });
             } else if (params.freq.isFinal) {
                 pitch = process(params.freq).map(function (v) {
@@ -9266,8 +9252,8 @@ dtm.guido = {
     },
 
     nnToPitch: function (nn) {
-        var pc = dtm.guido.pitchClass[dtm.val.mod(nn, 12)];
-        var oct = (nn - dtm.val.mod(nn, 12)) / 12 - 4;
+        var pc = dtm.guido.pitchClass[mod(nn, 12)];
+        var oct = (nn - mod(nn, 12)) / 12 - 4;
         return pc + oct.toString();
     },
 
@@ -9326,7 +9312,7 @@ dtm.inscore = function () {
         for (var i = 0; i < beats.length; i++) {
             var foo;
 
-            if (dtm.value.mod(i, 2) === 0) {
+            if (mod(i, 2) === 0) {
                 var down, up;
                 down = beats[i];
             } else {
@@ -9591,7 +9577,7 @@ dtm.inscore = function () {
                 }
 
                 v.dur(dur).decay(dur);
-                v.nn(dtm.val.pq(p + val, sc, params.pqRound) + tr).amp(vol).pan(pan).play();
+                v.nn(pq(p + val, sc, params.pqRound) + tr).amp(vol).pan(pan).play();
             });
         }
     };

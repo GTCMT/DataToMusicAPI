@@ -17,7 +17,6 @@ module.exports = function (grunt) {
                     'src/transform.js',
                     'src/array.js',
                     'src/collection.js',
-                    'src/value.js',
                     'src/iterator.js',
                     'src/parser.js',
                     'src/data.js',

@@ -539,7 +539,7 @@ dtm.synth = function () {
     // maybe not good to have this in synth, instead should be in a model?
     synth.time = function (src) {
         if (isNumber(src) && (src > 0) && !isEmpty(params.clock)) {
-            if (dtm.val.mod(params.clock.get('beat'), params.clock.get('time') * src) === 0) {
+            if (mod(params.clock.get('beat'), params.clock.get('time') * src) === 0) {
                 // TODO: implement
             }
         }
@@ -594,7 +594,7 @@ dtm.synth = function () {
 
             if (params.notenum.isFinal) {
                 pitch = process(params.notenum).map(function (v) {
-                    return freqToPitch(dtm.val.mtof(v));
+                    return freqToPitch(mtof(v));
                 });
             } else if (params.freq.isFinal) {
                 pitch = process(params.freq).map(function (v) {

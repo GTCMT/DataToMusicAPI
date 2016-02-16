@@ -111,7 +111,7 @@ dtm.generator = function () {
         function sin(len, min, max, amp, cycle, offset) {
             var res = new Float32Array(len);
             for (var i = 0; i < len; i++) {
-                var phase = dtm.value.mod(i/(len-1) + offset / cycle, 1.0);
+                var phase = mod(i/(len-1) + offset / cycle, 1.0);
                 var val = Math.sin(Math.PI * 2.0 * phase * cycle) * amp;
                 val = (val+1)/2 * (max - min) + min;
                 res[i] = val;
@@ -123,7 +123,7 @@ dtm.generator = function () {
         function cos(len, min, max, amp, cycle, offset) {
             var res = new Float32Array(len);
             for (var i = 0; i < len; i++) {
-                var phase = dtm.value.mod(i/(len-1) + offset, 1.0);
+                var phase = mod(i/(len-1) + offset, 1.0);
                 var val = Math.cos(Math.PI * 2.0 * phase * cycle) * amp;
                 val = (val+1)/2 * (max - min) + min;
                 res[i] = val;
@@ -215,7 +215,7 @@ dtm.generator = function () {
 
         function transposeScale(scale, factor) {
             var shifted = scale.map(function (v) {
-                return dtm.val.mod(v + factor, 12);
+                return mod(v + factor, 12);
             });
 
             return dtm.transform.sort(shifted);

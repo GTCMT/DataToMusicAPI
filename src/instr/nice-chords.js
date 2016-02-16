@@ -39,7 +39,7 @@
             osc[i] = actx.createOscillator();
             osc[i].connect(amp);
 
-            osc[i].frequency.setValueAtTime(dtm.val.mtof(dtm.val.pq(nn + 3 * i, scale)), now());
+            osc[i].frequency.setValueAtTime(mtof(pq(nn + 3 * i, scale)), now());
             osc[i].setPeriodicWave(timbre);
 
             osc[i].start(now());

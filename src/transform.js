@@ -78,7 +78,7 @@ dtm.transform = {
         var res = [];
 
         normalized.forEach(function (val, idx) {
-            res[idx] = truncateDigits(dtm.value.rescale(val, min, max));
+            res[idx] = truncateDigits(rescale(val, min, max));
         });
 
         return res;
@@ -96,7 +96,7 @@ dtm.transform = {
         var res = [];
 
         arr.forEach(function (val, idx) {
-            res[idx] = dtm.value.expCurve(val, factor);
+            res[idx] = expCurve(val, factor);
         });
         return res;
     },
@@ -113,7 +113,7 @@ dtm.transform = {
         var res = [];
 
         arr.forEach(function (val, idx) {
-            res[idx] = dtm.value.logCurve(val, factor);
+            res[idx] = logCurve(val, factor);
         });
         return res;
     },
@@ -393,14 +393,14 @@ dtm.transform = {
 
                 if (add) {
                     while (rem < 0) {
-                        res[dtm.val.mod(arr.length-n, arr.length)]++;
+                        res[mod(arr.length-n, arr.length)]++;
                         rem++;
                         n++;
                     }
                 } else {
                     while (rem > 0) {
                         if (res[arr.length-n] > 0) {
-                            res[dtm.val.mod(arr.length-n, arr.length)]--;
+                            res[mod(arr.length-n, arr.length)]--;
                             rem--;
                             n++;
                         } else {
@@ -729,7 +729,7 @@ dtm.transform = {
         }
 
         input.forEach(function (v, i) {
-            res[i] = dtm.value.mod(v, divisor);
+            res[i] = mod(v, divisor);
         });
 
         return res;
@@ -896,7 +896,7 @@ dtm.transform = {
 
         // TODO: non-wrapping zero-padded version
         for (var i = 0; i < size; i++) {
-            idx = dtm.val.mod(i + start, arr.length);
+            idx = mod(i + start, arr.length);
             res[i] = arr[idx];
         }
 
@@ -981,7 +981,7 @@ dtm.transform = {
         var res = [];
 
         for (var i = 0; i < arr.length; i++) {
-            var j = dtm.value.mod((i + amount), arr.length);
+            var j = mod((i + amount), arr.length);
             res[i] = arr[j];
         }
         return res;
@@ -1258,10 +1258,10 @@ dtm.transform = {
         return res;
     },
 
-    pq: function (input, scale, round) {
+    pitchQuantize: function (input, scale, round) {
         var res = [];
         input.forEach(function (val, idx) {
-            res[idx] = dtm.value.pq(val, scale, round);
+            res[idx] = pq(val, scale, round);
         });
 
         return res;
@@ -1326,7 +1326,7 @@ dtm.transform = {
         }
 
         input.forEach(function (v, i) {
-            res[i] = dtm.value.mtof(v);
+            res[i] = mtof(v);
         });
         return res;
     },
@@ -1341,7 +1341,7 @@ dtm.transform = {
         }
 
         input.forEach(function (v, i) {
-            res[i] = dtm.value.ftom(v);
+            res[i] = ftom(v);
         });
 
         return res;

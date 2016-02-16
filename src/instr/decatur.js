@@ -153,7 +153,7 @@
 
                     var pitch = '';
 
-                    pitch += dtm.guido.nnToPitch(dtm.val.pq(p+tr, sc, true));
+                    pitch += dtm.guido.nnToPitch(pq(p+tr, sc, true));
 
                     // note len & duration
                     if (params.durFx[dur] == 'rest' || ac === 0) {
@@ -371,15 +371,15 @@
 
                         if (noteLen !== 0) {
                             if (durMod !== 0 && ac !== 0) {
-                                var delInSec = del * unit + dtm.val.rand(0, 0.01);
+                                var delInSec = del * unit + rand(0, 0.01);
                                 var durInSec = noteLen * durMod * unit * 0.95;
                                 if (mods.chord.get('len') > 1) {
                                     for (var k = 0; k < chord.length; k++) {
-                                        var trv = dtm.val.pq(p + tr, sc, true);
-                                        evList.push([delInSec, durInSec, dtm.val.pq(trv + chord[k], sc, true)]);
+                                        var trv = pq(p + tr, sc, true);
+                                        evList.push([delInSec, durInSec, pq(trv + chord[k], sc, true)]);
                                     }
                                 } else {
-                                    evList.push([delInSec, durInSec, dtm.val.pq(p + tr, sc, true)]);
+                                    evList.push([delInSec, durInSec, pq(p + tr, sc, true)]);
                                 }
                             }
                             del += noteLen;
@@ -751,7 +751,7 @@
                     if (chord[j] !== 0) {
                         var cv = nn + chord[j];
                         if (scale) {
-                            cv = dtm.val.pq(cv, scale, true);
+                            cv = pq(cv, scale, true);
                         }
                         seq[i] += ', ';
                         seq[i] += dtm.guido.nnToPitch(cv);

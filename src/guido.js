@@ -28,8 +28,8 @@ dtm.guido = {
     },
 
     nnToPitch: function (nn) {
-        var pc = dtm.guido.pitchClass[dtm.val.mod(nn, 12)];
-        var oct = (nn - dtm.val.mod(nn, 12)) / 12 - 4;
+        var pc = dtm.guido.pitchClass[mod(nn, 12)];
+        var oct = (nn - mod(nn, 12)) / 12 - 4;
         return pc + oct.toString();
     },
 

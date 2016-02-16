@@ -75,7 +75,7 @@ var dtm = {
             var buffer = actx.createBuffer(1, bufLen, dtm.wa.actx.sampleRate);
             var contents = buffer.getChannelData(0);
             dtm.gen('range', bufLen).get().forEach(function (idx) {
-                contents[idx] = dtm.value.random(-1, 1);
+                contents[idx] = random(-1, 1);
             });
 
             return buffer;
@@ -92,8 +92,8 @@ var dtm = {
 
             var exp = 10;
             dtm.gen('range', bufLen).get().forEach(function (idx) {
-                left[idx] = dtm.val.rescale(dtm.val.expCurve(dtm.value.random(0, 1) * (bufLen - idx) / bufLen, exp), -1, 1);
-                right[idx] = dtm.val.rescale(dtm.val.expCurve(dtm.value.random(0, 1) * (bufLen - idx) / bufLen, exp), -1, 1);
+                left[idx] = rescale(expCurve(random(0, 1) * (bufLen - idx) / bufLen, exp), -1, 1);
+                right[idx] = rescale(expCurve(random(0, 1) * (bufLen - idx) / bufLen, exp), -1, 1);
             });
 
             return buffer;

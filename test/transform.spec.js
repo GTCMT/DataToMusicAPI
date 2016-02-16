@@ -4,7 +4,7 @@ describe('array helper functions', function () {
             describe('normalize autmatically to 0-1 range', function () {
                 var input = [];
                 for (var i = 0; i < 8; i++) {
-                    input[i] = dtm.value.randi(-10, 10);
+                    input[i] = randi(-10, 10);
                 }
                 var norm = dtm.transform.normalize(input);
 
@@ -35,7 +35,7 @@ describe('array helper functions', function () {
                 var min = -1;
 
                 for (var i = 0; i < 8; i++) {
-                    input[i] = dtm.value.randi(0, 10);
+                    input[i] = randi(0, 10);
                 }
 
                 var output = dtm.transform.rescale(input, min, max);
@@ -83,7 +83,7 @@ describe('array helper functions', function () {
         describe('size manipulation sutff', function () {
             var input = [];
             for (var i = 0; i < 4; i++) {
-                input[i] = dtm.value.randi(-10, 10);
+                input[i] = randi(-10, 10);
             }
 
             // TODO: write proper test cases
@@ -228,7 +228,7 @@ describe('array helper functions', function () {
     describe('mean', function () {
         var input = [];
         for (var i = 0; i < 8; i++) {
-            input[i] = dtm.value.randi(0, 10);
+            input[i] = randi(0, 10);
         }
 
         var output = mean(input);
@@ -265,7 +265,7 @@ describe('array helper functions', function () {
     describe('shift', function () {
         var input = [];
         for (var i = 0; i < 8; i++) {
-            input[i] = dtm.value.randi(-10, 10);
+            input[i] = randi(-10, 10);
         }
 
         var shift = -2;
@@ -280,7 +280,7 @@ describe('array helper functions', function () {
     describe('shuffle', function () {
         var input = [];
         for (var i = 0; i < 8; i++) {
-            input[i] = dtm.value.randi(-10, 10);
+            input[i] = randi(-10, 10);
         }
 
         var output = dtm.transform.shuffle(input);
@@ -494,7 +494,7 @@ describe('array helper functions', function () {
     describe('pitch quantize', function () {
         it('should work with solfa array', function () {
             //expect(dtm.transform.pq([0,2,4,5,7,9,11], ['d','r','me','f','s','le','te'])).toEqual([0,2,3,5,7,8,10]);
-            expect(dtm.transform.pq([0,2,4,6,7,9,11], ['d','r','me','f','s','le','te'])).toEqual([0,2,3,5,7,8,10]);
+            expect(dtm.transform.pitchQuantize([0,2,4,6,7,9,11], ['d','r','me','f','s','le','te'])).toEqual([0,2,3,5,7,8,10]);
         });
     });
 });
