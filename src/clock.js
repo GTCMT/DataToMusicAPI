@@ -26,6 +26,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
         isMaster: false,
 
         bpm: 120,
+        interval: { base: dtm.array([[0.5]]) },
         subDiv: 2,
         random: 0,
         swing: 0.5,
@@ -63,6 +64,12 @@ dtm.clock = function (bpm, subDiv, autoStart) {
     var curTime = 0.0;
 
     var actx = null, clockBuf = null;
+
+    function setFinal(param) {
+        ['bpm', 'time', 'interval'].forEach(function (v) {
+            params[v].isFinal = v === param;
+        });
+    }
 
     /**
      * Get the value of a parameter of the clock object.
@@ -226,13 +233,56 @@ dtm.clock = function (bpm, subDiv, autoStart) {
     };
 
     clock.interval = function (sec) {
+        function check(src, depth) {
+            if (!isInteger(depth)) {
+                depth = 3;
+            }
+            return isNumber(src) ||
+                ((isNumArray(src) ||
+                isNestedArray(src) ||
+                isNestedWithDtmArray(src) ||
+                isNumOrFloat32Array(src) ||
+                isNumDtmArray(src) ||
+                isNestedNumDtmArray(src)) && getMaxDepth(src) <= depth);
+        }
+
+        function convertShallow(src) {
+            if (src.length === 1) {
+                return convertShallow(src[0]);
+            } else {
+                if (isNestedNumDtmArray(src)) {
+                    return src;
+                } else if (isNestedWithDtmArray(src)) {
+                    return dtm.array.apply(this, src);
+                } else if (isNumDtmArray(src)) {
+                    return src().block(1);
+                } else if (isNestedArray(src)) {
+                    return dtm.array(src);
+                } else if (isNumOrFloat32Array(src)) {
+                    return dtm.array(src).block(1);
+                } else {
+                    return dtm.array([toFloat32Array(src)]);
+                }
+            }
+        }
+
+        var depth = 2;
+
+        if (isFunction(arguments[0])) {
+            var res = arguments[0](params.interval.base, clock);
+            params.interval.base = check(res, depth) ? convertShallow(res) : params.interval.base;
+        } else {
+            var argList = argsToArray(arguments);
+            params.interval.base = check(argList) ? convertShallow(argList) : param;
+        }
+
         params.sync = false;
         params.subDiv = 1.0;
-        params.bpm = 60.0 / sec * 4;
+        //params.bpm = 60.0 / sec * 4;
         return clock;
     };
 
-    clock.dur = clock.interval;
+    clock.dur = clock.int = clock.interval;
 
     function getInterval() {
         if (params.sync) {
@@ -250,6 +300,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
         }
     }
 
+    // TODO: remove this
     clock.setTime = function (input) {
         if (isArray(input)) {
             clock.params.time = input;
@@ -472,6 +523,9 @@ dtm.clock = function (bpm, subDiv, autoStart) {
                         clock.callbacks.forEach(function (cb) {
                             cb(clock);
                         });
+
+                        //params.subDiv = 1.0;
+                        params.bpm = 60 / params.interval.base.get('next').get() * 4;
                     }
 
                     params.current = params.reported;

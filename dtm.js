@@ -1430,246 +1430,7 @@ dtm.osc.close = dtm.osc.stop;
  */
 
 dtm.analyzer = {
-    //type: 'dtm.analyzer',
-    //
-    ///**
-    // * Returns the minimum value of numeric array.
-    // * @function module:analyzer#min
-    // * @param arr {number}
-    // * @returns {number}
-    // */
-    //min: function (arr) {
-    //    if (isNumOrFloat32Array(arr)) {
-    //        return Math.min.apply(this, arr);
-    //    }
-    //},
-    //
-    ///**
-    // * Returns the maximum value of numeric array.
-    // * @function module:analyzer#max
-    // * @param arr {number}
-    // * @returns {number}
-    // */
-    //max: function (arr) {
-    //    if (isNumOrFloat32Array(arr)) {
-    //        return Math.max.apply(this, arr);
-    //    }
-    //},
-    //
-    ///**
-    // * Returns the mean of a numeric array.
-    // * @function module:analyzer#mean
-    // * @param arr {array} Input numerical array.
-    // * @returns val {number} Single mean value.
-    // * @example
-    // *
-    // * dtm.transform.mean([8, 9, 4, 0, 9, 2, 1, 6]);
-    // * -> 4.875
-    // */
-    //mean: function (arr) {
-    //    if (isNumOrFloat32Array(arr)) {
-    //        return dtm.analyzer.sum(arr) / arr.length;
-    //    }
-    //},
-    //
-    ///**
-    // * Returns the most frequent value of the array.
-    // * @function module:analyzer#mode
-    // * @param arr {array}
-    // * @returns {value}
-    // */
-    //mode: function (arr) {
-    //    var uniqs = dtm.analyzer.unique(arr);
-    //    var max = 0;
-    //    var num = 0;
-    //    var res = null;
-    //
-    //    var histo = dtm.anal.countBy(arr);
-    //
-    //    uniqs.forEach(function (val) {
-    //        num = histo[val];
-    //
-    //        if (num > max) {
-    //            res = val;
-    //            max = num;
-    //        }
-    //    });
-    //
-    //    return res;
-    //},
-    //
-    ///**
-    // * Returns the median of numerical array.
-    // * @function module:analyzer#median
-    // * @param arr
-    // * @returns {number}
-    // */
-    //median: function (arr) {
-    //    var sorted = arr.sort();
-    //    var len = arr.length;
-    //
-    //    if (len % 2 === 0) {
-    //        return (sorted[len/2 - 1] + sorted[len/2]) / 2
-    //    } else {
-    //        return sorted[Math.floor(len/2)];
-    //    }
-    //},
-    //
-    ///**
-    // * Returns the midrange of numerical array.
-    // * @function module:analyzer#midrange
-    // * @param arr
-    // * @return {number}
-    // */
-    //midrange: function (arr) {
-    //    var max = dtm.analyzer.max(arr);
-    //    var min = dtm.analyzer.min(arr);
-    //    return (max + min) / 2;
-    //},
-    //
-    //// TODO: num string parsing
-    ///**
-    // * Simple summation.
-    // * @function module:analyzer#sum
-    // * @param arr
-    // * @returns {number}
-    // */
-    //sum: function (arr) {
-    //    return arr.reduce(function (num, sum) {
-    //        return num + sum;
-    //    });
-    //},
-    //
-    ///**
-    // * Variance.
-    // * @function module:analyzer#var
-    // * @param arr
-    // * @returns {*}
-    // */
-    //var: function (arr) {
-    //    var mean = dtm.analyzer.mean(arr);
-    //
-    //    var res = [];
-    //    arr.forEach(function (val, idx) {
-    //        res[idx] = Math.pow((mean - val), 2);
-    //    });
-    //
-    //    // TODO: divide-by-zero error
-    //    return dtm.analyzer.sum(res) / (arr.length-1);
-    //},
-    //
-    ///**
-    // * Standard Deviation.
-    // * @function module:analyzer#std
-    // * @param arr
-    // * @returns {*}
-    // */
-    //std: function (arr) {
-    //    return Math.sqrt(dtm.analyzer.var(arr));
-    //},
-    //
-    ///**
-    // * Population Variance.
-    // * @function module:analyzer#pvar
-    // * @param arr
-    // * @returns {*}
-    // */
-    //pvar: function (arr) {
-    //    var mean = dtm.analyzer.mean(arr);
-    //
-    //    var res = [];
-    //    arr.forEach(function (val, idx) {
-    //        res[idx] = Math.pow((mean - val), 2);
-    //    });
-    //
-    //    return dtm.analyzer.mean(res);
-    //},
-    //
-    ///**
-    // * Population Standard Deviation.
-    // * @function module:analyzer#pstd
-    // * @param arr
-    // * @returns {number}
-    // */
-    //pstd: function (arr) {
-    //    return Math.sqrt(dtm.analyzer.pvar(arr));
-    //},
-    //
-    ///**
-    // * Root-Mean-Square value of given numerical array.
-    // * @function module:analyzer#rms
-    // * @param arr {array}
-    // * @returns rms {number}
-    // */
-    //rms: function (arr) {
-    //    var res = [];
-    //    arr.forEach(function (val, idx) {
-    //        res[idx] = Math.pow(val, 2);
-    //    });
-    //
-    //    return Math.sqrt(dtm.analyzer.mean(res));
-    //},
-    //
-    //unique: function (input) {
-    //    var res = [];
-    //    input.forEach(function (v) {
-    //        if (res.indexOf(v) === -1) {
-    //            res.push(v);
-    //        }
-    //    });
-    //
-    //    return res;
-    //},
-    //
-    ///**
-    // * Counts occurrences of each class in the list.
-    // * @function module:analyzer#histo
-    // * @param input {array}
-    // * @returns {array}
-    // */
-    //histo: function (input) {
-    //    var res = [];
-    //    var classes = cloneArray(input);
-    //    var histogram = dtm.analyzer.countBy(input);
-    //
-    //    classes.forEach(function (val, idx) {
-    //        res[idx] = histogram[val];
-    //    });
-    //
-    //    return res;
-    //},
-    //
-    //countBy: function (input) {
-    //    var res = {};
-    //    input.forEach(function (v) {
-    //        if (!res.hasOwnProperty(v)) {
-    //            res[v] = 1;
-    //        } else {
-    //            res[v]++;
-    //        }
-    //    });
-    //    return res;
-    //},
-    //
-    ///**
-    // * List unique items as "class" in sorted order.
-    // * @function module:analyzer#classes
-    // * @param input {array}
-    // * @returns {array}
-    // */
-    //classes: function (input) {
-    //    return dtm.analyzer.unique(input).sort();
-    //},
-    //
-    //uniformity: function (input) {
-    //    return dtm.analyzer.classes(input).length / input.length;
-    //},
-    //
-    //intersection: function (arr1, arr2) {
-    //    return arr1.filter(function (n) {
-    //        return arr2.indexOf(n) !== -1;
-    //    });
-    //}
+
 };
 
 dtm.anal = dtm.analyzer;
@@ -5639,50 +5400,6 @@ dtm.array = function () {
 
 dtm.a = dtm.array;
 /**
- * @fileOverview Collection object. Right now, empty.
- * @module collection
- */
-
-/**
- * Creates a new instance of dtm.collection object
- * @function module:collection.collection
- * @returns dtm.collection {object}
- */
-dtm.collection = function () {
-    var params = {
-        keys: [],
-        types: [],
-        values: []
-    };
-
-    var coll = {
-        type: 'dtm.collection'
-    };
-
-    coll.get = function (param) {
-        var out = null;
-        return out;
-    };
-
-    coll.set = function () {
-        return coll;
-    };
-
-    coll.update = function () {
-        return coll;
-    };
-
-    coll.map = function () {
-        return coll;
-    };
-
-    return coll;
-};
-
-dtm.coll = dtm.collection;
-
-// TODO: transformation module for this???
-/**
  * @fileOverview Parses random stuff. Singleton.
  * @module parser
  */
@@ -6055,6 +5772,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
         isMaster: false,
 
         bpm: 120,
+        interval: { base: dtm.array([[0.5]]) },
         subDiv: 2,
         random: 0,
         swing: 0.5,
@@ -6092,6 +5810,12 @@ dtm.clock = function (bpm, subDiv, autoStart) {
     var curTime = 0.0;
 
     var actx = null, clockBuf = null;
+
+    function setFinal(param) {
+        ['bpm', 'time', 'interval'].forEach(function (v) {
+            params[v].isFinal = v === param;
+        });
+    }
 
     /**
      * Get the value of a parameter of the clock object.
@@ -6255,13 +5979,56 @@ dtm.clock = function (bpm, subDiv, autoStart) {
     };
 
     clock.interval = function (sec) {
+        function check(src, depth) {
+            if (!isInteger(depth)) {
+                depth = 3;
+            }
+            return isNumber(src) ||
+                ((isNumArray(src) ||
+                isNestedArray(src) ||
+                isNestedWithDtmArray(src) ||
+                isNumOrFloat32Array(src) ||
+                isNumDtmArray(src) ||
+                isNestedNumDtmArray(src)) && getMaxDepth(src) <= depth);
+        }
+
+        function convertShallow(src) {
+            if (src.length === 1) {
+                return convertShallow(src[0]);
+            } else {
+                if (isNestedNumDtmArray(src)) {
+                    return src;
+                } else if (isNestedWithDtmArray(src)) {
+                    return dtm.array.apply(this, src);
+                } else if (isNumDtmArray(src)) {
+                    return src().block(1);
+                } else if (isNestedArray(src)) {
+                    return dtm.array(src);
+                } else if (isNumOrFloat32Array(src)) {
+                    return dtm.array(src).block(1);
+                } else {
+                    return dtm.array([toFloat32Array(src)]);
+                }
+            }
+        }
+
+        var depth = 2;
+
+        if (isFunction(arguments[0])) {
+            var res = arguments[0](params.interval.base, clock);
+            params.interval.base = check(res, depth) ? convertShallow(res) : params.interval.base;
+        } else {
+            var argList = argsToArray(arguments);
+            params.interval.base = check(argList) ? convertShallow(argList) : param;
+        }
+
         params.sync = false;
         params.subDiv = 1.0;
-        params.bpm = 60.0 / sec * 4;
+        //params.bpm = 60.0 / sec * 4;
         return clock;
     };
 
-    clock.dur = clock.interval;
+    clock.dur = clock.int = clock.interval;
 
     function getInterval() {
         if (params.sync) {
@@ -6279,6 +6046,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
         }
     }
 
+    // TODO: remove this
     clock.setTime = function (input) {
         if (isArray(input)) {
             clock.params.time = input;
@@ -6501,6 +6269,9 @@ dtm.clock = function (bpm, subDiv, autoStart) {
                         clock.callbacks.forEach(function (cb) {
                             cb(clock);
                         });
+
+                        //params.subDiv = 1.0;
+                        params.bpm = 60 / params.interval.base.get('next').get() * 4;
                     }
 
                     params.current = params.reported;
@@ -8090,8 +7861,7 @@ dtm.synth = function () {
             params.dur.base = check(res, depth) ? convertShallow(res) : params.dur.base;
         } else {
             var argList = argsToArray(arguments);
-            params.dur.base = check(argList) ? convertShallow(argList) : param;
-
+            params.dur.base = check(argList) ? convertShallow(argList) : params.dur.base;
         }
 
         params.autoDur = false;
@@ -8099,7 +7869,11 @@ dtm.synth = function () {
         return synth;
     };
 
-    synth.int = synth.interval = synth.dur;
+    synth.interval = function () {
+        return synth;
+    };
+
+    synth.int = synth.interval;
 
     synth.offset = function (src) {
         params.offset = toFloat32Array(src)[0];

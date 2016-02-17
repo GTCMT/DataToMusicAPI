@@ -520,8 +520,7 @@ dtm.synth = function () {
             params.dur.base = check(res, depth) ? convertShallow(res) : params.dur.base;
         } else {
             var argList = argsToArray(arguments);
-            params.dur.base = check(argList) ? convertShallow(argList) : param;
-
+            params.dur.base = check(argList) ? convertShallow(argList) : params.dur.base;
         }
 
         params.autoDur = false;
@@ -529,7 +528,11 @@ dtm.synth = function () {
         return synth;
     };
 
-    synth.int = synth.interval = synth.dur;
+    synth.interval = function () {
+        return synth;
+    };
+
+    synth.int = synth.interval;
 
     synth.offset = function (src) {
         params.offset = toFloat32Array(src)[0];
