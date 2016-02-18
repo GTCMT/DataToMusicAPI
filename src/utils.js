@@ -290,11 +290,11 @@ function isNestedDtmArray(val) {
 }
 
 function isNumDtmArray(obj) {
-    return isDtmArray(obj) && isNumOrFloat32Array(obj.value);
+    return isDtmArray(obj) && isNumOrFloat32Array(obj.get());
 }
 
 function isNestedNumDtmArray(obj) {
-    return isNestedDtmArray(obj) && obj.value.every(function (a) { return isNumDtmArray(a)});
+    return isNestedDtmArray(obj) && obj.get().every(function (a) { return isNumDtmArray(a)});
 }
 
 /**

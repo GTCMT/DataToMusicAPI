@@ -18,22 +18,23 @@ function playPrev(elem) {
 </script>
 
 
+The dtm.array is the main unit for dealing with data in DTM, including storing, transforming, analyzing, and passing itself to other modules. Here, we cover the basic operations of the dtm.array.
 
 # Basics
+
 Creating an array and assigning values
 
     var arr = dtm.array([0, 1, 2])
     arr.set([3, 4, 5])
     arr.set(['hello', 'world'])
 
-Note that when every value is of the number type, the content is automatically casted to Float32Array
-
+Note that when every value is of the number type, the content is automatically casted to the Float32Array type. In general, you should avoid mixing different value types (e.g., strings, numbers, and booleans)
 
 Retrieving values
 
     var arr = dtm.array([0, 1, 2])
     arr.get() // -> [0, 1, 2]
-    arr.value // -> [0, 1, 2]
+    arr.val // -> [0, 1, 2]: This is a shorthand for for .get()
     arr.get(0) // -> 0
     arr.get(-1) // -> 2
     arr.get([0, 2]) // -> 0, 2
@@ -43,6 +44,7 @@ Retrieving the basic statistics
 
     var arr = dtm.array([0, 1, 2, 3, 4])
     arr.get('len') // -> 5
+    arr.len // -> 5: This is a shorthand for .get('len')
     arr.get('mean') // -> 2
     arr.get('sum') // -> 10
     arr.get('type') // -> 'string'
@@ -57,33 +59,42 @@ Retrieving values as new arrays
 
 
 # The dtm.array sub-types
+When we load data, they are stored in a dtm.array in multi-column structure. In other words, it creates a dtm.array containing multiple dtm.arrays as its elements.
 
     dtm.load('filepath').then(function (data) {
         data // this is a dtm.array with the value of multiple dtm.arrays
     })
     
-    // dtm.generator is also a dtm.array type
-    wavetable = dtm.gen('sine')
-    wavetable.range(0, 10).clip(3, 6).fit(100).repeat(3)
+The dtm.generator is also returns a dtm.array.
+
+    waveform = dtm.gen('sine')
+    waveform.range(0, 10).clip(3, 6).fit(100).repeat(3)
 
 
 ## Storing and cloning 
-Cloning is very useful if you want to transform a single source into multiple output.
+Cloning is very useful if you want to transform a single source into multiple output. Without cloning, transformation methods will always change the array itself, and you may not be able to reuse certain states. 
 
-    arr = dtm.array([0, 1, 2])
-    copy = arr.clone().add(1)
+    var arr = dtm.array([0, 1, 2])
+    var copy = arr.clone()
     
-    arr.value // -> [0, 1, 2]
-    copy.value // -> [1, 2, 3]
+    copy.add(1).val // -> [1, 2, 3]
+    arr.val // -> [0, 1, 2]
 
 
-    // Shorthand: you can clone an array by calling the dtm.array variable as a function
-    copy = arr()
-    
-    arr = dtm.array([0, 1, 2])
-    arr().add(1).value // -> [1, 2, 3]
-    arr.value // -> [0, 1, 2]
-    
+Shorthand: you can clone an array by calling the dtm.array variable as a function
+
+    var copy = arr()
+
+So you can do
+
+    var arr = dtm.array([0, 1, 2])
+    arr().add(1).val // -> [1, 2, 3]
+    arr.val // -> [0, 1, 2]
+
+Recall the original when the array was first created. This is useful if you want to get the raw data, etc.
+
+    arr.reset()
+    arr.original() // Alias
 
 
 # Basic musical transformations

@@ -1,12 +1,16 @@
 # Basics of loading and accessing data
 
-With the dtm.data module, data (e.g., csv, JSON, audio, image, web data via REST API) are loaded or acquired asynchronously, and we use a callback function to access them when they are ready.
+With the dtm.data module, data (e.g., csv, JSON, audio file, image, and some web data via REST API) are loaded or acquired asynchronously, and we can use a callback function to access them when they are ready.
 
     dtm.data('filepath' callback);
+    
+    function callback(d) {
+        // d is the data object that you loaded
+    }
 
-If you are loading your own file, the file path should be a relative path in your application (e.g., './data/sample.csv'), not a local or HTTP URL (e.g., 'file:///c:/data/sample.csv' or 'http://mywebsite.com/sample.csv', otherwise the same-origin policy of your web browser will block the loading of the data.
+If you are loading your own file, the file path should be a relative path in your application (e.g., 'data/sample.csv'), not a local or HTTP URL (e.g., 'file:///c:/data/sample.csv' or 'http://mywebsite.com/sample.csv', otherwise the same-origin policy of your web browser will block the loading of the data.
 
-The dtm.data also returns a promise object that can be accessed elsewhere later.
+The dtm.data also returns a promise object that can be accessed elsewhere later. Use obj.then() method
     
     var p = dtm.data('filepath')
     p.then(callback);

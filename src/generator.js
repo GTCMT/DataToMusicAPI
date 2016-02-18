@@ -182,7 +182,7 @@ dtm.generator = function () {
             }
 
             var steps = Math.floor((end - start) / interval) + 1;
-            params.len = steps;
+            generator.len = steps;
             //console.log(steps);
             var res = new Float32Array();
 
@@ -279,7 +279,7 @@ dtm.generator = function () {
             return res;
         }
 
-        generator.value = [];
+        generator.val = [];
 
         var sorted;
         if (isTypeCategOf('noMinMaxDir') || isTypeCategOf('random')) {
@@ -290,16 +290,16 @@ dtm.generator = function () {
         switch (params.type) {
             case 'line':
             case 'saw':
-                generator.value = line(params.len, params.min, params.max);
+                generator.val = line(generator.len, params.min, params.max);
                 break;
 
             case 'rise':
-                generator.value = line(params.len, sorted[0], sorted[1]);
+                generator.val = line(generator.len, sorted[0], sorted[1]);
                 break;
 
             case 'decay':
             case 'fall':
-                generator.value = line(params.len, sorted[1], sorted[0]);
+                generator.val = line(generator.len, sorted[1], sorted[0]);
                 break;
 
             case 'adsr':
@@ -308,12 +308,12 @@ dtm.generator = function () {
 
             case 'sin':
             case 'sine':
-                generator.value = sin(params.len, params.min, params.max, params.amp, params.cycle, paramsExt.phase);
+                generator.val = sin(generator.len, params.min, params.max, params.amp, params.cycle, paramsExt.phase);
                 break;
 
             case 'cos':
             case 'cosine':
-                generator.value = cos(params.len, params.min, params.max, params.amp, params.cycle, 0.00);
+                generator.val = cos(generator.len, params.min, params.max, params.amp, params.cycle, 0.00);
                 break;
 
             case 'tri':
@@ -326,44 +326,44 @@ dtm.generator = function () {
 
             case 'rand':
             case 'random':
-                generator.value = random(params.len, sorted[0], sorted[1], 1.0, false);
+                generator.val = random(generator.len, sorted[0], sorted[1], 1.0, false);
                 break;
 
             case 'noise':
-                generator.value = random(params.len, sorted[0], sorted[1], params.amp, false);
+                generator.val = random(generator.len, sorted[0], sorted[1], params.amp, false);
                 break;
 
             case 'randi':
-                generator.value = random(params.len, sorted[0], sorted[1], 1.0, true);
+                generator.val = random(generator.len, sorted[0], sorted[1], 1.0, true);
                 break;
 
             case 'range':
-                generator.value = range(paramsExt.start, paramsExt.end, paramsExt.interval);
+                generator.val = range(paramsExt.start, paramsExt.end, paramsExt.interval);
                 break;
 
             case 'seq':
-                generator.value = sequence(params.min, params.max);
+                generator.val = sequence(params.min, params.max);
                 break;
 
             case 'scale':
-                generator.value = scale(paramsExt.scale, paramsExt.transpose);
+                generator.val = scale(paramsExt.scale, paramsExt.transpose);
                 break;
 
             case 'fibonacci':
-                generator.value = fibonacci(params.len);
+                generator.val = fibonacci(generator.len);
                 break;
 
             case 'zeros':
             case 'zeroes':
-                generator.value = constant(params.len, 0);
+                generator.val = constant(generator.len, 0);
                 break;
 
             case 'ones':
-                generator.value = constant(params.len, 1);
+                generator.val = constant(generator.len, 1);
                 break;
 
             case 'const':
-                generator.value = constant(params.len, params.const);
+                generator.val = constant(generator.len, params.const);
                 break;
 
             case 'string':
@@ -374,14 +374,14 @@ dtm.generator = function () {
             case 'chars':
             case 'char':
             case 'c':
-                generator.value = params.string.split('');
+                generator.val = params.string.split('');
                 break;
 
             default:
                 break;
         }
 
-        params.len = generator.value.length;
+        generator.len = generator.val.length;
     }
 
     /**
@@ -402,11 +402,11 @@ dtm.generator = function () {
     };
 
     /**
-     * @function module:generator#len | size
+     * @function module:generator#size
      * @param length
      * @returns {array}
      */
-    generator.len = function (length) {
+    generator.size = function (length) {
         if (isString(length) && length[0] === 'a') {
             params.autolen = true;
             return generator;
@@ -414,14 +414,12 @@ dtm.generator = function () {
 
         var len = parseInt(length);
         if (!isNaN(len) && len > 0) {
-            params.len = len;
+            generator.len = len;
         }
 
         process();
         return generator;
     };
-
-    generator.size = generator.len;
 
     /**
      * @function module:generator#min
@@ -568,7 +566,7 @@ dtm.generator = function () {
     };
 
     // TODO: do more readable type check
-    params.len = 8;
+    generator.len = 8;
 
     if (arguments.length >= 1) {
         if (isObject(arguments[0])) {
@@ -608,11 +606,11 @@ dtm.generator = function () {
     }
 
     if (isTypeCategOf('envelope')) {
-        params.len = 128;
+        generator.len = 128;
     }
 
     if (isTypeCategOf('random')) {
-        params.len = 1;
+        generator.len = 1;
         params.min = 0.0;
 
         if (params.type === 'randi') {
@@ -632,7 +630,7 @@ dtm.generator = function () {
             }
         }
     } else if (isTypeCategOf('oscil')) {
-        params.len = 4096;
+        generator.len = 4096;
 
         if (arguments.length >= 3) {
             if (isArray(arguments[2])) {
@@ -720,11 +718,11 @@ dtm.generator = function () {
         } else if (isTypeCategOf('const')) {
             if (!isEmpty(arguments[1])) {
                 params.const = arguments[1];
-                params.len = 1;
+                generator.len = 1;
             }
         } else {
             // set the length from arg 1
-            generator.len(arguments[1]);
+            generator.size(arguments[1]);
 
             if (arguments.length >= 3) {
                 if (isArray(arguments[2])) {

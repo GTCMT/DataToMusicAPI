@@ -18,8 +18,8 @@ describe('generator', function () {
         it('should return the set length', function () {
             var g = dtm.gen('line', 16);
             expect(g.get('len')).toBe(16);
-            expect(g.len(10).get('len')).toBe(10);
-            expect(g.len('abc').get('len')).toBe(10);
+            expect(g.size(10).get('len')).toBe(10);
+            expect(g.size('abc').get('len')).toBe(10);
         });
 
         it('should set the range from an array', function () {
@@ -39,7 +39,7 @@ describe('generator', function () {
     describe('line', function () {
         it('should have the same len', function () {
             var g = dtm.gen('line', 20);
-            expect(g.get().length).toBe(20);
+            expect(g.get('len')).toBe(20);
         });
 
         it('should have the range of 0 to 1', function () {
@@ -215,7 +215,7 @@ describe('generator', function () {
 
     describe('using dtm.gen functions with regular dtm.array', function () {
         it('should not set the length', function () {
-            expect(dtm.a([1, 2, 3]).len(5).get('len')).toBe(3);
+            expect(dtm.a([1, 2, 3]).size(5).get('len')).toBe(3);
         });
 
         it('should ignore the type', function () {

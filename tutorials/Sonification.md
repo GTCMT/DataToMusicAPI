@@ -62,13 +62,12 @@ Similar mapping, but with a specific interval for each data point rather than fi
 
 Audification is a rather streight-forward technique that scales the amplitude and time scale to audio-sample level: In other words, a vector casted to a long duration waveform.
 
-    wf = dtm.gen('random')
-    	.size(s.get('numsamps'))
-    	.range(-1,1)
-
-    s.wt(wf).amp([0,1,1,0])
-    	.amp(function(a) {
-    		return a.fit(100)
-    	})
+    var s = dtm.synth().play()
+    
+    var wf = dtm.gen('random')
+        .size(s.get('sr'))
+        .range(-1,1)
+    
+    s.wt(wf).pitch(10).amp(0.5)
 
 <button onclick="playPrev(this)">Listen</button>

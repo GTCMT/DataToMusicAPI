@@ -490,7 +490,7 @@ describe('sum', function () {
 describe('row', function () {
     it('should work', function () {
         var a = dtm.gen('range', 9).block(3);
-        expect(a.row(0).value).toEqual(toFloat32Array([0,3,6]));
+        expect(a.row(0).get()).toEqual(toFloat32Array([0,3,6]));
     });
 });
 
@@ -503,9 +503,9 @@ describe('col', function () {
 describe('transpose', function () {
     it('should work', function () {
         var a = dtm.gen('range', 9).block(3).transp();
-        expect(a().col(0).value).toEqual(toFloat32Array([0,3,6]));
-        expect(a().col(1).value).toEqual(toFloat32Array([1,4,7]));
-        expect(a().row(1).value).toEqual(toFloat32Array([3,4,5]));
+        expect(a().col(0).get()).toEqual(toFloat32Array([0,3,6]));
+        expect(a().col(1).get()).toEqual(toFloat32Array([1,4,7]));
+        expect(a().row(1).get()).toEqual(toFloat32Array([3,4,5]));
     });
 });
 

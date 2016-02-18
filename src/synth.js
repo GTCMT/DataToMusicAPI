@@ -17,6 +17,7 @@ dtm.synth = function () {
         sr: 44100,
         //kr: 4410,
         dur: { base: dtm.array([[1]]) },
+        interval: { auto: true },
         play: { base: dtm.array([[true]]) },
         offset: 0.0,
         repeat: 1,
@@ -581,14 +582,14 @@ dtm.synth = function () {
             }
 
             function process(param) {
-                var temp = param.base.get('next').clone();
+                var tempArr = param.base.get('next').clone();
                 if (!isEmpty(param.add)) {
-                    temp.add(param.add.get('next'));
+                    tempArr.add(param.add.get('next'));
                 }
                 if (!isEmpty(param.mult)) {
-                    temp.mult(param.mult.get('next'));
+                    tempArr.mult(param.mult.get('next'));
                 }
-                return temp.value;
+                return tempArr.get();
             }
 
             var amp = process(params.amp);
