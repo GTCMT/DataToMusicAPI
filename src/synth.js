@@ -743,8 +743,9 @@ dtm.synth = function () {
                 nodes.pan.connect(out);
                 out.connect(actx.destination);
 
-                nodes.src.buffer = actx.createBuffer(1, params.tabLen, params.sr);
-                nodes.src.buffer.copyToChannel(params.wavetable, 0);
+                var tempBuff = actx.createBuffer(1, params.tabLen, params.sr); // FF needs this stupid procedure (Feb 18, 2016)
+                tempBuff.copyToChannel(params.wavetable, 0);
+                nodes.src.buffer = tempBuff;
                 nodes.src.loop = (params.type !== 'sample');
                 nodes.src.start(offset);
                 nodes.src.stop(offset + dur);
