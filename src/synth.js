@@ -729,7 +729,15 @@ dtm.synth = function () {
                 nodes.src = actx.createBufferSource();
                 nodes.amp = actx.createGain();
                 nodes.pFx[0].out = actx.createGain();
-                nodes.pan = actx.createStereoPanner();
+
+                if (actx.createStereoPanner) {
+                    nodes.pan = actx.createStereoPanner();
+                } else {
+                    nodes.left = actx.createGain();
+                    nodes.right = actx.createGain();
+                    nodes.merger = actx.createChannelMerger(2);
+                }
+
                 var declipper = actx.createGain();
                 var out = actx.createGain();
                 nodes.src.connect(nodes.amp);
@@ -739,12 +747,29 @@ dtm.synth = function () {
                     nodes.pFx[n].run(offset, dur);
                     nodes.pFx[n-1].out.connect(nodes.pFx[n].in);
                 }
-                nodes.pFx[n-1].out.connect(nodes.pan);
-                nodes.pan.connect(out);
+
+                if (actx.createStereoPanner) {
+                    nodes.pFx[n-1].out.connect(nodes.pan);
+                    nodes.pan.connect(out);
+                } else {
+                    nodes.pFx[n-1].out.connect(nodes.left);
+                    nodes.pFx[n-1].out.connect(nodes.right);
+                    nodes.left.connect(nodes.merger);
+                    nodes.right.connect(nodes.merger);
+                    nodes.merger.connect(out);
+                }
                 out.connect(actx.destination);
 
                 var tempBuff = actx.createBuffer(1, params.tabLen, params.sr); // FF needs this stupid procedure (Feb 18, 2016)
-                tempBuff.copyToChannel(params.wavetable, 0);
+                if (tempBuff.copyToChannel) {
+                    // for Safari
+                    tempBuff.copyToChannel(params.wavetable, 0);
+                } else {
+                    var tempTempBuff = tempBuff.getChannelData(0);
+                    tempTempBuff.forEach(function (v, i) {
+                        tempTempBuff[i] = params.wavetable[i];
+                    });
+                }
                 nodes.src.buffer = tempBuff;
                 nodes.src.loop = (params.type !== 'sample');
                 nodes.src.start(offset);
@@ -754,7 +779,28 @@ dtm.synth = function () {
                 curves.push({param: nodes.src.playbackRate, value: pitch});
                 curves.push({param: nodes.amp.gain, value: amp});
                 setParamCurve(offset, dur, curves);
-                setParamCurve(offset, dur, [{param: nodes.pan.pan, value: pan}]);
+
+                if (actx.createStereoPanner) {
+                    setParamCurve(offset, dur, [{param: nodes.pan.pan, value: pan}]);
+                } else {
+                    var left = pan.map(function (v) {
+                        if (v < 0) {
+                            return 0.5;
+                        } else {
+                            return 0.5 - v*0.5;
+                        }
+                    });
+
+                    var right = pan.map(function (v) {
+                        if (v < 0) {
+                            return 0.5 + v*0.5;
+                        } else {
+                            return 0.5;
+                        }
+                    });
+                    setParamCurve(offset, dur, [{param: nodes.left.gain, value: left}]);
+                    setParamCurve(offset, dur, [{param: nodes.right.gain, value: right}]);
+                }
 
                 nodes.pFx[0].out.gain.value = 1.0; // ?
                 out.gain.value = 1.0;
