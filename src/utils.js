@@ -346,9 +346,11 @@ function arrayCompare(first, second) {
 
 function objCompare(first, second) {
     var res = false;
-    objForEach(first, function (v, k) {
-
-    });
+    if (isFunction(first) && isFunction(second)) {
+        return first.toString() === second.toString();
+    } else if (isObject(first) && isObject(second)) {
+        return JSON.stringify(first) === JSON.stringify(second);
+    }
 
     return res;
 }

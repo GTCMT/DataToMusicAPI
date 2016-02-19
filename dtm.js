@@ -782,9 +782,11 @@ function arrayCompare(first, second) {
 
 function objCompare(first, second) {
     var res = false;
-    objForEach(first, function (v, k) {
-
-    });
+    if (isFunction(first) && isFunction(second)) {
+        return first.toString() === second.toString();
+    } else if (isObject(first) && isObject(second)) {
+        return JSON.stringify(first) === JSON.stringify(second);
+    }
 
     return res;
 }
@@ -6341,7 +6343,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
             }
         } else {
             clock.callbacks.forEach(function (stored) {
-                if (_.isEqual(stored, cb)) {
+                if (objCompare(stored, cb)) {
                     dtm.log('clock.add(): identical function exists in the callback list');
 
                     dupe = true;
@@ -6367,14 +6369,20 @@ dtm.clock = function (bpm, subDiv, autoStart) {
     clock.remove = function (id) {
         if (isFunction(id)) {
             dtm.log('removing a calblack function');
-            _.remove(clock.callbacks, function (cb) {
-                return _.isEqual(cb, id);
-            });
+
+            for (var i = clock.callbacks.length; i >= 0; i--) {
+                if (objCompare(clock.callbacks[i], id)) {
+                    clock.callbacks.splice(i, 1);
+                }
+            }
         } else if (isString(id)) {
             dtm.log('removing a calblack function: ' + id);
-            _.remove(clock.callbacks, function (cb) {
-                return cb.name == id;
-            });
+
+            for (var i = clock.callbacks.length; i >= 0; i--) {
+                if (clock.callbacks[i].name == id) {
+                    clock.callbacks.splice(i, 1);
+                }
+            }
         }
 
         return clock;
@@ -6477,7 +6485,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
                 //var pbRate = 1/(1/freq - Math.abs(timeErr));
 
                 clockSrc.playbackRate.value = freq * dtm.wa.clMult;
-                clockSrc.playbackRate.value += clockSrc.playbackRate.value * params.random * _.sample([1, -1]);
+                clockSrc.playbackRate.value += clockSrc.playbackRate.value * params.random * Math.round(Math.random()*2-1);
 
                 if (clock.beat % 2 == 0) {
                     clockSrc.playbackRate.value *= (1.0 - params.swing) / 0.5;
@@ -6536,7 +6544,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
                 freq = params.bpm / 60.0 * (params.subDiv / 4.0);
 
                 clockSrc.playbackRate.value = freq * dtm.wa.clMult;
-                clockSrc.playbackRate.value += clockSrc.playbackRate.value * params.random * _.sample([1, -1]);
+                clockSrc.playbackRate.value += clockSrc.playbackRate.value * params.random * Math.round(Math.random()*2-1);
 
                 if (clock.beat % 2 == 0) {
                     clockSrc.playbackRate.value *= (1.0 - params.swing) / 0.5;

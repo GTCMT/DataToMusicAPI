@@ -213,9 +213,11 @@ describe('hasMissingValues', function () {
     });
 });
 
-xdescribe('objCompare', function () {
+describe('objCompare', function () {
     it('should work with shallow objects', function () {
         expect(objCompare({}, {})).toBe(true);
+        expect(objCompare({foo:123}, {foo:123})).toBe(true);
+        expect(objCompare(function(){return 1;}, function(){return 1;})).toBe(true);
     });
 });
 
