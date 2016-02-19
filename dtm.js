@@ -3202,7 +3202,13 @@ dtm.transform = {
      * @returns {Array}
      */
     shuffle: function (arr) {
-        return _.shuffle(arr);
+        for (var i = arr.length-1; i >= 1; i--) {
+            var j = Math.round(Math.random() * i);
+            var temp = arr[j];
+            arr[j] = arr[i];
+            arr[i] = temp;
+        }
+        return arr;
     },
 
     /**
@@ -3212,8 +3218,14 @@ dtm.transform = {
      * @returns {array}
      */
     sort: function (arr) {
-        var res = _.sortBy(arr, function (val) {
-            return val;
+        var res = arr.sort(function (a, b) {
+            if (a > b) {
+                return 1;
+            } else if (a < b) {
+                return -1;
+            } else {
+                return 0
+            }
         });
         if (isFloat32Array(arr)) {
             return toFloat32Array(res);
@@ -3685,11 +3697,6 @@ dtm.transform = {
         });
         return res;
     },
-
-    //getClasses: function (input) {
-    //    return _.clone()
-    //
-    //}
 
     mtof: function (input) {
         var res;
@@ -6712,414 +6719,58 @@ dtm.clock = function (bpm, subDiv, autoStart) {
 };
 
 dtm.c = dtm.clock;
-/**
- * @fileOverview The instrument object that makes some complex musical gestures. It can contain multiple models, and be modulated in various ways.
- * @module instr
- */
+dtm.instr = function () {
+    var instr = function () {
+        return instr;
+    };
 
-/**
- * Creates a new instance of dtm.instr object. If given a name, it either creates a new instrument with the name, or loads from the pre-registered instrument model collection.
- * @function module:instr.instr
- * @param [arg] {string|dtm.model}
- * @returns {dtm.instr}
- */
-dtm.instr = function (arg) {
     var params = {
-        name: 'default',
-        isPlaying: false,
-        poly: false,
-
-        // what is this for?
-        modDest: [],
-
-        modList: [],
-
-        sync: true,
-        clock: dtm.clock(true, 8),
-
-        instrModel: null,
-
-        callbacks: [],
-
-        defInstr: function defaultInstr(c) {
-            var v = params.models.voice;
-            var vol = params.models.volume.get('next');
-            var dur = params.models.dur.get('next');
-            var r = params.models.rhythm.get('next');
-            var p = params.models.pitch.get('next');
-            var sc = params.models.scale.get();
-            var tr = params.models.transp.get('next');
-            var ct = params.models.chord.get();
-            var div = params.models.subdiv.get('next');
-            params.clock.subdiv(div);
-
-            var wt = params.models.wavetable;
-            var lpf = params.models.lpf;
-            var comb = params.models.comb;
-            var delay = params.models.delay;
-
-            if (params.sync === false) {
-                params.clock.bpm(params.models.bpm.get('next'));
-            }
-
-            params.callbacks.forEach(function (cb) {
-                cb(params.clock);
-            });
-
-            if (r) {
-                ct.forEach(function (val) {
-                    if (wt) {
-                        v.wt(wt.get());
-                    }
-
-                    if (lpf) {
-                        v.lpf(lpf.get('next'), params.models.res.get('next'));
-                    }
-
-                    if (comb) {
-                        v.comb(0.5, params.models.comb.get('next'));
-                    }
-
-                    if (delay) {
-                        v.delay(params.models.delay.get('next'));
-                    }
-
-                    v.dur(dur).decay(dur);
-                    v.nn(pq(p + val, sc, params.pqRound) + tr).amp(vol).play();
-                });
-            }
-        }
+        dur: 0.3
     };
 
-    var instr = {
-        type: 'dtm.instrument',
-        //params: {}
-        params: []
-    };
+    var s = dtm.synth().dur(params.dur).rep().amp(dtm.decay());
+    var uni = dtm.model('unipolar');
 
-    /**
-     * Returns a parameter of the instrument object.
-     * @function module:instr#get
-     * @param param {string}
-     * @returns {*}
-     */
-    instr.get = function (param) {
-        //return params[key];
-
-        switch (param) {
-            case 'name':
-                return params.name;
-
-            case 'isplaying':
-            case 'isPlaying':
-                return params.isPlaying;
-
-            case 'c':
-            case 'clock':
-                return params.clock;
-
-            case 'beat':
-                return params.clock.get('beat');
-
-            case 'm':
-            case 'mod':
-            case 'model':
-            case 'models':
-            case 'modList':
-                return instr.params;
-
-            case 'param':
-            case 'params':
-                break;
-
-            default:
-                break;
-        }
-    };
-
-    instr.set = function (dest, src, adapt) {
-        if (isNumber(src)) {
-            params.models[dest] = dtm.array(src);
-        } else {
-            if (src.constructor === Array) {
-                params.models[dest] = dtm.array(src);
-            } else if (isDtmArray(src)) {
-                //if (src.get('type') === 'string') {
-                //    params.models[dest] = src.clone().classId();
-                //} else {
-                //}
-                params.models[dest] = src.clone();
-            } else if (src.type === 'dtm.model') {
-
-            } else if (src.type === 'dtm.synth') {
-                params.models[dest] = src;
-            }
-        }
-
-        switch (dest) {
-            case 'bpm':
-            case 'tempo':
-                break;
-
-            case 'div':
-            case 'subdiv':
-            case 'subDiv':
-                break;
-
-            default:
-                break;
-        }
-        return instr;
-    };
-
-    // TODO: implement
-    instr.clone = function () {
-        return instr;
-    };
-
-    /**
-     * Sets a model for one of the parameters of the instrument.
-     * @function module:instr#model
-     * @param model {string|dtm.model|dtm.array}
-     * @param [target='none'] {string}
-     * @returns {dtm.instr}
-     */
-    instr.model = function () {
-        var arg = arguments[0];
-        var categ = 'none'; // TODO: WIP
-
-        if (isString(arguments[1])) {
-            categ = arguments[1];
-        }
-
-        // TODO: refactor...
-        if (arg.constructor === Array) {
-            if (categ) {
-                params.models[categ] = dtm.array(arg);
-            } else {
-                params.models['none'] = dtm.array(arg);
-            }
-        } else if (isObject(arg)) {
-            if (arg.type === 'dtm.model') {
-                if (arg.get('categ') === 'instr') {
-                    // CHECK: ...
-                    dtm.log('assigning model "' + arg.params.name + '" to category "' + categ + '"');
-                    params.models[categ] = arg;
-                    params.modDest.push(arg);
-                } else if (arg.get('categ')) {
-                    dtm.log('assigning model "' + arg.params.name + '" to category "' + arg.params.categ + '"');
-                    params.models[arg.params.categ] = arg;
-                    params.modDest.push(arg);
-                } else if (categ) {
-                    dtm.log('assigning model "' + arg.params.name + '" to category "' + categ + '"');
-                    params.models[categ] = arg;
-                    params.modDest.push(arg);
-                }
-
-            } else if (isDtmArray(src)) {
-                params.models[categ] = arg;
-            }
-        } else if (isString(arg)) {
-            var model = _.find(dtm.modelColl, {params: {
-                name: arg
-            }});
-
-            if (!isEmpty(model)) {
-                if (!categ) {
-                    categ = model.params.categ;
-                }
-
-                dtm.log('assigning model "' + model.params.name + '" to category "' + categ + '"');
-                params.models[categ] = model;
-                params.modDest.push(model);
-            }
-        }
-
-        return instr;
-    };
-
-    instr.map = function (src, dest) {
-        if (isArray(src)) {
-            params.models[dest] = dtm.array(src).normalize();
-        } else if (isDtmArray(src)) {
-            // CHECK: assigning an array here is maybe not so smart...
-            params.models[dest] = src.normalize();
-        } else if (src.type === 'dtm.model') {
-
-        }
-        // use global index from the master
-
-        return instr;
-    };
-
-    /**
-     * Starts performing the instrument.
-     * @function module:instr#play
-     * @returns {dtm.instr}
-     */
     instr.play = function () {
-        // should only play single voice / part / instance
-        if (params.isPlaying !== true) {
-            params.isPlaying = true;
-            dtm.log('playing instr: ' + params.name);
-
-            if (!params.instrModel) {
-                //params.clock.add(params.defInstr).start();
-                //params.clock.add(params.instrModel.play).start();
-            }
-
-            if (params.instrModel) {
-                if (params.instrModel.get('categ') === 'instr') {
-                    //params.instrModel.stop();
-                    //params.instrModel.play();
-
-                    if (params.instrModel.output) {
-                        params.clock.add(params.instrModel.output).start();
-                    }
-                }
-            }
-
-            // register to the active instr list?
-            dtm.master.activeInstrs.push(instr);
-        } else {
-            dtm.log('instrument ' + params.name + ' is already playing!');
-        }
+        s.play();
 
         return instr;
     };
 
     instr.stop = function () {
-        if (params.isPlaying === true) {
-            params.isPlaying = false;
-            dtm.log('stopping: ' + params.name);
-
-            if (params.instrModel) {
-                if (params.instrModel.params.categ === 'instr') {
-                    params.instrModel.stop();
-                }
-            }
-
-            params.clock.stop();
-            params.clock.clear();
-
-            params.callbacks = [];
-        }
-        return instr;
-    };
-
-
-    // TODO: implement this
-    /**
-     * Modulates a parameter of the instrument by the index or the name.
-     * @function module:instr#mod
-     * @param tgt {number|string} Modulation target.
-     * @param src {number|string|array|dtm.array} Modulation source.
-     * @param [mode='adapt'] {string} Scaling mode.
-     * @returns {dtm.instr}
-     */
-    instr.mod = function (tgt, src, mode) {
-        var dest = '';
-
-        if (isString(tgt)) {
-            dest = tgt;
-        } else if (isNumber(tgt)) {
-            // TODO: error check
-            dest = instr.params[tgt];
-        }
-
-        instr[dest](src, mode);
-        // maybe feed arguments[1-];
+        s.stop();
 
         return instr;
     };
 
-    instr.modulate = instr.mod;
-
-    function mapper(dest, src) {
-        if (isNumber(src)) {
-            params.models[dest] = dtm.array(src);
-        } else if (isString(src)) {
-            params.models[dest] = dtm.array(src).classify();
-        } else {
-            if (isArray(src)) {
-                params.models[dest] = dtm.array(src);
-            } else if (isDtmArray(src)) {
-                if (src.get('type') === 'string') {
-                    params.models[dest] = src.clone().classify();
-                } else {
-                    params.models[dest] = src.clone();
-                }
-            } else if (src.type === 'dtm.model') {
-
-            } else if (src.type === 'dtm.synth') {
-                params.models[dest] = src;
-            }
-        }
-    }
-
-    //instr.load = function (arg) {
-    //    if (typeof(arg) === 'string') {
-    //        var model = _.find(dtm.modelColl, {params: {
-    //            name: arg,
-    //            categ: 'instr'
-    //        }});
-    //
-    //        if (typeof(model) !== 'undefined') {
-    //            dtm.log('loading instrument model: ' + arg);
-    //            params.instrModel = model;
-    //            params.name = arg;
-    //            //params.models = model.models;
-    //            instr.model(model);
-    //            //instr.play = params.instrModel.play;
-    //            //instr.run = params.instrModel.run;
-    //
-    //            // CHECK: not good
-    //            params.modDest.push(model);
-    //        } else {
-    //            dtm.log('registering a new instrument: ' + arg);
-    //            params.name = arg;
-    //            params.categ = 'instr';
-    //            dtm.modelColl.push(instr);
-    //        }
-    //
-    //    } else if (typeof(arg) !== 'undefined') {
-    //        if (arg.params.categ === 'instr') {
-    //            params.instrModel = arg; // TODO: check the class name
-    //            instr.model(arg);
-    //        }
-    //    }
-    //
-    //    return instr;
-    //};
-
-    instr.load = function (arg) {
-        var model;
-
-        if (isString(arg)) {
-            //model = _.find(dtm.modelColl, function (m) {
-            //    return m.get('name') == arg;
-            //});
-            model = dtm.modelCallers[arg](); // requires the IIFE to manually return the created model... bad design?
-        } else if (arg.type === 'dtm.model') {
-            model = arg;
+    instr.pitch = function () {
+        var args;
+        if (argsAreSingleVals(arguments)) {
+            args = argsToArray(arguments);
+        } else if (arguments.length === 1) {
+            args = arguments[0];
         }
 
-        if (typeof(model) !== 'undefined') {
-            model.parent = instr;
-            model.assignMethods(instr);
-
-            params.instrModel = model;
-        }
-
+        s.nn(dtm.model('unipolar')(args).range(60,90).block());
         return instr;
     };
 
-    arg = arg || 'default';
-    instr.load(arg);
+    instr.speed = function () {
+        var args;
+        if (argsAreSingleVals(arguments)) {
+            args = argsToArray(arguments);
+        } else if (arguments.length === 1) {
+            args = arguments[0];
+        }
+
+        s.dur(dtm.model('unipolar')(args).range(0.05, 0.5).block());
+        return instr;
+    };
+
     return instr;
 };
 
-dtm.i = dtm.instrument = dtm.instr;
+dtm.i = dtm.instr;
 /**
  * @fileOverview Used to create a new instrument / musical models. Hopefully.
  * @module model
@@ -9468,424 +9119,6 @@ dtm.inscore = function () {
     m.getTable = function () {
         return table;
     };
-
-    return m;
-})();
-/**
- * @fileOverview Instrument model "default"
- * @module instr-default
- */
-
-(function (){
-    var m = dtm.model('default', 'instr').register();
-
-    var params = {
-        clock: dtm.clock(true, 8),
-        sync: true,
-        callbacks: [],
-
-        modules: {
-            voice: dtm.synth(),
-            wavetable: null,
-            volume: dtm.array(1),
-            pan: dtm.array(0.5),
-            scale: dtm.gen('range', 12),
-            rhythm: dtm.array(1),
-            pitch: dtm.array(69),
-            transp: dtm.array(0),
-            chord: dtm.array(0),
-            bpm: dtm.array(120),
-            subdiv: dtm.array(8),
-            repeats: null,
-            step: null,
-
-            atk: null,
-            dur: dtm.array(0.25),
-            lpf: null,
-            res: dtm.array(0),
-            comb: null,
-            delay: null
-        },
-
-        pqRound: false
-    };
-
-    m.output = function (c) {
-        var v = params.modules.voice;
-        var vol = params.modules.volume.get('next');
-        var pan = params.modules.pan.get('next');
-        var dur = params.modules.dur.get('next');
-        var r = params.modules.rhythm.get('next');
-        var p = params.modules.pitch.get('next');
-        var sc = params.modules.scale.get();
-        var tr = params.modules.transp.get('next');
-        var ct = params.modules.chord.get();
-        var div = params.modules.subdiv.get('next');
-        c.subDiv(div);
-
-        var wt = params.modules.wavetable;
-        var lpf = params.modules.lpf;
-        var comb = params.modules.comb;
-        var delay = params.modules.delay;
-
-        if (params.sync === false) {
-            c.bpm(params.modules.bpm.get('next'));
-        }
-
-        params.callbacks.forEach(function (cb) {
-            cb(params.clock);
-        });
-
-        if (r) {
-            ct.forEach(function (val) {
-                if (wt) {
-                    v.wt(wt.get());
-                }
-
-                if (lpf) {
-                    v.lpf(lpf.get('next'), params.modules.res.get('next'));
-                }
-
-                if (comb) {
-                    v.comb(0.5, params.modules.comb.get('next'));
-                }
-
-                if (delay) {
-                    v.delay(params.modules.delay.get('next'));
-                }
-
-                v.dur(dur).decay(dur);
-                v.nn(pq(p + val, sc, params.pqRound) + tr).amp(vol).pan(pan).play();
-            });
-        }
-    };
-
-    /**
-     * Sets the synthesis voice for the instrument. Alternatively: .syn(), .synth()
-     * @function module:instr-default#voice
-     * @param arg {string|dtm.synth}
-     * @returns {dtm.instr}
-     */
-    m.param.voice = function (arg) {
-        if (typeof(arg) === 'string') {
-            params.modules.voice.set(arg);
-        } else if (arg.type === 'dtm.synth') {
-            params.modules.voice = arg;
-        }
-        return m.parent;
-    };
-
-    m.param.syn = m.param.synth = m.param.voice;
-
-    /**
-     * Sets the wavetable using the input. Alternatively: .wavetable()
-     * @function module:instr-default#wt
-     * @param src {number|string|array|dtm.array}
-     * @param [mode='adaptive'] {string}
-     * @returns {dtm.instr}
-     */
-    m.mod.wt = function (src, mode) {
-        mapper(src, 'wavetable');
-
-        if (m.modes.literal.indexOf(mode) > -1) {
-        } else if (m.modes.preserve.indexOf(mode) > -1) {
-            params.modules.wavetable.range(0, 1, 0, 1)
-        } else {
-            params.modules.wavetable.normalize();
-        }
-
-        return m.parent;
-    };
-
-    m.mod.wf = m.mod.wavetable = m.mod.wt;
-
-    m.mod.at = function (src, mode) {
-        mapper(src, 'at');
-
-        return m.parent;
-    };
-
-    m.mod.rhythm = function (src, mode) {
-        mapper(src, 'rhythm');
-
-        if (m.modes.literal.indexOf(mode) > -1) {
-        } else if (m.modes.preserve.indexOf(mode) > -1) {
-        } else {
-            params.modules.rhythm.normalize().round();
-        }
-
-        return m.parent;
-    };
-
-    m.mod.beats = m.mod.rhythm;
-
-    m.mod.volume = function (src, mode) {
-        mapper(src, 'volume');
-
-        if (m.modes.literal.indexOf(mode) > -1) {
-        } else if (m.modes.preserve.indexOf(mode) > -1) {
-        } else {
-            params.modules.volume.logCurve(5, 0, 1).rescale(0.1, 1);
-        }
-
-        return m.parent;
-    };
-
-    m.mod.amp = m.mod.level = m.mod.vol = m.mod.volume;
-
-    /**
-     * Sets the stereo panning.
-     * @function module:instr-default#pan
-     * @param src {number|array|dtm.array|string}
-     * @param mode {string}
-     * @returns {dtm.instr}
-     */
-    m.mod.pan = function (src, mode) {
-        mapper(src, 'pan');
-
-        if (m.modes.literal.indexOf(mode) > -1) {
-        } else if (m.modes.preserve.indexOf(mode) > -1) {
-            params.modules.pan.normalize(0, 1);
-        } else {
-            params.modules.pan.normalize();
-        }
-
-        return m.parent;
-    };
-
-    m.mod.pitch = function (src, mode, round) {
-        mapper(src, 'pitch');
-
-        if (m.modes.literal.indexOf(mode) > -1) {
-
-        } else if (m.modes.preserve.indexOf(mode) > -1) {
-            params.modules.pitch.rescale(60, 90, 0, 1);
-        } else {
-            params.modules.pitch.rescale(60, 90);
-        }
-
-        if (round) {
-            params.modules.pitch.round();
-        }
-
-        return m.parent;
-    };
-
-    m.mod.nn = m.mod.noteNum = m.mod.pitch;
-
-    m.mod.transpose = function (src, mode, round) {
-        mapper(src, 'transp');
-
-        if (m.modes.literal.indexOf(mode) > -1) {
-        } else if (m.modes.preserve.indexOf(mode) > -1) {
-        } else {
-            params.modules.transp.normalize().scale(-12, 12);
-        }
-
-        if (round) {
-            params.modules.transp.round();
-        }
-
-        return m.parent;
-    };
-
-    m.mod.tr = m.mod.transp = m.mod.transpose;
-
-    m.mod.scale = function (src, mode, round) {
-        if (typeof(round) === 'undefined') {
-            params.pqRound = false;
-        } else {
-            params.pqRound = round;
-        }
-
-        mapper(src, 'scale');
-
-        if (m.modes.literal.indexOf(mode) > -1) {
-        } else if (m.modes.preserve.indexOf(mode) > -1) {
-        } else {
-            params.modules.scale.normalize().scale(0,11).round().unique().sort()
-        }
-
-
-        return m.parent;
-    };
-
-    m.mod.pq = m.mod.scale;
-
-    m.mod.chord = function (src, mode) {
-        mapper(src, 'chord');
-
-        if (m.modes.literal.indexOf(mode) > -1) {
-        } else if (m.modes.preserve.indexOf(mode) > -1) {
-        } else {
-            params.modules.chord.normalize().scale(0, 12).round().unique().sort();
-
-            if (params.modules.chord.get('len') > 4) {
-                params.modules.chord.fit(4).round().unique().sort();
-            }
-        }
-
-        return m.parent;
-    };
-
-    m.param.clock = function (bpm, subDiv, time) {
-        m.parent.get('clock').bpm(bpm);
-        m.parent.get('clock').subDiv(subDiv);
-        return m.parent;
-    };
-
-    m.mod.bpm = function (src, mode) {
-        params.sync = false;
-
-        mapper(src, 'bpm');
-
-        if (m.modes.literal.indexOf(mode) > -1) {
-        } else if (m.modes.preserve.indexOf(mode) > -1) {
-        } else {
-            params.modules.bpm.normalize().scale(60, 180);
-        }
-
-        return m.parent;
-    };
-
-    m.mod.tempo = m.mod.bpm;
-
-    // CHECK: not working
-    m.mod.subDiv = function (src, mode) {
-        mapper(src, 'subdiv');
-
-        if (m.modes.literal.indexOf(mode) > -1) {
-        } else if (m.modes.preserve.indexOf(mode) > -1) {
-        } else {
-            params.modules.subdiv.normalize().scale(1, 5).round().powof(2);
-        }
-
-        return m.parent;
-    };
-
-    m.mod.speed = m.mod.len = m.mod.note = m.mod.div = m.mod.subdiv = m.mod.subDiv;
-
-    m.param.sync = function (bool) {
-        if (typeof(bool) === 'undefined') {
-            bool = true;
-        }
-        params.clock.sync(bool);
-        params.sync = bool;
-        return m.parent;
-    };
-
-    m.mod.lpf = function (src, mode) {
-        mapper(src, 'lpf');
-
-        if (m.modes.literal.indexOf(mode) > -1) {
-        } else if (m.modes.preserve.indexOf(mode) > -1) {
-        } else {
-            params.modules.lpf.normalize().exp(3, 0, 1).scale(500, 5000);
-        }
-
-        return m.parent;
-    };
-
-    m.mod.res = function (src, mode) {
-        mapper(src, 'res');
-
-        if (m.modes.literal.indexOf(mode) > -1) {
-        } else if (m.modes.preserve.indexOf(mode) > -1) {
-        } else {
-            params.modules.res.normalize().scale(0, 50);
-        }
-
-        return m.parent;
-    };
-
-    m.mod.comb = function (src, mode) {
-        mapper('comb', src);
-
-        if (m.modes.literal.indexOf(mode) > -1) {
-        } else if (m.modes.preserve.indexOf(mode) > -1) {
-        } else {
-            params.modules.comb.normalize().rescale(60, 90);
-        }
-
-        return m.parent;
-    };
-
-    m.mod.delay = function (src, mode) {
-        mapper(src, 'delay');
-
-        if (m.modes.literal.indexOf(mode) > -1) {
-        } else if (m.modes.preserve.indexOf(mode) > -1) {
-        } else {
-            params.modules.delay.normalize();
-        }
-
-        return m.parent;
-    };
-
-    m.mod.dur = function (src, mode) {
-        mapper(src, 'dur');
-
-        if (m.modes.literal.indexOf(mode) > -1) {
-        } else if (m.modes.preserve.indexOf(mode) > -1) {
-        } else {
-            params.modules.dur.normalize().exp(10, 0, 1).scale(0.01, 0.5);
-        }
-
-        return m.parent;
-    };
-
-    // CHECK: kind of broken now
-    m.mod.on = function (arg) {
-        switch (arg) {
-            case 'note':
-                params.callbacks.push(arguments[1]);
-                break;
-
-            case 'every':
-            case 'beat':
-                var foo = arguments[1];
-                var bar = arguments[2];
-                params.callbacks.push(function (c) {
-                    if (c.get('beat') % foo === 0) {
-                        bar(c)
-                    }
-                });
-                break;
-
-            case 'subDiv':
-            case 'subdiv':
-            case 'div':
-                break;
-
-            default:
-                break;
-        }
-        return m.parent;
-    };
-
-    m.mod.when = m.mod.on;
-
-    function mapper(src, dest) {
-        if (typeof(src) === 'number') {
-            params.modules[dest] = dtm.array(src);
-        } else if (typeof(src) === 'string') {
-            params.modules[dest] = dtm.array('str', src).classify();
-        } else {
-            if (src.constructor === Array) {
-                params.modules[dest] = dtm.array(src);
-            } else if (isDtmArray(src)) {
-                if (src.get('type') === 'string') {
-                    params.modules[dest] = src.clone().classify();
-                } else {
-                    params.modules[dest] = src.clone();
-                }
-            } else if (src.type === 'dtm.model') {
-
-            } else if (src.type === 'dtm.synth') {
-                params.modules[dest] = src;
-            }
-        }
-    }
 
     return m;
 })();

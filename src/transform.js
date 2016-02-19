@@ -827,7 +827,13 @@ dtm.transform = {
      * @returns {Array}
      */
     shuffle: function (arr) {
-        return _.shuffle(arr);
+        for (var i = arr.length-1; i >= 1; i--) {
+            var j = Math.round(Math.random() * i);
+            var temp = arr[j];
+            arr[j] = arr[i];
+            arr[i] = temp;
+        }
+        return arr;
     },
 
     /**
@@ -837,8 +843,14 @@ dtm.transform = {
      * @returns {array}
      */
     sort: function (arr) {
-        var res = _.sortBy(arr, function (val) {
-            return val;
+        var res = arr.sort(function (a, b) {
+            if (a > b) {
+                return 1;
+            } else if (a < b) {
+                return -1;
+            } else {
+                return 0
+            }
         });
         if (isFloat32Array(arr)) {
             return toFloat32Array(res);
@@ -1310,11 +1322,6 @@ dtm.transform = {
         });
         return res;
     },
-
-    //getClasses: function (input) {
-    //    return _.clone()
-    //
-    //}
 
     mtof: function (input) {
         var res;

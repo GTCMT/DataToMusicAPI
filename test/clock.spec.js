@@ -2,7 +2,7 @@ describe('clock', function () {
     describe('get', function () {
         var c = dtm.clock(120, 16);
 
-        describe('bpm', function () {
+        xdescribe('bpm', function () {
             it('should return 120', function () {
                 expect(c.get('bpm')).toBe(120);
             });

@@ -236,7 +236,7 @@ describe('array helper functions', function () {
 
     describe('mirror', function () {
         var rev = dtm.transform.reverse;
-        var input = _.shuffle(dtm.gen('range', 8).get());
+        var input = dtm.transform.shuffle(dtm.gen('range', 8).get());
         var output = rev(input);
 
         var iSum = input.reduce(function (sum, num) {
@@ -254,7 +254,7 @@ describe('array helper functions', function () {
 
     describe('invert', function () {
         var num = 8;
-        var input = _.shuffle(dtm.gen('range', num));
+        var input = dtm.transform.shuffle(dtm.gen('range', num));
         var output = dtm.transform.invert(input);
 
         for (var i = 0; i < num; i++) {
@@ -495,6 +495,16 @@ describe('array helper functions', function () {
         it('should work with solfa array', function () {
             //expect(dtm.transform.pq([0,2,4,5,7,9,11], ['d','r','me','f','s','le','te'])).toEqual([0,2,3,5,7,8,10]);
             expect(dtm.transform.pitchQuantize([0,2,4,6,7,9,11], ['d','r','me','f','s','le','te'])).toEqual([0,2,3,5,7,8,10]);
+        });
+    });
+
+    describe('sort', function () {
+        it('should work', function () {
+            expect(dtm.transform.sort([2,1,0])).toEqual([0,1,2]);
+            expect(dtm.transform.sort([2,10,0])).toEqual([0,2,10]);
+            expect(dtm.transform.sort(toFloat32Array([2,1,0]))).toEqual(toFloat32Array([0,1,2]));
+            expect(dtm.transform.sort(['c','b','a'])).toEqual(['a','b','c']);
+            expect(dtm.transform.sort(['h','e','y'])).toEqual(['e','h','y']);
         });
     });
 });
