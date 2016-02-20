@@ -6835,7 +6835,7 @@ dtm.instr = function () {
             args = arguments[0];
         }
 
-        s.dur(dtm.model('unipolar')(args).range(0.05, 0.5).block());
+        s.dur(dtm.model('unipolar')(args).range(0.5, 0.05).block());
         return instr;
     };
 
@@ -7252,8 +7252,14 @@ dtm.synth = function () {
     var params = {
         sr: 44100,
         //kr: 4410,
-        dur: { base: dtm.array([[1]]) },
-        interval: { auto: true },
+        dur: {
+            base: dtm.array([[1]]),
+            auto: true
+        },
+        interval: {
+            base: dtm.array([[1]]),
+            auto: true
+        },
         play: { base: dtm.array([[true]]) },
         offset: 0.0,
         repeat: 1,
@@ -7263,7 +7269,6 @@ dtm.synth = function () {
 
         baseTime: 0.0, // for offline rendering
         lookahead: false,
-        autoDur: false,
         voiceId: Math.random(),
         startTime: 0.0,
         phase: 0.0,
@@ -7331,8 +7336,6 @@ dtm.synth = function () {
                 return params.clock;
             case 'lookahead':
                 return params.lookahead;
-            case 'autoDur':
-                return params.autoDur;
             case 'dur':
             case 'duration':
                 return params.dur;
@@ -7355,7 +7358,6 @@ dtm.synth = function () {
                 if (arguments.callee.caller.arguments[0].type === 'dtm.clock') {
                     params.clock = arguments.callee.caller.arguments[0];
                     params.lookahead = true;
-                    params.autoDur = true;
                 }
             }
         }
@@ -7373,7 +7375,6 @@ dtm.synth = function () {
                 if (arguments[0].type === 'dtm.clock') {
                     params.clock = arguments[0];
                     params.lookahead = true;
-                    params.autoDur = true;
                 }
             }
         }
@@ -7732,25 +7733,6 @@ dtm.synth = function () {
      */
     synth.dur = function () {
         var depth = 2;
-        function convertShallow(src) {
-            if (src.length === 1) {
-                return convertShallow(src[0]);
-            } else {
-                if (isNestedNumDtmArray(src)) {
-                    return src;
-                } else if (isNestedWithDtmArray(src)) {
-                    return dtm.array.apply(this, src);
-                } else if (isNumDtmArray(src)) {
-                    return src().block(1);
-                } else if (isNestedArray(src)) {
-                    return dtm.array(src);
-                } else if (isNumOrFloat32Array(src)) {
-                    return dtm.array(src).block(1);
-                } else {
-                    return dtm.array([toFloat32Array(src)]);
-                }
-            }
-        }
 
         if (isFunction(arguments[0])) {
             var res = arguments[0](params.dur.base, synth, params.clock);
@@ -7760,12 +7742,28 @@ dtm.synth = function () {
             params.dur.base = check(argList) ? convertShallow(argList) : params.dur.base;
         }
 
-        params.autoDur = false;
+        params.dur.auto = false;
 
         return synth;
     };
 
     synth.interval = function () {
+        var depth = 2;
+
+        if (isFunction(arguments[0])) {
+            var res = arguments[0](params.interval.base, synth, params.clock);
+            params.interval.base = check(res, depth) ? convertShallow(res) : params.interval.base;
+        } else {
+            var argList = argsToArray(arguments);
+            params.interval.base = check(argList) ? convertShallow(argList) : params.interval.base;
+        }
+
+        params.interval.auto = false;
+
+        if (params.dur.auto) {
+            params.dur.auto = 'interval';
+        }
+
         return synth;
     };
 
@@ -7844,18 +7842,28 @@ dtm.synth = function () {
                 pitch = process(params.pitch);
             }
 
-            var dur;
+            var interval, dur;
 
-            if (params.autoDur) {
-                if (params.type === 'sample') {
+            if (params.interval.auto && params.clock) {
+                interval = params.clock.get('interval');
+            } else {
+                interval = process(params.interval)[0];
+            }
+
+            if (interval <= 0) {
+                interval = 0;
+            }
+
+            if (params.dur.auto) {
+                if (params.dur.auto === 'sample') {
                     params.tabLen = params.wavetable.length;
 
                     dur = 0;
                     pitch.forEach(function (v) {
                         dur += params.tabLen / params.sr / v / pitch.length;
-                    })
-                } else if (params.clock) {
-                    dur = params.clock.get('dur');
+                    });
+                } else {
+                    dur = interval;
                 }
             } else {
                 dur = process(params.dur)[0];
@@ -7962,6 +7970,12 @@ dtm.synth = function () {
 
                 params.startTime = offset;
 
+                var dummyOsc = actx.createOscillator();
+                var silence = actx.createGain();
+                silence.gain.value = 0;
+                dummyOsc.connect(silence);
+                silence.connect(actx.destination);
+
                 nodes.src = actx.createBufferSource();
                 nodes.amp = actx.createGain();
                 nodes.pFx[0].out = actx.createGain();
@@ -8011,6 +8025,9 @@ dtm.synth = function () {
                 nodes.src.start(offset);
                 nodes.src.stop(offset + dur);
 
+                dummyOsc.start(offset);
+                dummyOsc.stop(offset + interval);
+
                 var curves = [];
                 curves.push({param: nodes.src.playbackRate, value: pitch});
                 curves.push({param: nodes.amp.gain, value: amp});
@@ -8046,7 +8063,7 @@ dtm.synth = function () {
                 declipper.gain.linearRampToValueAtTime(1.0, offset + ramp);
                 declipper.gain.setTargetAtTime(0.0, offset + dur - ramp, ramp * 0.3);
 
-                nodes.src.onended = function () {
+                dummyOsc.onended = function () {
                     dtm.master.removeVoice(synth);
 
                     // rep(1) would only play once
@@ -8316,7 +8333,10 @@ dtm.synth = function () {
                     if (xhr.readyState == 4 && xhr.status == 200) {
                         actx.decodeAudioData(xhr.response, function (buf) {
                             params.wavetable = buf.getChannelData(0);
-                            params.autoDur = true;
+
+                            if (params.dur.auto) {
+                                params.dur.auto = 'sample';
+                            }
                             resolve(synth);
                         });
                     }
@@ -8631,6 +8651,26 @@ dtm.synth = function () {
                 return dtm.array(src);
             } else if (isNumOrFloat32Array(src)) {
                 return dtm.array([src]);
+            } else {
+                return dtm.array([toFloat32Array(src)]);
+            }
+        }
+    }
+
+    function convertShallow(src) {
+        if (src.length === 1) {
+            return convertShallow(src[0]);
+        } else {
+            if (isNestedNumDtmArray(src)) {
+                return src;
+            } else if (isNestedWithDtmArray(src)) {
+                return dtm.array.apply(this, src);
+            } else if (isNumDtmArray(src)) {
+                return src().block(1);
+            } else if (isNestedArray(src)) {
+                return dtm.array(src);
+            } else if (isNumOrFloat32Array(src)) {
+                return dtm.array(src).block(1);
             } else {
                 return dtm.array([toFloat32Array(src)]);
             }
@@ -9097,18 +9137,18 @@ dtm.inscore = function () {
             if (isNumber(arg)) {
                 a.set(arg);
             } else if (typeof(arg) === 'string') {
-                a.set(arg).split().histo();
+                a.set(arg).split().classify();
             } else if (isArray(arg)) {
                 if (isNumOrFloat32Array(arg)) {
                     a.set(arg);
                 } else {
-                    a.set(arg).split().histo();
+                    a.set(arg).split().classify();
                 }
             } else if (isDtmArray(arg)) {
                 a = arg.clone();
 
                 if (a.get('type') === 'string') {
-                    a.histo();
+                    a.classify();
                 }
             }
         } else if (arguments.length > 1) {
@@ -9117,7 +9157,7 @@ dtm.inscore = function () {
             if (isNumOrFloat32Array(args)) {
                 a.set(args);
             } else if (isStringArray(args)) {
-                a.set(args).split().histo();
+                a.set(args).split().classify();
             }
         }
 
@@ -9154,18 +9194,18 @@ dtm.inscore = function () {
             if (isNumber(arg)) {
                 a.set(arg);
             } else if (isString(arg)) {
-                a.set(arg).split().histo();
+                a.set(arg).split().classify();
             } else if (isArray(arg)) {
                 if (isNumOrFloat32Array(arg)) {
                     a.set(arg);
                 } else {
-                    a.set(arg).split().histo();
+                    a.set(arg).split().classify();
                 }
             } else if (isDtmArray(arg)) {
                 a = arg.clone();
 
                 if (a.get('type') === 'string') {
-                    a.histo();
+                    a.classify();
                 }
             }
         } else if (arguments.length > 1) {
@@ -9174,7 +9214,7 @@ dtm.inscore = function () {
             if (isNumArray(args)) {
                 a.set(args);
             } else if (isStringArray(args)) {
-                a.set(args).split().histo();
+                a.set(args).split().classify();
             }
         }
 

@@ -42,7 +42,7 @@ dtm.instr = function () {
             args = arguments[0];
         }
 
-        s.dur(dtm.model('unipolar')(args).range(0.05, 0.5).block());
+        s.dur(dtm.model('unipolar')(args).range(0.5, 0.05).block());
         return instr;
     };
 

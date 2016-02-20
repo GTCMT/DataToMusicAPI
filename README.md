@@ -41,20 +41,15 @@ dtm.instr().pitch(data).volume(data).play();
 
 
 ```
-var a = dtm.array('s', 'hello world!');
+var a = dtm.array('hello world!').slice();
 
-a.class().rescale(60, 90).round();
+a.class().range(60, 90).round().block(1);
 
-dtm.clock().add(sonify).start();
-
-function sonify(c) {
-    dtm.synth().nn(a.get('next')).play();
-}
+dtm.syn().dur(0.1).play()
+.rep(a.len)
+.nn(a);
 ```
 <button onclick="playPrev(this)">Listen</button>
-
-
-![some diagram](JavaScript.png "diagram")
 
 ## How to Build ##
 Dependencies:
@@ -63,5 +58,3 @@ Bower (browser library management)
 Grunt (task automation)
 Karma and Jasmine (for unit test)
 JSDoc (documentation builder)
-Lodash (good stuff)
-

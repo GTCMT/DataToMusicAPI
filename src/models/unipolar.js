@@ -11,18 +11,18 @@
             if (isNumber(arg)) {
                 a.set(arg);
             } else if (typeof(arg) === 'string') {
-                a.set(arg).split().histo();
+                a.set(arg).split().classify();
             } else if (isArray(arg)) {
                 if (isNumOrFloat32Array(arg)) {
                     a.set(arg);
                 } else {
-                    a.set(arg).split().histo();
+                    a.set(arg).split().classify();
                 }
             } else if (isDtmArray(arg)) {
                 a = arg.clone();
 
                 if (a.get('type') === 'string') {
-                    a.histo();
+                    a.classify();
                 }
             }
         } else if (arguments.length > 1) {
@@ -31,7 +31,7 @@
             if (isNumOrFloat32Array(args)) {
                 a.set(args);
             } else if (isStringArray(args)) {
-                a.set(args).split().histo();
+                a.set(args).split().classify();
             }
         }
 

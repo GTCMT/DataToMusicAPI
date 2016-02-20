@@ -53,7 +53,7 @@ Vibrato using sine generator
     })
     
     dtm.s().play()
-        .dur(3) // Each segment is played over the period of 3 seconds
+        .interval(3) // Each segment is played over the period of 3 seconds
         .rep(seq.get('len')) // Iterate through the seq list, then stop
         .nn(60) // Set the base note
         .nn.add(seq) // Modulate the pitch by addition
