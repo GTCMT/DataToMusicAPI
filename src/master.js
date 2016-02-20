@@ -65,9 +65,6 @@ dtm.master = {
         dtm.clocks.forEach(function (c) {
             c.stop();
             c.clear();
-            //_.forEach(c, function (d) {
-            //    d.callbacks = [];
-            //})
         });
 
         dtm.master.activeInstrs.forEach(function (i) {

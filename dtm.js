@@ -6,7 +6,7 @@
  */
 
 var params = {
-    isLogging: false
+    isLogging: true
 };
 
 /**
@@ -6332,7 +6332,6 @@ dtm.clock = function (bpm, subDiv, autoStart) {
             clock.callbacks.forEach(function (stored) {
                 if (stored.name == name) {
                     dtm.log('clock.add(): identical function exists in the callback list');
-
                     dupe = true;
                 }
             });
@@ -6343,11 +6342,12 @@ dtm.clock = function (bpm, subDiv, autoStart) {
             }
         } else {
             clock.callbacks.forEach(function (stored) {
-                if (objCompare(stored, cb)) {
-                    dtm.log('clock.add(): identical function exists in the callback list');
-
-                    dupe = true;
-                }
+                // TODO: this would disable the master clock ticking???
+                //if (objCompare(stored, cb)) {
+                //    dtm.log('clock.add(): identical function exists in the callback list');
+                //
+                //    dupe = true;
+                //}
             });
 
             if (!dupe) {
@@ -8847,9 +8847,6 @@ dtm.master = {
         dtm.clocks.forEach(function (c) {
             c.stop();
             c.clear();
-            //_.forEach(c, function (d) {
-            //    d.callbacks = [];
-            //})
         });
 
         dtm.master.activeInstrs.forEach(function (i) {

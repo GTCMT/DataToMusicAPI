@@ -4,7 +4,7 @@
  */
 
 var params = {
-    isLogging: false
+    isLogging: true
 };
 
 /**
