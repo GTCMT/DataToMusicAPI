@@ -29,6 +29,8 @@ dtm.synth = function () {
         repeat: 1,
         autoRep: true,
 
+        onNoteCallback: [],
+
         interp: 'step',
 
         baseTime: 0.0, // for offline rendering
@@ -94,6 +96,12 @@ dtm.synth = function () {
         }
     };
 
+    /**
+     * Returns parameters
+     * @function module:synth#get
+     * @param param
+     * @returns {*}
+     */
     synth.get = function (param) {
         switch (param) {
             case 'clock':
@@ -572,6 +580,10 @@ dtm.synth = function () {
             return synth;
         }
 
+        params.onNoteCallback.forEach(function (fn) {
+            fn(synth, params.clock);
+        });
+
         // deferred
         setTimeout(function () {
             //===== type check
@@ -618,7 +630,7 @@ dtm.synth = function () {
                 interval = 0;
             }
 
-            if (params.dur.auto) {
+            if (params.dur.auto && interval !== 0) {
                 if (params.dur.auto === 'sample') {
                     params.tabLen = params.wavetable.length;
 
@@ -828,18 +840,27 @@ dtm.synth = function () {
                 declipper.gain.setTargetAtTime(0.0, offset + dur - ramp, ramp * 0.3);
 
                 dummyOsc.onended = function () {
-                    dtm.master.removeVoice(synth);
-
                     // rep(1) would only play once
                     if (params.repeat > 1) {
                         params.repeat--;
                         synth.play(); // TODO: pass any argument?
                     }
                 };
+
+                nodes.src.onended = function () {
+                    dtm.master.removeVoice(synth);
+                }
             }
 
         }, defer + deferIncr);
 
+        return synth;
+    };
+
+    synth.onnote = function (fn) {
+        if (isFunction(fn)) {
+            params.onNoteCallback.push(fn);
+        }
         return synth;
     };
 

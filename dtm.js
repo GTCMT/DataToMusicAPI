@@ -2097,34 +2097,6 @@ dtm.generator = function () {
         return generator;
     };
 
-    /**
-     * @function module:generator#min
-     * @param min
-     * @returns {array}
-     */
-    generator.min = function (min) {
-        var val = parseFloat(min);
-        if (!isNaN(val)) {
-            params.min = val;
-        }
-        process();
-        return generator;
-    };
-
-    /**
-     * @function module:generator#max
-     * @param max
-     * @returns {array}
-     */
-    generator.max = function (max) {
-        var val = parseFloat(max);
-        if (!isNaN(val)) {
-            params.max = val;
-        }
-        process();
-        return generator;
-    };
-
     ///**
     // * @function module:generator#range
     // * @param arg1 {number|array|dtm.array} A min value or an array of min and max values
@@ -2144,11 +2116,11 @@ dtm.generator = function () {
     //
     //    if (isNumOrFloat32Array(args)) {
     //        if (args.length === 2) {
-    //            generator.min(args[0]);
-    //            generator.max(args[1]);
+    //            params.min = (args[0]);
+    //            params.max = (args[1]);
     //        } else if (args.length > 2) {
-    //            generator.min(dtm.analyzer.min(args));
-    //            generator.max(dtm.analyzer.max(args));
+    //            params.min = (dtm.analyzer.min(args));
+    //            params.max = (dtm.analyzer.max(args));
     //        }
     //        process();
     //    }
@@ -2331,8 +2303,8 @@ dtm.generator = function () {
         if (arguments.length === 4) {
             if (isArray(arguments[3])) {
                 if (arguments[3].length === 2) {
-                    generator.min(arguments[3][0]);
-                    generator.max(arguments[3][1]);
+                    params.min = arguments[3][0];
+                    params.max = arguments[3][1];
                 }
             } else {
                 params.min = -1.0;
@@ -2403,22 +2375,22 @@ dtm.generator = function () {
             if (arguments.length >= 3) {
                 if (isArray(arguments[2])) {
                     if (arguments[2].length === 1) {
-                        generator.max(arguments[2][0]);
+                        params.max = arguments[2][0];
                     } else if (arguments[2].length === 2) {
-                        generator.min(arguments[2][0]);
-                        generator.max(arguments[2][1]);
+                        params.min = arguments[2][0];
+                        params.max = arguments[2][1];
                     }
                 } else {
                     if (arguments.length === 3) {
                         // set as 0 - max
-                        generator.min(0);
-                        generator.max(arguments[2]);
+                        params.min = 0;
+                        params.max = arguments[2];
                         generator.amp(1.0);
                     }
 
                     if (arguments.length >= 4) {
-                        generator.min(arguments[2]);
-                        generator.max(arguments[3]);
+                        params.min = arguments[2];
+                        params.max = arguments[3];
                     }
                 }
             }
@@ -4221,6 +4193,12 @@ dtm.array = function () {
         }
     };
 
+    /**
+     * Returns an inner array specified by the index or the name. Note that this will always clone the array, so the further edit on the returned array will not affect the original array.
+     * @function module:array:col
+     * @param which
+     * @returns {*}
+     */
     array.col = function (which) {
         if (isNestedDtmArray(array)) {
             if (isString(which)) {
@@ -4233,9 +4211,9 @@ dtm.array = function () {
                 if (isEmpty(res)) {
                     res = array;
                 }
-                return res;
+                return res.clone();
             } else {
-                return array.get(which);
+                return array.get(which).clone();
             }
         } else {
             return array.set(array.get(which)).label(array.get('name'));
@@ -4244,12 +4222,13 @@ dtm.array = function () {
 
     array.column = array.col;
 
+    /**
+     * Returns a row of a nested array by the index.
+     * @param num
+     * @returns {dtm.array}
+     */
     array.row = function (num) {
-        var newArray = [];
-        array.forEach(function (a) {
-            newArray.push(a.get(num));
-        });
-        return array.set(newArray);
+        return array.set(array.get('row', num));
     };
 
     // TODO: conflicts with gen.transpose()
@@ -4260,7 +4239,8 @@ dtm.array = function () {
             while (array.val.some(function (a) {
                 return i < a.get('len');
             })) {
-                newArray.push(array().row(i));
+                // TODO: get('row', i)
+                newArray.push(array.get('row', i));
                 i++;
             }
             return array.set(newArray);
@@ -4481,17 +4461,21 @@ dtm.array = function () {
     };
 
     array.unnest = function () {
-        var flattened = [];
-        array.val.forEach(function (v) {
-            if (isDtmArray(v)) {
-                flattened = concat(flattened, v.get());
-            }
-        });
+        if (isNestedDtmArray(array)) {
+            var flattened = [];
+            array.val.forEach(function (v) {
+                if (isDtmArray(v)) {
+                    flattened = concat(flattened, v.get());
+                }
+            });
 
-        if (isNumArray(flattened)) {
-            flattened = toFloat32Array(flattened);
+            if (isNumArray(flattened)) {
+                flattened = toFloat32Array(flattened);
+            }
+            return array.set(flattened);
+        } else {
+            return array;
         }
-        return array.set(flattened);
     };
 
     array.flatten = array.ub = array.unblock = array.unnest;
@@ -4781,49 +4765,6 @@ dtm.array = function () {
 
     array.str = array.stretch;
 
-    array.summarize = function () {
-        return array;
-    };
-
-    array.sum = function () {
-        if (isNestedWithDtmArray(array.val)) {
-            var maxLen = 0;
-            array.val.forEach(function (a) {
-                if (a.get('len') > maxLen) {
-                    maxLen = a.get('len');
-                }
-            });
-
-            var res = new Float32Array(maxLen);
-
-            for (var i = 0; i < maxLen; i++) {
-                array.val.forEach(function (a) {
-                    if (i < a.get('len') && isNumber(a.get(i))) {
-                        res[i] += a.get(i);
-                    }
-                });
-            }
-
-            return array.set(res);
-        } else {
-            var sum = array.val.reduce(function (a, b) {
-                return a + b;
-            });
-            return array.set(sum);
-        }
-    };
-
-    /**
-     * Scales the values so that the sum fits the target value. Useful, for example, for fitting intervallic values to a specific measure length.
-     * @function module:array#fitsum
-     * @param tgt {number} If the round argument is true, the target value is also rounded.
-     * @param [round=false] {boolean}
-     * @returns {dtm.array}
-     */
-    array.fitsum = function (tgt, round, min) {
-        return array.set(dtm.transform.fitSum(array.val, tgt, round));
-    };
-
     /**
      * Adds a value to all the array elements.
      * @function module:array#add
@@ -4959,6 +4900,179 @@ dtm.array = function () {
         return array.set(dtm.transform.powof(array.val, factor, interp));
     };
 
+    /* CONVERSION WITH STATS */
+    array.min = function () {
+        if (isNestedDtmArray(array)) {
+            return array.map(function (a) {
+                return a.get('min');
+            });
+        } else {
+            return array.set(array.get('min'));
+        }
+    };
+
+    array.max = function () {
+        if (isNestedDtmArray(array)) {
+            return array.map(function (a) {
+                return a.get('max');
+            });
+        } else {
+            return array.set(array.get('max'));
+        }
+    };
+
+    array.extent = function () {
+        if (isNestedDtmArray(array)) {
+            return array.map(function (a) {
+                return a.set(a.get('extent'));
+            });
+        } else {
+            return array.set(array.get('extent'));
+        }
+    };
+
+    array.mean = function () {
+        if (isNestedDtmArray(array)) {
+            return array.map(function (a) {
+                return a.get('mean');
+            });
+        } else {
+            return array.set(array.get('mean'));
+        }
+    };
+
+    array.avg = array.mean;
+
+    array.mode = function () {
+        if (isNestedDtmArray(array)) {
+            return array.map(function (a) {
+                return a.get('mode');
+            });
+        } else {
+            return array.set(array.get('mode'));
+        }
+    };
+
+    array.median = function () {
+        if (isNestedDtmArray(array)) {
+            return array.map(function (a) {
+                return a.get('median');
+            });
+        } else {
+            return array.set(array.get('median'));
+        }
+    };
+
+    array.midrange = function () {
+        if (isNestedDtmArray(array)) {
+            return array.map(function (a) {
+                return a.get('midrange');
+            });
+        } else {
+            return array.set(array.get('midrange'));
+        }
+    };
+
+    array.mid = array.midrange;
+
+    array.std = function () {
+        if (isNestedDtmArray(array)) {
+            return array.map(function (a) {
+                return a.get('std');
+            });
+        } else {
+            return array.set(array.get('std'));
+        }
+    };
+
+    array.pstd = function () {
+        if (isNestedDtmArray(array)) {
+            return array.map(function (a) {
+                return a.get('pstd');
+            });
+        } else {
+            return array.set(array.get('pstd'));
+        }
+    };
+
+    array.var = function () {
+        if (isNestedDtmArray(array)) {
+            return array.map(function (a) {
+                return a.get('var');
+            });
+        } else {
+            return array.set(array.get('var'));
+        }
+    };
+
+    array.pvar = function () {
+        if (isNestedDtmArray(array)) {
+            return array.map(function (a) {
+                return a.get('pvar');
+            });
+        } else {
+            return array.set(array.get('pvar'));
+        }
+    };
+
+    array.rms = function () {
+        if (isNestedDtmArray(array)) {
+            return array.map(function (a) {
+                return a.get('rms');
+            });
+        } else {
+            return array.set(array.get('rms'));
+        }
+    };
+
+
+    // TODO: not consistent with other stats-based conversions
+    array.sum = function () {
+        if (isNestedWithDtmArray(array.val)) {
+            var maxLen = 0;
+            array.val.forEach(function (a) {
+                if (a.get('len') > maxLen) {
+                    maxLen = a.get('len');
+                }
+            });
+
+            var res = new Float32Array(maxLen);
+
+            for (var i = 0; i < maxLen; i++) {
+                array.val.forEach(function (a) {
+                    if (i < a.get('len') && isNumber(a.get(i))) {
+                        res[i] += a.get(i);
+                    }
+                });
+            }
+
+            return array.set(res);
+        } else {
+            var sum = array.val.reduce(function (a, b) {
+                return a + b;
+            });
+            return array.set(sum);
+        }
+    };
+
+    array.sumrow = function () {
+        return array;
+    };
+
+    /**
+     * Scales the values so that the sum fits the target value. Useful, for example, for fitting intervallic values to a specific measure length.
+     * @function module:array#fitsum
+     * @param tgt {number} If the round argument is true, the target value is also rounded.
+     * @param [round=false] {boolean}
+     * @returns {dtm.array}
+     */
+    array.fitsum = function (tgt, round, min) {
+        return array.set(dtm.transform.fitSum(array.val, tgt, round));
+    };
+
+    array.prod = function () {
+
+    };
 
     /* LIST OPERATIONS*/
 
@@ -7265,6 +7379,8 @@ dtm.synth = function () {
         repeat: 1,
         autoRep: true,
 
+        onNoteCallback: [],
+
         interp: 'step',
 
         baseTime: 0.0, // for offline rendering
@@ -7330,6 +7446,12 @@ dtm.synth = function () {
         }
     };
 
+    /**
+     * Returns parameters
+     * @function module:synth#get
+     * @param param
+     * @returns {*}
+     */
     synth.get = function (param) {
         switch (param) {
             case 'clock':
@@ -7808,6 +7930,10 @@ dtm.synth = function () {
             return synth;
         }
 
+        params.onNoteCallback.forEach(function (fn) {
+            fn(synth, params.clock);
+        });
+
         // deferred
         setTimeout(function () {
             //===== type check
@@ -7854,7 +7980,7 @@ dtm.synth = function () {
                 interval = 0;
             }
 
-            if (params.dur.auto) {
+            if (params.dur.auto && interval !== 0) {
                 if (params.dur.auto === 'sample') {
                     params.tabLen = params.wavetable.length;
 
@@ -8064,18 +8190,27 @@ dtm.synth = function () {
                 declipper.gain.setTargetAtTime(0.0, offset + dur - ramp, ramp * 0.3);
 
                 dummyOsc.onended = function () {
-                    dtm.master.removeVoice(synth);
-
                     // rep(1) would only play once
                     if (params.repeat > 1) {
                         params.repeat--;
                         synth.play(); // TODO: pass any argument?
                     }
                 };
+
+                nodes.src.onended = function () {
+                    dtm.master.removeVoice(synth);
+                }
             }
 
         }, defer + deferIncr);
 
+        return synth;
+    };
+
+    synth.onnote = function (fn) {
+        if (isFunction(fn)) {
+            params.onNoteCallback.push(fn);
+        }
         return synth;
     };
 

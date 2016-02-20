@@ -421,34 +421,6 @@ dtm.generator = function () {
         return generator;
     };
 
-    /**
-     * @function module:generator#min
-     * @param min
-     * @returns {array}
-     */
-    generator.min = function (min) {
-        var val = parseFloat(min);
-        if (!isNaN(val)) {
-            params.min = val;
-        }
-        process();
-        return generator;
-    };
-
-    /**
-     * @function module:generator#max
-     * @param max
-     * @returns {array}
-     */
-    generator.max = function (max) {
-        var val = parseFloat(max);
-        if (!isNaN(val)) {
-            params.max = val;
-        }
-        process();
-        return generator;
-    };
-
     ///**
     // * @function module:generator#range
     // * @param arg1 {number|array|dtm.array} A min value or an array of min and max values
@@ -468,11 +440,11 @@ dtm.generator = function () {
     //
     //    if (isNumOrFloat32Array(args)) {
     //        if (args.length === 2) {
-    //            generator.min(args[0]);
-    //            generator.max(args[1]);
+    //            params.min = (args[0]);
+    //            params.max = (args[1]);
     //        } else if (args.length > 2) {
-    //            generator.min(dtm.analyzer.min(args));
-    //            generator.max(dtm.analyzer.max(args));
+    //            params.min = (dtm.analyzer.min(args));
+    //            params.max = (dtm.analyzer.max(args));
     //        }
     //        process();
     //    }
@@ -655,8 +627,8 @@ dtm.generator = function () {
         if (arguments.length === 4) {
             if (isArray(arguments[3])) {
                 if (arguments[3].length === 2) {
-                    generator.min(arguments[3][0]);
-                    generator.max(arguments[3][1]);
+                    params.min = arguments[3][0];
+                    params.max = arguments[3][1];
                 }
             } else {
                 params.min = -1.0;
@@ -727,22 +699,22 @@ dtm.generator = function () {
             if (arguments.length >= 3) {
                 if (isArray(arguments[2])) {
                     if (arguments[2].length === 1) {
-                        generator.max(arguments[2][0]);
+                        params.max = arguments[2][0];
                     } else if (arguments[2].length === 2) {
-                        generator.min(arguments[2][0]);
-                        generator.max(arguments[2][1]);
+                        params.min = arguments[2][0];
+                        params.max = arguments[2][1];
                     }
                 } else {
                     if (arguments.length === 3) {
                         // set as 0 - max
-                        generator.min(0);
-                        generator.max(arguments[2]);
+                        params.min = 0;
+                        params.max = arguments[2];
                         generator.amp(1.0);
                     }
 
                     if (arguments.length >= 4) {
-                        generator.min(arguments[2]);
-                        generator.max(arguments[3]);
+                        params.min = arguments[2];
+                        params.max = arguments[3];
                     }
                 }
             }
