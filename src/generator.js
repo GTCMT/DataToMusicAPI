@@ -138,6 +138,9 @@ dtm.generator = function () {
             return res;
         }
 
+        // TODO: implement
+        function tri(len, min, max, amp, cycle, offset) {}
+
         function random(len, min, max, amp, floor) {
             var res = new Float32Array(len);
             for (var i = 0; i < len; i++) {
@@ -276,6 +279,17 @@ dtm.generator = function () {
                     res[i] = res[i-1] + res[i-2];
                 }
             }
+            return res;
+        }
+
+        function gauss(len) {
+            var res = new Float32Array(len);
+
+            for (var i = 0; i < len; i++) {
+                var x = -Math.PI + (Math.PI * 2 / len) * i;
+                res[i] = Math.pow(Math.E, -0.5 * Math.pow(x, 2)) / Math.sqrt(2 * Math.PI) / 0.4 * (params.max - params.min) + params.min;
+            }
+
             return res;
         }
 

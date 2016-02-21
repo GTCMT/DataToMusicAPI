@@ -32,6 +32,14 @@ Vibrato using sine generator
         
 <button onclick="playPrev(this)">Listen</button>
 
+Generating a triangle wave
+
+    var tri = dtm.a([-1,1,-1]).fit(1024);
+    tri.fitrep(5); // repeat for 5 cycles within the fixed length
+    
+    dtm.syn().wavetable(tri).nn(60).play();
+
+<button onclick="playPrev(this)">Listen</button>
 
 # Sequencing
 
