@@ -5346,7 +5346,19 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.window = function (type) {
-        return array.set(dtm.transform.window(array.val, type));
+        if (isNestedDtmArray(array)) {
+            return array.map(function (a) {
+                return a.window(type);
+            });
+        } else {
+            return array.set(dtm.transform.window(array.val, type));
+        }
+    };
+
+    array.win = array.window;
+
+    array.copy = function (times) {
+
     };
 
     /**
@@ -6100,6 +6112,68 @@ dtm.data = function (input, fn) {
             };
         });
     }
+};
+
+dtm.csv = function (input, fn) {
+    if (isString(input)) {
+        var url = input;
+
+        return new Promise(function (resolve) {
+            var ext = url.split('.').pop(); // checks the extension
+
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', url, true);
+
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState == 4 && xhr.status == 200) {
+                    var data = dtm.array();
+                    var arrays = [];
+                    objForEach(dtm.parser.csvToCols(xhr.response), function (v, k) {
+                        var a = dtm.array(v).label(k).parent(data);
+                        arrays.push(a);
+                    });
+
+                    if (typeof(fn) !== 'undefined') {
+                        fn(data.set(arrays));
+                    }
+
+                    resolve(data.set(arrays));
+                }
+            };
+
+            xhr.send();
+        });
+    } else {
+        var elem_files = input;
+        var reader = new FileReader();
+
+        reader.readAsText(elem_files[0]);
+        return new Promise(function (resolve) {
+            reader.onload = function (e) {
+                //resolve(dtm.parser.csvToCols(e.target.result));
+                var data = dtm.array();
+                var arrays = [];
+                objForEach(dtm.parser.csvToCols(e.target.result), function (v, k) {
+                    var a = dtm.array(v).label(k).parent(data);
+                    arrays.push(a);
+                });
+
+                if (typeof(fn) !== 'undefined') {
+                    fn(data.set(arrays));
+                }
+
+                resolve(data.set(arrays));
+            };
+        });
+    }
+};
+
+dtm.json = function (input, fn) {
+
+};
+
+dtm.text = function (input, fn) {
+
 };
 
 dtm.load = dtm.data;
@@ -6911,10 +6985,11 @@ dtm.instr = function () {
     };
 
     var params = {
-        dur: 0.3
+        dur: 0.1
     };
 
-    var s = dtm.synth().dur(params.dur).rep().amp(dtm.decay());
+    var s = dtm.synth().dur(params.dur).rep()
+        .amp(dtm.decay().expc(10));
     var uni = dtm.model('unipolar');
 
     instr.play = function () {
@@ -6949,7 +7024,7 @@ dtm.instr = function () {
             args = arguments[0];
         }
 
-        s.dur(dtm.model('unipolar')(args).range(0.5, 0.05).block());
+        s.int(dtm.model('unipolar')(args).range(0.5, 0.05).block());
         return instr;
     };
 
@@ -8555,6 +8630,24 @@ dtm.synth = function () {
         } else {
             nodes.fx.push(lpf);
         }
+        return synth;
+    };
+
+    synth.lpf.post = function (freq, q) {
+        var lpf = new fx.LPF(true);
+
+        freq = typeCheck(freq);
+        if (freq) {
+            lpf.freq = freq;
+        }
+
+        q = typeCheck(q);
+        if (q) {
+            lpf.q = q;
+        }
+
+        nodes.pFx.push(lpf);
+
         return synth;
     };
 

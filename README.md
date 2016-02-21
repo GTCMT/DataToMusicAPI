@@ -31,24 +31,19 @@ Client-side JavaScript utility tools for data handling, mapping, and sound synth
 <button onclick="playPrev(this)">Listen</button>
 
 
-```
-data = 'hello';
-
-dtm.instr().pitch(data).volume(data).play();
-```
+    data = 'hello';
+    dtm.instr().pitch(data).speed(data).play();
 
 <button onclick="playPrev(this)">Listen</button>
 
-
-```
-var a = dtm.array('hello world!').slice();
-
-a.class().range(60, 90).round().block(1);
-
-dtm.syn().dur(0.1).play()
-.rep(a.len)
-.nn(a);
-```
+    var a = dtm.array('hello world!').split();
+    a.class().range(60, 90).round().block(1);
+    
+    dtm.syn().play()
+        .interval(0.1)
+        .rep(a.len)
+        .nn(a);
+    
 <button onclick="playPrev(this)">Listen</button>
 
 ## How to Build ##

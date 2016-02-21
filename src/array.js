@@ -1513,7 +1513,19 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.window = function (type) {
-        return array.set(dtm.transform.window(array.val, type));
+        if (isNestedDtmArray(array)) {
+            return array.map(function (a) {
+                return a.window(type);
+            });
+        } else {
+            return array.set(dtm.transform.window(array.val, type));
+        }
+    };
+
+    array.win = array.window;
+
+    array.copy = function (times) {
+
     };
 
     /**

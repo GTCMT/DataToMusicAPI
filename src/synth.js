@@ -1208,6 +1208,24 @@ dtm.synth = function () {
         return synth;
     };
 
+    synth.lpf.post = function (freq, q) {
+        var lpf = new fx.LPF(true);
+
+        freq = typeCheck(freq);
+        if (freq) {
+            lpf.freq = freq;
+        }
+
+        q = typeCheck(q);
+        if (q) {
+            lpf.q = q;
+        }
+
+        nodes.pFx.push(lpf);
+
+        return synth;
+    };
+
     /**
      * @function module:synth#hpf
      * @param freq

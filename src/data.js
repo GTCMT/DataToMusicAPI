@@ -223,4 +223,66 @@ dtm.data = function (input, fn) {
     }
 };
 
+dtm.csv = function (input, fn) {
+    if (isString(input)) {
+        var url = input;
+
+        return new Promise(function (resolve) {
+            var ext = url.split('.').pop(); // checks the extension
+
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', url, true);
+
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState == 4 && xhr.status == 200) {
+                    var data = dtm.array();
+                    var arrays = [];
+                    objForEach(dtm.parser.csvToCols(xhr.response), function (v, k) {
+                        var a = dtm.array(v).label(k).parent(data);
+                        arrays.push(a);
+                    });
+
+                    if (typeof(fn) !== 'undefined') {
+                        fn(data.set(arrays));
+                    }
+
+                    resolve(data.set(arrays));
+                }
+            };
+
+            xhr.send();
+        });
+    } else {
+        var elem_files = input;
+        var reader = new FileReader();
+
+        reader.readAsText(elem_files[0]);
+        return new Promise(function (resolve) {
+            reader.onload = function (e) {
+                //resolve(dtm.parser.csvToCols(e.target.result));
+                var data = dtm.array();
+                var arrays = [];
+                objForEach(dtm.parser.csvToCols(e.target.result), function (v, k) {
+                    var a = dtm.array(v).label(k).parent(data);
+                    arrays.push(a);
+                });
+
+                if (typeof(fn) !== 'undefined') {
+                    fn(data.set(arrays));
+                }
+
+                resolve(data.set(arrays));
+            };
+        });
+    }
+};
+
+dtm.json = function (input, fn) {
+
+};
+
+dtm.text = function (input, fn) {
+
+};
+
 dtm.load = dtm.data;

@@ -4,10 +4,11 @@ dtm.instr = function () {
     };
 
     var params = {
-        dur: 0.3
+        dur: 0.1
     };
 
-    var s = dtm.synth().dur(params.dur).rep().amp(dtm.decay());
+    var s = dtm.synth().dur(params.dur).rep()
+        .amp(dtm.decay().expc(10));
     var uni = dtm.model('unipolar');
 
     instr.play = function () {
@@ -42,7 +43,7 @@ dtm.instr = function () {
             args = arguments[0];
         }
 
-        s.dur(dtm.model('unipolar')(args).range(0.5, 0.05).block());
+        s.int(dtm.model('unipolar')(args).range(0.5, 0.05).block());
         return instr;
     };
 
