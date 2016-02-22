@@ -7579,6 +7579,7 @@ dtm.synth = function () {
     params.sr = actx.sampleRate;
     params.rtFxOnly = !dtm.wa.useOfflineContext;
     var deferIncr = 1;
+    var dummyBuffer = actx.createBuffer(1, 1, 44100);
 
     var init = function () {
         if (isObject(arguments[0])) {
@@ -7980,6 +7981,26 @@ dtm.synth = function () {
 
     synth.int = synth.interval;
 
+    synth.interval.add = function () {
+        //var depth = 2;
+        //
+        //if (isFunction(arguments[0])) {
+        //    var res = arguments[0](params.interval.base, synth, params.clock);
+        //    params.interval.base = check(res, depth) ? convertShallow(res) : params.interval.base;
+        //} else {
+        //    var argList = argsToArray(arguments);
+        //    params.interval.base = check(argList) ? convertShallow(argList) : params.interval.base;
+        //}
+        //
+        //params.interval.auto = false;
+        //
+        //if (params.dur.auto) {
+        //    params.dur.auto = 'interval';
+        //}
+
+        return synth;
+    };
+
     synth.offset = function (src) {
         params.offset = toFloat32Array(src)[0];
         return synth;
@@ -8008,7 +8029,6 @@ dtm.synth = function () {
         }
 
         // if playSwitch is a function
-
 
         if (params.pending) {
             params.pending = false;
@@ -8185,12 +8205,6 @@ dtm.synth = function () {
 
                 params.startTime = offset;
 
-                var dummyOsc = actx.createOscillator();
-                var silence = actx.createGain();
-                silence.gain.value = 0;
-                dummyOsc.connect(silence);
-                silence.connect(actx.destination);
-
                 nodes.src = actx.createBufferSource();
                 nodes.amp = actx.createGain();
                 nodes.pFx[0].out = actx.createGain();
@@ -8225,6 +8239,15 @@ dtm.synth = function () {
                 }
                 out.connect(actx.destination);
 
+                //var dummyOsc = actx.createOscillator();
+                var dummySrc = actx.createBufferSource();
+                dummySrc.buffer = dummyBuffer;
+                dummySrc.loop = true;
+                var silence = actx.createGain();
+                silence.gain.value = 1;
+                dummySrc.connect(silence);
+                silence.connect(out);
+
                 var tempBuff = actx.createBuffer(1, params.tabLen, params.sr); // FF needs this stupid procedure (Feb 18, 2016)
                 if (tempBuff.copyToChannel) {
                     // for Safari
@@ -8237,11 +8260,29 @@ dtm.synth = function () {
                 }
                 nodes.src.buffer = tempBuff;
                 nodes.src.loop = (params.type !== 'sample');
-                nodes.src.start(offset);
-                nodes.src.stop(offset + dur);
 
-                dummyOsc.start(offset);
-                dummyOsc.stop(offset + interval);
+                var p = new Promise(function (resolve) {
+                    dummySrc.onended = function () {
+                        // rep(1) would only play once
+                        if (params.repeat > 1) {
+                            synth.play(); // TODO: pass any argument?
+                            params.repeat--;
+                        }
+                    };
+
+                    nodes.src.onended = function () {
+                        dtm.master.removeVoice(synth);
+                    };
+
+                    resolve();
+                });
+
+                p.then(function () {
+                    dummySrc.start(offset);
+                    dummySrc.stop(offset + interval);
+                    nodes.src.start(offset + 0.01);
+                    nodes.src.stop(offset + dur + 0.01);
+                });
 
                 var curves = [];
                 curves.push({param: nodes.src.playbackRate, value: pitch});
@@ -8277,18 +8318,6 @@ dtm.synth = function () {
                 declipper.gain.setValueAtTime(0.0, offset);
                 declipper.gain.linearRampToValueAtTime(1.0, offset + ramp);
                 declipper.gain.setTargetAtTime(0.0, offset + dur - ramp, ramp * 0.3);
-
-                dummyOsc.onended = function () {
-                    // rep(1) would only play once
-                    if (params.repeat > 1) {
-                        params.repeat--;
-                        synth.play(); // TODO: pass any argument?
-                    }
-                };
-
-                nodes.src.onended = function () {
-                    dtm.master.removeVoice(synth);
-                }
             }
 
         }, defer + deferIncr);
@@ -8951,6 +8980,9 @@ dtm.synth = function () {
         }
     }
 
+    function mapParamShallow() {
+
+    }
 
     // TODO: return value type not consistent!
     /**
@@ -9051,7 +9083,7 @@ dtm.master = {
         chord: null,
         tonalFunc: null,
 
-        maxNumVoices: 10,
+        maxNumVoices: 20,
         voices: []
     },
 

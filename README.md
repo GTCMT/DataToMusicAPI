@@ -18,8 +18,28 @@ function playPrev(elem) {
 </script>
 
 
-# DataToMusic #
+# DataToMusic
 Client-side JavaScript utility tools for data musification (sonification). 
+
+## Getting Started
+
+```html
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title>Hello DTM</title>
+    <script src="dtm.js"></script>
+</head>
+<body>
+<script>
+    dtm.synth().play();
+</script>
+</body>
+</html>
+```
+
+## Loading data
 
     dtm.data('sample.csv', sonify);
     
@@ -28,7 +48,9 @@ Client-side JavaScript utility tools for data musification (sonification).
         dtm.instr().pitch(src).play();
     }
 
-<!-- -->
+See the Data tutorial for more details.
+
+## Mapping data to an instrument model
 
     data = 'hello';
     dtm.instr().pitch(data).speed(data).play();
