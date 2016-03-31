@@ -140,11 +140,34 @@ describe('isNumOrFloat32Array', function () {
     });
 });
 
+describe('isParsableNumArray', function () {
+    it('should work', function () {
+        expect(isParsableNumArray(['1', '2', '3'])).toBe(true);
+        expect(isParsableNumArray(['1', 'hey', '3'])).toBe(false);
+        expect(isParsableNumArray([NaN, 'hey', '3'])).toBe(false);
+        expect(isParsableNumArray([1, 2, 3])).toBe(false);
+    });
+});
+
 describe('isStringArray', function () {
     it('should work', function () {
         expect(isStringArray(['hey', 'ho'])).toBe(true);
         expect(isStringArray(['hey', 1])).toBe(false);
         expect(isStringArray([dtm.a('hey')])).toBe(false);
+    });
+});
+
+describe('isObjArray', function () {
+    it('should work', function () {
+        expect(isObjArray([{}, {}])).toBe(true);
+        expect(isObjArray([dtm.array()])).toBe(false);
+        expect(isObjArray(['hey', 'ho'])).toBe(false);
+        expect(isObjArray([1, 2])).toBe(false);
+        expect(isObjArray(toFloat32Array([1, 2]))).toBe(false);
+        expect(isObjArray([null, null])).toBe(false);
+        expect(isObjArray([undefined, undefined])).toBe(false);
+        expect(isObjArray([undefined, {}])).toBe(false);
+        expect(isObjArray([NaN, Infinity])).toBe(false);
     });
 });
 
@@ -255,6 +278,15 @@ describe('isNestedDtmArray', function () {
     it('should work', function () {
         expect(isNestedNumDtmArray(dtm.a([1,2,3]))).toBe(false);
         expect(isNestedNumDtmArray(dtm.a([1,2,3], [4,5,6]))).toBe(true);
+    });
+});
+
+describe('isDtmObj', function () {
+    it('should work', function () {
+        expect(isDtmObj(dtm.array())).toBe(true);
+        expect(isDtmObj(dtm.synth())).toBe(true);
+        //expect(isDtmObj(dtm.clock())).toBe(true);
+        expect(isDtmObj({})).toBe(false);
     });
 });
 
@@ -534,9 +566,9 @@ describe('analysis functions', function () {
         });
     });
 
-    describe('countBy', function () {
+    describe('countOccurrences', function () {
         it('should work', function () {
-            expect(countBy([1, 2, 2, 3, 4, 4, 4])).toEqual({
+            expect(countOccurrences([1, 2, 2, 3, 4, 4, 4])).toEqual({
                 '1': 1,
                 '2': 2,
                 '3': 1,

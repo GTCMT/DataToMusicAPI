@@ -140,6 +140,36 @@ function isNumArray(val) {
 }
 
 /**
+ * Checks if the object is a string array with values like ['1', '2', '3.45']
+ * @param val
+ * @returns {boolean}
+ */
+function isParsableNumArray(val) {
+    var res = false;
+    if (isStringArray(val)) {
+        res = val.every(function (val) {
+            return !isNaN(parseFloat(val));
+        })
+    }
+    return res;
+}
+
+/**
+ * Checks if the array consists of the generic object type (i.e., {}) items
+ * @param val
+ * @returns {boolean}
+ */
+function isObjArray(val) {
+    var res = false;
+    if (isArray(val) && val.length > 0) {
+        res = val.every(function (v) {
+            return isObject(v) && !isDtmObj(v);
+        });
+    }
+    return res;
+}
+
+/**
  * Checks if the value is either a regular or typed number array
  * @param val
  * @returns {boolean}
@@ -521,6 +551,19 @@ function cloneArray(input) {
     }
 }
 
+function print(input) {
+    if (isNestedDtmArray(input) || isNestedWithDtmArray(input)) {
+        input.forEach(function (a) {
+            console.log(a.get('name'), a.get());
+        });
+    } else if (isDtmArray(input)) {
+        console.log(input.get('name'), input.get());
+    } else {
+        console.log(input);
+    }
+    return input;
+}
+
 //function append() {
 //
 //}
@@ -608,7 +651,7 @@ function mode(arr) {
     var num = 0;
     var res = null;
 
-    var histo = countBy(arr);
+    var histo = countOccurrences(arr);
 
     uniqs.forEach(function (val) {
         num = histo[val];
@@ -655,9 +698,15 @@ function midrange(arr) {
  * @returns {number}
  */
 function sum(arr) {
-    return arr.reduce(function (num, sum) {
-        return num + sum;
-    });
+    if (isNestedWithDtmArray(arr)) {
+        return sum(arr.map(function (a) {
+            return sum(a.get());
+        }))
+    } else {
+        return arr.reduce(function (num, sum) {
+            return num + sum;
+        });
+    }
 }
 
 /**
@@ -711,6 +760,15 @@ function pstd(arr) {
     return Math.sqrt(pvar(arr));
 }
 
+function meanSquare(arr) {
+    var res = [];
+    arr.forEach(function (val, idx) {
+        res[idx] = Math.pow(val, 2);
+    });
+
+    return mean(res);
+}
+
 /**
  * Root-Mean-Square value of given numerical array.
  * @param arr {array}
@@ -744,7 +802,7 @@ function unique(input) {
 function histo(input) {
     var res = [];
     var classes = cloneArray(input);
-    var histogram = countBy(input);
+    var histogram = countOccurrences(input);
 
     classes.forEach(function (val, idx) {
         res[idx] = histogram[val];
@@ -753,7 +811,7 @@ function histo(input) {
     return res;
 }
 
-function countBy(input) {
+function countOccurrences(input) {
     var res = {};
     input.forEach(function (v) {
         if (!res.hasOwnProperty(v)) {
@@ -940,6 +998,20 @@ function random(arg1, arg2) {
     return Math.random() * (max - min) + min;
 }
 
+// a slight modification of https://en.wikibooks.org/wiki/Algorithm_Implementation/Strings/Levenshtein_distance#JavaScript
+function levenshteinDistance(a, b) {
+    if (a.length === 0) return b.length;
+    if (b.length === 0) return a.length;
+    
+    var cost = a[0] !== b[0] ? 1 : 0;
+
+    return Math.min(
+        levenshteinDistance(a.substr(1), b) + 1,
+        levenshteinDistance(b.substr(1), a) + 1,
+        levenshteinDistance(a.substr(1), b.substr(1)) + cost
+    );
+}
+
 //function clone(obj) {
 //    var copy;
 //
@@ -1071,6 +1143,8 @@ dtm.util.isArray = isArray;
 dtm.util.isFloat32Array = isFloat32Array;
 dtm.util.isNumArray = isNumArray;
 dtm.util.isNumOrFloat32Array = isNumOrFloat32Array;
+dtm.util.isParsableNumArray = isParsableNumArray;
+dtm.util.isObjArray = isObjArray;
 dtm.util.isMixedArray = isMixedArray;
 dtm.util.isStringArray = isStringArray;
 dtm.util.isBoolArray = isBoolArray;
@@ -1105,7 +1179,7 @@ dtm.util.pstd = pstd;
 dtm.util.rms = rms;
 dtm.util.unique = unique;
 dtm.util.histo = histo;
-dtm.util.countBy = countBy;
+dtm.util.countBy = countOccurrences;
 dtm.util.listClasses = listClasses;
 dtm.util.uniformity = uniformity;
 dtm.util.intersection = intersection;
@@ -1133,3 +1207,4 @@ dtm.util.Float32Map = Float32Map;
 dtm.util.truncateDigits = truncateDigits;
 dtm.util.deferCallback = deferCallback;
 dtm.util.cloneArray = cloneArray;
+dtm.util.print = print;

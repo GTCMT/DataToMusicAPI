@@ -3,8 +3,9 @@
  * @module core
  */
 
+// TODO: put this in the master
 var params = {
-    isLogging: true
+    isLogging: false
 };
 
 /**
@@ -100,7 +101,7 @@ var dtm = {
         };
 
         dtm.wa.buffs = {
-            verbIr: dtm.wa.makeIr(2)
+            verbIr: dtm.gen('noise').size(88200).mult(dtm.gen('decay').size(44100))
         };
     },
 

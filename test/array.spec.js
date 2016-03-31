@@ -9,7 +9,16 @@ describe('get', function () {
             expect(a.get(-1)).toBe(3);
             expect(a.get(3)).toBe(1);
 
+            expect(a.get([0,1])).toEqual(toFloat32Array([1,2]));
+
             expect(dtm.gen('range', 5).get(-2)).toBe(3);
+        });
+
+        it('should return dtm.array col for the indices', function () {
+            var a = dtm.array([[1],[2],[3]]);
+            expect(a.get(0).get()).toEqual(toFloat32Array(1));
+            expect(a.get(-1).get()).toEqual(toFloat32Array(3));
+            expect(a.get([0,1]).flatten().get()).toEqual(toFloat32Array([1,2]));
         });
     });
 
@@ -180,7 +189,7 @@ describe('set', function () {
             expect(a.get('next').get()).toEqual(toFloat32Array(1));
             expect(a.get('next').get()).toEqual(toFloat32Array([2,3]));
 
-            expect(dtm.a([1], [2,3]).normalize().get(0).get()).toEqual(toFloat32Array(1));
+            expect(dtm.a([1], [2,3]).normalize().get(0).get()).toEqual(toFloat32Array(0));
 
             expect(dtm.a([1],[2],[3]).get(0).get('parent').get('len')).toBe(3);
         })
@@ -245,8 +254,8 @@ describe('nominal operations', function () {
 
 describe('list operations', function () {
     describe('unique', function () {
-        var a = dtm.array([1, 2, 3, 2, 1]).unique();
         it('should return [1, 2, 3]', function () {
+            var a = dtm.array([1, 2, 3, 2, 1]).unique();
             expect(a.get().toString()).toBe([1, 2, 3].toString());
         });
     });
@@ -416,8 +425,9 @@ describe('scalers', function () {
 
 describe('arithmetic', function () {
     describe('diff', function () {
-        var a = dtm.a([0, -3, 3]);
-        //console.log(a.diff().get());
+        it('should work', function () {
+            expect(dtm.a([0, -3, 3]).diff().get()).toEqual(toFloat32Array([-3, 6]));
+        });
     });
 });
 
@@ -496,7 +506,15 @@ describe('row', function () {
 
 describe('col', function () {
     it('should work with number or list query', function () {
+        expect(dtm.a([[1],[2],[3]]).col(0).val).toEqual(toFloat32Array(1));
+        expect(dtm.a([[1],[2],[3]]).col([0,1]).flatten().val).toEqual(toFloat32Array([1,2]));
+    });
 
+    it('should work with str or mixed array query', function () {
+        expect(dtm.range(5).block().col('0').val).toEqual(toFloat32Array(0));
+        expect(dtm.range(5).block().col('1').val).toEqual(toFloat32Array(1));
+        expect(dtm.range(5).block().col(['0']).flatten().val).toEqual(toFloat32Array(0));
+        expect(dtm.range(5).block().col(['0', '1']).flatten().val).toEqual(toFloat32Array([0,1]));
     });
 });
 
@@ -517,5 +535,73 @@ xdescribe('residue', function () {
     it('should work', function () {
         // precision error
         expect(dtm.a([0.1, 0.9, 1.3]).round().residue().get()).toEqual(toFloat32Array([0.1, -0.1, 0.3]));
+    });
+});
+
+describe('count', function () {
+    it('should work', function () {
+        res = [1,2,2,1];
+
+        dtm.a([1,2,3,2,3,4]).count().forEach(function (a, i) {
+            expect(a.get('name')).toBe((i+1).toString());
+            expect(a.get()).toEqual(toFloat32Array(res[i]));
+        });
+    });
+});
+
+describe('pmf', function () {
+    var res = [0.4, 0.4, 0.2];
+    it('should work', function () {
+        dtm.a([1,2,3,2,1]).pmf().forEach(function (a, i) {
+            expect(a.get()).toEqual(toFloat32Array(res[i]));
+        });
+    });
+});
+
+describe('entropy', function () {
+    it('should work', function () {
+        expect(dtm.a([1, 2]).entropy().get()).toEqual(toFloat32Array(1));
+        //expect(dtm.a([1, 1]).entropy().get()).toEqual(toFloat32Array(0));
+    });
+});
+
+describe('mapdist', function () {
+    var res = [0.4, 0.4, 0.2];
+    it('should work', function () {
+        expect(dtm.a([1,2,3,2,1]).mapdist().get()).toEqual(toFloat32Array([0.4, 0.4, 0.2, 0.4, 0.4]));
+    });
+});
+
+describe('reciprocal', function () {
+    it('should work', function () {
+        expect(dtm.a([1,2,3]).reciprocal().get()).toEqual(toFloat32Array([1,1/2,1/3]));
+        dtm.a([1,2,3]).block().reciprocal().forEach(function (a, i) {
+            expect(a.get()).toEqual(toFloat32Array(1/(i+1)));
+        });
+    });
+});
+
+describe('mse', function () {
+    it('should compare to the original value with no argument', function () {
+        expect(dtm.a([1,-1]).mult(0).mse().get()).toEqual(toFloat32Array(1));
+    });
+});
+
+describe('corr', function () {
+    it('should work', function () {
+        expect(dtm.a([1,1,1,1]).corr().get()).toEqual(toFloat32Array([0,1,2,3,4,3,2,1,0]));
+        dtm.a([1,2,3]).corr(dtm.a([1,1,1,1,1]));
+    });
+});
+
+describe('corrcoef', function () {
+    it('should work', function () {
+        dtm.a([1,2,3]).corrcoef();
+    });
+});
+
+describe('covar', function () {
+    it('should work', function () {
+        dtm.a([1,2]).cov([1,2]);
     });
 });

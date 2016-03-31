@@ -80,7 +80,7 @@ describe('model abstract', function () {
             expect(uni([0, 1, 2]).get()).toEqual(toFloat32Array([0.0, 0.2, 0.4]));
         });
 
-        it('should deal with strings', function () {
+        xit('should deal with strings', function () {
             var a = uni('hello');
             expect(typeof(a.get(0))).toBe('number');
             expect(a.get()).toEqual(toFloat32Array([0, 0, 1, 1, 0]));

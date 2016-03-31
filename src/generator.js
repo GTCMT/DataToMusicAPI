@@ -17,8 +17,10 @@ dtm.generator = function () {
         end: 1.0,
         interval: null,
 
-        scale: 'chromatic',
+        scale: undefined,
         transpose: 0,
+
+        index: undefined,
 
         //step: 0.0,
         amp: 1.0,
@@ -38,9 +40,9 @@ dtm.generator = function () {
         params[key] = val;
     });
 
-    generator.meta = {
-        type: 'dtm.generator'
-    };
+    //generator.meta = {
+    //    type: 'dtm.generator'
+    //};
 
     // TODO: define params better
     // name, arg1, 2, 3, ..., length
@@ -63,10 +65,11 @@ dtm.generator = function () {
             'decay', 'fall', 'invSaw',
             'adsr', 'ADSR',
             'seq', 'sequence', 'series',
-            'range',
+            'range', 'r',
             'scale', 'mode', 'chord',
+            'modal',
             'fibonacci',
-            'noise', 'random', 'rand', 'randi',
+            'noise', 'random', 'rand', 'rf', 'randi', 'ri',
             'gauss', 'gaussian', 'gaussCurve', 'normal',
             'sin', 'sine', 'cos', 'cosine',
             'tri', 'triangle',
@@ -80,11 +83,11 @@ dtm.generator = function () {
         const: ['zeros', 'zeroes', 'ones', 'constant', 'constants', 'const', 'consts'],
         envelope: ['rise', 'decay', 'fall', 'ahr'],
         sequence: [],
-        noLength: ['string', 'str', 's', 'character', 'characters', 'chars', 'char', 'c', 'range', 'seq', 'scale', 'mode', 'chord'],
+        noLength: ['string', 'str', 's', 'character', 'characters', 'chars', 'char', 'c', 'range', 'r', 'seq', 'scale', 'mode', 'chord', 'modal'],
         noRange: [],
         noMinMax: [],
         noMinMaxDir: ['rise', 'decay', 'fall', 'noise'],
-        random: ['random', 'rand', 'randi'],
+        random: ['random', 'rand', 'rf', 'randi', 'ri'],
         string: ['string', 'split', 'str', 's', 'character', 'characters', 'chars', 'char', 'c', 'text']
     };
 
@@ -225,7 +228,7 @@ dtm.generator = function () {
         }
 
         function scale(name, transpose) {
-            var res = null;
+            var res = [];
 
             var scales = {
                 chromatic: {
@@ -233,11 +236,11 @@ dtm.generator = function () {
                     values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
                 },
                 major: {
-                    names: ['major', 'maj'],
+                    names: ['major', 'maj', 'ionian'],
                     values: [0, 2, 4, 5, 7, 9, 11]
                 },
                 minor: {
-                    names: ['minor', 'min'],
+                    names: ['minor', 'min', 'aeolian'],
                     values: [0, 2, 3, 5, 7, 8, 10]
                 },
                 wholetone: {
@@ -247,12 +250,36 @@ dtm.generator = function () {
                 majpenta: {
                     names: ['penta', 'pent', 'majpenta'],
                     values: [0, 2, 4, 7, 9]
+                },
+                dorian: {
+                    names: ['dorian'],
+                    values: [0, 2, 3, 5, 7, 9, 10]
+                },
+                phrygian: {
+                    names: ['phrygian', 'phry'],
+                    values: [0, 1, 3, 5, 7, 8, 10]
+                },
+                lydian: {
+                    names: ['lydian', 'lyd'],
+                    values: [0, 2, 4, 6, 7, 9, 11]
+                },
+                mixolydian: {
+                    names: ['mixolydian', 'mixo'],
+                    values: [0, 2, 4, 5, 7, 9, 10]
+                },
+                locrian: {
+                    names: ['locrian', 'loc'],
+                    values: [0, 1, 3, 5, 6, 8, 10]
                 }
             };
 
-            objForEach(scales, function (v) {
-                if (v.names.indexOf(name.toLowerCase()) !== -1) {
-                    res = new Float32Array(transposeScale(v.values, transpose));
+            objForEach(scales, function (v, k) {
+                if (!isEmpty(name)) {
+                    if (v.names.indexOf(name.toLowerCase()) !== -1) {
+                        res = new Float32Array(transposeScale(v.values, transpose));
+                    }
+                } else {
+                    res.push(dtm.array(v.values).label(k));
                 }
             });
 
@@ -266,6 +293,46 @@ dtm.generator = function () {
                     values: [0, 4, 7, 11, 14, 18, 21]
                 }
             };
+        }
+
+        function modal(index) {
+            var modes = {
+                'dahina tabla': [1, 2.89, 4.95, 6.99, 8.01, 9.02],
+                'bayan tabla': [1, 2.0, 3.01, 4.01, 4.69, 5.63],
+                'red cedar wood plate': [1, 1.47, 2.09, 2.56],
+                'redwood wood plate': [1, 1.47, 2.11, 2.57],
+                'douglas fir wood plate': [1, 1.42, 2.11, 2.47],
+                'uniform wooden bar': [1, 2.572, 4.644, 6.984, 9.723, 12],
+                'uniform aluminum bar': [1, 2.756, 5.423, 8.988, 13.448, 18.680],
+                'xylophone': [1, 3.932, 9.538, 16.688, 24.566, 31.147],
+                'vibraphone 1': [1, 3.984, 10.668, 17.979, 23.679, 33.642],
+                'vibraphone 2': [1, 3.997, 9.469, 15.566, 20.863, 29.440],
+                'chalandi plates': [1, 1.72581, 5.80645, 7.41935, 13.91935],
+                'tibetan bowl (180mm)': [1, 2.77828, 5.18099, 8.16289, 11.66063, 15.63801, 19.99],
+                'tibetan bowl (152 mm)': [1, 2.66242, 4.83757, 7.51592, 10.64012, 14.21019, 18.14027],
+                'tibetan bowl (140 mm)': [1, 2.76515, 5.12121, 7.80681, 10.78409],
+                'wine glass': [1, 2.32, 4.25, 6.63, 9.38],
+                'small handbell': [1, 1.0019054878049, 1.7936737804878, 1.8009908536585, 2.5201981707317, 2.5224085365854, 2.9907012195122, 2.9940548780488, 3.7855182926829, 3.8061737804878, 4.5689024390244, 4.5754573170732, 5.0296493902439, 5.0455030487805, 6.0759908536585, 5.9094512195122, 6.4124237804878, 6.4430640243902, 7.0826219512195, 7.0923780487805, 7.3188262195122, 7.5551829268293],
+                'spinel sphere with diameter of 3.6675mm': [1, 1.026513174725, 1.4224916858532, 1.4478690202098, 1.4661959580455, 1.499452545408, 1.7891839345101, 1.8768994627782, 1.9645945254541, 1.9786543873113, 2.0334612432847, 2.1452852391916, 2.1561524686621, 2.2533435661294, 2.2905090816065, 2.3331798413917, 0, 2.4567715528268, 2.4925556408289, 2.5661806088514, 2.6055768738808, 2.6692760296751, 2.7140956766436, 2.7543617293425, 2.7710411870043],
+                'pot lid': [1, 3.2, 6.23, 6.27, 9.92, 14.15]
+            };
+
+            if (isString(index)) {
+                if (index in modes) {
+                    return toFloat32Array(modes[index]);
+                } else {
+                    return toFloat32Array(1);
+                }
+            } else if (isInteger(index)) {
+                index = mod(index, Object.keys(modes).length);
+                return toFloat32Array(modes[Object.keys(modes)[index]]);
+            } else {
+                var res = [];
+                objForEach(modes, function (v, k) {
+                    res.push(dtm.array(v).label(k));
+                });
+                return res;
+            }
         }
 
         // TODO: typed?
@@ -338,6 +405,7 @@ dtm.generator = function () {
             case 'harmonic':
                 break;
 
+            case 'rf':
             case 'rand':
             case 'random':
                 generator.val = random(generator.len, sorted[0], sorted[1], 1.0, false);
@@ -347,10 +415,12 @@ dtm.generator = function () {
                 generator.val = random(generator.len, sorted[0], sorted[1], params.amp, false);
                 break;
 
+            case 'ri':
             case 'randi':
                 generator.val = random(generator.len, sorted[0], sorted[1], 1.0, true);
                 break;
 
+            case 'r':
             case 'range':
                 generator.val = range(paramsExt.start, paramsExt.end, paramsExt.interval);
                 break;
@@ -361,6 +431,10 @@ dtm.generator = function () {
 
             case 'scale':
                 generator.val = scale(paramsExt.scale, paramsExt.transpose);
+                break;
+
+            case 'modal':
+                generator.val = modal(paramsExt.index);
                 break;
 
             case 'fibonacci':
@@ -396,6 +470,7 @@ dtm.generator = function () {
         }
 
         generator.len = generator.val.length;
+        generator.meta.setOriginal(generator.val);
     }
 
     /**
@@ -434,36 +509,6 @@ dtm.generator = function () {
         process();
         return generator;
     };
-
-    ///**
-    // * @function module:generator#range
-    // * @param arg1 {number|array|dtm.array} A min value or an array of min and max values
-    // * @param [arg2] {number} A max value
-    // * @returns {array}
-    // */
-    //generator.range = function (arg1, arg2) {
-    //    var args;
-    //
-    //    if (isDtmObj(arg1)) {
-    //        args = arg1.get();
-    //    } else if (argIsSingleArray(arguments)) {
-    //        args = arguments[0];
-    //    } else if (argsAreSingleVals(arguments)) {
-    //        args = argsToArray(arguments);
-    //    }
-    //
-    //    if (isNumOrFloat32Array(args)) {
-    //        if (args.length === 2) {
-    //            params.min = (args[0]);
-    //            params.max = (args[1]);
-    //        } else if (args.length > 2) {
-    //            params.min = (dtm.analyzer.min(args));
-    //            params.max = (dtm.analyzer.max(args));
-    //        }
-    //        process();
-    //    }
-    //    return generator;
-    //};
 
     generator.start = function (val) {
         if (isNumber(val)) {
@@ -599,7 +644,7 @@ dtm.generator = function () {
         generator.len = 1;
         params.min = 0.0;
 
-        if (params.type === 'randi') {
+        if (params.type === 'randi' || params.type === 'ri') {
             params.max = 2;
         } else {
             params.max = 1.0;
@@ -658,7 +703,7 @@ dtm.generator = function () {
             } else {
                 params.string = String(arguments[1]);
             }
-        } else if (params.type === 'range') {
+        } else if (params.type === 'range' || params.type === 'r') {
             if (isNumArray(arguments[1])) {
                 if (arguments[1].length === 1) {
                     // TODO: reduce the redundant process()
@@ -701,6 +746,8 @@ dtm.generator = function () {
                 paramsExt.transpose = arguments[2];
             }
             //process();
+        } else if (params.type === 'modal') {
+            paramsExt.index = arguments[1];
         } else if (isTypeCategOf('const')) {
             if (!isEmpty(arguments[1])) {
                 params.const = arguments[1];
@@ -741,7 +788,7 @@ dtm.generator = function () {
 
 dtm.g = dtm.gen = dtm.generator;
 
-var generators = ['line', 'rise', 'decay', 'fall', 'seq', 'sequence', 'series', 'range', 'noise', 'random', 'rand', 'randi', 'gaussian', 'gaussCurve', 'gauss', 'normal', 'zeros', 'zeroes', 'ones', 'constant', 'constants', 'const', 'consts', 'repeat', 'string', 'str', 'sin', 'sine', 'cos', 'cosine', 'tri', 'triangle', 'saw', 'fibonacci', 'decay', 'scale'];
+var generators = ['line', 'rise', 'decay', 'fall', 'seq', 'sequence', 'series', 'range', 'r', 'noise', 'random', 'rand', 'rf', 'randi', 'ri', 'gaussian', 'gauss', 'normal', 'zeros', 'zeroes', 'ones', 'constant', 'constants', 'const', 'consts', 'repeat', 'string', 'str', 'sin', 'sine', 'cos', 'cosine', 'tri', 'triangle', 'saw', 'fibonacci', 'decay', 'scale', 'modal'];
 
 generators.forEach(function (type) {
     dtm[type] = function () {

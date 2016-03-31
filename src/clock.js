@@ -465,7 +465,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
 
     clock.run = clock.play = clock.start;
 
-    var clockSrc;
+    var clockSrc, clockAmp;
 
     // TODO: refactor big time!!!!
     // TODO: also implement swing / random to the af-based clock
@@ -545,23 +545,16 @@ dtm.clock = function (bpm, subDiv, autoStart) {
         } else if (params.isMaster) {
             if (params.source === 'webAudio') {
                 actx = dtm.wa.actx;
-                clockSrc = actx.createBufferSource();
-                clockBuf = dtm.wa.clockBuf;
-                clockSrc.buffer = clockBuf;
-                clockSrc.connect(actx.destination);
+                clockSrc = actx.createOscillator();
+                clockAmp = actx.createGain();
+                clockSrc.connect(clockAmp);
+                clockAmp.connect(actx.destination);
+                clockAmp.gain.value = 0;
 
-                freq = params.bpm / 60.0 * (params.subDiv / 4.0);
-
-                clockSrc.playbackRate.value = freq * dtm.wa.clMult;
-                clockSrc.playbackRate.value += clockSrc.playbackRate.value * params.random * Math.round(Math.random()*2-1);
-
-                if (clock.beat % 2 == 0) {
-                    clockSrc.playbackRate.value *= (1.0 - params.swing) / 0.5;
-                } else {
-                    clockSrc.playbackRate.value *= params.swing / 0.5;
-                }
-
-                clockSrc.start(actx.currentTime + 0.0000001);
+                freq = params.bpm / 60;
+                var int = dtm.wa.clMult / freq;
+                clockSrc.start(actx.currentTime);
+                clockSrc.stop(actx.currentTime + int);
 
                 clockSrc.onended = function () {
                     curTime += 1/freq;
@@ -578,7 +571,10 @@ dtm.clock = function (bpm, subDiv, autoStart) {
                     cb(clock);
                 });
 
-                clock.beat = (clock.beat + 1) % (params.subDiv * clock.params.time[0] / clock.params.time[1]);
+                // clock.beat = (clock.beat + 1) % params.subDiv;
+                clock.beat++;
+
+                // clock.beat = (clock.beat + 1) % (params.subDiv * clock.params.time[0] / clock.params.time[1]);
 
             } else if (params.source === 'animationFrame') {
                 params.reported = Math.round(timestamp / 1000. * params.bpm / 60. * params.resolution);
@@ -586,9 +582,6 @@ dtm.clock = function (bpm, subDiv, autoStart) {
                 if (params.reported !== params.current) {
                     if ((params.current % params.resolution) > (params.reported % params.resolution)) {
                         params.beat = Math.round((params.current-params.offset) / params.resolution);
-
-                        //console.log(dtm.wa.actx.currentTime);
-                        //console.log(params.reported);
                     }
 
 
@@ -619,9 +612,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
                     cb(clock);
                 });
             }
-        }
-
-        else if (dtm.master.clock.get('source') === 'animationFrame') {
+        } else if (dtm.master.clock.get('source') === 'animationFrame') {
             if ((dtm.master.clock.get('cur') % (params.resolution/params.subDiv*4)) < params.prev) {
 
                 params.beat = Math.round((dtm.master.clock.get('cur')-params.offset) / params.resolution * params.subDiv / 4);

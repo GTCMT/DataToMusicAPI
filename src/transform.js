@@ -46,16 +46,6 @@ dtm.transform = {
             return arr.map(function (val) {
                 return (val - min) / denom;
             });
-
-            //if (isFloat32Array(arr)) {
-            //    return Float32Map(arr, function (val) {
-            //        return (val - min) / denom;
-            //    });
-            //} else if (isNumArray(arr)) {
-            //    return arr.map(function (val) {
-            //        return (val - min) / denom;
-            //    });
-            //}
         }
     },
 
@@ -535,6 +525,41 @@ dtm.transform = {
         return res;
     },
 
+    div: function (input, factor, interp) {
+        var res = null;
+        if (isArray(input)) {
+            res = new Array(input.length);
+        } else if (isFloat32Array(input)) {
+            res = new Float32Array(input.length);
+        }
+
+        if (isEmpty(factor)) {
+            factor = 1;
+        }
+
+        if (!isString(interp)) {
+            interp = 'step';
+        }
+
+        if (isNumber(factor)) {
+            input.forEach(function (val, idx) {
+                res[idx] = val / factor;
+            });
+        } else if (isNumOrFloat32Array(factor)) {
+            if (input.length > factor.length) {
+                factor = dtm.transform.fit(factor, input.length, interp);
+            } else if (input.length < factor.length) {
+                input = dtm.transform.fit(input, factor.length, interp);
+            }
+
+            for (var i = 0; i < input.length; i++) {
+                res[i] = input[i] / factor[i];
+            }
+        }
+
+        return res;
+    },
+
     /**
      * Power operation on the array contents. If the second argument is a number, it acts as a scalar value. If it is an array, it is first stretched with linear or specified interpolation method, then element-wise power operation is performed.
      * @function module:transform#pow
@@ -614,6 +639,41 @@ dtm.transform = {
 
             for (var i = 0; i < input.length; i++) {
                 res[i] = Math.pow(factor[i], input[i]);
+            }
+        }
+
+        return res;
+    },
+
+    log: function (input, base, interp) {
+        var res = null;
+        if (isArray(input)) {
+            res = new Array(input.length);
+        } else if (isFloat32Array(input)) {
+            res = new Float32Array(input.length);
+        }
+
+        if (isEmpty(base)) {
+            base = Math.E;
+        }
+
+        if (!isString(interp)) {
+            interp = 'step';
+        }
+
+        if (isNumber(base)) {
+            input.forEach(function (val, idx) {
+                res[idx] = Math.log(val) / Math.log(base);
+            });
+        } else if (isNumOrFloat32Array(base)) {
+            if (input.length > base.length) {
+                base = dtm.transform.fit(base, input.length, interp);
+            } else if (input.length < base.length) {
+                input = dtm.transform.fit(input, base.length, interp);
+            }
+
+            for (var i = 0; i < input.length; i++) {
+                res[i] = Math.log(input[i]) / Math.log(base[i]);
             }
         }
 
@@ -1268,6 +1328,12 @@ dtm.transform = {
         }
 
         return res;
+    },
+    
+    editDistance: function (array, target) {
+        return array.map(function (v) {
+            return levenshteinDistance(v, target);
+        });
     },
 
     pitchQuantize: function (input, scale, round) {

@@ -27,7 +27,7 @@ dtm.master = {
         chord: null,
         tonalFunc: null,
 
-        maxNumVoices: 20,
+        maxNumVoices: 500,
         voices: []
     },
 

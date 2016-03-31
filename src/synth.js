@@ -15,7 +15,6 @@ dtm.synth = function () {
 
     var params = {
         sr: 44100,
-        //kr: 4410,
         dur: {
             base: dtm.array([[1]]),
             auto: true
@@ -47,7 +46,7 @@ dtm.synth = function () {
         promise: null,
         pending: false,
 
-        amp: { base: dtm.array([[1]]) },
+        amp: { base: dtm.array([[0.3]]) },
 
         notenum: {
             base: dtm.array([[69]]),
@@ -345,9 +344,10 @@ dtm.synth = function () {
                 this.in.connect(this.dry);
                 this.dry.connect(this.out);
 
-                var size = params.sr * 2;
+                // var size = params.sr * 2;
+                var size = dtm.wa.buffs.verbIr.len;
                 var ir = ctx.createBuffer(1, size, params.sr);
-                ir.copyToChannel(dtm.gen('noise').size(size).mult(dtm.gen('decay').size(size)).get(), 0);
+                ir.copyToChannel(dtm.wa.buffs.verbIr.get(), 0);
                 this.verb.buffer = ir;
 
                 this.dryLevel = this.mix.map(function (v) {
@@ -520,6 +520,8 @@ dtm.synth = function () {
         return synth;
     };
 
+    synth.d = synth.dur;
+
     synth.interval = function () {
         var depth = 2;
 
@@ -540,7 +542,27 @@ dtm.synth = function () {
         return synth;
     };
 
-    synth.int = synth.interval;
+    synth.i = synth.int = synth.interval;
+    
+    synth.interval.freq = function () {
+        var depth = 2;
+
+        if (isFunction(arguments[0])) {
+            var res = arguments[0](params.interval.base, synth, params.clock);
+            params.interval.base = check(res, depth) ? convertShallow(res).reciprocal() : params.interval.base;
+        } else {
+            var argList = argsToArray(arguments);
+            params.interval.base = check(argList) ? convertShallow(argList).reciprocal() : params.interval.base;
+        }
+
+        params.interval.auto = false;
+
+        if (params.dur.auto) {
+            params.dur.auto = 'interval';
+        }
+
+        return synth;
+    };
 
     synth.interval.add = function () {
         //var depth = 2;
@@ -559,6 +581,10 @@ dtm.synth = function () {
         //    params.dur.auto = 'interval';
         //}
 
+        return synth;
+    };
+
+    synth.bpm = function () {
         return synth;
     };
 
@@ -755,6 +781,11 @@ dtm.synth = function () {
 
                     nodes.rtSrc.onended = function () {
                         dtm.master.removeVoice(synth);
+
+                        if (params.repeat > 1) {
+                            synth.play(); // TODO: pass any argument?
+                            params.repeat--;
+                        }
                     };
                 };
             } else {
@@ -800,7 +831,6 @@ dtm.synth = function () {
                 }
                 out.connect(actx.destination);
 
-                //var dummyOsc = actx.createOscillator();
                 var dummySrc = actx.createBufferSource();
                 dummySrc.buffer = dummyBuffer;
                 dummySrc.loop = true;
@@ -949,7 +979,7 @@ dtm.synth = function () {
         return synth;
     };
 
-    synth.rep = synth.repeat;
+    synth.r = synth.rep = synth.repeat;
 
     function getPhase() {
         params.phase = (actx.currentTime - params.startTime) / params.dur;
@@ -1123,7 +1153,7 @@ dtm.synth = function () {
         return synth;
     };
 
-    synth.wt = synth.wavetable;
+    synth.w = synth.wt = synth.wavetable;
 
     synth.source = function (src) {
         if (isString(src)) {
@@ -1134,7 +1164,11 @@ dtm.synth = function () {
     };
 
     synth.load = function (name) {
-        if (isString(name)) {
+        if (name === 'noise') {
+            params.wavetable = dtm.gen('noise').size(44100).get();
+            synth.pitch(1);
+
+        } else if (isString(name)) {
             params.pending = true;
             params.source = name;
             params.type = 'sample';

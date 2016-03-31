@@ -5,8 +5,9 @@
  * @module core
  */
 
+// TODO: put this in the master
 var params = {
-    isLogging: true
+    isLogging: false
 };
 
 /**
@@ -102,7 +103,7 @@ var dtm = {
         };
 
         dtm.wa.buffs = {
-            verbIr: dtm.wa.makeIr(2)
+            verbIr: dtm.gen('noise').size(88200).mult(dtm.gen('decay').size(44100))
         };
     },
 
@@ -576,6 +577,36 @@ function isNumArray(val) {
 }
 
 /**
+ * Checks if the object is a string array with values like ['1', '2', '3.45']
+ * @param val
+ * @returns {boolean}
+ */
+function isParsableNumArray(val) {
+    var res = false;
+    if (isStringArray(val)) {
+        res = val.every(function (val) {
+            return !isNaN(parseFloat(val));
+        })
+    }
+    return res;
+}
+
+/**
+ * Checks if the array consists of the generic object type (i.e., {}) items
+ * @param val
+ * @returns {boolean}
+ */
+function isObjArray(val) {
+    var res = false;
+    if (isArray(val) && val.length > 0) {
+        res = val.every(function (v) {
+            return isObject(v) && !isDtmObj(v);
+        });
+    }
+    return res;
+}
+
+/**
  * Checks if the value is either a regular or typed number array
  * @param val
  * @returns {boolean}
@@ -957,6 +988,19 @@ function cloneArray(input) {
     }
 }
 
+function print(input) {
+    if (isNestedDtmArray(input) || isNestedWithDtmArray(input)) {
+        input.forEach(function (a) {
+            console.log(a.get('name'), a.get());
+        });
+    } else if (isDtmArray(input)) {
+        console.log(input.get('name'), input.get());
+    } else {
+        console.log(input);
+    }
+    return input;
+}
+
 //function append() {
 //
 //}
@@ -1044,7 +1088,7 @@ function mode(arr) {
     var num = 0;
     var res = null;
 
-    var histo = countBy(arr);
+    var histo = countOccurrences(arr);
 
     uniqs.forEach(function (val) {
         num = histo[val];
@@ -1091,9 +1135,15 @@ function midrange(arr) {
  * @returns {number}
  */
 function sum(arr) {
-    return arr.reduce(function (num, sum) {
-        return num + sum;
-    });
+    if (isNestedWithDtmArray(arr)) {
+        return sum(arr.map(function (a) {
+            return sum(a.get());
+        }))
+    } else {
+        return arr.reduce(function (num, sum) {
+            return num + sum;
+        });
+    }
 }
 
 /**
@@ -1147,6 +1197,15 @@ function pstd(arr) {
     return Math.sqrt(pvar(arr));
 }
 
+function meanSquare(arr) {
+    var res = [];
+    arr.forEach(function (val, idx) {
+        res[idx] = Math.pow(val, 2);
+    });
+
+    return mean(res);
+}
+
 /**
  * Root-Mean-Square value of given numerical array.
  * @param arr {array}
@@ -1180,7 +1239,7 @@ function unique(input) {
 function histo(input) {
     var res = [];
     var classes = cloneArray(input);
-    var histogram = countBy(input);
+    var histogram = countOccurrences(input);
 
     classes.forEach(function (val, idx) {
         res[idx] = histogram[val];
@@ -1189,7 +1248,7 @@ function histo(input) {
     return res;
 }
 
-function countBy(input) {
+function countOccurrences(input) {
     var res = {};
     input.forEach(function (v) {
         if (!res.hasOwnProperty(v)) {
@@ -1376,6 +1435,20 @@ function random(arg1, arg2) {
     return Math.random() * (max - min) + min;
 }
 
+// a slight modification of https://en.wikibooks.org/wiki/Algorithm_Implementation/Strings/Levenshtein_distance#JavaScript
+function levenshteinDistance(a, b) {
+    if (a.length === 0) return b.length;
+    if (b.length === 0) return a.length;
+    
+    var cost = a[0] !== b[0] ? 1 : 0;
+
+    return Math.min(
+        levenshteinDistance(a.substr(1), b) + 1,
+        levenshteinDistance(b.substr(1), a) + 1,
+        levenshteinDistance(a.substr(1), b.substr(1)) + cost
+    );
+}
+
 //function clone(obj) {
 //    var copy;
 //
@@ -1507,6 +1580,8 @@ dtm.util.isArray = isArray;
 dtm.util.isFloat32Array = isFloat32Array;
 dtm.util.isNumArray = isNumArray;
 dtm.util.isNumOrFloat32Array = isNumOrFloat32Array;
+dtm.util.isParsableNumArray = isParsableNumArray;
+dtm.util.isObjArray = isObjArray;
 dtm.util.isMixedArray = isMixedArray;
 dtm.util.isStringArray = isStringArray;
 dtm.util.isBoolArray = isBoolArray;
@@ -1541,7 +1616,7 @@ dtm.util.pstd = pstd;
 dtm.util.rms = rms;
 dtm.util.unique = unique;
 dtm.util.histo = histo;
-dtm.util.countBy = countBy;
+dtm.util.countBy = countOccurrences;
 dtm.util.listClasses = listClasses;
 dtm.util.uniformity = uniformity;
 dtm.util.intersection = intersection;
@@ -1569,6 +1644,7 @@ dtm.util.Float32Map = Float32Map;
 dtm.util.truncateDigits = truncateDigits;
 dtm.util.deferCallback = deferCallback;
 dtm.util.cloneArray = cloneArray;
+dtm.util.print = print;
 dtm.osc = {
     type: 'dtm.osc',
     oscPort: null,
@@ -1693,8 +1769,10 @@ dtm.generator = function () {
         end: 1.0,
         interval: null,
 
-        scale: 'chromatic',
+        scale: undefined,
         transpose: 0,
+
+        index: undefined,
 
         //step: 0.0,
         amp: 1.0,
@@ -1714,9 +1792,9 @@ dtm.generator = function () {
         params[key] = val;
     });
 
-    generator.meta = {
-        type: 'dtm.generator'
-    };
+    //generator.meta = {
+    //    type: 'dtm.generator'
+    //};
 
     // TODO: define params better
     // name, arg1, 2, 3, ..., length
@@ -1739,10 +1817,11 @@ dtm.generator = function () {
             'decay', 'fall', 'invSaw',
             'adsr', 'ADSR',
             'seq', 'sequence', 'series',
-            'range',
+            'range', 'r',
             'scale', 'mode', 'chord',
+            'modal',
             'fibonacci',
-            'noise', 'random', 'rand', 'randi',
+            'noise', 'random', 'rand', 'rf', 'randi', 'ri',
             'gauss', 'gaussian', 'gaussCurve', 'normal',
             'sin', 'sine', 'cos', 'cosine',
             'tri', 'triangle',
@@ -1756,11 +1835,11 @@ dtm.generator = function () {
         const: ['zeros', 'zeroes', 'ones', 'constant', 'constants', 'const', 'consts'],
         envelope: ['rise', 'decay', 'fall', 'ahr'],
         sequence: [],
-        noLength: ['string', 'str', 's', 'character', 'characters', 'chars', 'char', 'c', 'range', 'seq', 'scale', 'mode', 'chord'],
+        noLength: ['string', 'str', 's', 'character', 'characters', 'chars', 'char', 'c', 'range', 'r', 'seq', 'scale', 'mode', 'chord', 'modal'],
         noRange: [],
         noMinMax: [],
         noMinMaxDir: ['rise', 'decay', 'fall', 'noise'],
-        random: ['random', 'rand', 'randi'],
+        random: ['random', 'rand', 'rf', 'randi', 'ri'],
         string: ['string', 'split', 'str', 's', 'character', 'characters', 'chars', 'char', 'c', 'text']
     };
 
@@ -1901,7 +1980,7 @@ dtm.generator = function () {
         }
 
         function scale(name, transpose) {
-            var res = null;
+            var res = [];
 
             var scales = {
                 chromatic: {
@@ -1909,11 +1988,11 @@ dtm.generator = function () {
                     values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
                 },
                 major: {
-                    names: ['major', 'maj'],
+                    names: ['major', 'maj', 'ionian'],
                     values: [0, 2, 4, 5, 7, 9, 11]
                 },
                 minor: {
-                    names: ['minor', 'min'],
+                    names: ['minor', 'min', 'aeolian'],
                     values: [0, 2, 3, 5, 7, 8, 10]
                 },
                 wholetone: {
@@ -1923,12 +2002,36 @@ dtm.generator = function () {
                 majpenta: {
                     names: ['penta', 'pent', 'majpenta'],
                     values: [0, 2, 4, 7, 9]
+                },
+                dorian: {
+                    names: ['dorian'],
+                    values: [0, 2, 3, 5, 7, 9, 10]
+                },
+                phrygian: {
+                    names: ['phrygian', 'phry'],
+                    values: [0, 1, 3, 5, 7, 8, 10]
+                },
+                lydian: {
+                    names: ['lydian', 'lyd'],
+                    values: [0, 2, 4, 6, 7, 9, 11]
+                },
+                mixolydian: {
+                    names: ['mixolydian', 'mixo'],
+                    values: [0, 2, 4, 5, 7, 9, 10]
+                },
+                locrian: {
+                    names: ['locrian', 'loc'],
+                    values: [0, 1, 3, 5, 6, 8, 10]
                 }
             };
 
-            objForEach(scales, function (v) {
-                if (v.names.indexOf(name.toLowerCase()) !== -1) {
-                    res = new Float32Array(transposeScale(v.values, transpose));
+            objForEach(scales, function (v, k) {
+                if (!isEmpty(name)) {
+                    if (v.names.indexOf(name.toLowerCase()) !== -1) {
+                        res = new Float32Array(transposeScale(v.values, transpose));
+                    }
+                } else {
+                    res.push(dtm.array(v.values).label(k));
                 }
             });
 
@@ -1942,6 +2045,46 @@ dtm.generator = function () {
                     values: [0, 4, 7, 11, 14, 18, 21]
                 }
             };
+        }
+
+        function modal(index) {
+            var modes = {
+                'dahina tabla': [1, 2.89, 4.95, 6.99, 8.01, 9.02],
+                'bayan tabla': [1, 2.0, 3.01, 4.01, 4.69, 5.63],
+                'red cedar wood plate': [1, 1.47, 2.09, 2.56],
+                'redwood wood plate': [1, 1.47, 2.11, 2.57],
+                'douglas fir wood plate': [1, 1.42, 2.11, 2.47],
+                'uniform wooden bar': [1, 2.572, 4.644, 6.984, 9.723, 12],
+                'uniform aluminum bar': [1, 2.756, 5.423, 8.988, 13.448, 18.680],
+                'xylophone': [1, 3.932, 9.538, 16.688, 24.566, 31.147],
+                'vibraphone 1': [1, 3.984, 10.668, 17.979, 23.679, 33.642],
+                'vibraphone 2': [1, 3.997, 9.469, 15.566, 20.863, 29.440],
+                'chalandi plates': [1, 1.72581, 5.80645, 7.41935, 13.91935],
+                'tibetan bowl (180mm)': [1, 2.77828, 5.18099, 8.16289, 11.66063, 15.63801, 19.99],
+                'tibetan bowl (152 mm)': [1, 2.66242, 4.83757, 7.51592, 10.64012, 14.21019, 18.14027],
+                'tibetan bowl (140 mm)': [1, 2.76515, 5.12121, 7.80681, 10.78409],
+                'wine glass': [1, 2.32, 4.25, 6.63, 9.38],
+                'small handbell': [1, 1.0019054878049, 1.7936737804878, 1.8009908536585, 2.5201981707317, 2.5224085365854, 2.9907012195122, 2.9940548780488, 3.7855182926829, 3.8061737804878, 4.5689024390244, 4.5754573170732, 5.0296493902439, 5.0455030487805, 6.0759908536585, 5.9094512195122, 6.4124237804878, 6.4430640243902, 7.0826219512195, 7.0923780487805, 7.3188262195122, 7.5551829268293],
+                'spinel sphere with diameter of 3.6675mm': [1, 1.026513174725, 1.4224916858532, 1.4478690202098, 1.4661959580455, 1.499452545408, 1.7891839345101, 1.8768994627782, 1.9645945254541, 1.9786543873113, 2.0334612432847, 2.1452852391916, 2.1561524686621, 2.2533435661294, 2.2905090816065, 2.3331798413917, 0, 2.4567715528268, 2.4925556408289, 2.5661806088514, 2.6055768738808, 2.6692760296751, 2.7140956766436, 2.7543617293425, 2.7710411870043],
+                'pot lid': [1, 3.2, 6.23, 6.27, 9.92, 14.15]
+            };
+
+            if (isString(index)) {
+                if (index in modes) {
+                    return toFloat32Array(modes[index]);
+                } else {
+                    return toFloat32Array(1);
+                }
+            } else if (isInteger(index)) {
+                index = mod(index, Object.keys(modes).length);
+                return toFloat32Array(modes[Object.keys(modes)[index]]);
+            } else {
+                var res = [];
+                objForEach(modes, function (v, k) {
+                    res.push(dtm.array(v).label(k));
+                });
+                return res;
+            }
         }
 
         // TODO: typed?
@@ -2014,6 +2157,7 @@ dtm.generator = function () {
             case 'harmonic':
                 break;
 
+            case 'rf':
             case 'rand':
             case 'random':
                 generator.val = random(generator.len, sorted[0], sorted[1], 1.0, false);
@@ -2023,10 +2167,12 @@ dtm.generator = function () {
                 generator.val = random(generator.len, sorted[0], sorted[1], params.amp, false);
                 break;
 
+            case 'ri':
             case 'randi':
                 generator.val = random(generator.len, sorted[0], sorted[1], 1.0, true);
                 break;
 
+            case 'r':
             case 'range':
                 generator.val = range(paramsExt.start, paramsExt.end, paramsExt.interval);
                 break;
@@ -2037,6 +2183,10 @@ dtm.generator = function () {
 
             case 'scale':
                 generator.val = scale(paramsExt.scale, paramsExt.transpose);
+                break;
+
+            case 'modal':
+                generator.val = modal(paramsExt.index);
                 break;
 
             case 'fibonacci':
@@ -2072,6 +2222,7 @@ dtm.generator = function () {
         }
 
         generator.len = generator.val.length;
+        generator.meta.setOriginal(generator.val);
     }
 
     /**
@@ -2110,36 +2261,6 @@ dtm.generator = function () {
         process();
         return generator;
     };
-
-    ///**
-    // * @function module:generator#range
-    // * @param arg1 {number|array|dtm.array} A min value or an array of min and max values
-    // * @param [arg2] {number} A max value
-    // * @returns {array}
-    // */
-    //generator.range = function (arg1, arg2) {
-    //    var args;
-    //
-    //    if (isDtmObj(arg1)) {
-    //        args = arg1.get();
-    //    } else if (argIsSingleArray(arguments)) {
-    //        args = arguments[0];
-    //    } else if (argsAreSingleVals(arguments)) {
-    //        args = argsToArray(arguments);
-    //    }
-    //
-    //    if (isNumOrFloat32Array(args)) {
-    //        if (args.length === 2) {
-    //            params.min = (args[0]);
-    //            params.max = (args[1]);
-    //        } else if (args.length > 2) {
-    //            params.min = (dtm.analyzer.min(args));
-    //            params.max = (dtm.analyzer.max(args));
-    //        }
-    //        process();
-    //    }
-    //    return generator;
-    //};
 
     generator.start = function (val) {
         if (isNumber(val)) {
@@ -2275,7 +2396,7 @@ dtm.generator = function () {
         generator.len = 1;
         params.min = 0.0;
 
-        if (params.type === 'randi') {
+        if (params.type === 'randi' || params.type === 'ri') {
             params.max = 2;
         } else {
             params.max = 1.0;
@@ -2334,7 +2455,7 @@ dtm.generator = function () {
             } else {
                 params.string = String(arguments[1]);
             }
-        } else if (params.type === 'range') {
+        } else if (params.type === 'range' || params.type === 'r') {
             if (isNumArray(arguments[1])) {
                 if (arguments[1].length === 1) {
                     // TODO: reduce the redundant process()
@@ -2377,6 +2498,8 @@ dtm.generator = function () {
                 paramsExt.transpose = arguments[2];
             }
             //process();
+        } else if (params.type === 'modal') {
+            paramsExt.index = arguments[1];
         } else if (isTypeCategOf('const')) {
             if (!isEmpty(arguments[1])) {
                 params.const = arguments[1];
@@ -2417,7 +2540,7 @@ dtm.generator = function () {
 
 dtm.g = dtm.gen = dtm.generator;
 
-var generators = ['line', 'rise', 'decay', 'fall', 'seq', 'sequence', 'series', 'range', 'noise', 'random', 'rand', 'randi', 'gaussian', 'gaussCurve', 'gauss', 'normal', 'zeros', 'zeroes', 'ones', 'constant', 'constants', 'const', 'consts', 'repeat', 'string', 'str', 'sin', 'sine', 'cos', 'cosine', 'tri', 'triangle', 'saw', 'fibonacci', 'decay', 'scale'];
+var generators = ['line', 'rise', 'decay', 'fall', 'seq', 'sequence', 'series', 'range', 'r', 'noise', 'random', 'rand', 'rf', 'randi', 'ri', 'gaussian', 'gauss', 'normal', 'zeros', 'zeroes', 'ones', 'constant', 'constants', 'const', 'consts', 'repeat', 'string', 'str', 'sin', 'sine', 'cos', 'cosine', 'tri', 'triangle', 'saw', 'fibonacci', 'decay', 'scale', 'modal'];
 
 generators.forEach(function (type) {
     dtm[type] = function () {
@@ -2473,16 +2596,6 @@ dtm.transform = {
             return arr.map(function (val) {
                 return (val - min) / denom;
             });
-
-            //if (isFloat32Array(arr)) {
-            //    return Float32Map(arr, function (val) {
-            //        return (val - min) / denom;
-            //    });
-            //} else if (isNumArray(arr)) {
-            //    return arr.map(function (val) {
-            //        return (val - min) / denom;
-            //    });
-            //}
         }
     },
 
@@ -2962,6 +3075,41 @@ dtm.transform = {
         return res;
     },
 
+    div: function (input, factor, interp) {
+        var res = null;
+        if (isArray(input)) {
+            res = new Array(input.length);
+        } else if (isFloat32Array(input)) {
+            res = new Float32Array(input.length);
+        }
+
+        if (isEmpty(factor)) {
+            factor = 1;
+        }
+
+        if (!isString(interp)) {
+            interp = 'step';
+        }
+
+        if (isNumber(factor)) {
+            input.forEach(function (val, idx) {
+                res[idx] = val / factor;
+            });
+        } else if (isNumOrFloat32Array(factor)) {
+            if (input.length > factor.length) {
+                factor = dtm.transform.fit(factor, input.length, interp);
+            } else if (input.length < factor.length) {
+                input = dtm.transform.fit(input, factor.length, interp);
+            }
+
+            for (var i = 0; i < input.length; i++) {
+                res[i] = input[i] / factor[i];
+            }
+        }
+
+        return res;
+    },
+
     /**
      * Power operation on the array contents. If the second argument is a number, it acts as a scalar value. If it is an array, it is first stretched with linear or specified interpolation method, then element-wise power operation is performed.
      * @function module:transform#pow
@@ -3041,6 +3189,41 @@ dtm.transform = {
 
             for (var i = 0; i < input.length; i++) {
                 res[i] = Math.pow(factor[i], input[i]);
+            }
+        }
+
+        return res;
+    },
+
+    log: function (input, base, interp) {
+        var res = null;
+        if (isArray(input)) {
+            res = new Array(input.length);
+        } else if (isFloat32Array(input)) {
+            res = new Float32Array(input.length);
+        }
+
+        if (isEmpty(base)) {
+            base = Math.E;
+        }
+
+        if (!isString(interp)) {
+            interp = 'step';
+        }
+
+        if (isNumber(base)) {
+            input.forEach(function (val, idx) {
+                res[idx] = Math.log(val) / Math.log(base);
+            });
+        } else if (isNumOrFloat32Array(base)) {
+            if (input.length > base.length) {
+                base = dtm.transform.fit(base, input.length, interp);
+            } else if (input.length < base.length) {
+                input = dtm.transform.fit(input, base.length, interp);
+            }
+
+            for (var i = 0; i < input.length; i++) {
+                res[i] = Math.log(input[i]) / Math.log(base[i]);
             }
         }
 
@@ -3696,6 +3879,12 @@ dtm.transform = {
 
         return res;
     },
+    
+    editDistance: function (array, target) {
+        return array.map(function (v) {
+            return levenshteinDistance(v, target);
+        });
+    },
 
     pitchQuantize: function (input, scale, round) {
         var res = [];
@@ -3879,7 +4068,7 @@ dtm.array = function () {
     };
 
     var array = function () {
-        return array.clone();
+        return array.clone.apply(this, arguments);
     }; // this makes .name() not overridable
 
     array.meta = {
@@ -3891,18 +4080,16 @@ dtm.array = function () {
             objForEach(paramsExt, function (val, key) {
                 params[key] = val;
             });
+            return array;
         },
         setOriginal: function (arr) {
             params.original = arr;
+            return array;
         }
     };
 
     array.val = [];
     array.len = 0;
-
-    function init () {
-
-    }
 
     // TODO: list different query params in detail in the documentation
     /**
@@ -3914,16 +4101,37 @@ dtm.array = function () {
     array.get = function (param) {
         if (isNumber(param)) {
             // TODO: support multiple single val arguments?
+            if (!isInteger(param)) {
+                param = Math.round(param)
+            }
+
             return array.val[mod(param, array.len)];
-        } else if (isNumArray(param) || (isDtmArray(param) && isNumArray(param.get()))) {
+        } else if (isArray(param) || isDtmArray(param)) {
             var indices = isDtmArray(param) ? param.get() : param;
-            var res = []; // TODO: support typed array?
+            var res = [];
 
             // TODO: only accept integers
 
             indices.forEach(function (i) {
-                res.push(array.val[mod(i, array.len)]);
+                if (isNumber(i)) {
+                    if (!isInteger(i)) {
+                        i = Math.round(i);
+                    }
+                    res.push(array.val[mod(i, array.len)]);
+                } else if (isString(i) && isNestedDtmArray(array)) {
+                    array.forEach(function (a) {
+                        if (a.get('name') === i) {
+                            res.push(a);
+                        }
+                    });
+                }
             });
+
+            if (isNestedDtmArray(array)) {
+                res = dtm.array(res);
+            } else if (isFloat32Array(array.val)) {
+                res = toFloat32Array(res);
+            }
 
             return res;
 
@@ -4063,6 +4271,8 @@ dtm.array = function () {
                 case 'pdf':
                     break;
 
+                case 'entropy':
+                    return array.clone().entropy().get();
 
                 /* ITERATORS */
                 case 'current':
@@ -4203,6 +4413,16 @@ dtm.array = function () {
                     }
             }
         } else {
+            //if (isNestedDtmArray(array)) {
+            //    console.log(array.val.map(function (a) {
+            //        return a.get();
+            //    }));
+            //    return array.val.map(function (a) {
+            //        return a.get();
+            //    });
+            //} else {
+            //    return array.val;
+            //}
             return array.val;
         }
     };
@@ -4262,6 +4482,8 @@ dtm.array = function () {
             return array.block(1);
         }
     };
+
+    array.t = array.transp;
 
     /**
      * Sets or overwrites the contents of the array object.
@@ -4355,6 +4577,16 @@ dtm.array = function () {
         return array;
     };
 
+    array.keys = function () {
+        if (isNestedDtmArray(array)) {
+            return array.set(array.get('keys'));
+        } else {
+            return array;
+        }
+    };
+
+    array.names = array.indices = array.keys;
+
     /**
      * Sets the value type of the array content. Should be either 'number' or 'string'?
      * @function mudule:array#valuetype
@@ -4427,7 +4659,6 @@ dtm.array = function () {
         return array;
     };
 
-
     /* GENERATORS */
     /**
      * Returns a copy of the array object. It can be used when you don't want to reference the same array object from different places. For convenience, you can also do arrObj() instead of arrObj.clone() to quickly return a copy.
@@ -4435,26 +4666,30 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.clone = function () {
-        var newValue = [];
-        if (isNestedWithDtmArray(array.val)) {
-            newValue = array.val.map(function (a) {
-                return a.clone();
-            });
+        if (arguments.length === 0) {
+            var newValue = [];
+            if (isNestedWithDtmArray(array.val)) {
+                newValue = array.val.map(function (a) {
+                    return a.clone();
+                });
+            } else {
+                newValue = array.val;
+            }
+            var newArr = dtm.array(newValue).label(params.name);
+            newArr.meta.setOriginal(params.original);
+
+            // CHECK: this may cause troubles!
+            newArr.index(params.index);
+            newArr.step(params.step);
+
+            if (params.type === 'string') {
+                newArr.classes = params.classes;
+                //newArr.setType('string');
+            }
+            return newArr;
         } else {
-            newValue = array.val;
+            return array.col.apply(this, arguments)
         }
-        var newArr = dtm.array(newValue).label(params.name);
-        newArr.meta.setOriginal(params.original);
-
-        // CHECK: this may cause troubles!
-        newArr.index(params.index);
-        newArr.step(params.step);
-
-        if (params.type === 'string') {
-            newArr.classes = params.classes;
-            //newArr.setType('string');
-        }
-        return newArr;
     };
 
     array.parent = function (obj) {
@@ -4492,7 +4727,7 @@ dtm.array = function () {
         }
     };
 
-    array.flatten = array.ub = array.unblock = array.unnest;
+    array.flatten = array.ub = array.unblock = array.un = array.unnest;
 
     /**
      * Morphs the array values with a target array / dtm.array values. The lengths can be mismatched.
@@ -4528,6 +4763,14 @@ dtm.array = function () {
         return array.set(params.original);
     };
 
+    /**
+     * Overwrites the "original" state with the current state.
+     * @returns {dtm.array}
+     */
+    array.save = function () {
+        return array.meta.setOriginal(array.val);
+    };
+
     array.residue = function () {
         return array.set(dtm.transform.subtract(params.original, array.val));
     };
@@ -4555,13 +4798,27 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.normalize = function (arg1, arg2) {
+        var min, max, args;
+
         if (isNestedDtmArray(array)) {
+            if (isNumber(arg1) && isNumber(arg2)) {
+                min = arg1;
+                max = arg2;
+            } else {
+                min = Infinity;
+                max = -Infinity;
+
+                array.forEach(function (a) {
+                    min = a.get('min') < min ? a.get('min') : min;
+                    max = a.get('max') > max ? a.get('max') : max;
+                });
+            }
+
             return array.map(function (a) {
-                return a.normalize(arg1, arg2);
+                return a.normalize(min, max);
             });
         }
 
-        var min, max, args;
         if (isNumber(arg1) && isNumber(arg2)) {
             min = arg1;
             max = arg2;
@@ -4590,7 +4847,7 @@ dtm.array = function () {
 
     /**
      * Modifies the range of the array. Shorthand: array.sc
-     * @function module:array#scale
+     * @function module:array#range
      * @param arg1 {number|array|dtm.array} The target minimum value of the scaled range.
      * @param arg2 {number|array|dtm.array} The target maximum value of the scaled range.
      * @param [arg3] {number} The minimum of the domain (original) value.
@@ -4609,14 +4866,27 @@ dtm.array = function () {
      * dtm.array([1, 2, 3]).scale(0, 10, 0, 5).get();
      * -> [2, 4, 6]
      */
-    array.scale = function (arg1, arg2, arg3, arg4) {
+    array.range = function (arg1, arg2, arg3, arg4) {
+        var min, max, dmin, dmax;
+
         if (isNestedDtmArray(array)) {
+            if (isNumber(arg3) && isNumber(arg4)) {
+                dmin = arg3;
+                dmax = arg4;
+            } else {
+                dmin = Infinity;
+                dmax = -Infinity;
+
+                array.forEach(function (a) {
+                    dmin = a.get('min') < dmin ? a.get('min') : dmin;
+                    dmax = a.get('max') > dmax ? a.get('max') : dmax;
+                });
+            }
+
             return array.map(function (a) {
-                return a.scale(arg1, arg2, arg3, arg4);
+                return a.scale(arg1, arg2, dmin, dmax);
             });
         }
-
-        var min, max, dmin, dmax;
 
         // TODO: better typecheck order
 
@@ -4664,7 +4934,7 @@ dtm.array = function () {
         return array.set(dtm.transform.rescale(array.val, min, max, dmin, dmax));
     };
 
-    array.r = array.range = array.sc = array.scale;
+    array.r = array.range;
 
     /**
      * Caps the array value range at the min and max values. Only works with a numerical array.
@@ -4777,7 +5047,7 @@ dtm.array = function () {
         return array.set(dtm.transform.stretch(array.val, factor, interp));
     };
 
-    array.str = array.stretch;
+    array.s = array.str = array.stretch;
 
     /**
      * Adds a value to all the array elements.
@@ -4887,6 +5157,54 @@ dtm.array = function () {
 
     array.dot = array.mult;
 
+    array.divide = function (factor, interp) {
+        if (!isString(interp)) {
+            interp = 'step';
+        }
+        if (isNestedNumDtmArray(array)) {
+            return array.map(function (a) {
+                if (isNestedNumDtmArray(factor)) {
+                    return a.divide(factor.get('next'));
+                } else {
+                    return a.divide(factor);
+                }
+            });
+        } else {
+            if (isNumDtmArray(factor)) {
+                factor = factor.get();
+            } else if (isNestedNumDtmArray(factor)) {
+                var newArr = [];
+                factor.forEach(function () {
+                    newArr.push(array.get());
+                });
+                array.set(newArr);
+                return array.map(function (a) {
+                    return a.divide(factor.get('next'));
+                });
+            }
+
+            return array.set(dtm.transform.div(array.val, factor, interp));
+        }
+    };
+
+    array.div = array.divide;
+
+    array.reciprocal = function () {
+        if (isNestedNumDtmArray(array)) {
+            return array.map(function (a) {
+                return a.reciprocal();
+            });
+        } else if (isNumDtmArray(array)) {
+            return array.map(function (v) {
+                return 1/v;
+            });
+        } else {
+            return array;
+        }
+    };
+
+    array.recip = array.reciprocal;
+
     /**
      * @function module:array#pow
      * @param factor {number|array|dtm.array}
@@ -4894,7 +5212,7 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.pow = function (factor, interp) {
-        if (isDtmArray(factor)) {
+        if (isNumDtmArray(factor)) {
             factor = factor.get();
         }
         return array.set(dtm.transform.pow(array.val, factor, interp));
@@ -4908,30 +5226,69 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.powof = function (factor, interp) {
-        if (isDtmArray(factor)) {
+        if (isNumDtmArray(factor)) {
             factor = factor.get();
         }
         return array.set(dtm.transform.powof(array.val, factor, interp));
     };
 
+    array.log = function (base, interp) {
+        if (isNumDtmArray(base)) {
+            base = base.get();
+        }
+        return array.set(dtm.transform.log(array.val, base, interp));
+    };
+
     /* CONVERSION WITH STATS */
-    array.min = function () {
-        if (isNestedDtmArray(array)) {
-            return array.map(function (a) {
-                return a.get('min');
-            });
+    array.min = function (fn) {
+        if (isFunction(fn)) {
+            var res = getMin(array.val.map(function (v) {
+                return fn(v);
+            }));
+
+            if (isNestedDtmArray(array)) {
+                return array.filter(function (v) {
+                    return fn(v) === res;
+                });
+            } else {
+                return array.filter(function (v) {
+                    return fn(v) === res;
+                });
+            }
         } else {
-            return array.set(array.get('min'));
+            if (isNestedDtmArray(array)) {
+                return array.map(function (a) {
+                    return a.min();
+                });
+            } else {
+                return array.set(getMin(array.val));
+            }
         }
     };
 
-    array.max = function () {
-        if (isNestedDtmArray(array)) {
-            return array.map(function (a) {
-                return a.get('max');
-            });
+    array.max = function (fn) {
+        if (isFunction(fn)) {
+            var res = getMax(array.val.map(function (v) {
+                return fn(v);
+            }));
+
+            if (isNestedDtmArray(array)) {
+                return array.filter(function (v) {
+                    return fn(v) === res;
+                });
+            } else {
+                return array.filter(function (v) {
+                    return fn(v) === res;
+                });
+            }
         } else {
-            return array.set(array.get('max'));
+            if (isNestedDtmArray(array)) {
+                return array.map(function (a) {
+                    return a.max();
+                });
+            } else {
+                return array.set(getMax(array.val));
+            }
         }
     };
 
@@ -4945,100 +5302,347 @@ dtm.array = function () {
         }
     };
 
-    array.mean = function () {
-        if (isNestedDtmArray(array)) {
-            return array.map(function (a) {
-                return a.get('mean');
-            });
+    array.mean = function (fn) {
+        if (isFunction(fn)) {
+            var res = mean(array.val.map(function (v) {
+                return fn(v);
+            }));
+
+            if (isNestedDtmArray(array)) {
+                return array.filter(function (v) {
+                    return fn(v) === res;
+                });
+            } else {
+                return array.filter(function (v) {
+                    return fn(v) === res;
+                });
+            }
         } else {
-            return array.set(array.get('mean'));
+            if (isNestedDtmArray(array)) {
+                return array.map(function (a) {
+                    return a.mean();
+                });
+            } else {
+                return array.set(mean(array.val));
+            }
         }
     };
 
     array.avg = array.mean;
 
-    array.mode = function () {
-        if (isNestedDtmArray(array)) {
-            return array.map(function (a) {
-                return a.get('mode');
-            });
+    array.mode = function (fn) {
+        if (isFunction(fn)) {
+            var res = mode(array.val.map(function (v) {
+                return fn(v);
+            }));
+
+            if (isNestedDtmArray(array)) {
+                return array.filter(function (v) {
+                    return fn(v) === res;
+                });
+            } else {
+                return array.filter(function (v) {
+                    return fn(v) === res;
+                });
+            }
         } else {
-            return array.set(array.get('mode'));
+            if (isNestedDtmArray(array)) {
+                return array.map(function (a) {
+                    return a.mode();
+                });
+            } else {
+                return array.set(mode(array.val));
+            }
         }
     };
 
-    array.median = function () {
-        if (isNestedDtmArray(array)) {
-            return array.map(function (a) {
-                return a.get('median');
-            });
+    array.median = function (fn) {
+        if (isFunction(fn)) {
+            var res = median(array.val.map(function (v) {
+                return fn(v);
+            }));
+
+            if (isNestedDtmArray(array)) {
+                return array.filter(function (v) {
+                    return fn(v) === res;
+                });
+            } else {
+                return array.filter(function (v) {
+                    return fn(v) === res;
+                });
+            }
         } else {
-            return array.set(array.get('median'));
+            if (isNestedDtmArray(array)) {
+                return array.map(function (a) {
+                    return a.median();
+                });
+            } else {
+                return array.set(median(array.val));
+            }
         }
     };
 
-    array.midrange = function () {
-        if (isNestedDtmArray(array)) {
-            return array.map(function (a) {
-                return a.get('midrange');
-            });
+    array.midrange = function (fn) {
+        if (isFunction(fn)) {
+            var res = midrange(array.val.map(function (v) {
+                return fn(v);
+            }));
+
+            if (isNestedDtmArray(array)) {
+                return array.filter(function (v) {
+                    return fn(v) === res;
+                });
+            } else {
+                return array.filter(function (v) {
+                    return fn(v) === res;
+                });
+            }
         } else {
-            return array.set(array.get('midrange'));
+            if (isNestedDtmArray(array)) {
+                return array.map(function (a) {
+                    return a.midrange();
+                });
+            } else {
+                return array.set(midrange(array.val));
+            }
         }
     };
 
     array.mid = array.midrange;
 
-    array.std = function () {
-        if (isNestedDtmArray(array)) {
-            return array.map(function (a) {
-                return a.get('std');
-            });
+    array.std = function (fn) {
+        if (isFunction(fn)) {
+            var res = std(array.val.map(function (v) {
+                return fn(v);
+            }));
+
+            if (isNestedDtmArray(array)) {
+                return array.filter(function (v) {
+                    return fn(v) === res;
+                });
+            } else {
+                return array.filter(function (v) {
+                    return fn(v) === res;
+                });
+            }
         } else {
-            return array.set(array.get('std'));
+            if (isNestedDtmArray(array)) {
+                return array.map(function (a) {
+                    return a.std();
+                });
+            } else {
+                return array.set(std(array.val));
+            }
         }
     };
 
-    array.pstd = function () {
-        if (isNestedDtmArray(array)) {
-            return array.map(function (a) {
-                return a.get('pstd');
-            });
+    array.pstd = function (fn) {
+        if (isFunction(fn)) {
+            var res = pstd(array.val.map(function (v) {
+                return fn(v);
+            }));
+
+            if (isNestedDtmArray(array)) {
+                return array.filter(function (v) {
+                    return fn(v) === res;
+                });
+            } else {
+                return array.filter(function (v) {
+                    return fn(v) === res;
+                });
+            }
         } else {
-            return array.set(array.get('pstd'));
+            if (isNestedDtmArray(array)) {
+                return array.map(function (a) {
+                    return a.pstd();
+                });
+            } else {
+                return array.set(pstd(array.val));
+            }
         }
     };
 
-    array.var = function () {
-        if (isNestedDtmArray(array)) {
-            return array.map(function (a) {
-                return a.get('var');
-            });
+    array.var = function (fn) {
+        if (isFunction(fn)) {
+            var res = variance(array.val.map(function (v) {
+                return fn(v);
+            }));
+
+            if (isNestedDtmArray(array)) {
+                return array.filter(function (v) {
+                    return fn(v) === res;
+                });
+            } else {
+                return array.filter(function (v) {
+                    return fn(v) === res;
+                });
+            }
         } else {
-            return array.set(array.get('var'));
+            if (isNestedDtmArray(array)) {
+                return array.map(function (a) {
+                    return a.var();
+                });
+            } else {
+                return array.set(variance(array.val));
+            }
         }
     };
 
-    array.pvar = function () {
-        if (isNestedDtmArray(array)) {
-            return array.map(function (a) {
-                return a.get('pvar');
-            });
+    array.pvar = function (fn) {
+        if (isFunction(fn)) {
+            var res = pvar(array.val.map(function (v) {
+                return fn(v);
+            }));
+
+            if (isNestedDtmArray(array)) {
+                return array.filter(function (v) {
+                    return fn(v) === res;
+                });
+            } else {
+                return array.filter(function (v) {
+                    return fn(v) === res;
+                });
+            }
         } else {
-            return array.set(array.get('pvar'));
+            if (isNestedDtmArray(array)) {
+                return array.map(function (a) {
+                    return a.pvar();
+                });
+            } else {
+                return array.set(pvar(array.val));
+            }
         }
     };
 
-    array.rms = function () {
-        if (isNestedDtmArray(array)) {
-            return array.map(function (a) {
-                return a.get('rms');
-            });
+    array.rms = function (fn) {
+        if (isFunction(fn)) {
+            var res = rms(array.val.map(function (v) {
+                return fn(v);
+            }));
+
+            if (isNestedDtmArray(array)) {
+                return array.filter(function (v) {
+                    return fn(v) === res;
+                });
+            } else {
+                return array.filter(function (v) {
+                    return fn(v) === res;
+                });
+            }
         } else {
-            return array.set(array.get('rms'));
+            if (isNestedDtmArray(array)) {
+                return array.map(function (a) {
+                    return a.rms();
+                });
+            } else {
+                return array.set(rms(array.val));
+            }
         }
     };
 
+    array.linreg = function () {
+        if (isNumDtmArray(array)) {
+            var xEst = dtm.range(array.get('len')).get('mean');
+            var yEst = array.get('mean');
+            var SSxy = 0;
+            var SSxx = 0;
+
+            array.val.forEach(function (y, x) {
+                SSxy += (x - xEst) * (y - yEst);
+                SSxx += Math.pow((x - xEst), 2);
+            });
+            var b1 = SSxy / SSxx;
+            var b0 = yEst - b1 * xEst;
+
+            var est = [];
+            var err = [];
+            for (var i = 0; i < array.get('len'); i++) {
+                est.push(b0 + b1 * i);
+                err.push(array.get(i) - est[i]);
+            }
+
+            return array.set([est, err, [b1, b0]]);
+        } else if (isNestedDtmArray(array)) {
+            return array.map(function (a) {
+                return a.linreg();
+            });
+        } else {
+            return array;
+        }
+    };
+
+    array.covar = function (tgt) {
+        if (isNumDtmArray(array)) {
+            if (isNumDtmArray(tgt)) {
+                tgt = tgt.clone();
+            } else if (isNumOrFloat32Array(tgt)) {
+                tgt = dtm.array(tgt);
+            } else {
+                tgt = array.clone();
+            }
+
+            var len = array.get('len');
+
+            if (tgt.get('len') !== len) {
+                tgt.fit(len, 'step');
+            }
+
+            var xEst = array.get('mean');
+            var yEst = array.get('mean');
+
+            var res = 0;
+
+            for (var i = 0; i < len; i++) {
+                res += (array.get(i) - xEst) * (tgt.get(i) - yEst);
+            }
+
+            res /= len;
+
+            return dtm.array(res);
+        } else {
+            return array;
+        }
+    };
+
+    array.cov = array.covar;
+
+    array.conv = function (tgt) {
+        return array;
+    };
+
+    array.corr = function (tgt) {
+        if (isNumDtmArray(array)) {
+            var res = dtm.array();
+            var zeros = dtm.const(0).size(array.get('len'));
+            var src = array();
+
+            if (isNumDtmArray(tgt) || isNumOrFloat32Array(tgt)) {
+                var tgtLen = isNumOrFloat32Array(tgt) ? tgt.length : tgt.get('len');
+                tgt = zeros().append(tgt).append(zeros);
+                src.append(dtm.const(0).size(tgtLen)).append(zeros);
+            } else {
+                tgt = zeros().append(src).append(zeros);
+                src.append(zeros).append(zeros);
+            }
+
+            for (var i = 0; i < src.get('len') - (array.get('len')-1); i++) {
+                res.append(src().mult(tgt).get('sum'));
+                src.shift(-1);
+            }
+
+            return res;
+        } else {
+            return array;
+        }
+    };
+
+    array.corrcoef = function (tgt) {
+        if (isNumDtmArray(array)) {
+
+        } else {
+            return array;
+        }
+    };
 
     // TODO: not consistent with other stats-based conversions
     array.sum = function () {
@@ -5094,36 +5698,206 @@ dtm.array = function () {
     /**
      * Performs JS Array.map function to the array values.
      * @function module:array#map
-     * @param callback
+     * @param fn
      * @returns {dtm.array}
      */
-    array.map = function (callback) {
+    array.map = function (fn) {
         //return array.set(array.val.map(callback));
-        return array.set(fromFloat32Array(array.val).map(callback));
+        return array.set(fromFloat32Array(array.val).map(fn));
     };
 
-    array.foreach = function (callback) {
-        array.val.forEach(callback);
+    array.map.dist = function () {
+        if (!isNestedDtmArray(array)) {
+            var dist = array().pmf();
+            return array.map(function (v) {
+                return dist().col(v.toString()).get(0);
+            });
+        } else {
+            return array;
+        }
+    };
+
+    array.map.entropy = function () {
+        if (isNestedDtmArray(array)) {
+            return array.map(function (a) {
+                return a.entropy();
+            });
+        } else {
+            return array.entropy();
+        }
+    };
+
+    array.map.histo = function () {
+        // CHECK: this is hacky
+        params.type = 'string'; // re-set the type to string from number
+        return array.set(toFloat32Array(histo(array.val)));
+    };
+
+    array.foreach = function (fn) {
+        array.val.forEach(fn);
         return array;
     };
 
     array.forEach = array.foreach;
 
-    array.filter = function (callback) {
-        return array.set(array.val.filter(callback));
+    array.each = function (fn) {
+        if (isNestedDtmArray(array)) {
+            array.forEach(fn);
+        } else {
+            array.forEach(fn);
+        }
+        return array;
     };
 
-    array.reduce = function (callback) {
-        return array.set(array.val.reduce(callback));
+    var fnList = [
+        'label', 'parent',
+        'morph', 'reset', 'save', 'residue', 'flush', 'clear',
+        'normalize', 'n', 'range', 'r', 'limit', 'clip',
+        'expcurve', 'expc', 'logcurve', 'logc',
+        'fit', 'f', 'stretch', 'str', 's',
+        'add', 'subtract', 'mult', 'dot', 'divide', 'div',
+        'reciprocal', 'recip', 'pow', 'powof', 'log',
+        'min', 'max', 'extent',
+        'mean', 'avg', 'mode', 'median', 'midrange', 'mid',
+        'std', 'pstd', 'var', 'pvar',
+        'rms',
+        'linreg', 'covar', 'cov', 'corr',
+        'sum', 'fitsum',
+        'entropy',
+        'filter', 'find', 'sort', 'sortby',
+        'reduce', 'some', 'every',
+        'subarray', 'match',
+        'replace', 'select', 'sel',
+        'concat', 'cat', 'append',
+        'repeat', 'rep', 'fitrep', 'frep',
+        'pad',
+        'truncate',
+        'block', 'b',
+        'nest', 'unnest', 'un', 'unblock', 'ub', 'flatten',
+        'ola', 'window', 'win',
+        'copy', 'seg',
+        'shift', 'mirror', 'mirr', 'mir',
+        'reverse', 'rev',
+        'invert', 'inv',
+        'shuffle', 'randomize',
+        'reorder', 'order',
+        'queue', 'fifo',
+        'round', 'floor', 'ceil', 'hwr', 'fwr', 'abs', 'modulo', 'mod',
+        'mse', 'snr', 'dbsnr', 'diff', 'editdist',
+        'dct', 'idct',
+        'randomtrigger', 'randtrig',
+        'unique', 'classify',
+        'classify', 'stringify', 'tonumber', 'tonum', 'toFloat32',
+        'morethan', 'mt', 'mtet', 'lessthan', 'lt', 'ltet',
+        'removeempty',
+        'split',
+        'pitchquantize', 'pq', 'mtof', 'ftom',
+        'ntob', 'bton', 'itob', 'btoi', 'btot', 'ttob',
+        'size'
+    ];
+
+    fnList.forEach(function (v) {
+        array.each[v] = function () {
+            var self = this;
+            var args = arguments;
+
+            if (isNestedDtmArray(array)) {
+                array.forEach(function (a) {
+                    a[v].apply(self, args);
+                });
+                return array;
+            } else {
+                return array;
+            }
+        };
+
+        array.map[v] = function () {
+            var self = this;
+            var args = arguments;
+
+            if (isNestedDtmArray(array)) {
+                return array.map(function (a) {
+                    return a[v].apply(self, args);
+                });
+            } else {
+                return array;
+            }
+        };
+    });
+
+    array.filter = function (fn) {
+        return array.set(array.val.filter(fn));
+    };
+
+    array.find = function (tgt) {
+        if (!isEmpty(tgt)) {
+            var res = [];
+
+            if (isFunction(tgt)) {
+                array.forEach(function (v, i) {
+                    if (tgt(v)) {
+                        res.push(i);
+                    }
+                });
+            } else if (isSingleVal(tgt)) {
+                array.forEach(function (v, i) {
+                    if (v === tgt) {
+                        res.push(i);
+                    }
+                });
+            } else {
+                return array;
+            }
+
+            return array.set(res);
+        } else {
+            return array;
+        }
+    };
+
+    /**
+     * Sorts the contents of numerical array.
+     * @function module:array#sort
+     * @returns {dtm.array}
+     */
+    array.sort = function (fn) {
+        if (isEmpty(fn)) {
+            return array.set(dtm.transform.sort(array.val));
+        } else {
+            return array.set(array.val.sort(fn));
+        }
+    };
+
+    array.sortby = function (fn, desc) {
+        if (!isBoolean(desc)) {
+            desc = false;
+        }
+        if (!isFunction(fn)) {
+            fn = function (v) {
+                return v;
+            };
+        }
+        var res = array.val.sort(function (a, b) {
+            if (desc) {
+                return fn(b) - fn(a);
+            } else {
+                return fn(a) - fn(b);
+            }
+        });
+        return array.set(res);
+    };
+
+    array.reduce = function (fn) {
+        return array.set(array.val.reduce(fn));
     };
 
     // TODO: these should be in the get method
-    array.some = function (callback) {
-        return array.val.some(callback);
+    array.some = function (fn) {
+        return array.val.some(fn);
     };
 
-    array.every = function (callback) {
-        return array.val.every(callback);
+    array.every = function (fn) {
+        return array.val.every(fn);
     };
 
     array.subarray = function () {
@@ -5209,15 +5983,6 @@ dtm.array = function () {
 
     array.sel = array.select;
 
-    /**
-     * Sorts the contents of numerical array.
-     * @function module:array#sort
-     * @returns {dtm.array}
-     */
-    array.sort = function () {
-        return array.set(dtm.transform.sort(array.val));
-    };
-
     // TODO: nested array and concat?
     /**
      * Concatenates new values to the contents.
@@ -5238,7 +6003,7 @@ dtm.array = function () {
         return array.set(array.val);
     };
 
-    array.append = array.concat;
+    array.append = array.cat = array.concat;
 
     /**
      * Repeats the contents of the current array.
@@ -5295,7 +6060,7 @@ dtm.array = function () {
 
     /**
      * Truncates some values either at the end or both at the beginning and the end.
-     * @function module:array#truncate | slice
+     * @function module:array#truncate
      * @param arg1 {number} Start bits to truncate. If the arg2 is not present, it will be the End bits to truncate.
      * @param [arg2] {number} End bits to truncate.
      * @returns {dtm.array}
@@ -5303,8 +6068,6 @@ dtm.array = function () {
     array.truncate = function (arg1, arg2) {
         return array.set(dtm.transform.truncate(array.val, arg1, arg2));
     };
-
-    array.slice = array.truncate;
 
     // TODO: accept option as arg? for numBlocks, pad, overlap ratio, etc.
     array.block = function (len, hop, window, pad) {
@@ -5324,13 +6087,14 @@ dtm.array = function () {
         var numBlocks = Math.floor((array.len - len) / hop) + 1;
 
         for (var i = 0; i < numBlocks; i++) {
-            newArr[i] = dtm.array(array.val.slice(i*hop, i*hop+len)).window(window).parent(array);
+            // name: original starting index
+            newArr[i] = dtm.array(array.val.slice(i*hop, i*hop+len)).window(window).parent(array).label((i*hop).toString());
         }
 
         return array.set(newArr);
     };
 
-    array.nest = array.b = array.block;
+    array.b = array.bl = array.block;
 
     array.ola = function (hop) {
         if (!isInteger(hop) || hop < 1) {
@@ -5372,7 +6136,57 @@ dtm.array = function () {
     array.win = array.window;
 
     array.copy = function (times) {
+        if (!isInteger(times)) {
+            times = 1;
+        }
+        if (!isNestedDtmArray(array)) {
+            var res = [];
+            for (var i = 0; i < times; i++) {
+                res.push(array.val);
+            }
+            return dtm.array(res);
+        } else {
 
+        }
+        return array;
+    };
+
+    array.seg = function (idx) {
+        if (isNumArray(idx) || isNumDtmArray(idx)) {
+            var res = [];
+            var len = isNumArray(idx) ? idx.length : idx.len;
+            if (isNumDtmArray(idx)) {
+                idx = idx.get();
+            }
+
+            if (idx[0] !== 0) {
+                if (isFloat32Array(array.val)) {
+                    res.push(dtm.array(array.val.subarray(0, idx[i])).label('0'));
+                } else {
+                    res.push(dtm.array(array.val.slice(0, idx[i])).label('0'));
+                }
+            }
+
+            for (var i = 0; i < len-1; i++) {
+                if (isFloat32Array(array.val)) {
+                    res.push(dtm.array(array.val.subarray(idx[i], idx[i+1])).label(idx[i].toString()));
+                } else {
+                    res.push(dtm.array(array.val.slice(idx[i], idx[i+1])).label(idx[i].toString()));
+                }
+            }
+
+            if (isFloat32Array(array.val)) {
+                res.push(dtm.array(array.val.subarray(idx[i], array.val.length)).label(idx[i].toString()));
+            } else {
+                res.push(dtm.array(array.val.slice(idx[i], array.val.length)).label(idx[i].toString()));
+            }
+
+            return array.set(res);
+        } else if (isInteger(idx)) {
+            return array;
+        }
+
+        return array;
     };
 
     /**
@@ -5394,7 +6208,7 @@ dtm.array = function () {
         return array.concat(dtm.transform.reverse(array.val));
     };
 
-    array.mir = array.mirror;
+    array.mir = array.mirr = array.mirror;
 
     /**
      * Flips the array contents horizontally.
@@ -5434,10 +6248,6 @@ dtm.array = function () {
     };
 
     array.randomize = array.shuffle;
-
-    array.blockShuffle = function (blockSize) {
-        return array;
-    };
 
     array.reorder = function () {
         var indices;
@@ -5547,9 +6357,46 @@ dtm.array = function () {
 
     array.mod = array.modulo;
 
-    //array.derivative = function (order) {
-    //    return array;
-    //};
+    /**
+     * Calculates the mean-square-error. If no argument is given, it will take the current array state as the modified value, and calculates the distortion from the original (initial state) value of itself. This would be useful for choosing quantization or transformation methods with less distortion to the data.
+     * @returns {dtm.array}
+     */
+    array.mse = function () {
+        if (arguments.length === 0) {
+            if (!isNestedDtmArray(array)) {
+                var source = array.clone().reset();
+
+                // respect the original length
+                if (source.get('len') !== array.get('len')) {
+                    array.fit(source.get('len'), 'step');
+                }
+
+                return source().subtract(array).pow(2).sum().divide(source.get('len'));
+            }
+        } else {
+            return array;
+        }
+    };
+
+    array.snr = function () {
+        if (arguments.length === 0) {
+            if (!isNestedDtmArray(array)) {
+                var mse = array.clone().mse();
+                return array.set(meanSquare(array.val) / mse.get(0));
+            }
+        }
+        return array;
+    };
+
+    array.dbsnr = function () {
+        if (arguments.length === 0) {
+            if (!isNestedDtmArray(array)) {
+                var snr = array.snr();
+                return array.set(10 * Math.log10(snr.get(0)));
+            }
+        }
+        return array;
+    };
 
     /**
      * @function module:array#diff
@@ -5571,17 +6418,74 @@ dtm.array = function () {
         return array.set(array.val);
     };
 
-    /**
-     * Removes zeros from the sequence.
-     * @function module:array#removezeros
-     * @returns {dtm.array}
-     */
-    array.removezeros = function () {
-        return array.set(dtm.transform.removeZeros(array.val));
+    array.editdist = function (target) {
+        if (isString(target)) {
+            return array.set(dtm.transform.editDistance(array.val, target));
+        } else {
+            return array;
+        }
+    };
+
+    // /**
+    //  * Removes zeros from the sequence.
+    //  * @function module:array#removezeros
+    //  * @returns {dtm.array}
+    //  */
+    // array.removezeros = function () {
+    //     return array.set(dtm.transform.removeZeros(array.val));
+    // };
+    //
+    // array.removevalue = function () {
+    //     return array;
+    // };
+
+    array.dct = function () {
+        if (isNumDtmArray(array)) {
+            var res = [];
+            var w;
+            for (var k = 0; k < array.len; k++) {
+                if (k === 0) {
+                    w = Math.sqrt(1/(4*array.len));
+                } else {
+                    w = Math.sqrt(1/(2*array.len));
+                }
+                res.push(2 * w * sum(array.val.map(function (v, n) {
+                    return v * Math.cos(Math.PI/array.len * (n + 0.5) * k);
+                })));
+            }
+            return array.set(res);
+        } else if (isNestedDtmArray(array)) {
+            return array.map(function (a) {
+                return a.dct();
+            });
+        }
+        return array;
+    };
+
+    array.idct = function () {
+        if (isNumDtmArray(array)) {
+            var res = [];
+            for (var k = 0; k < array.len; k++) {
+                res.push(sum(array.val.map(function (v, n) {
+                    if (n === 0) {
+                        return v / Math.sqrt(array.len);
+                    } else {
+                        return Math.sqrt(2/array.len) * v * Math.cos(Math.PI/array.len * n * (k + 0.5));
+                    }
+                })));
+            }
+            return array.set(res);
+        } else if (isNestedDtmArray(array)) {
+            return array.map(function (a) {
+                return a.idct();
+            });
+        }
+        return array;
     };
 
     /* NOMINAL */
 
+    // TODO: copy-paste the count function
     /**
      * Generates a histogram from a nominal array, such as the string type.
      * @function module:array#histogram
@@ -5592,6 +6496,70 @@ dtm.array = function () {
         params.type = 'string'; // re-set the type to string from number
         return array.set(toFloat32Array(histo(array.val)));
     };
+
+    /**
+     * Probability mass function
+     * @returns {dtm.array}
+     */
+    array.pmf = function () {
+        if (!isNestedDtmArray(array)) {
+            return array.count().mult(1/array.get('sum'));
+        } else {
+            return array;
+        }
+    };
+
+    array.dist = array.pmf;
+
+    array.entropy = function () {
+        if (isNestedDtmArray(array)) {
+            return array.map(function (a) {
+                return a.entropy();
+            })
+        } else {
+            var dist = array.pmf().unnest();
+            return dist.map(function (v) {
+                return v * Math.log2(v);
+            }).sum().mult(-1);
+        }
+    };
+
+    /**
+     *
+     * @returns {*}
+     */
+    array.randomtrigger = function (dist) {
+        if (!isString(dist)) {
+            dist = 'uniform';
+        }
+
+        if (isNestedNumDtmArray(array)) {
+            return array.map(function (a) {
+                return a.randomtrigger();
+            });
+        } else if (isNumDtmArray(array)) {
+            return array.map(function (v) {
+                if (Math.random() <= v) {
+                    return 1.0;
+                } else {
+                    return 0.0;
+                }
+            });
+        } else {
+            return array;
+        }
+    };
+
+    array.randtrig = array.randomtrigger;
+
+    array.count = function () {
+        var res = [];
+        objForEach(countOccurrences(array.get()), function (v, k) {
+            res.push(dtm.a(v).label(k).parent(array));
+        });
+        return array.set(res);
+    };
+
     /**
      * Overwrites the contents with unsorted unique values of the array.
      * @function module:array#uniq | unique
@@ -5626,7 +6594,11 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.tonumber = function () {
-        return array.set(toFloat32Array(dtm.transform.tonumber(array.val)));
+        if (isParsableNumArray(array.val) || isBoolArray(array.val)) {
+            return array.set(toFloat32Array(dtm.transform.tonumber(array.val)));
+        } else {
+            return array;
+        }
     };
 
     array.toFloat32 = function () {
@@ -5637,12 +6609,80 @@ dtm.array = function () {
     };
 
     // CHECK: occurrence or value??
-    array.morethan = function () {
+    // TODO: remove empty columns
+    array.morethan = function (val) {
+        if (isNestedDtmArray(array)) {
+            array.forEach(function (a) {
+                a.morethan(val);
+            });
+        } else {
+            array.filter(function (v) {
+                return v > val;
+            });
+        }
+        return array.removeempty();
+    };
+
+    array.mtet = function (val) {
+        if (isNestedDtmArray(array)) {
+            array.forEach(function (a) {
+                a.mtet(val);
+            });
+        } else {
+            array.filter(function (v) {
+                return v >= val;
+            });
+        }
         return array;
     };
 
     array.lessthan = function () {
+        if (isNestedDtmArray(array)) {
+            array.forEach(function (a) {
+                a.lessthan(val);
+            });
+        } else {
+            array.filter(function (v) {
+                return v < val;
+            });
+        }
         return array;
+    };
+
+    array.ltet = function () {
+        if (isNestedDtmArray(array)) {
+            array.forEach(function (a) {
+                a.ltet(val);
+            });
+        } else {
+            array.filter(function (v) {
+                return v <= val;
+            });
+        }
+        return array;
+    };
+
+    array.removeempty = function () {
+        var newArr = [];
+        if (isNestedDtmArray(array)) {
+            array.forEach(function (a) {
+                if (a.get(0).constructor.name === 'Float32Array') {
+                    if (a.get(0).length > 0) {
+                        newArr.push(a);
+                    }
+                } else {
+                    newArr.push(a);
+                }
+            });
+            return dtm.array(newArr);
+        } else {
+            array.forEach(function (v) {
+                if (!isEmpty(v)) {
+                    newArr.push(v);
+                }
+            });
+            return dtm.array(newArr).label(array.get('name'));
+        }
     };
 
     /* STRING OPERATIONS */
@@ -5735,19 +6775,19 @@ dtm.array = function () {
     };
     /**
      * Converts beat sequence into an array of indices (or delays or onset-coordinate vectors.) Useful for creating time delay-based events.
-     * @function module:array#beatsToIndices | btoid
+     * @function module:array#beatsToTime
      * @returns {dtm.array}
      */
-    array.beatsToIndices = function () {
+    array.beatsToTime = function () {
         return array.set(dtm.transform.beatsToIndices(array.val));
     };
 
     /**
-     * function module:array#indicesToBeats | idtob
+     * function module:array#timeToBeats
      * @param [len]
      * @returns {dtm.array}
      */
-    array.indicesToBeats = function (len) {
+    array.timeToBeats = function (len) {
         return array.set(dtm.transform.indicesToBeats(array.val, len));
     };
 
@@ -5766,8 +6806,8 @@ dtm.array = function () {
     array.bton = array.beatsToNotes;
     array.itob = array.intervalsToBeats;
     array.btoi = array.beatsToIntervals;
-    array.btoid = array.beatsToIndices;
-    array.idtob = array.indicesToBeats;
+    array.btot = array.beatsToIndices;
+    array.ttob = array.indicesToBeats;
 
 
 
@@ -5997,7 +7037,7 @@ dtm.data = function (input, fn) {
                                         arrays.push(dtm.array(Array.prototype.slice.call(floatArr)).label('ch_' + c).parent(data));
                                     }
 
-                                    if (typeof(fn) !== 'undefined') {
+                                    if (!isEmpty(fn)) {
                                         fn(data.set(arrays));
                                     }
 
@@ -6082,7 +7122,7 @@ dtm.data = function (input, fn) {
                                 params.coll = second;
                             }
 
-                            if (typeof(fn) !== 'undefined') {
+                            if (!isEmpty(fn)) {
                                 fn(data.set(arrays));
                             }
 
@@ -6117,7 +7157,7 @@ dtm.data = function (input, fn) {
                         arrays.push(a);
                     });
 
-                    if (typeof(fn) !== 'undefined') {
+                    if (!isEmpty(fn)) {
                         fn(data.set(arrays));
                     }
 
@@ -6128,15 +7168,13 @@ dtm.data = function (input, fn) {
     }
 };
 
+dtm.load = dtm.data;
+
 dtm.csv = function (input, fn) {
     if (isString(input)) {
-        var url = input;
-
         return new Promise(function (resolve) {
-            var ext = url.split('.').pop(); // checks the extension
-
             var xhr = new XMLHttpRequest();
-            xhr.open('GET', url, true);
+            xhr.open('GET', input, true);
 
             xhr.onreadystatechange = function () {
                 if (xhr.readyState == 4 && xhr.status == 200) {
@@ -6147,7 +7185,7 @@ dtm.csv = function (input, fn) {
                         arrays.push(a);
                     });
 
-                    if (typeof(fn) !== 'undefined') {
+                    if (!isEmpty(fn)) {
                         fn(data.set(arrays));
                     }
 
@@ -6172,7 +7210,7 @@ dtm.csv = function (input, fn) {
                     arrays.push(a);
                 });
 
-                if (typeof(fn) !== 'undefined') {
+                if (!isEmpty(fn)) {
                     fn(data.set(arrays));
                 }
 
@@ -6187,10 +7225,311 @@ dtm.json = function (input, fn) {
 };
 
 dtm.text = function (input, fn) {
+    if (isString(input)) {
+        return new Promise(function (resolve) {
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', input, true);
 
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState == 4 && xhr.status == 200) {
+                    var data = dtm.array();
+                    if (isString(xhr.response)) {
+                        data.set(xhr.response);
+                    } else {
+                        throw(new TypeError('the file content is not text'));
+                    }
+
+                    if (!isEmpty(fn)) {
+                        fn(data);
+                    }
+
+                    resolve(data);
+                }
+            };
+
+            xhr.send();
+        });
+    } else {
+        var elem_files = input;
+        var reader = new FileReader();
+
+        reader.readAsText(elem_files[0]);
+        return new Promise(function (resolve) {
+            reader.onload = function (e) {
+                var data = dtm.array();
+                if (isString(e.target.result)) {
+                    data.set(e.target.result);
+                }
+
+                if (!isEmpty(fn)) {
+                    fn(data);
+                }
+
+                resolve(data);
+            };
+        });
+    }
 };
 
-dtm.load = dtm.data;
+dtm.txt = dtm.text;
+
+dtm.web = function (url, fn) {
+    return new Promise(function (resolve) {
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', url, true);
+
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState == 4 && xhr.status == 200) {
+                var data = dtm.array();
+
+                if (url.indexOf('wunderground') > -1) {
+                    var obj = JSON.parse(xhr.response);
+
+                    // hard coding...
+                    data.label('hourly_forecast');
+                    var coll = obj['hourly_forecast'];
+                    var keys = Object.keys(coll[0]);
+
+                    function mapObjArray(objArray) {
+                        var keys = Object.keys(objArray[0]);
+                        var res = keys.map(function (k) {
+                            var temp = objArray.map(function (doc) {
+                                return doc[k];
+                            });
+
+                            var resArray = dtm.array(temp).label(k);
+
+                            if (isParsableNumArray(temp)) {
+                                resArray.tonum();
+                            }
+                            return resArray;
+                        });
+                        return dtm.array(res);
+                    }
+
+                    var res = [];
+
+                    keys.forEach(function (k) {
+                        var temp = coll.map(function (doc) {
+                            return doc[k];
+                        });
+
+                        if (isObjArray(temp)) {
+                            temp = mapObjArray(temp);
+                        }
+
+                        var resArray = dtm.array(temp).label(k).parent(data);
+                        if (isParsableNumArray(temp)) {
+                            resArray.tonum();
+                        }
+
+                        res.push(resArray);
+                    });
+                } else {
+                    //var second = res[Object.keys(res)[0]];
+                    //
+                    //if (second.constructor === Array) {
+                    //    keys = Object.keys(second[0]);
+                    //} else {
+                    //    keys = Object.keys(second);
+                    //}
+                    //
+                    //// TODO: may not work with non-array JSON formats
+                    //params.coll = res;
+                }
+
+                if (!isEmpty(fn)) {
+                    fn(data.set(res));
+                }
+
+                resolve(data.set(res));
+            } else {
+
+            }
+        };
+
+        xhr.send();
+    });
+};
+
+dtm.image = function (input, fn, mode) {
+    if (isString(input)) {
+        var url = input;
+
+        return new Promise(function (resolve) {
+            var xhr = new XMLHttpRequest();
+            xhr.responseType = 'blob';
+            xhr.open('GET', url, true);
+
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState == 4 && xhr.status == 200) {
+                    var data = dtm.array();
+
+                    var img = new Image();
+                    img.onload = function () {
+                        var canvas = document.createElement('canvas');
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+
+                        var context = canvas.getContext('2d');
+                        context.drawImage(img, 0, 0);
+
+                        var imageData = context.getImageData(0, 0, img.width, img.height).data;
+                        // var red = new Float32Array(imageData.length/4);
+                        // var green = new Float32Array(imageData.length/4);
+                        // var blue = new Float32Array(imageData.length/4);
+                        var bri = new Float32Array(imageData.length/4);
+
+                        for (var i = 0; i < imageData.length; i += 4) {
+                            var brightness = 0.34 * imageData[i] + 0.5 * imageData[i+1] + 0.16 * imageData[i+2];
+                            // red[i/4] = imageData[i]/255;
+                            // green[i/4] = imageData[i+1]/255;
+                            // blue[i/4] = imageData[i+2]/255;
+                            bri[i/4] = brightness/255;
+                        }
+
+                        // data.set([
+                        //     dtm.array(red).block(img.width).label('red').parent(data),
+                        //     dtm.array(green).block(img.width).label('green').parent(data),
+                        //     dtm.array(blue).block(img.width).label('blue').parent(data),
+                        //     dtm.array(bri).block(img.width).label('brightness').parent(data)
+                        // ]);
+                        data.set(bri).block(img.width).label('brightness');
+
+                        if (!isEmpty(fn)) {
+                            fn(data);
+                        }
+
+                        resolve(data);
+                    };
+                    img.src = window.URL.createObjectURL(xhr.response);
+                }
+            };
+
+            xhr.send();
+        });
+    } else {
+        var elem_files = input;
+        var fileType = null;
+        var reader = new FileReader();
+        if (elem_files[0].name.match(/.+\.json/gi)) {
+            fileType = 'json';
+        } else if (elem_files[0].name.match(/.+\.csv/gi)) {
+            fileType = 'csv';
+        }
+        reader.readAsText(elem_files[0]);
+        return new Promise(function (resolve) {
+            reader.onload = function (e) {
+                if (fileType === 'json') {
+                    resolve(JSON.parse(e.target.result));
+                } else if (fileType === 'csv') {
+                    //resolve(dtm.parser.csvToCols(e.target.result));
+                    var data = dtm.array();
+                    var arrays = [];
+                    objForEach(dtm.parser.csvToCols(e.target.result), function (v, k) {
+                        var a = dtm.array(v).label(k).parent(data);
+                        arrays.push(a);
+                    });
+
+                    if (!isEmpty(fn)) {
+                        fn(data.set(arrays));
+                    }
+
+                    resolve(data.set(arrays));
+                }
+            };
+        });
+    }
+};
+
+dtm.pic = dtm.img = dtm.image;
+
+dtm.cam = function (input, freq) {
+    var w = 400;
+    var h = 300;
+
+    var data, fn;
+
+    if (isDtmArray(input)) {
+        data = input;
+    } else if (isFunction(input)) {
+        fn = input;
+    }
+    if (isEmpty(data)) {
+        data = dtm.array(0);
+    }
+
+    if (!isNumber(freq) || freq < 0) {
+        freq = 1;
+    }
+
+    navigator.getUserMedia = (navigator.getUserMedia ||
+    navigator.webkitGetUserMedia ||
+    navigator.mozGetUserMedia ||
+    navigator.msGetUserMedia);
+
+    if (navigator.getUserMedia) {
+        navigator.getUserMedia({
+                audio: false,
+                video: {
+                    width: w,
+                    height: h
+                }
+            },
+            function (stream) {
+                var video;
+                if (document.getElementById('cam')) {
+                    video = document.getElementById('cam');
+                } else {
+                    video = document.createElement('video');
+                }
+                video.src = (window.URL && window.URL.createObjectURL(stream)) || stream;
+
+                var canvas = document.createElement('canvas');
+                canvas.width = w;
+                canvas.height = h;
+
+                var context = canvas.getContext('2d');
+                context.fillRect(0, 0, w, h);
+
+                video.onloadedmetadata = function (e) {
+                    video.play();
+                    video.muted = 'true';
+                };
+
+                dtm.clock(function () {
+                    context.drawImage(video, 0, 0, w, h);
+                    var imageData = context.getImageData(0, 0, w, h).data;
+
+                    var res = new Float32Array(imageData.length/4);
+
+                    for (var i = 0; i < imageData.length; i += 4) {
+                        var brightness = 0.34 * imageData[i] + 0.5 * imageData[i+1] + 0.16 * imageData[i+2];
+                        // // red
+                        // imageData[i] = brightness;
+                        // // green
+                        // imageData[i+1] = brightness;
+                        // // blue
+                        // imageData[i+2] = brightness;
+
+                        res[i/4] = brightness/255;
+                    }
+                    data.set(res).block(w);
+
+                    if (!isEmpty(fn)) {
+                        fn(data);
+                    }
+
+                }).interval(1/freq);
+            },
+            function (err) {
+                console.log(err);
+            }
+        );
+    } else {
+        console.log('getUserMedia not supported');
+    }
+};
 /**
  * @fileOverview WebAudio buffer-based clock. Somewhat precise. But buggy.
  * @module clock
@@ -6658,7 +7997,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
 
     clock.run = clock.play = clock.start;
 
-    var clockSrc;
+    var clockSrc, clockAmp;
 
     // TODO: refactor big time!!!!
     // TODO: also implement swing / random to the af-based clock
@@ -6738,23 +8077,16 @@ dtm.clock = function (bpm, subDiv, autoStart) {
         } else if (params.isMaster) {
             if (params.source === 'webAudio') {
                 actx = dtm.wa.actx;
-                clockSrc = actx.createBufferSource();
-                clockBuf = dtm.wa.clockBuf;
-                clockSrc.buffer = clockBuf;
-                clockSrc.connect(actx.destination);
+                clockSrc = actx.createOscillator();
+                clockAmp = actx.createGain();
+                clockSrc.connect(clockAmp);
+                clockAmp.connect(actx.destination);
+                clockAmp.gain.value = 0;
 
-                freq = params.bpm / 60.0 * (params.subDiv / 4.0);
-
-                clockSrc.playbackRate.value = freq * dtm.wa.clMult;
-                clockSrc.playbackRate.value += clockSrc.playbackRate.value * params.random * Math.round(Math.random()*2-1);
-
-                if (clock.beat % 2 == 0) {
-                    clockSrc.playbackRate.value *= (1.0 - params.swing) / 0.5;
-                } else {
-                    clockSrc.playbackRate.value *= params.swing / 0.5;
-                }
-
-                clockSrc.start(actx.currentTime + 0.0000001);
+                freq = params.bpm / 60;
+                var int = dtm.wa.clMult / freq;
+                clockSrc.start(actx.currentTime);
+                clockSrc.stop(actx.currentTime + int);
 
                 clockSrc.onended = function () {
                     curTime += 1/freq;
@@ -6771,7 +8103,10 @@ dtm.clock = function (bpm, subDiv, autoStart) {
                     cb(clock);
                 });
 
-                clock.beat = (clock.beat + 1) % (params.subDiv * clock.params.time[0] / clock.params.time[1]);
+                // clock.beat = (clock.beat + 1) % params.subDiv;
+                clock.beat++;
+
+                // clock.beat = (clock.beat + 1) % (params.subDiv * clock.params.time[0] / clock.params.time[1]);
 
             } else if (params.source === 'animationFrame') {
                 params.reported = Math.round(timestamp / 1000. * params.bpm / 60. * params.resolution);
@@ -6779,9 +8114,6 @@ dtm.clock = function (bpm, subDiv, autoStart) {
                 if (params.reported !== params.current) {
                     if ((params.current % params.resolution) > (params.reported % params.resolution)) {
                         params.beat = Math.round((params.current-params.offset) / params.resolution);
-
-                        //console.log(dtm.wa.actx.currentTime);
-                        //console.log(params.reported);
                     }
 
 
@@ -6812,9 +8144,7 @@ dtm.clock = function (bpm, subDiv, autoStart) {
                     cb(clock);
                 });
             }
-        }
-
-        else if (dtm.master.clock.get('source') === 'animationFrame') {
+        } else if (dtm.master.clock.get('source') === 'animationFrame') {
             if ((dtm.master.clock.get('cur') % (params.resolution/params.subDiv*4)) < params.prev) {
 
                 params.beat = Math.round((dtm.master.clock.get('cur')-params.offset) / params.resolution * params.subDiv / 4);
@@ -7454,7 +8784,6 @@ dtm.synth = function () {
 
     var params = {
         sr: 44100,
-        //kr: 4410,
         dur: {
             base: dtm.array([[1]]),
             auto: true
@@ -7486,7 +8815,7 @@ dtm.synth = function () {
         promise: null,
         pending: false,
 
-        amp: { base: dtm.array([[1]]) },
+        amp: { base: dtm.array([[0.3]]) },
 
         notenum: {
             base: dtm.array([[69]]),
@@ -7784,9 +9113,10 @@ dtm.synth = function () {
                 this.in.connect(this.dry);
                 this.dry.connect(this.out);
 
-                var size = params.sr * 2;
+                // var size = params.sr * 2;
+                var size = dtm.wa.buffs.verbIr.len;
                 var ir = ctx.createBuffer(1, size, params.sr);
-                ir.copyToChannel(dtm.gen('noise').size(size).mult(dtm.gen('decay').size(size)).get(), 0);
+                ir.copyToChannel(dtm.wa.buffs.verbIr.get(), 0);
                 this.verb.buffer = ir;
 
                 this.dryLevel = this.mix.map(function (v) {
@@ -7959,6 +9289,8 @@ dtm.synth = function () {
         return synth;
     };
 
+    synth.d = synth.dur;
+
     synth.interval = function () {
         var depth = 2;
 
@@ -7979,7 +9311,27 @@ dtm.synth = function () {
         return synth;
     };
 
-    synth.int = synth.interval;
+    synth.i = synth.int = synth.interval;
+    
+    synth.interval.freq = function () {
+        var depth = 2;
+
+        if (isFunction(arguments[0])) {
+            var res = arguments[0](params.interval.base, synth, params.clock);
+            params.interval.base = check(res, depth) ? convertShallow(res).reciprocal() : params.interval.base;
+        } else {
+            var argList = argsToArray(arguments);
+            params.interval.base = check(argList) ? convertShallow(argList).reciprocal() : params.interval.base;
+        }
+
+        params.interval.auto = false;
+
+        if (params.dur.auto) {
+            params.dur.auto = 'interval';
+        }
+
+        return synth;
+    };
 
     synth.interval.add = function () {
         //var depth = 2;
@@ -7998,6 +9350,10 @@ dtm.synth = function () {
         //    params.dur.auto = 'interval';
         //}
 
+        return synth;
+    };
+
+    synth.bpm = function () {
         return synth;
     };
 
@@ -8194,6 +9550,11 @@ dtm.synth = function () {
 
                     nodes.rtSrc.onended = function () {
                         dtm.master.removeVoice(synth);
+
+                        if (params.repeat > 1) {
+                            synth.play(); // TODO: pass any argument?
+                            params.repeat--;
+                        }
                     };
                 };
             } else {
@@ -8239,7 +9600,6 @@ dtm.synth = function () {
                 }
                 out.connect(actx.destination);
 
-                //var dummyOsc = actx.createOscillator();
                 var dummySrc = actx.createBufferSource();
                 dummySrc.buffer = dummyBuffer;
                 dummySrc.loop = true;
@@ -8261,6 +9621,7 @@ dtm.synth = function () {
                 nodes.src.buffer = tempBuff;
                 nodes.src.loop = (params.type !== 'sample');
 
+                // onended was sometimes not getting registered before src.start for some reason
                 var p = new Promise(function (resolve) {
                     dummySrc.onended = function () {
                         // rep(1) would only play once
@@ -8387,7 +9748,7 @@ dtm.synth = function () {
         return synth;
     };
 
-    synth.rep = synth.repeat;
+    synth.r = synth.rep = synth.repeat;
 
     function getPhase() {
         params.phase = (actx.currentTime - params.startTime) / params.dur;
@@ -8561,7 +9922,7 @@ dtm.synth = function () {
         return synth;
     };
 
-    synth.wt = synth.wavetable;
+    synth.w = synth.wt = synth.wavetable;
 
     synth.source = function (src) {
         if (isString(src)) {
@@ -8572,7 +9933,11 @@ dtm.synth = function () {
     };
 
     synth.load = function (name) {
-        if (isString(name)) {
+        if (name === 'noise') {
+            params.wavetable = dtm.gen('noise').size(44100).get();
+            synth.pitch(1);
+
+        } else if (isString(name)) {
             params.pending = true;
             params.source = name;
             params.type = 'sample';
@@ -9083,7 +10448,7 @@ dtm.master = {
         chord: null,
         tonalFunc: null,
 
-        maxNumVoices: 20,
+        maxNumVoices: 500,
         voices: []
     },
 
@@ -9550,5 +10915,58 @@ dtm.inscore = function () {
     };
 
     return m;
+})();
+(function () {
+    var i = dtm.model('image-pad').register();
+    var data = dtm.a();
+    var dur = 60;
+    var scale = dtm.a([0,4,5,7,10,14]);
+    var numVoices = 100;
+
+    i.data = function (d) {
+        data = d;
+
+        return i;
+    };
+
+    i.play = function () {
+        setTimeout(function () {
+            data.r(0,70,0,1).pq(scale);
+
+            data.forEach(function(a,i){
+                if (i % Math.ceil(data.len/numVoices) === 0) {
+                    dtm.syn().play().dur(dur)
+                        .amp(5/numVoices).nn(30)
+                        .nn.add(a)
+                        .nn.add(dtm.rand(-0.2,0.2))
+                        .pan(i/data.len * 2 - 1)
+                        .amp.mult(dtm.rise())
+                        .delay();
+                }
+            });
+        }, 0);
+        return i;
+    };
+
+    i.dur = function (val) {
+        dur = val;
+        return i;
+    };
+
+    i.pq = function (scale) {
+        scale = dtm.scale(scale);
+        return i;
+    };
+
+    i.scale = i.pq;
+
+    i.numVoices = function (num) {
+        numVoices = num;
+        return i;
+    };
+
+    i.voice = i.voices = i.numVoices;
+
+    return i;
 })();
 })();
