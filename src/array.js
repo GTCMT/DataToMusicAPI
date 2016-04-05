@@ -819,15 +819,15 @@ dtm.array = function () {
      * @returns {dtm.array}
      * @example
      * // Specifying the output range
-     * dtm.array([1, 2, 3]).scale([0, 10]).get();
+     * dtm.array([1, 2, 3]).range([0, 10]).get();
      * // or
-     * dtm.array([1, 2, 3]).scale(0, 10).get();
+     * dtm.array([1, 2, 3]).range(0, 10).get();
      * -> [0, 5, 10]
      *
      * // Specifying the domain values (the second array in the argument)
-     * dtm.array([1, 2, 3]).scale([0, 10], [0, 5]).get();
+     * dtm.array([1, 2, 3]).range([0, 10], [0, 5]).get();
      * // or
-     * dtm.array([1, 2, 3]).scale(0, 10, 0, 5).get();
+     * dtm.array([1, 2, 3]).range(0, 10, 0, 5).get();
      * -> [2, 4, 6]
      */
     array.range = function (arg1, arg2, arg3, arg4) {
@@ -848,7 +848,7 @@ dtm.array = function () {
             }
 
             return array.map(function (a) {
-                return a.scale(arg1, arg2, dmin, dmax);
+                return a.range(arg1, arg2, dmin, dmax);
             });
         }
 
@@ -1732,7 +1732,7 @@ dtm.array = function () {
         'reduce', 'some', 'every',
         'subarray', 'match',
         'replace', 'select', 'sel',
-        'concat', 'cat', 'append',
+        'concat', 'cat', 'append', 'app',
         'repeat', 'rep', 'fitrep', 'frep',
         'pad',
         'truncate',
@@ -1967,7 +1967,7 @@ dtm.array = function () {
         return array.set(array.val);
     };
 
-    array.append = array.cat = array.concat;
+    array.app = array.append = array.cat = array.concat;
 
     /**
      * Repeats the contents of the current array.
@@ -2125,9 +2125,9 @@ dtm.array = function () {
 
             if (idx[0] !== 0) {
                 if (isFloat32Array(array.val)) {
-                    res.push(dtm.array(array.val.subarray(0, idx[i])).label('0'));
+                    res.push(dtm.array(array.val.subarray(0, idx[0])).label('0'));
                 } else {
-                    res.push(dtm.array(array.val.slice(0, idx[i])).label('0'));
+                    res.push(dtm.array(array.val.slice(0, idx[0])).label('0'));
                 }
             }
 

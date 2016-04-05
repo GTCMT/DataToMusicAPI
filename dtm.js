@@ -1818,8 +1818,8 @@ dtm.generator = function () {
             'adsr', 'ADSR',
             'seq', 'sequence', 'series',
             'range', 'r',
-            'scale', 'mode', 'chord',
-            'modal',
+            'scale', 'chord',
+            'modal', 'modes', 'mode',
             'fibonacci',
             'noise', 'random', 'rand', 'rf', 'randi', 'ri',
             'gauss', 'gaussian', 'gaussCurve', 'normal',
@@ -2186,6 +2186,8 @@ dtm.generator = function () {
                 break;
 
             case 'modal':
+            case 'modes':
+            case 'mode':
                 generator.val = modal(paramsExt.index);
                 break;
 
@@ -2498,7 +2500,7 @@ dtm.generator = function () {
                 paramsExt.transpose = arguments[2];
             }
             //process();
-        } else if (params.type === 'modal') {
+        } else if (params.type === 'modal' || params.type === 'modes' || params.type === 'mode') {
             paramsExt.index = arguments[1];
         } else if (isTypeCategOf('const')) {
             if (!isEmpty(arguments[1])) {
@@ -2540,7 +2542,7 @@ dtm.generator = function () {
 
 dtm.g = dtm.gen = dtm.generator;
 
-var generators = ['line', 'rise', 'decay', 'fall', 'seq', 'sequence', 'series', 'range', 'r', 'noise', 'random', 'rand', 'rf', 'randi', 'ri', 'gaussian', 'gauss', 'normal', 'zeros', 'zeroes', 'ones', 'constant', 'constants', 'const', 'consts', 'repeat', 'string', 'str', 'sin', 'sine', 'cos', 'cosine', 'tri', 'triangle', 'saw', 'fibonacci', 'decay', 'scale', 'modal'];
+var generators = ['line', 'rise', 'decay', 'fall', 'seq', 'sequence', 'series', 'range', 'r', 'noise', 'random', 'rand', 'rf', 'randi', 'ri', 'gaussian', 'gauss', 'normal', 'zeros', 'zeroes', 'ones', 'constant', 'constants', 'const', 'consts', 'repeat', 'string', 'str', 'sin', 'sine', 'cos', 'cosine', 'tri', 'triangle', 'saw', 'fibonacci', 'decay', 'scale', 'modal', 'modes', 'mode'];
 
 generators.forEach(function (type) {
     dtm[type] = function () {
@@ -4855,15 +4857,15 @@ dtm.array = function () {
      * @returns {dtm.array}
      * @example
      * // Specifying the output range
-     * dtm.array([1, 2, 3]).scale([0, 10]).get();
+     * dtm.array([1, 2, 3]).range([0, 10]).get();
      * // or
-     * dtm.array([1, 2, 3]).scale(0, 10).get();
+     * dtm.array([1, 2, 3]).range(0, 10).get();
      * -> [0, 5, 10]
      *
      * // Specifying the domain values (the second array in the argument)
-     * dtm.array([1, 2, 3]).scale([0, 10], [0, 5]).get();
+     * dtm.array([1, 2, 3]).range([0, 10], [0, 5]).get();
      * // or
-     * dtm.array([1, 2, 3]).scale(0, 10, 0, 5).get();
+     * dtm.array([1, 2, 3]).range(0, 10, 0, 5).get();
      * -> [2, 4, 6]
      */
     array.range = function (arg1, arg2, arg3, arg4) {
@@ -4884,7 +4886,7 @@ dtm.array = function () {
             }
 
             return array.map(function (a) {
-                return a.scale(arg1, arg2, dmin, dmax);
+                return a.range(arg1, arg2, dmin, dmax);
             });
         }
 
@@ -5768,7 +5770,7 @@ dtm.array = function () {
         'reduce', 'some', 'every',
         'subarray', 'match',
         'replace', 'select', 'sel',
-        'concat', 'cat', 'append',
+        'concat', 'cat', 'append', 'app',
         'repeat', 'rep', 'fitrep', 'frep',
         'pad',
         'truncate',
@@ -6003,7 +6005,7 @@ dtm.array = function () {
         return array.set(array.val);
     };
 
-    array.append = array.cat = array.concat;
+    array.app = array.append = array.cat = array.concat;
 
     /**
      * Repeats the contents of the current array.
@@ -6161,9 +6163,9 @@ dtm.array = function () {
 
             if (idx[0] !== 0) {
                 if (isFloat32Array(array.val)) {
-                    res.push(dtm.array(array.val.subarray(0, idx[i])).label('0'));
+                    res.push(dtm.array(array.val.subarray(0, idx[0])).label('0'));
                 } else {
-                    res.push(dtm.array(array.val.slice(0, idx[i])).label('0'));
+                    res.push(dtm.array(array.val.slice(0, idx[0])).label('0'));
                 }
             }
 
@@ -7444,7 +7446,7 @@ dtm.image = function (input, fn, mode) {
 
 dtm.pic = dtm.img = dtm.image;
 
-dtm.cam = function (input, freq) {
+dtm.cam = function (input, interval) {
     var w = 400;
     var h = 300;
 
@@ -7459,8 +7461,8 @@ dtm.cam = function (input, freq) {
         data = dtm.array(0);
     }
 
-    if (!isNumber(freq) || freq < 0) {
-        freq = 1;
+    if (!isNumber(interval) || interval < 0) {
+        interval = 1;
     }
 
     navigator.getUserMedia = (navigator.getUserMedia ||
@@ -7520,7 +7522,7 @@ dtm.cam = function (input, freq) {
                         fn(data);
                     }
 
-                }).interval(1/freq);
+                }).interval(interval);
             },
             function (err) {
                 console.log(err);
@@ -8921,6 +8923,8 @@ dtm.synth = function () {
         }
 
         params.baseTime = actx.currentTime;
+
+        // TODO: move this to global (master?)
         params.wavetable = new Float32Array(params.tabLen);
         params.wavetable.forEach(function (v, i) {
             params.wavetable[i] = Math.sin(2 * Math.PI * i / params.tabLen);
@@ -9312,7 +9316,7 @@ dtm.synth = function () {
     };
 
     synth.i = synth.int = synth.interval;
-    
+
     synth.interval.freq = function () {
         var depth = 2;
 
@@ -10917,32 +10921,44 @@ dtm.inscore = function () {
     return m;
 })();
 (function () {
-    var i = dtm.model('image-pad').register();
+    var i = dtm.model('image-scan').register();
     var data = dtm.a();
-    var dur = 60;
+    var dur = 30;
     var scale = dtm.a([0,4,5,7,10,14]);
     var numVoices = 100;
 
     i.data = function (d) {
-        data = d;
+        data = d.t();
 
         return i;
     };
 
     i.play = function () {
         setTimeout(function () {
-            data.r(0,70,0,1).pq(scale);
+            new Promise(function (resolve, reject) {
+                var mu = data().each.mean().flatten().r(0,70,0,1).save();
+                var sc = dtm.scale()
+                    .filter(function (s) {
+                        return s.get('name') !== 'chromatic';
+                    })
+                    .max(function (s) {
+                        return mu().pq(s).snr().get(0);
+                    }).flatten();
+                resolve(sc);
+            }).then(function (scale) {
+                data.r(0,70,0,1).pq(scale);
 
-            data.forEach(function(a,i){
-                if (i % Math.ceil(data.len/numVoices) === 0) {
-                    dtm.syn().play().dur(dur)
-                        .amp(5/numVoices).nn(30)
-                        .nn.add(a)
-                        .nn.add(dtm.rand(-0.2,0.2))
-                        .pan(i/data.len * 2 - 1)
-                        .amp.mult(dtm.rise())
-                        .delay();
-                }
+                data.forEach(function(a,i){
+                    if (i % Math.ceil(data.len/numVoices) === 0) {
+                        dtm.syn().play().dur(dur)
+                            .amp(3/numVoices).nn(30)
+                            .nn.add(a)
+                            .nn.add(dtm.rand(-0.2,0.2))
+                            .pan(i/data.len * 2 - 1)
+                            .amp.mult(dtm.rise())
+                            .delay();
+                    }
+                });
             });
         }, 0);
         return i;

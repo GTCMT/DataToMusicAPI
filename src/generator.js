@@ -66,8 +66,8 @@ dtm.generator = function () {
             'adsr', 'ADSR',
             'seq', 'sequence', 'series',
             'range', 'r',
-            'scale', 'mode', 'chord',
-            'modal',
+            'scale', 'chord',
+            'modal', 'modes', 'mode',
             'fibonacci',
             'noise', 'random', 'rand', 'rf', 'randi', 'ri',
             'gauss', 'gaussian', 'gaussCurve', 'normal',
@@ -434,6 +434,8 @@ dtm.generator = function () {
                 break;
 
             case 'modal':
+            case 'modes':
+            case 'mode':
                 generator.val = modal(paramsExt.index);
                 break;
 
@@ -746,7 +748,7 @@ dtm.generator = function () {
                 paramsExt.transpose = arguments[2];
             }
             //process();
-        } else if (params.type === 'modal') {
+        } else if (params.type === 'modal' || params.type === 'modes' || params.type === 'mode') {
             paramsExt.index = arguments[1];
         } else if (isTypeCategOf('const')) {
             if (!isEmpty(arguments[1])) {
@@ -788,7 +790,7 @@ dtm.generator = function () {
 
 dtm.g = dtm.gen = dtm.generator;
 
-var generators = ['line', 'rise', 'decay', 'fall', 'seq', 'sequence', 'series', 'range', 'r', 'noise', 'random', 'rand', 'rf', 'randi', 'ri', 'gaussian', 'gauss', 'normal', 'zeros', 'zeroes', 'ones', 'constant', 'constants', 'const', 'consts', 'repeat', 'string', 'str', 'sin', 'sine', 'cos', 'cosine', 'tri', 'triangle', 'saw', 'fibonacci', 'decay', 'scale', 'modal'];
+var generators = ['line', 'rise', 'decay', 'fall', 'seq', 'sequence', 'series', 'range', 'r', 'noise', 'random', 'rand', 'rf', 'randi', 'ri', 'gaussian', 'gauss', 'normal', 'zeros', 'zeroes', 'ones', 'constant', 'constants', 'const', 'consts', 'repeat', 'string', 'str', 'sin', 'sine', 'cos', 'cosine', 'tri', 'triangle', 'saw', 'fibonacci', 'decay', 'scale', 'modal', 'modes', 'mode'];
 
 generators.forEach(function (type) {
     dtm[type] = function () {

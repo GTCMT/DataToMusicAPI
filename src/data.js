@@ -499,7 +499,7 @@ dtm.image = function (input, fn, mode) {
 
 dtm.pic = dtm.img = dtm.image;
 
-dtm.cam = function (input, freq) {
+dtm.cam = function (input, interval) {
     var w = 400;
     var h = 300;
 
@@ -514,8 +514,8 @@ dtm.cam = function (input, freq) {
         data = dtm.array(0);
     }
 
-    if (!isNumber(freq) || freq < 0) {
-        freq = 1;
+    if (!isNumber(interval) || interval < 0) {
+        interval = 1;
     }
 
     navigator.getUserMedia = (navigator.getUserMedia ||
@@ -575,7 +575,7 @@ dtm.cam = function (input, freq) {
                         fn(data);
                     }
 
-                }).interval(1/freq);
+                }).interval(interval);
             },
             function (err) {
                 console.log(err);

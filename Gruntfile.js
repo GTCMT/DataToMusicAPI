@@ -41,7 +41,7 @@ module.exports = function (grunt) {
                     //'src/models/playback.js',
                     //'src/models.rhythm/clave-models.rhythm.js',
 
-                    'src/instr/image-pad.js',
+                    'src/instr/image-scan.js',
                     //'src/instr/single-note.js',
                     //'src/instr/short-noise.js',
                     //'src/instr/nice-chords.js',

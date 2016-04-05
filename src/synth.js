@@ -152,6 +152,8 @@ dtm.synth = function () {
         }
 
         params.baseTime = actx.currentTime;
+
+        // TODO: move this to global (master?)
         params.wavetable = new Float32Array(params.tabLen);
         params.wavetable.forEach(function (v, i) {
             params.wavetable[i] = Math.sin(2 * Math.PI * i / params.tabLen);
@@ -543,7 +545,7 @@ dtm.synth = function () {
     };
 
     synth.i = synth.int = synth.interval;
-    
+
     synth.interval.freq = function () {
         var depth = 2;
 
