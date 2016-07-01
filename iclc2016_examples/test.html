@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title>test</title>
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.5.0/styles/monokai-sublime.min.css">
+    <style>
+		.hljs {
+			/*white-space: pre;*/
+			word-wrap: normal;
+		}
+    </style>
+	<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.5.0/highlight.min.js"></script>
+	<script>
+		hljs.configure({
+			tabReplace: '    '
+		});
+		hljs.initHighlightingOnLoad();
+	</script>
+    <script src="../javascripts/dtm.js"></script>
+</head>
+<body>
+<a href="../iclc2016.html">Go Back</a>
+<div>
+	<pre><code class="javascript">
+dtm.cam(D = dtm.a([0]), 1);
+dtm.c(function() {
+	dtm.syn().play()
+	.amp(dtm.decay())
+	.nn(D(D.len/2).r(50,100).fit(16).pq(dtm.scale('mixo')).round())
+	.verb(0.1)
+}).time(1/2)
+	</code></pre>
+</div>
+<button onclick="play()">Play</button> <button onclick="stop()">Stop</button>
+<script>
+function play() {
+	var elems = document.getElementsByClassName('javascript');
+	try {
+		eval(elems[0].textContent);
+	} catch (e) {
+		throw e;
+	}
+}
+
+function stop() {
+	dtm.master.panic();
+	dtm.master.stop();
+}
+</script>
+</body>
+</html>
