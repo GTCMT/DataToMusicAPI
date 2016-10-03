@@ -563,9 +563,12 @@ dtm.generator = function () {
         process();
         return generator;
     };
-    generator.freq = generator.cycle;
 
-    generator.phase = function (phase) {
+    // overriding with array.freq
+    // generator.freq = generator.cycle;
+
+    // generator.phase conflicts with array.phase
+    generator.offset = function (phase) {
         if (isNumber(phase)) {
             paramsExt.phase = phase;
         }
@@ -573,7 +576,7 @@ dtm.generator = function () {
         return generator;
     };
 
-    generator.offset = generator.phase;
+    // generator.offset = generator.phase;
 
     /**
      * @function module:generator#const
@@ -652,18 +655,33 @@ dtm.generator = function () {
             params.max = 1.0;
         }
 
-        if (arguments.length === 2 && isNumber(arguments[1])) {
-            params.max = arguments[1];
-        } else if (arguments.length === 3) {
-            if (isNumber(arguments[1])) {
-                params.min = arguments[1];
-            }
+        if (arguments.length >= 2 && isInteger(arguments[1])) {
+            generator.len = arguments[1] > 0 ? arguments[1] : 1;
+        }
+
+        if (arguments.length === 3) {
             if (isNumber(arguments[2])) {
                 params.max = arguments[2];
+            } else if (isNumOrFloat32Array(arguments[2])) {
+
+            } else if (isNumDtmArray(arguments[2])) {
+
+            }
+        } else if (arguments.length === 4) {
+            if (isNumber(arguments[2])) {
+                params.min = arguments[2];
+            }
+            if (isNumber(arguments[3])) {
+                params.max = arguments[3];
             }
         }
     } else if (isTypeCategOf('oscil')) {
         generator.len = 4096;
+
+        // TODO: temporary
+        if (arguments.length === 2 && isInteger(arguments[1])) {
+            generator.len = arguments[1] > 0 ? arguments[1] : 4096;
+        }
 
         if (arguments.length >= 3) {
             if (isArray(arguments[2])) {

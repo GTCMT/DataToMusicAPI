@@ -981,6 +981,53 @@ dtm.array = function () {
 
     array.r = array.range;
 
+    // array.amp = function () {
+    //     return array;
+    // };
+
+    // with support for fractional freq array with table lookup and angular velocity
+    array.freq = function (input) {
+        var freqArr;
+
+        if (isNumber(input)) {
+            freqArr = [input];
+        } else if (isNumOrFloat32Array(input)) {
+            freqArr = input;
+        } else if (isNumDtmArray(input)) {
+            freqArr = input.get();
+        }
+
+        var res = [];
+
+        var phase = 0;
+        var len;
+        var wavetable = array.clone();
+
+        if (freqArr.length > array.len) {
+            wavetable.fit(freqArr.length, 'step');
+            len = freqArr.length;
+        } else {
+            len = wavetable.len;
+        }
+
+        var currFreqVal = 1;
+        var floor, ceil, frac;
+
+        dtm.line(len).forEach(function (p) {
+            floor = Math.floor(phase * (len-1));
+            ceil = floor + 1;
+            frac = phase * (len-1) - floor;
+
+            res.push(wavetable.val[floor] * (1-frac) + wavetable.val[ceil] * frac);
+
+            currFreqVal = freqArr[Math.floor(p * freqArr.length)];
+            phase += 1/len * currFreqVal;
+            phase = mod(phase, 1);
+        });
+
+        return array.set(res);
+    };
+
     /**
      * Caps the array value range at the min and max values. Only works with a numerical array.
      * @function module:array#limit | clip
