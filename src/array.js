@@ -429,6 +429,87 @@ dtm.array = function () {
         return array.set(array.get('row', num));
     };
 
+
+    // memo: only for single-dimensional numerical interpolation
+    // mode: linear, step (round), ...
+    array.interp = function (at, mode) {
+        if (!isString(mode)) {
+            mode = 'linear';
+        }
+
+        var res = [];
+        var indices = [];
+
+        if (isNumber(at)) {
+            indices[0] = at;
+        } else if (isNumOrFloat32Array(at)) {
+            indices = at;
+        } else if (isNumDtmArray(at)) {
+            indices = at.get();
+        } else {
+            return array;
+        }
+
+        indices.forEach(function (i) {
+            if (mode === 'step' || mode === 'round') {
+                res.push(array.val[mod(Math.round(i), array.len)]);
+            } else {
+                var floor = mod(Math.floor(i), array.len);
+                var ceil = mod(floor + 1, array.len);
+                var frac = i - Math.floor(i);
+
+                res.push(array.val[floor] * (1-frac) + array.val[ceil] * frac);
+            }
+        });
+
+        return array.set(res);
+    };
+
+    // interp with index scaled to the 0-1 range
+    array.phase = function (at, mode) {
+        if (!isString(mode)) {
+            mode = 'linear';
+        }
+
+        var res = [];
+        var indices = [];
+
+        if (isNumber(at)) {
+            indices[0] = at;
+        } else if (isNumOrFloat32Array(at)) {
+            indices = at;
+        } else if (isNumDtmArray(at)) {
+            indices = at.get();
+        } else {
+            return array;
+        }
+
+        indices.forEach(function (i) {
+            // even number floor value gives positive direction
+            // e.g., 0~1, 2~3, -1~-2
+            // odd gives inverse direction
+            if (mod(Math.floor(i), 2) === 0) {
+                i = mod(i, 1);
+            } else {
+                i = 1 - mod(i, 1);
+            }
+
+            i *= (array.len-1); // rescale index range
+
+            if (mode === 'step' || mode === 'round') {
+                res.push(array.val[mod(Math.round(i), array.len)]);
+            } else {
+                var floor = mod(Math.floor(i), array.len);
+                var ceil = mod(floor + 1, array.len);
+                var frac = i - Math.floor(i);
+
+                res.push(array.val[floor] * (1-frac) + array.val[ceil] * frac);
+            }
+        });
+
+        return array.set(res);
+    };
+
     // TODO: conflicts with gen.transpose()
     array.transp = function () {
         if (isNestedDtmArray(array)) {
