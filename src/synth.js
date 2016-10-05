@@ -27,6 +27,8 @@ dtm.synth = function () {
         offset: 0.0,
         repeat: 1,
         autoRep: true,
+        iteration: 0,
+        sequence: null,
 
         onNoteCallback: [],
 
@@ -123,16 +125,21 @@ dtm.synth = function () {
         }
     };
 
-    if (!!arguments.callee.caller) {
-        if (arguments.callee.caller.arguments.length > 0) {
-            if (isObject(arguments.callee.caller.arguments[0])) {
-                if (arguments.callee.caller.arguments[0].type === 'dtm.clock') {
-                    params.clock = arguments.callee.caller.arguments[0];
-                    params.lookahead = true;
+    try {
+        if (!!arguments.callee.caller) {
+            if (arguments.callee.caller.arguments.length > 0) {
+                if (isObject(arguments.callee.caller.arguments[0])) {
+                    if (arguments.callee.caller.arguments[0].type === 'dtm.clock') {
+                        params.clock = arguments.callee.caller.arguments[0];
+                        params.lookahead = true;
+                    }
                 }
             }
         }
+    } catch (e) {
+
     }
+
 
     var actx = dtm.wa.actx;
     var octx = null;
@@ -608,10 +615,13 @@ dtm.synth = function () {
     /**
      * Plays
      * @function module:synth#play
-     * @param [bool=true] {boolean}
      * @returns {dtm.synth}
      */
-    synth.play = function (bool) {
+    synth.play = function (fn) {
+        if (isFunction(fn)) {
+            params.onNoteCallback.push(fn);
+        }
+
         var defer = 0.01;
         if (params.lookahead) {
             defer = Math.round(params.clock.get('lookahead') * 500);
@@ -622,30 +632,34 @@ dtm.synth = function () {
         if (params.pending) {
             params.pending = false;
             params.promise.then(function () {
-                synth.play(bool);
+                synth.play();
                 return synth;
             });
             return synth;
         }
 
-        params.onNoteCallback.forEach(function (fn) {
-            fn(synth, params.clock);
-        });
-
+        // TODO: use promises rather than deferring
         // deferred
         setTimeout(function () {
+            // TODO: use promise
+            params.onNoteCallback.forEach(function (fn) {
+                fn(synth, params.clock);
+            });
+
+            var seqValue = params.sequence ? params.sequence[mod(params.iteration, params.sequence.length)] : params.iteration;
+
             //===== type check
-            if (isBoolean(bool) && bool === false) {
-                return synth;
-            }
+            // if (isBoolean(bool) && bool === false) {
+            //     return synth;
+            // }
 
             function process(param) {
-                var tempArr = param.base.get('next').clone();
+                var tempArr = param.base.get(seqValue).clone();
                 if (!isEmpty(param.add)) {
-                    tempArr.add(param.add.get('next'));
+                    tempArr.add(param.add.get(seqValue));
                 }
                 if (!isEmpty(param.mult)) {
-                    tempArr.mult(param.mult.get('next'));
+                    tempArr.mult(param.mult.get(seqValue));
                 }
                 return tempArr.get();
             }
@@ -914,11 +928,47 @@ dtm.synth = function () {
                 declipper.gain.setTargetAtTime(0.0, offset + dur - ramp, ramp * 0.3);
             }
 
+            params.iteration++;
+
         }, defer + deferIncr);
 
         return synth;
     };
 
+    // bad name
+    synth.iter = function (val) {
+        if (isInteger(val)) {
+            params.iteration = val;
+        }
+        return params.iteration;
+    };
+
+    // set order of the iteration
+    synth.seq = function (input) {
+        if (input === 'reset' || input === 'clear' || input === []) {
+            params.sequence = null;
+        }
+
+        if (argsAreSingleVals(arguments)) {
+            if (isNumOrFloat32Array(argsToArray(arguments))) {
+                params.sequence = argsToArray(arguments);
+            }
+        } else if (isNumber(input)) {
+            params.sequence = [input];
+        } else if (isNumOrFloat32Array(input)) {
+            params.sequence = input;
+        } else if (isNumDtmArray(input)) {
+            params.sequence = input.get();
+        } else {
+            return params.sequence ? params.sequence[mod(params.iteration, params.sequence.length)] : params.iteration;
+        }
+
+        return synth;
+    };
+
+    synth.sequence = synth.seq;
+
+    // lazy-eval
     synth.onnote = function (fn) {
         if (isFunction(fn)) {
             params.onNoteCallback.push(fn);
