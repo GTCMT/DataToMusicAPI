@@ -420,7 +420,7 @@ function argIsSingleArray(args) {
 
 function argsAreSingleVals(args) {
     var res = false;
-    if (!argIsSingleArray(args)) {
+    if (!argIsSingleArray(args) && args.length > 0) {
         var argsArr = argsToArray(args);
         res = argsArr.every(function (a) {
             return isSingleVal(a);
