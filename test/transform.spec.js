@@ -16,7 +16,7 @@ describe('array helper functions', function () {
 
             describe('normalize w/ domain min max', function () {
                 var input = [0, 2, 4, 1, 3, 5];
-                var dmin = -0;
+                var dmin = 0;
                 var dmax = 20;
 
                 var norm = dtm.transform.normalize(input, dmin, dmax);

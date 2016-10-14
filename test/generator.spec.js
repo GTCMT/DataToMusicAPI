@@ -89,20 +89,20 @@ describe('generator', function () {
             expect(dtm.gen('randi').get(0)).not.toBeLessThan(0);
             expect(dtm.gen('randi').get(0)).not.toBeGreaterThan(1);
 
-            expect(dtm.gen('randi', 3).get('len')).toBe(1);
-            expect(dtm.gen('randi', 3).get(0)).not.toBeLessThan(0);
-            expect(dtm.gen('randi', 3).get(0)).not.toBeGreaterThan(2);
-
             expect(dtm.gen('randi', 1, 3).get('len')).toBe(1);
-            expect(dtm.gen('randi', 1, 3).get(0)).not.toBeLessThan(1);
+            expect(dtm.gen('randi', 1, 3).get(0)).not.toBeLessThan(0);
             expect(dtm.gen('randi', 1, 3).get(0)).not.toBeGreaterThan(2);
+
+            expect(dtm.gen('randi', 1, 1, 3).get('len')).toBe(1);
+            expect(dtm.gen('randi', 1, 1, 3).get(0)).not.toBeLessThan(1);
+            expect(dtm.gen('randi', 1, 1, 3).get(0)).not.toBeGreaterThan(2);
         });
     });
 
     describe('osc', function () {
         describe('sine', function () {
             it('should offset phase', function () {
-                expect(dtm.gen('sine').phase(0.25).get(0)).toBe(1.0);
+                expect(dtm.gen('sine').offset(0.25).get(0)).toBe(1.0);
             });
         });
         //console.log(dtm.gen('cos', 10, 1, 3).get());
@@ -156,7 +156,6 @@ describe('generator', function () {
 
         describe('scale', function () {
             it('should work', function () {
-                expect(dtm.gen('scale').get()).toEqual(toFloat32Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]));
                 expect(dtm.gen('scale', 'major').get()).toEqual(toFloat32Array([0, 2, 4, 5, 7, 9, 11]));
                 expect(dtm.gen('scale', 'major', 'C').get()).toEqual(toFloat32Array([0, 2, 4, 5, 7, 9, 11]));
                 expect(dtm.gen('scale', 'major', 0).get()).toEqual(toFloat32Array([0, 2, 4, 5, 7, 9, 11]));

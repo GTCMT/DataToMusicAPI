@@ -1,5 +1,30 @@
 (function () {
 
+var alias = {
+    // modules
+    array: ['array', 'arr', 'a'],
+    clock: ['clock', 'clk', 'cl', 'c'],
+    generator: ['generator', 'generate', 'gen', 'g'],
+    instrument: ['instrument', 'instr', 'inst', 'i'],
+    master: ['master', 'mstr', 'mst'],
+    model: ['model', 'mdl', 'm'],
+    synth: ['synth', 'syn', 's'],
+    utils: ['utilities', 'utils', 'util', 'utl', 'u'],
+
+    // synth
+    amplitude: ['amplitude', 'amp', 'a'],
+    frequency: ['frequency', 'freq', 'frq', 'f'],
+    notenum: ['notenumber', 'notenum', 'note', 'nn', 'n'],
+
+    play: ['play', 'p'],
+    stop: ['stop', 's'],
+    run: ['run', 'r'],
+
+    interval: ['interval', 'int', 'i'],
+    duration: ['duration', 'dur', 'd'],
+    repeat: ['repeat', 'rep'],
+    trigger: ['trigger', 'trig', 'tr', 't']
+};
 /**
  * @fileOverview
  * @module core
@@ -33,7 +58,10 @@ var dtm = {
     modelCallers: {},
     clocks: [],
 
-    params: {},
+    params: {
+        plotter: null,
+        printer: null
+    },
 
     // TODO: a function to list currently loaded objects, such as data, arrays, models... - for console livecoding situation
 
@@ -123,6 +151,14 @@ var dtm = {
                 window[k] = v;
             }
         });
+    },
+
+    setPlotter: function (fn) {
+        dtm.params.plotter = fn;
+    },
+
+    setPrinter: function (fn) {
+        dtm.params.printer = fn;
     }
 };
 
@@ -485,6 +521,14 @@ function isString(value) {
     return typeof(value) === 'string';
 }
 
+function toString(value) {
+    if (isNumber(value)) {
+        return value.toString();
+    } else {
+        return value;
+    }
+}
+
 /**
  * Checks if the value is a boolean value
  * @param value
@@ -724,6 +768,18 @@ function isDtmObj(val) {
     }
 }
 
+function isDtmSynth(val) {
+    if (isObject(val) || typeof(val) === 'function') {
+        if (val.hasOwnProperty('meta')) {
+            return val.meta.type === 'dtm.synth';
+        } else {
+            return false;
+        }
+    } else {
+        return false;
+    }
+}
+
 /**
  * Checks if the value is an instance of dtm.array
  * @param val
@@ -857,7 +913,7 @@ function argIsSingleArray(args) {
 
 function argsAreSingleVals(args) {
     var res = false;
-    if (!argIsSingleArray(args)) {
+    if (!argIsSingleArray(args) && args.length > 0) {
         var argsArr = argsToArray(args);
         res = argsArr.every(function (a) {
             return isSingleVal(a);
@@ -935,19 +991,22 @@ function concat(first, second) {
     }
 }
 
-function Float32Splice(array, len) {
-    var res = new Float32Array(array.length - len);
+function Float32Splice(array, start, deleteCount) {
+    console.log(array.length - deleteCount);
+    var res = new Float32Array(array.length - deleteCount);
     var temp = Array.prototype.slice.call(array);
-    res.set(temp.splice(len));
+    temp.splice(start, deleteCount);
+    res.set(temp);
 
     return res;
 }
 
-function splice(array, len) {
-    if (isArray(array)) {
-        return array.splice(len);
-    } else if (isFloat32Array(array)) {
-        return Float32Splice(array, len);
+function splice(array, start, deleteCount) {
+    if (isFloat32Array(array)) {
+        return Float32Splice(array, start, deleteCount);
+    } else {
+        array.splice(start, deleteCount);
+        return array;
     }
 }
 
@@ -989,6 +1048,7 @@ function cloneArray(input) {
 }
 
 function print(input) {
+    var formatted = null;
     if (isNestedDtmArray(input) || isNestedWithDtmArray(input)) {
         input.forEach(function (a) {
             console.log(a.get('name'), a.get());
@@ -1143,6 +1203,16 @@ function sum(arr) {
         return arr.reduce(function (num, sum) {
             return num + sum;
         });
+
+        // var data = new Float32Array(arr);
+        // var ptr = Module._malloc(data.byteLength);
+        // var view = new Float32Array(Module.HEAPF32.buffer, ptr, data.length);
+        // view.set(data);
+        //
+        // var res = Module.ccall('sum', null, ['number', 'number'], [ptr, data.length]);
+        //
+        // Module._free(ptr);
+        // return res;
     }
 }
 
@@ -1449,6 +1519,17 @@ function levenshteinDistance(a, b) {
     );
 }
 
+function alloc(arr) {
+    var data = new Float32Array(arr);
+    var ptr = Module._malloc(data.byteLength);
+    var view = new Float32Array(Module.HEAPF32.buffer, ptr, data.length);
+    view.set(data);
+}
+
+function free(ptr) {
+    Module._free(ptr);
+}
+
 //function clone(obj) {
 //    var copy;
 //
@@ -1588,6 +1669,7 @@ dtm.util.isBoolArray = isBoolArray;
 dtm.util.isNestedArray = isNestedArray;
 dtm.util.isNestedWithDtmArray = isNestedWithDtmArray;
 dtm.util.isDtmObj = isDtmObj;
+dtm.util.isDtmSynth = isDtmSynth;
 dtm.util.isDtmArray = isDtmArray;
 dtm.util.isNestedDtmArray = isNestedDtmArray;
 dtm.util.isNumDtmArray = isNumDtmArray;
@@ -1825,6 +1907,7 @@ dtm.generator = function () {
             'gauss', 'gaussian', 'gaussCurve', 'normal',
             'sin', 'sine', 'cos', 'cosine',
             'tri', 'triangle',
+            'sig', 'sigmoid', 'logistic',
             'zeros', 'zeroes', 'ones',
             'constant', 'constants', 'const', 'consts',
             'repeat',
@@ -1846,8 +1929,6 @@ dtm.generator = function () {
     function isTypeCategOf(type) {
         return types[type].indexOf(params.type) > -1;
     }
-
-    // dtm.gen().get(): using dtm.array get instead
 
     function process() {
         function line(len, min, max, cycle) {
@@ -1896,6 +1977,12 @@ dtm.generator = function () {
         // TODO: implement
         function tri(len, min, max, amp, cycle, offset) {}
 
+        function sig(len, steepness) {
+            return dtm.line(len).range(-Math.E, Math.E).map(function (v) {
+                return 1/(1+Math.pow(Math.E,(-v*steepness)));
+            });
+        }
+
         function random(len, min, max, amp, floor) {
             var res = new Float32Array(len);
             for (var i = 0; i < len; i++) {
@@ -1940,7 +2027,7 @@ dtm.generator = function () {
             }
 
             var steps = Math.floor((end - start) / interval) + 1;
-            generator.len = steps;
+            generator.length = steps;
             //console.log(steps);
             var res = new Float32Array();
 
@@ -2123,16 +2210,16 @@ dtm.generator = function () {
         switch (params.type) {
             case 'line':
             case 'saw':
-                generator.val = line(generator.len, params.min, params.max);
+                generator.val = line(generator.length, params.min, params.max);
                 break;
 
             case 'rise':
-                generator.val = line(generator.len, sorted[0], sorted[1]);
+                generator.val = line(generator.length, sorted[0], sorted[1]);
                 break;
 
             case 'decay':
             case 'fall':
-                generator.val = line(generator.len, sorted[1], sorted[0]);
+                generator.val = line(generator.length, sorted[1], sorted[0]);
                 break;
 
             case 'adsr':
@@ -2141,12 +2228,12 @@ dtm.generator = function () {
 
             case 'sin':
             case 'sine':
-                generator.val = sin(generator.len, params.min, params.max, params.amp, params.cycle, paramsExt.phase);
+                generator.val = sin(generator.length, params.min, params.max, params.amp, params.cycle, paramsExt.phase);
                 break;
 
             case 'cos':
             case 'cosine':
-                generator.val = cos(generator.len, params.min, params.max, params.amp, params.cycle, 0.00);
+                generator.val = cos(generator.length, params.min, params.max, params.amp, params.cycle, 0.00);
                 break;
 
             case 'tri':
@@ -2160,16 +2247,16 @@ dtm.generator = function () {
             case 'rf':
             case 'rand':
             case 'random':
-                generator.val = random(generator.len, sorted[0], sorted[1], 1.0, false);
+                generator.val = random(generator.length, sorted[0], sorted[1], 1.0, false);
                 break;
 
             case 'noise':
-                generator.val = random(generator.len, sorted[0], sorted[1], params.amp, false);
+                generator.val = random(generator.length, sorted[0], sorted[1], params.amp, false);
                 break;
 
             case 'ri':
             case 'randi':
-                generator.val = random(generator.len, sorted[0], sorted[1], 1.0, true);
+                generator.val = random(generator.length, sorted[0], sorted[1], 1.0, true);
                 break;
 
             case 'r':
@@ -2192,20 +2279,20 @@ dtm.generator = function () {
                 break;
 
             case 'fibonacci':
-                generator.val = fibonacci(generator.len);
+                generator.val = fibonacci(generator.length);
                 break;
 
             case 'zeros':
             case 'zeroes':
-                generator.val = constant(generator.len, 0);
+                generator.val = constant(generator.length, 0);
                 break;
 
             case 'ones':
-                generator.val = constant(generator.len, 1);
+                generator.val = constant(generator.length, 1);
                 break;
 
             case 'const':
-                generator.val = constant(generator.len, params.const);
+                generator.val = constant(generator.length, params.const);
                 break;
 
             case 'string':
@@ -2223,7 +2310,7 @@ dtm.generator = function () {
                 break;
         }
 
-        generator.len = generator.val.length;
+        generator.length = generator.val.length;
         generator.meta.setOriginal(generator.val);
     }
 
@@ -2257,7 +2344,7 @@ dtm.generator = function () {
 
         var len = parseInt(length);
         if (!isNaN(len) && len > 0) {
-            generator.len = len;
+            generator.length = len;
         }
 
         process();
@@ -2293,7 +2380,7 @@ dtm.generator = function () {
      * @param amp
      * @returns {array}
      */
-    generator.amp = function (amp) {
+    generator.oscamp = function (amp) {
         var val = parseFloat(amp);
         if (!isNaN(val)) {
             params.amp = val;
@@ -2315,9 +2402,12 @@ dtm.generator = function () {
         process();
         return generator;
     };
-    generator.freq = generator.cycle;
 
-    generator.phase = function (phase) {
+    // overriding with array.freq
+    // generator.freq = generator.cycle;
+
+    // generator.phase conflicts with array.phase
+    generator.offset = function (phase) {
         if (isNumber(phase)) {
             paramsExt.phase = phase;
         }
@@ -2325,7 +2415,7 @@ dtm.generator = function () {
         return generator;
     };
 
-    generator.offset = generator.phase;
+    // generator.offset = generator.phase;
 
     /**
      * @function module:generator#const
@@ -2351,7 +2441,7 @@ dtm.generator = function () {
     };
 
     // TODO: do more readable type check
-    generator.len = 8;
+    generator.length = 8;
 
     if (arguments.length >= 1) {
         if (isObject(arguments[0])) {
@@ -2391,11 +2481,11 @@ dtm.generator = function () {
     }
 
     if (isTypeCategOf('envelope')) {
-        generator.len = 128;
+        generator.length = 128;
     }
 
     if (isTypeCategOf('random')) {
-        generator.len = 1;
+        generator.length = 1;
         params.min = 0.0;
 
         if (params.type === 'randi' || params.type === 'ri') {
@@ -2404,29 +2494,44 @@ dtm.generator = function () {
             params.max = 1.0;
         }
 
-        if (arguments.length === 2 && isNumber(arguments[1])) {
-            params.max = arguments[1];
-        } else if (arguments.length === 3) {
-            if (isNumber(arguments[1])) {
-                params.min = arguments[1];
-            }
+        if (arguments.length >= 2 && isInteger(arguments[1])) {
+            generator.length = arguments[1] > 0 ? arguments[1] : 1;
+        }
+
+        if (arguments.length === 3) {
             if (isNumber(arguments[2])) {
                 params.max = arguments[2];
+            } else if (isNumOrFloat32Array(arguments[2])) {
+
+            } else if (isNumDtmArray(arguments[2])) {
+
+            }
+        } else if (arguments.length === 4) {
+            if (isNumber(arguments[2])) {
+                params.min = arguments[2];
+            }
+            if (isNumber(arguments[3])) {
+                params.max = arguments[3];
             }
         }
     } else if (isTypeCategOf('oscil')) {
-        generator.len = 4096;
+        generator.length = 4096;
+
+        // TODO: temporary
+        if (arguments.length === 2 && isInteger(arguments[1])) {
+            generator.length = arguments[1] > 0 ? arguments[1] : 4096;
+        }
 
         if (arguments.length >= 3) {
             if (isArray(arguments[2])) {
                 if (arguments[2].length === 1) {
-                    generator.amp(arguments[2][0]);
+                    generator.oscamp(arguments[2][0]);
                 } else if (arguments[2].length === 2) {
                     params.min = arguments[2][0];
                     params.max = arguments[2][1];
                 }
             } else {
-                generator.amp(arguments[2]);
+                generator.oscamp(arguments[2]);
             }
         }
 
@@ -2434,7 +2539,7 @@ dtm.generator = function () {
             // set as amplitude
             params.min = -1.0;
             params.max = 1.0;
-            generator.amp(arguments[2]);
+            generator.oscamp(arguments[2]);
         }
 
         if (arguments.length === 4) {
@@ -2505,7 +2610,7 @@ dtm.generator = function () {
         } else if (isTypeCategOf('const')) {
             if (!isEmpty(arguments[1])) {
                 params.const = arguments[1];
-                generator.len = 1;
+                generator.length = 1;
             }
         } else {
             // set the length from arg 1
@@ -2524,7 +2629,7 @@ dtm.generator = function () {
                         // set as 0 - max
                         params.min = 0;
                         params.max = arguments[2];
-                        generator.amp(1.0);
+                        generator.oscamp(1.0);
                     }
 
                     if (arguments.length >= 4) {
@@ -2542,7 +2647,8 @@ dtm.generator = function () {
 
 dtm.g = dtm.gen = dtm.generator;
 
-var generators = ['line', 'rise', 'decay', 'fall', 'seq', 'sequence', 'series', 'range', 'r', 'noise', 'random', 'rand', 'rf', 'randi', 'ri', 'gaussian', 'gauss', 'normal', 'zeros', 'zeroes', 'ones', 'constant', 'constants', 'const', 'consts', 'repeat', 'string', 'str', 'sin', 'sine', 'cos', 'cosine', 'tri', 'triangle', 'saw', 'fibonacci', 'decay', 'scale', 'modal', 'modes', 'mode'];
+// creating shorthand modules
+var generators = ['line', 'rise', 'decay', 'fall', 'seq', 'sequence', 'series', 'range', 'r', 'noise', 'random', 'rand', 'rf', 'randi', 'ri', 'gaussian', 'gauss', 'normal', 'zeros', 'zeroes', 'ones', 'constant', 'constants', 'const', 'consts', 'repeat', 'string', 'str', 'sin', 'sine', 'cos', 'cosine', 'tri', 'triangle', 'saw', 'fibonacci', 'decay', 'scale', 'modal', 'modes', 'mode', 'sig', 'sigmoid', 'logistic'];
 
 generators.forEach(function (type) {
     dtm[type] = function () {
@@ -2600,6 +2706,25 @@ dtm.transform = {
             });
         }
     },
+    // normalize: function (arr, min, max) {
+    //     if (!isNumber(min)) {
+    //         min = getMin(arr);
+    //     }
+    //
+    //     if (!isNumber(max)) {
+    //         max = getMax(arr);
+    //     }
+    //
+    //     var data = new Float32Array(arr);
+    //     var ptr = Module._malloc(data.byteLength);
+    //     var view = new Float32Array(Module.HEAPF32.buffer, ptr, data.length);
+    //     view.set(data);
+    //
+    //     Module.ccall('normalize', null, ['number', 'number', 'number', 'number'], [ptr, data.length, min, max]);
+    //
+    //     Module._free(ptr);
+    //     return view;
+    // },
 
     /**
      * Modifies the range of an array.
@@ -3694,17 +3819,22 @@ dtm.transform = {
     /**
      * Converts an interval sequence into a beat sequence.
      * @function module:transform#intervalToBeats
-     * @param input
+     * @param intervals {array}
+     * @param ampseq {array}
      * @returns {Array}
      */
-    intervalsToBeats: function (input) {
+    intervalsToBeats: function (intervals, ampseq) {
         var res = [];
         var idx = 0;
 
-        input.forEach(function (note) {
+        intervals.forEach(function (note, noteIdx) {
             for (var i = 0; i < note; i++) {
                 if (i === 0) {
-                    res[idx] = 1;
+                    if (ampseq) {
+                        res[idx] = ampseq[mod(noteIdx, ampseq.length)];
+                    } else {
+                        res[idx] = 1;
+                    }
                 } else {
                     res[idx] = 0;
                 }
@@ -4048,6 +4178,56 @@ dtm.tr = dtm.transform;
  * @returns array object {{value: null, normalized: null, length: null, min: null, max: null, mean: null}}
  */
 dtm.array = function () {
+    var fnList = [
+        'label', 'parent',
+        'morph', 'reset', 'save', 'residue', 'flush', 'clear',
+        'normalize', 'n', 'range', 'r', 'limit', 'clip',
+        'expcurve', 'expc', 'logcurve', 'logc',
+        'fit', 'f', 'stretch', 'str', 's',
+        'phase', 'interp',
+        'line', 'step', 'cubic', 'cos',
+        'freq', 'amp', 'gain', 'fir',
+        'add', 'subtract', 'mult', 'dot', 'divide', 'div',
+        'reciprocal', 'recip', 'pow', 'powof', 'log',
+        'min', 'max', 'extent',
+        'mean', 'avg', 'mode', 'median', 'midrange', 'mid',
+        'std', 'pstd', 'var', 'pvar',
+        'rms',
+        'linreg', 'covar', 'cov', 'corr', 'amdf',
+        'sum', 'fitsum',
+        'entropy',
+        'filter', 'find', 'sort', 'sortby',
+        'reduce', 'some', 'every',
+        'subarray', 'match',
+        'replace', 'select', 'sel',
+        'concat', 'cat', 'append', 'app', 'prepend',
+        'remove', 'removeempty',
+        'repeat', 'rep', 'fitrep', 'frep',
+        'pad',
+        'truncate',
+        'block', 'b', 'group', 'g',
+        'nest', 'unnest', 'un', 'unblock', 'ub', 'u', 'flatten',
+        'ola', 'window', 'win',
+        'copy', 'seg',
+        'shift', 'mirror', 'mirr', 'mir',
+        'reverse', 'rev',
+        'invert', 'inv',
+        'shuffle', 'randomize',
+        'reorder', 'order',
+        'queue', 'fifo',
+        'round', 'floor', 'ceil', 'hwr', 'fwr', 'abs', 'modulo', 'mod',
+        'mse', 'snr', 'dbsnr', 'diff', 'editdist',
+        'dct', 'idct',
+        'randomtrigger', 'randtrig',
+        'unique', 'classify',
+        'classify', 'stringify', 'tonumber', 'tonum', 'toFloat32',
+        'morethan', 'mt', 'mtet', 'lessthan', 'lt', 'ltet',
+        'split', 'join',
+        'pitchquantize', 'pq', 'mtof', 'ftom',
+        'ntob', 'bton', 'itob', 'btoi', 'btot', 'ttob',
+        'size'
+    ];
+
     var params = {
         name: '',
         type: null, // number, string, boolean, coll, mixed, date
@@ -4069,9 +4249,28 @@ dtm.array = function () {
         processed: 0
     };
 
-    var array = function () {
-        return array.clone.apply(this, arguments);
-    }; // this makes .name() not overridable
+    var array = function (fn) {
+        if (isFunction(fn)) {
+            fn(array);
+            return array;
+        } else {
+            return array.clone.apply(this, arguments);
+        }
+    }; // this makes .name() not overridable?
+
+    Object.defineProperty(array, 'name', {
+        enumerable: false,
+        writable: true,
+        configurable: true,
+        value: ''
+    });
+
+    Object.defineProperty(array, 'length', {
+        enumerable: false,
+        writable: true,
+        configurable: true,
+        value: 0
+    });
 
     array.meta = {
         type: 'dtm.array',
@@ -4091,7 +4290,8 @@ dtm.array = function () {
     };
 
     array.val = [];
-    array.len = 0;
+    array.length = 0;
+    array.undoStack = [];
 
     // TODO: list different query params in detail in the documentation
     /**
@@ -4107,7 +4307,7 @@ dtm.array = function () {
                 param = Math.round(param)
             }
 
-            return array.val[mod(param, array.len)];
+            return array.val[mod(param, array.length)];
         } else if (isArray(param) || isDtmArray(param)) {
             var indices = isDtmArray(param) ? param.get() : param;
             var res = [];
@@ -4119,7 +4319,7 @@ dtm.array = function () {
                     if (!isInteger(i)) {
                         i = Math.round(i);
                     }
-                    res.push(array.val[mod(i, array.len)]);
+                    res.push(array.val[mod(i, array.length)]);
                 } else if (isString(i) && isNestedDtmArray(array)) {
                     array.forEach(function (a) {
                         if (a.get('name') === i) {
@@ -4182,13 +4382,13 @@ dtm.array = function () {
 
                 case 'len':
                 case 'length':
-                    return array.len;
+                    return array.length;
 
                 case 'size':
                     if (isNestedDtmArray(array)) {
-                        return { row: array.val[0].get('len'), col: array.len };
+                        return { row: array.val[0].get('len'), col: array.length };
                     } else {
-                        return array.len;
+                        return array.length;
                     }
 
                 case 'autolen':
@@ -4212,7 +4412,7 @@ dtm.array = function () {
                 case 'row':
                     if (isInteger(arguments[1]) && isNestedWithDtmArray(array.val)) {
                         var idx = arguments[1];
-                        var res = [];
+                        res = [];
                         array.val.forEach(function (a) {
                             res.push(a.get(idx));
                         });
@@ -4287,11 +4487,11 @@ dtm.array = function () {
                 case 'next':
                     // TODO: increment after return
                     if (isEmpty(arguments[1])) {
-                        params.index = mod(params.index + params.step, array.len);
+                        params.index = mod(params.index + params.step, array.length);
                         return array.val[params.index];
                     } else if (isNumber(arguments[1]) && arguments[1] >= 1) {
                         // TODO: incr w/ the step size AFTER RETURN
-                        params.index = mod(params.index + params.step, array.len);
+                        params.index = mod(params.index + params.step, array.length);
                         blockArray = dtm.transform.getBlock(array.val, params.index, arguments[1]);
                         return dtm.array(blockArray);
                     } else {
@@ -4300,7 +4500,7 @@ dtm.array = function () {
 
                 case 'prev':
                 case 'previous':
-                    params.index = mod(params.index - params.step, array.len);
+                    params.index = mod(params.index - params.step, array.length);
                     return array.val[params.index];
 
                 case 'palindrome':
@@ -4308,7 +4508,7 @@ dtm.array = function () {
 
                 case 'rand':
                 case 'random':
-                    params.index = randi(0, array.len);
+                    params.index = randi(0, array.length);
                     return array.val[params.index];
 
                 case 'urn':
@@ -4348,7 +4548,7 @@ dtm.array = function () {
 
                 case 'blockNext':
                     // TODO: incr w/ the step size AFTER RETURN
-                    params.index = mod(params.index + params.step, array.len);
+                    params.index = mod(params.index + params.step, array.length);
                     blockArray = dtm.transform.getBlock(array.val, params.index, arguments[1]);
                     return dtm.array(blockArray);
 
@@ -4364,7 +4564,7 @@ dtm.array = function () {
                         params.normalized = dtm.transform.normalize(array.val);
                     }
                     if (isInteger(arguments[1])) {
-                        return params.normalized[mod(arguments[1], array.len)];
+                        return params.normalized[mod(arguments[1], array.length)];
                     } else {
                         return params.normalized;
                     }
@@ -4452,7 +4652,7 @@ dtm.array = function () {
                 return array.get(which).clone();
             }
         } else {
-            return array.set(array.get(which)).label(array.get('name'));
+            return dtm.array(array.get(which)).label(array.get('name'));
         }
     };
 
@@ -4465,6 +4665,87 @@ dtm.array = function () {
      */
     array.row = function (num) {
         return array.set(array.get('row', num));
+    };
+
+
+    // memo: only for single-dimensional numerical interpolation
+    // mode: linear, step (round), ...
+    array.interp = function (at, mode) {
+        if (!isString(mode)) {
+            mode = 'linear';
+        }
+
+        var res = [];
+        var indices = [];
+
+        if (isNumber(at)) {
+            indices[0] = at;
+        } else if (isNumOrFloat32Array(at)) {
+            indices = at;
+        } else if (isNumDtmArray(at)) {
+            indices = at.get();
+        } else {
+            return array;
+        }
+
+        indices.forEach(function (i) {
+            if (mode === 'step' || mode === 'round') {
+                res.push(array.val[mod(Math.round(i), array.length)]);
+            } else {
+                var floor = mod(Math.floor(i), array.length);
+                var ceil = mod(floor + 1, array.length);
+                var frac = i - Math.floor(i);
+
+                res.push(array.val[floor] * (1-frac) + array.val[ceil] * frac);
+            }
+        });
+
+        return array.set(res);
+    };
+
+    // interp with index scaled to the 0-1 range
+    array.phase = function (at, mode) {
+        if (!isString(mode)) {
+            mode = 'linear';
+        }
+
+        var res = [];
+        var indices = [];
+
+        if (isNumber(at)) {
+            indices[0] = at;
+        } else if (isNumOrFloat32Array(at)) {
+            indices = at;
+        } else if (isNumDtmArray(at)) {
+            indices = at.get();
+        } else {
+            return array;
+        }
+
+        indices.forEach(function (i) {
+            // even number floor value gives positive direction
+            // e.g., 0~1, 2~3, -1~-2
+            // odd gives inverse direction
+            if (mod(Math.floor(i), 2) === 0) {
+                i = mod(i, 1);
+            } else {
+                i = 1 - mod(i, 1);
+            }
+
+            i *= (array.length-1); // rescale index range
+
+            if (mode === 'step' || mode === 'round') {
+                res.push(array.val[mod(Math.round(i), array.length)]);
+            } else {
+                var floor = mod(Math.floor(i), array.length);
+                var ceil = mod(floor + 1, array.length);
+                var frac = i - Math.floor(i);
+
+                res.push(array.val[floor] * (1-frac) + array.val[ceil] * frac);
+            }
+        });
+
+        return array.set(res);
     };
 
     // TODO: conflicts with gen.transpose()
@@ -4524,7 +4805,8 @@ dtm.array = function () {
                         }
                     });
                 } else if (isDtmArray(arguments[0])) {
-                    array.val = arguments[0].get();
+                    // array.val = arguments[0].get(); // cloning
+                    array = arguments[0]; // retain the reference
                     // set parent in the child
                 } else if (isNestedDtmArray(arguments[0])) {
                     array.val = arguments[0].get();
@@ -4560,8 +4842,8 @@ dtm.array = function () {
             params.processed++;
         }
 
-        array.len = array.val.length;
-        params.index = array.len - 1;
+        array.length = array.val.length;
+        params.index = array.length - 1;
 
         return array;
     };
@@ -4579,6 +4861,8 @@ dtm.array = function () {
         return array;
     };
 
+    array.name = array.label;
+
     array.keys = function () {
         if (isNestedDtmArray(array)) {
             return array.set(array.get('keys'));
@@ -4588,6 +4872,14 @@ dtm.array = function () {
     };
 
     array.names = array.indices = array.keys;
+
+    array.len = function () {
+        if (isNestedDtmArray(array)) {
+            return array.map(function (v) { return v.length; });
+        } else {
+            return array.set(array.length);
+        }
+    };
 
     /**
      * Sets the value type of the array content. Should be either 'number' or 'string'?
@@ -4637,11 +4929,11 @@ dtm.array = function () {
 
     /**
      * Sets the size of the iteration step.
-     * @function module:array#step
+     * @function module:array#stepsize
      * @param val {number}
      * @returns {dtm.array}
      */
-    array.step = function (val) {
+    array.stepsize = function (val) {
         if (isInteger(val) && val > 0) {
             params.step = val;
         }
@@ -4656,7 +4948,7 @@ dtm.array = function () {
      */
     array.index = function (val) {
         if (isNumber(val)) {
-            params.index = mod(Math.round(val), array.len);
+            params.index = mod(Math.round(val), array.length);
         }
         return array;
     };
@@ -4682,7 +4974,7 @@ dtm.array = function () {
 
             // CHECK: this may cause troubles!
             newArr.index(params.index);
-            newArr.step(params.step);
+            newArr.stepsize(params.step);
 
             if (params.type === 'string') {
                 newArr.classes = params.classes;
@@ -4729,7 +5021,7 @@ dtm.array = function () {
         }
     };
 
-    array.flatten = array.ub = array.unblock = array.un = array.unnest;
+    array.flatten = array.u = array.ungroup = array.ub = array.unblock = array.un = array.unnest;
 
     /**
      * Morphs the array values with a target array / dtm.array values. The lengths can be mismatched.
@@ -4740,21 +5032,44 @@ dtm.array = function () {
      * @returns {dtm.array}
      */
     array.morph = function (tgtArr, morphIdx, interp) {
-        if (!isArray(tgtArr)) {
-            if (isDtmArray(tgtArr)) {
-                tgtArr = tgtArr.get();
-            }
+        if (isNumDtmArray(tgtArr)) {
+            tgtArr = tgtArr.val;
         }
 
-        if (!isNumber(morphIdx)) {
+        // TODO: accept array for multi-point morphing
+        if (isNumDtmArray(morphIdx)) {
+            morphIdx = morphIdx.get(0);
+        } else if (!isNumber(morphIdx)) {
             morphIdx = 0.5;
         }
 
-        if (isNumArray(array.val) && isNumArray(tgtArr)) {
+        morphIdx = 1 - Math.abs(mod(morphIdx, 2) - 1);
+
+        if (!isString(interp)) {
+            interp = 'linear';
+        }
+
+        if (isNumDtmArray(array) && isNumOrFloat32Array(tgtArr)) {
             array.set(dtm.transform.morph(array.val, tgtArr, morphIdx, interp));
+        }
+
+        return array;
+    };
+    
+    array.undo = function (steps) {
+        if (!isNumber(steps) || steps < 1) {
+            steps = 1;
         }
         return array;
     };
+
+    array.redo = function (steps) {
+        if (!isNumber(steps) || steps < 1) {
+            steps = 1;
+        }
+        return array;
+    };
+
 
     /**
      * Retrieves the original values from when the array object was first created.
@@ -4892,8 +5207,16 @@ dtm.array = function () {
 
         // TODO: better typecheck order
 
-        if (isNumber(arg1)) {
-            min = arg1;
+        if (arguments.length === 0) {
+            min = 0;
+            max = 1;
+        } else if (isNumber(arg1)) {
+            if (arguments.length === 1) {
+                min = 0;
+                max = arg1;
+            } else {
+                min = arg1;
+            }
         } else if (isNumArray(arg1)) {
             if (arg1.length >= 2) {
                 min = arg1[0];
@@ -4937,6 +5260,91 @@ dtm.array = function () {
     };
 
     array.r = array.range;
+
+    array.unipolar = function () {
+        return array.range(0, 1);
+    };
+
+    array.up = array.uni = array.unipolar;
+
+    array.bipolar = function (dc) {
+        if (!isBoolean(dc)) {
+            dc = false;
+        }
+
+        // TODO: this is wrong
+        if (dc) {
+            var mean = array.get('mean');
+            var posSize = array.get('max') - mean;
+            var negSize = mean - array.get('min');
+
+            if (posSize >= negSize) {
+                return array.range(-1, 1, mean - posSize, array.get('max'));
+            } else {
+                return array.range(-1, 1, array.get('min'), mean + negSize);
+            }
+        } else {
+            return array.range(-1, 1);
+        }
+    };
+
+    array.bp = array.bi = array.bipolar;
+
+    // array.amp = function () {
+    //     return array;
+    // };
+
+    // with support for fractional freq array with table lookup and angular velocity
+    array.freq = function (input) {
+        var freqArr;
+
+        if (argsAreSingleVals(arguments)) {
+            freqArr = argsToArray(arguments);
+        } else if (isNumOrFloat32Array(input)) {
+            freqArr = input;
+        } else if (isNumDtmArray(input)) {
+            freqArr = input.get();
+        }
+
+        var res = [];
+
+        var phase = 0;
+        var len;
+        var wavetable = array.clone();
+
+        if (freqArr.length > array.length) {
+            wavetable.fit(freqArr.length, 'step');
+            len = freqArr.length;
+        } else {
+            len = wavetable.length;
+        }
+
+        var currFreqVal = 1;
+        var floor, ceil, frac;
+
+        dtm.line(len).forEach(function (p) {
+            currFreqVal = freqArr[Math.floor(p * freqArr.length)];
+            if (currFreqVal < 0) {
+                phase += 1/len * currFreqVal;
+                phase = mod(phase, 1);
+            }
+
+            floor = Math.floor(phase * (len-1));
+            ceil = floor + 1;
+            // ceil = currFreqVal >= 0 ? floor + 1 : floor - 1;
+            // ceil = mod(ceil, len);
+            frac = phase * (len-1) - floor;
+
+            res.push(wavetable.val[floor] * (1-frac) + wavetable.val[ceil] * frac);
+
+            if (currFreqVal >= 0) {
+                phase += 1/len * currFreqVal;
+                phase = mod(phase, 1);
+            }
+        });
+
+        return array.set(res);
+    };
 
     /**
      * Caps the array value range at the min and max values. Only works with a numerical array.
@@ -5012,7 +5420,6 @@ dtm.array = function () {
         return array;
     };
 
-    // TODO: there might be a memory leak / some inefficiency
     /**
      * Stretches or shrinks the length of the array into the specified length.
      * @function module:array#fit
@@ -5032,6 +5439,30 @@ dtm.array = function () {
 
     array.f = array.fit;
 
+    array.line = function (len) {
+        return array.fit(len, 'linear');
+    };
+
+    array.linear = array.line;
+
+    array.step = function (len) {
+        return array.fit(len, 'step');
+    };
+
+    array.cubic = function (len) {
+        return array.fit(len, 'cubic');
+    };
+
+    array.cos = function (len) {
+        return array.fit(len, 'cos');
+    };
+
+    array.fit.line = array.line;
+    array.fit.linear = array.line;
+    array.fit.step = array.step;
+    array.fit.cubic = array.cubic;
+    array.fit.cos = array.cos;
+
     /**
      * Multiplies the length of the array by the given factor.
      * @function module:array#stretch
@@ -5049,7 +5480,25 @@ dtm.array = function () {
         return array.set(dtm.transform.stretch(array.val, factor, interp));
     };
 
-    array.s = array.str = array.stretch;
+    array.ts = array.s = array.str = array.stretch;
+
+    array.stretch.line = function (factor) {
+        return array.stretch(factor, 'linear');
+    };
+
+    array.stretch.linear = array.stretch.line;
+
+    array.stretch.step = function (factor) {
+        return array.stretch(factor, 'step');
+    };
+
+    array.stretch.cubic = function (factor) {
+        return array.stretch(factor, 'cubic');
+    };
+
+    array.stretch.cos = function (factor) {
+        return array.stretch(factor, 'cos');
+    };
 
     /**
      * Adds a value to all the array elements.
@@ -5158,6 +5607,22 @@ dtm.array = function () {
     };
 
     array.dot = array.mult;
+
+    array.amp = function (input) {
+        var ampArr;
+
+        if (argsAreSingleVals(arguments)) {
+            ampArr = argsToArray(arguments);
+        } else if (isNumOrFloat32Array(input)) {
+            ampArr = input;
+        } else if (isNumDtmArray(input)) {
+            ampArr = input.get();
+        }
+
+        return array.mult(ampArr);
+    };
+
+    array.gain = array.amp;
 
     array.divide = function (factor, interp) {
         if (!isString(interp)) {
@@ -5573,6 +6038,10 @@ dtm.array = function () {
         }
     };
 
+    array.polyreg = function (n) {
+        return array;
+    };
+
     array.covar = function (tgt) {
         if (isNumDtmArray(array)) {
             if (isNumDtmArray(tgt)) {
@@ -5644,6 +6113,20 @@ dtm.array = function () {
         } else {
             return array;
         }
+    };
+
+    array.amdf = function (max) {
+        if (!isNumber(max)) {
+            max = Math.round(array.length / 2);
+        }
+
+        var res = [];
+
+        for (var i = 1; i < max; i++) {
+            res.push(array().subtract(array().shift(i)).abs().mean().get(0));
+        }
+
+        return array.set(res);
     };
 
     // TODO: not consistent with other stats-based conversions
@@ -5751,53 +6234,6 @@ dtm.array = function () {
         return array;
     };
 
-    var fnList = [
-        'label', 'parent',
-        'morph', 'reset', 'save', 'residue', 'flush', 'clear',
-        'normalize', 'n', 'range', 'r', 'limit', 'clip',
-        'expcurve', 'expc', 'logcurve', 'logc',
-        'fit', 'f', 'stretch', 'str', 's',
-        'add', 'subtract', 'mult', 'dot', 'divide', 'div',
-        'reciprocal', 'recip', 'pow', 'powof', 'log',
-        'min', 'max', 'extent',
-        'mean', 'avg', 'mode', 'median', 'midrange', 'mid',
-        'std', 'pstd', 'var', 'pvar',
-        'rms',
-        'linreg', 'covar', 'cov', 'corr',
-        'sum', 'fitsum',
-        'entropy',
-        'filter', 'find', 'sort', 'sortby',
-        'reduce', 'some', 'every',
-        'subarray', 'match',
-        'replace', 'select', 'sel',
-        'concat', 'cat', 'append', 'app',
-        'repeat', 'rep', 'fitrep', 'frep',
-        'pad',
-        'truncate',
-        'block', 'b',
-        'nest', 'unnest', 'un', 'unblock', 'ub', 'flatten',
-        'ola', 'window', 'win',
-        'copy', 'seg',
-        'shift', 'mirror', 'mirr', 'mir',
-        'reverse', 'rev',
-        'invert', 'inv',
-        'shuffle', 'randomize',
-        'reorder', 'order',
-        'queue', 'fifo',
-        'round', 'floor', 'ceil', 'hwr', 'fwr', 'abs', 'modulo', 'mod',
-        'mse', 'snr', 'dbsnr', 'diff', 'editdist',
-        'dct', 'idct',
-        'randomtrigger', 'randtrig',
-        'unique', 'classify',
-        'classify', 'stringify', 'tonumber', 'tonum', 'toFloat32',
-        'morethan', 'mt', 'mtet', 'lessthan', 'lt', 'ltet',
-        'removeempty',
-        'split',
-        'pitchquantize', 'pq', 'mtof', 'ftom',
-        'ntob', 'bton', 'itob', 'btoi', 'btot', 'ttob',
-        'size'
-    ];
-
     fnList.forEach(function (v) {
         array.each[v] = function () {
             var self = this;
@@ -5889,6 +6325,8 @@ dtm.array = function () {
         return array.set(res);
     };
 
+    array.sort.by = array.sortby;
+
     array.reduce = function (fn) {
         return array.set(array.val.reduce(fn));
     };
@@ -5908,6 +6346,10 @@ dtm.array = function () {
 
     // TODO: regexp-like processing???
     array.match = function () {
+        return array;
+    };
+
+    array.pick = function () {
         return array;
     };
 
@@ -5977,7 +6419,7 @@ dtm.array = function () {
             return array;
         } else {
             indices.forEach(function (i) {
-                res.push(array.val[mod(i, array.len)]);
+                res.push(array.val[mod(i, array.length)]);
             });
             return array.set(res);
         }
@@ -6006,6 +6448,19 @@ dtm.array = function () {
     };
 
     array.app = array.append = array.cat = array.concat;
+
+    array.prepend = function (arr) {
+        if (isEmpty(arr)) {
+            arr = [];
+        }
+
+        if (isDtmArray(arr)) {
+            array.val = concat(arr.get(), array.val);
+        } else {
+            array.val = concat(arr, array.val);
+        }
+        return array.set(array.val);
+    };
 
     /**
      * Repeats the contents of the current array.
@@ -6040,7 +6495,7 @@ dtm.array = function () {
             interp = 'step';
         }
 
-        return array.set(dtm.transform.fit(dtm.transform.repeat(array.val, count), array.len, interp));
+        return array.set(dtm.transform.fit(dtm.transform.repeat(array.val, count), array.length, interp));
     };
 
     array.frep = array.fitrep;
@@ -6063,7 +6518,7 @@ dtm.array = function () {
     /**
      * Truncates some values either at the end or both at the beginning and the end.
      * @function module:array#truncate
-     * @param arg1 {number} Start bits to truncate. If the arg2 is not present, it will be the End bits to truncate.
+     * @param arg1 {number} Start bits to truncate. If the arg2 is not present, it will be the end bits to truncate.
      * @param [arg2] {number} End bits to truncate.
      * @returns {dtm.array}
      */
@@ -6071,12 +6526,52 @@ dtm.array = function () {
         return array.set(dtm.transform.truncate(array.val, arg1, arg2));
     };
 
+    array.remove = function (input) {
+        var at = [];
+        var val = array.val;
+
+        if (argsAreSingleVals(arguments)) {
+            if (isNumArray(argsToArray(arguments))) {
+                at = argsToArray(arguments);
+            }
+        } else if (isNumOrFloat32Array(input)) {
+            at = input;
+        } else if (isNumDtmArray(input)) {
+            at = input.get();
+        }
+
+        at.forEach(function (i) {
+            val.splice(i, 1);
+        });
+        return array.set(val);
+    };
+
+    array.remove.at = function (input) {
+        var at = [];
+        var val = array.val;
+
+        if (argsAreSingleVals(arguments)) {
+            if (isNumArray(argsToArray(arguments))) {
+                at = argsToArray(arguments);
+            }
+        } else if (isNumOrFloat32Array(input)) {
+            at = input;
+        } else if (isNumDtmArray(input)) {
+            at = input.get();
+        }
+
+        at.forEach(function (i) {
+            val = splice(val, Math.round(i), 1);
+        });
+        return array.set(val);
+    };
+
     // TODO: accept option as arg? for numBlocks, pad, overlap ratio, etc.
     array.block = function (len, hop, window, pad) {
         if (!isInteger(len) || len < 1) {
             len = 1;
-        } else if (len > array.len) {
-            len = array.len;
+        } else if (len > array.length) {
+            len = array.length;
         }
         if (!isInteger(hop) || hop < 1) {
             hop = len;
@@ -6086,7 +6581,7 @@ dtm.array = function () {
         }
 
         var newArr = [];
-        var numBlocks = Math.floor((array.len - len) / hop) + 1;
+        var numBlocks = Math.floor((array.length - len) / hop) + 1;
 
         for (var i = 0; i < numBlocks; i++) {
             // name: original starting index
@@ -6096,7 +6591,38 @@ dtm.array = function () {
         return array.set(newArr);
     };
 
-    array.b = array.bl = array.block;
+    array.g = array.group = array.b = array.bl = array.block;
+
+    array.block.at = function () {
+        return array;
+    };
+
+    array.block.diff = function (val, abs) {
+        if (!isBoolean(abs)) {
+            abs = false;
+        }
+
+
+
+        return array;
+    };
+
+    array.block.into = function (val) {
+        if (isInteger(val)) {
+            var len = Math.floor(array.length / val);
+            return array.block(len);
+        } else {
+            return array;
+        }
+    };
+
+    array.block.peak = function (tolerance) {
+        return array;
+    };
+
+    array.block.minpeak = function (tolerance) {
+        return array;
+    };
 
     array.ola = function (hop) {
         if (!isInteger(hop) || hop < 1) {
@@ -6104,7 +6630,7 @@ dtm.array = function () {
         }
 
         if (isNestedWithDtmArray(array.val)) {
-            var len = hop * (array.len-1) + array.val[0].get('len');
+            var len = hop * (array.length-1) + array.val[0].get('len');
             var newArr = new Array(len);
             newArr.fill(0);
             array.val.forEach(function (a, i) {
@@ -6156,7 +6682,7 @@ dtm.array = function () {
     array.seg = function (idx) {
         if (isNumArray(idx) || isNumDtmArray(idx)) {
             var res = [];
-            var len = isNumArray(idx) ? idx.length : idx.len;
+            var len = idx.length;
             if (isNumDtmArray(idx)) {
                 idx = idx.get();
             }
@@ -6289,7 +6815,7 @@ dtm.array = function () {
         } else if (isArray(input)) {
             if (isFloat32Array(array.val)) {
                 array.val = Float32Concat(array.val, input);
-                array.val = Float32Splice(array.val, input.length);
+                array.val = Float32Splice(array.val, 0, input.length);
             } else {
                 array.val = array.val.concat(input);
                 array.val = array.val.splice(input.length);
@@ -6445,14 +6971,14 @@ dtm.array = function () {
         if (isNumDtmArray(array)) {
             var res = [];
             var w;
-            for (var k = 0; k < array.len; k++) {
+            for (var k = 0; k < array.length; k++) {
                 if (k === 0) {
-                    w = Math.sqrt(1/(4*array.len));
+                    w = Math.sqrt(1/(4*array.length));
                 } else {
-                    w = Math.sqrt(1/(2*array.len));
+                    w = Math.sqrt(1/(2*array.length));
                 }
                 res.push(2 * w * sum(array.val.map(function (v, n) {
-                    return v * Math.cos(Math.PI/array.len * (n + 0.5) * k);
+                    return v * Math.cos(Math.PI/array.length * (n + 0.5) * k);
                 })));
             }
             return array.set(res);
@@ -6467,12 +6993,12 @@ dtm.array = function () {
     array.idct = function () {
         if (isNumDtmArray(array)) {
             var res = [];
-            for (var k = 0; k < array.len; k++) {
+            for (var k = 0; k < array.length; k++) {
                 res.push(sum(array.val.map(function (v, n) {
                     if (n === 0) {
-                        return v / Math.sqrt(array.len);
+                        return v / Math.sqrt(array.length);
                     } else {
-                        return Math.sqrt(2/array.len) * v * Math.cos(Math.PI/array.len * n * (k + 0.5));
+                        return Math.sqrt(2/array.length) * v * Math.cos(Math.PI/array.length * n * (k + 0.5));
                     }
                 })));
             }
@@ -6482,6 +7008,31 @@ dtm.array = function () {
                 return a.idct();
             });
         }
+        return array;
+    };
+
+    array.fir = function (coef) {
+        var coef_ = [];
+        if (argsAreSingleVals(arguments)) {
+            coef_ = argsToArray(arguments);
+        } else if (isNumOrFloat32Array(coef)) {
+            coef_ = coef;
+        } else if (isNumDtmArray(coef)) {
+            coef_ = coef.get();
+        }
+        var res = [];
+
+        for (var n = 0; n < array.length; n++) {
+            res[n] = 0;
+            coef_.forEach(function (v, i) {
+                res[n] += (n-i) >= 0 ? v * array.val[n-i] : 0;
+            });
+        }
+
+        return array.set(res);
+    };
+
+    array.iir = function () {
         return array;
     };
 
@@ -6698,6 +7249,27 @@ dtm.array = function () {
         return array.set(dtm.transform.split(array.val, separator));
     };
 
+    array.join = function (delimiter) {
+        if (isNestedDtmArray(array)) {
+            array.map(function (a) {
+                return a.join(delimiter);
+            });
+        }
+
+        if (!isString(delimiter)) {
+            delimiter = '';
+        }
+        var res = '';
+        array.forEach(function (v, i) {
+            res += toString(v);
+            if (i < array.length-1) {
+                res += delimiter;
+            }
+        });
+
+        return array.set(res);
+    };
+
     /* MUSICAL */
 
     /**
@@ -6763,8 +7335,15 @@ dtm.array = function () {
      * @function module:array#intervalsToBeats | itob
      * @returns {dtm.array}
      */
-    array.intervalsToBeats = function () {
-        return array.set(dtm.transform.intervalsToBeats(array.val));
+    array.intervalsToBeats = function (arr) {
+        var ampseq;
+
+        if (isNumDtmArray(arr)) {
+            ampseq = arr.val;
+        } else if (isNumOrFloat32Array(arr)) {
+            ampseq = arr;
+        }
+        return array.set(dtm.transform.intervalsToBeats(array.val, ampseq));
     };
 
     /**
@@ -6801,6 +7380,7 @@ dtm.array = function () {
     array.class = array.classify;
     array.tostring = array.stringify;
     array.tonum = array.tonumber;
+    array.num = array.tonumber;
     array.mt = array.morethan;
     array.lt = array.lessthan;
     array.pq = array.pitchquantize;
@@ -6812,20 +7392,44 @@ dtm.array = function () {
     array.ttob = array.indicesToBeats;
 
 
-
     /* dtm.generator placeholders */
     // these are not really necessary, but prevents typeError when calling dtm.gen functions on pure dtm.array object
     array.type = function () { return array; };
     array.size = function () { return array; };
 
+    array.call = function (fn) {
+        if (isFunction(fn)) {
+            if (arguments.length > 1) {
+
+            }
+            fn(array);
+        }
+        return array;
+    };
+    array.do = array.call;
+
+    array.plot = function () {
+        if (isFunction(dtm.params.plotter)) {
+            dtm.params.plotter.apply(this, [array].concat(argsToArray(arguments)));
+        }
+        return array;
+    };
+
+    array.print = function () {
+        if (isFunction(dtm.params.printer)) {
+            dtm.params.printer.apply(this, [array].concat(argsToArray(arguments)));
+        } else {
+            dtm.util.print(array);
+        }
+        return array;
+    };
 
     // set the array content here
     array.set.apply(this, arguments);
-
     return array;
 };
 
-dtm.a = dtm.array;
+dtm.d = dtm.data = dtm.a = dtm.array;
 /**
  * @fileOverview Parses random stuff. Singleton.
  * @module parser
@@ -6951,14 +7555,14 @@ dtm.parser = {
  */
 
 /**
- * Creates a new dtm.data object, if the argument is empty, or a promise object, if the argument is a URL.
+ * Creates a new dtm.data (array) object, if the argument is empty, or a promise object, if the argument is a URL.
  * @function module:data.data
  * @param [input] {string} URL to load or query the data
  * @param fn {function}
  * @param type
  * @returns {dtm.data | promise}
  */
-dtm.data = function (input, fn) {
+dtm.load = function (input, fn) {
     if (isString(input)) {
         var url = input;
 
@@ -7170,11 +7774,9 @@ dtm.data = function (input, fn) {
     }
 };
 
-dtm.load = dtm.data;
-
 dtm.csv = function (input, fn) {
     if (isString(input)) {
-        return new Promise(function (resolve) {
+        var p = new Promise(function (resolve) {
             var xhr = new XMLHttpRequest();
             xhr.open('GET', input, true);
 
@@ -7191,12 +7793,20 @@ dtm.csv = function (input, fn) {
                         fn(data.set(arrays));
                     }
 
-                    resolve(data.set(arrays));
+                    // resolve(data.set(arrays));
+                    resolve(arrays);
                 }
             };
 
             xhr.send();
         });
+
+        var data = dtm.array();
+        p.then(function (d) {
+            data.set(d);
+        });
+
+        return data;
     } else {
         var elem_files = input;
         var reader = new FileReader();
@@ -7228,7 +7838,7 @@ dtm.json = function (input, fn) {
 
 dtm.text = function (input, fn) {
     if (isString(input)) {
-        return new Promise(function (resolve) {
+        var p = new Promise(function (resolve) {
             var xhr = new XMLHttpRequest();
             xhr.open('GET', input, true);
 
@@ -7245,12 +7855,20 @@ dtm.text = function (input, fn) {
                         fn(data);
                     }
 
-                    resolve(data);
+                    // resolve(data);
+                    resolve(xhr.response);
                 }
             };
 
             xhr.send();
         });
+
+        var data = dtm.array();
+        p.then(function (res) {
+            p = data.set(res);
+        });
+
+        return data;
     } else {
         var elem_files = input;
         var reader = new FileReader();
@@ -7328,6 +7946,13 @@ dtm.web = function (url, fn) {
                         res.push(resArray);
                     });
                 } else {
+                    // TODO: this only works for shodan
+                    var coll = JSON.parse(xhr.response)['matches'];
+
+
+                    // params.coll = JSON.parse(xhr.response)['matches'];
+                    // params.coll = second;
+
                     //var second = res[Object.keys(res)[0]];
                     //
                     //if (second.constructor === Array) {
@@ -7346,7 +7971,6 @@ dtm.web = function (url, fn) {
 
                 resolve(data.set(res));
             } else {
-
             }
         };
 
@@ -8766,9 +9390,6 @@ dtm.model = function (name, categ) {
     //model.load.apply(this, arguments);
     return model;
 };
-
-dtm.m = dtm.model;
-
 /**
  * @fileOverview Some building blocks for model creation. It can be used as one-shot as well.
  * @module synth
@@ -8798,6 +9419,8 @@ dtm.synth = function () {
         offset: 0.0,
         repeat: 1,
         autoRep: true,
+        iteration: 0,
+        sequence: null,
 
         onNoteCallback: [],
 
@@ -8808,6 +9431,7 @@ dtm.synth = function () {
         voiceId: Math.random(),
         startTime: 0.0,
         phase: 0.0,
+        playing: false,
 
         wavetable: null,
         rendered: null,
@@ -8817,7 +9441,7 @@ dtm.synth = function () {
         promise: null,
         pending: false,
 
-        amp: { base: dtm.array([[0.3]]) },
+        amp: { base: dtm.array([[0.5]]) },
 
         notenum: {
             base: dtm.array([[69]]),
@@ -8894,16 +9518,21 @@ dtm.synth = function () {
         }
     };
 
-    if (!!arguments.callee.caller) {
-        if (arguments.callee.caller.arguments.length > 0) {
-            if (isObject(arguments.callee.caller.arguments[0])) {
-                if (arguments.callee.caller.arguments[0].type === 'dtm.clock') {
-                    params.clock = arguments.callee.caller.arguments[0];
-                    params.lookahead = true;
+    try {
+        if (!!arguments.callee.caller) {
+            if (arguments.callee.caller.arguments.length > 0) {
+                if (isObject(arguments.callee.caller.arguments[0])) {
+                    if (arguments.callee.caller.arguments[0].type === 'dtm.clock') {
+                        params.clock = arguments.callee.caller.arguments[0];
+                        params.lookahead = true;
+                    }
                 }
             }
         }
+    } catch (e) {
+
     }
+
 
     var actx = dtm.wa.actx;
     var octx = null;
@@ -8912,8 +9541,12 @@ dtm.synth = function () {
     var deferIncr = 1;
     var dummyBuffer = actx.createBuffer(1, 1, 44100);
 
+    // actx.createStereoPanner = null;
+
     var init = function () {
-        if (isObject(arguments[0])) {
+        if (isInteger(arguments[0]) && arguments[0] > 0) {
+            params.tabLen = arguments[0];
+        } else if (isObject(arguments[0])) {
             if (arguments[0].hasOwnProperty('type')) {
                 if (arguments[0].type === 'dtm.clock') {
                     params.clock = arguments[0];
@@ -8949,6 +9582,20 @@ dtm.synth = function () {
 
     }
 
+    // TODO: remove support for the add and mult
+    function processParam(param, seqValue) {
+        var tempArr = param.base.get(seqValue).clone();
+
+        // removed the add and mult entries
+        // if (!isEmpty(param.add)) {
+        //     tempArr.add(param.add.get(seqValue));
+        // }
+        // if (!isEmpty(param.mult)) {
+        //     tempArr.mult(param.mult.get(seqValue));
+        // }
+        return tempArr.get();
+    }
+
     function setParamCurve (time, dur, curves) {
         curves.forEach(function (curve) {
             // if the curve length exceeds the set duration * this
@@ -8956,11 +9603,20 @@ dtm.synth = function () {
             if (params.curve || (curve.value.length / params.sr) > (dur * maxDurRatioForSVAT)) {
                 curve.param.setValueCurveAtTime(curve.value, time, dur);
             } else {
+                // curve.param.setValueCurveAtTime(curve.value, time, dur);
                 curve.value.forEach(function (v, i) {
                     curve.param.setValueAtTime(v, time + i / curve.value.length * dur);
+                    // for chrome v53.0.2785.116
+                    if (i === curve.value.length-1) {
+                        curve.param.setValueAtTime(v, time + dur);
+                    }
                 });
             }
         });
+    }
+
+    function modParamCurve () {
+
     }
 
     var fx = {
@@ -9118,7 +9774,7 @@ dtm.synth = function () {
                 this.dry.connect(this.out);
 
                 // var size = params.sr * 2;
-                var size = dtm.wa.buffs.verbIr.len;
+                var size = dtm.wa.buffs.verbIr.length;
                 var ir = ctx.createBuffer(1, size, params.sr);
                 ir.copyToChannel(dtm.wa.buffs.verbIr.get(), 0);
                 this.verb.buffer = ir;
@@ -9272,16 +9928,52 @@ dtm.synth = function () {
         return synth;
     };
 
+    synth.sync = function (input) {
+        if (isDtmSynth(input)) {
+            synth.interval(input);
+            synth.seq(input);
+        }
+        return synth;
+    };
+
+    synth.follow = synth.sync;
+
+    synth.mimic = function (input) {
+        if (isDtmSynth(input)) {
+            // synth = input();
+            synth.interval(input);
+            synth.seq(input);
+            synth.notenum(input);
+            synth.amplitude(input);
+            synth.pan(input);
+            synth.wavetable(input);
+        }
+        return synth;
+    };
+
     /**
      * Takes array types with only up to the max depth of 1.
      * @function module:synth#dur
      * @returns {dtm.synth}
      */
-    synth.dur = function () {
-        var depth = 2;
+    synth.duration = function () {
+        var seqValue = params.sequence ? params.sequence[mod(params.iteration, params.sequence.length)] : params.iteration;
 
-        if (isFunction(arguments[0])) {
-            var res = arguments[0](params.dur.base, synth, params.clock);
+        if (arguments.length === 0) {
+            if (params.dur.auto) {
+                return params.interval.base(seqValue);
+            } else {
+                return params.dur.base(seqValue);
+            }
+        }
+
+        var depth = 2;
+        var res;
+        if (isDtmSynth(arguments[0])) {
+            res = arguments[0].duration();
+            params.dur.base = check(res, depth) ? convertShallow(res) : params.dur.base;
+        } else if (isFunction(arguments[0])) {
+            res = arguments[0](params.dur.base, synth, params.clock);
             params.dur.base = check(res, depth) ? convertShallow(res) : params.dur.base;
         } else {
             var argList = argsToArray(arguments);
@@ -9293,13 +9985,19 @@ dtm.synth = function () {
         return synth;
     };
 
-    synth.d = synth.dur;
-
     synth.interval = function () {
         var depth = 2;
 
-        if (isFunction(arguments[0])) {
-            var res = arguments[0](params.interval.base, synth, params.clock);
+        if (arguments.length === 0) {
+            return params.interval.base();
+        }
+
+        var res;
+        if (isDtmSynth(arguments[0])) {
+            res = arguments[0].interval();
+            params.interval.base = check(res, depth) ? convertShallow(res) : params.interval.base;
+        } else if (isFunction(arguments[0])) {
+            res = arguments[0](params.interval.base, synth, params.clock);
             params.interval.base = check(res, depth) ? convertShallow(res) : params.interval.base;
         } else {
             var argList = argsToArray(arguments);
@@ -9314,8 +10012,6 @@ dtm.synth = function () {
 
         return synth;
     };
-
-    synth.i = synth.int = synth.interval;
 
     synth.interval.freq = function () {
         var depth = 2;
@@ -9333,26 +10029,6 @@ dtm.synth = function () {
         if (params.dur.auto) {
             params.dur.auto = 'interval';
         }
-
-        return synth;
-    };
-
-    synth.interval.add = function () {
-        //var depth = 2;
-        //
-        //if (isFunction(arguments[0])) {
-        //    var res = arguments[0](params.interval.base, synth, params.clock);
-        //    params.interval.base = check(res, depth) ? convertShallow(res) : params.interval.base;
-        //} else {
-        //    var argList = argsToArray(arguments);
-        //    params.interval.base = check(argList) ? convertShallow(argList) : params.interval.base;
-        //}
-        //
-        //params.interval.auto = false;
-        //
-        //if (params.dur.auto) {
-        //    params.dur.auto = 'interval';
-        //}
 
         return synth;
     };
@@ -9379,10 +10055,13 @@ dtm.synth = function () {
     /**
      * Plays
      * @function module:synth#play
-     * @param [bool=true] {boolean}
      * @returns {dtm.synth}
      */
-    synth.play = function (bool) {
+    synth.play = function (fn) {
+        if (isFunction(fn)) {
+            params.onNoteCallback.push(fn);
+        }
+
         var defer = 0.01;
         if (params.lookahead) {
             defer = Math.round(params.clock.get('lookahead') * 500);
@@ -9393,48 +10072,36 @@ dtm.synth = function () {
         if (params.pending) {
             params.pending = false;
             params.promise.then(function () {
-                synth.play(bool);
+                synth.play();
                 return synth;
             });
             return synth;
         }
 
-        params.onNoteCallback.forEach(function (fn) {
-            fn(synth, params.clock);
-        });
-
+        // TODO: use promise-all rather than deferring
         // deferred
         setTimeout(function () {
-            //===== type check
-            if (isBoolean(bool) && bool === false) {
-                return synth;
-            }
+            var seqValue = params.sequence ? params.sequence[mod(params.iteration, params.sequence.length)] : params.iteration;
 
-            function process(param) {
-                var tempArr = param.base.get('next').clone();
-                if (!isEmpty(param.add)) {
-                    tempArr.add(param.add.get('next'));
-                }
-                if (!isEmpty(param.mult)) {
-                    tempArr.mult(param.mult.get('next'));
-                }
-                return tempArr.get();
-            }
+            // TODO: use promise
+            params.onNoteCallback.forEach(function (fn) {
+                fn(synth, seqValue, params.clock);
+            });
 
-            var amp = process(params.amp);
-            var pan = process(params.pan);
+            var amp = processParam(params.amp, seqValue);
+            var pan = processParam(params.pan, seqValue);
             var pitch;
 
             if (params.notenum.isFinal) {
-                pitch = process(params.notenum).map(function (v) {
+                pitch = processParam(params.notenum, seqValue).map(function (v) {
                     return freqToPitch(mtof(v));
                 });
             } else if (params.freq.isFinal) {
-                pitch = process(params.freq).map(function (v) {
+                pitch = processParam(params.freq, seqValue).map(function (v) {
                     return freqToPitch(v);
                 });
             } else {
-                pitch = process(params.pitch);
+                pitch = processParam(params.pitch, seqValue);
             }
 
             var interval, dur;
@@ -9442,7 +10109,7 @@ dtm.synth = function () {
             if (params.interval.auto && params.clock) {
                 interval = params.clock.get('interval');
             } else {
-                interval = process(params.interval)[0];
+                interval = processParam(params.interval, seqValue)[0];
             }
 
             if (interval <= 0) {
@@ -9461,7 +10128,7 @@ dtm.synth = function () {
                     dur = interval;
                 }
             } else {
-                dur = process(params.dur)[0];
+                dur = processParam(params.dur, seqValue)[0];
             }
 
             if (dur <= 0) {
@@ -9469,6 +10136,7 @@ dtm.synth = function () {
             }
 
             var offset = params.offset;
+            var curves;
 
             dtm.master.addVoice(synth);
 
@@ -9509,7 +10177,7 @@ dtm.synth = function () {
                     nodes.src.loop = true;
                 }
 
-                var curves = [];
+                curves = [];
                 curves.push({param: nodes.src.playbackRate, value: pitch});
                 curves.push({param: nodes.amp.gain, value: amp});
                 setParamCurve(offset, dur, curves);
@@ -9598,8 +10266,8 @@ dtm.synth = function () {
                 } else {
                     nodes.pFx[n-1].out.connect(nodes.left);
                     nodes.pFx[n-1].out.connect(nodes.right);
-                    nodes.left.connect(nodes.merger);
-                    nodes.right.connect(nodes.merger);
+                    nodes.left.connect(nodes.merger, 0, 0);
+                    nodes.right.connect(nodes.merger, 0, 1);
                     nodes.merger.connect(out);
                 }
                 out.connect(actx.destination);
@@ -9628,6 +10296,10 @@ dtm.synth = function () {
                 // onended was sometimes not getting registered before src.start for some reason
                 var p = new Promise(function (resolve) {
                     dummySrc.onended = function () {
+                        if (interval >= dur) {
+                            dtm.master.removeVoice(synth);
+                        }
+
                         // rep(1) would only play once
                         if (params.repeat > 1) {
                             synth.play(); // TODO: pass any argument?
@@ -9636,7 +10308,10 @@ dtm.synth = function () {
                     };
 
                     nodes.src.onended = function () {
-                        dtm.master.removeVoice(synth);
+                        if (dur > interval) {
+                            dtm.master.removeVoice(synth);
+                        }
+                        params.playing = false;
                     };
 
                     resolve();
@@ -9645,11 +10320,15 @@ dtm.synth = function () {
                 p.then(function () {
                     dummySrc.start(offset);
                     dummySrc.stop(offset + interval);
-                    nodes.src.start(offset + 0.01);
-                    nodes.src.stop(offset + dur + 0.01);
+                    nodes.src.start(offset + 0.00001);
+                    nodes.src.stop(offset + dur + 0.00001);
+
+                    // ignoring start offset for now
+                    // need a timer
+                    params.playing = true;
                 });
 
-                var curves = [];
+                curves = [];
                 curves.push({param: nodes.src.playbackRate, value: pitch});
                 curves.push({param: nodes.amp.gain, value: amp});
                 setParamCurve(offset, dur, curves);
@@ -9685,17 +10364,80 @@ dtm.synth = function () {
                 declipper.gain.setTargetAtTime(0.0, offset + dur - ramp, ramp * 0.3);
             }
 
+            params.iteration++;
+
         }, defer + deferIncr);
 
         return synth;
     };
 
+    synth.trigger = function () {
+        synth.mute();
+        synth.play.apply(this, arguments);
+        return synth;
+    };
+
+    synth.t = synth.tr = synth.trig = synth.trigger;
+
+    synth.run = function () {
+        synth.mute().rep();
+        synth.play.apply(this, arguments);
+        return synth;
+    };
+
+    synth.start = function () {
+        synth.rep();
+        synth.play.apply(this, arguments);
+        return synth;
+    };
+
+    // bad name
+    synth.iter = function (val) {
+        if (isInteger(val)) {
+            params.iteration = val;
+        }
+        return params.iteration;
+    };
+
+    synth.incr = synth.iter;
+
+    // set order of the iteration
+    synth.seq = function (input) {
+        if (input === 'reset' || input === 'clear' || input === []) {
+            params.sequence = null;
+        }
+
+        if (isDtmSynth(input)) {
+            params.sequence = [input.seq()];
+        } else if (argsAreSingleVals(arguments) && arguments.length > 1) {
+            if (isNumOrFloat32Array(argsToArray(arguments))) {
+                params.sequence = argsToArray(arguments);
+            }
+        } else if (isNumber(input)) {
+            params.sequence = [input];
+        } else if (isNumOrFloat32Array(input)) {
+            params.sequence = input;
+        } else if (isNumDtmArray(input)) {
+            params.sequence = input.get();
+        } else {
+            return params.sequence ? params.sequence[mod(params.iteration, params.sequence.length)] : params.iteration;
+        }
+
+        return synth;
+    };
+
+    synth.sequence = synth.seq;
+
+    // lazy-eval
     synth.onnote = function (fn) {
         if (isFunction(fn)) {
             params.onNoteCallback.push(fn);
         }
         return synth;
     };
+
+    // this is stupid
+    synth.each = synth.do = synth.call = synth.onnote;
 
     // testing
     synth.cancel = function (time) {
@@ -9751,11 +10493,9 @@ dtm.synth = function () {
         }
         return synth;
     };
-
-    synth.r = synth.rep = synth.repeat;
-
+    
     function getPhase() {
-        params.phase = (actx.currentTime - params.startTime) / params.dur;
+        params.phase = (actx.currentTime - params.startTime) / params.dur.base(synth.seq()).get(0);
         if (params.phase < 0.0) {
             params.phase = 0.0;
         } else if (params.phase > 1.0) {
@@ -9763,6 +10503,15 @@ dtm.synth = function () {
         }
         return params.phase;
     }
+
+    synth.phase = function () {
+        return getPhase();
+    };
+
+    synth.mute = function () {
+        synth.gain(0);
+        return synth;
+    };
 
     synth.mod = function (name, val) {
         if (isString(name) && params.named.hasOwnProperty(name)) {
@@ -9787,22 +10536,15 @@ dtm.synth = function () {
      * @function module:synth#freq
      * @returns {dtm.synth}
      */
-    synth.freq = function () {
+    synth.frequency = function () {
+        var seqValue = params.sequence ? params.sequence[mod(params.iteration, params.sequence.length)] : params.iteration;
+
+        if (arguments.length === 0) {
+            return params.freq.base(seqValue);
+        } else if (isDtmSynth(arguments[0])) {
+            return synth.frequency(arguments[0].freq());
+        }
         mapParam(arguments, params.freq);
-        setFinal('freq');
-
-        return synth;
-    };
-
-    synth.freq.add = function () {
-        mapParam(arguments, params.freq, 'add');
-        setFinal('freq');
-
-        return synth;
-    };
-
-    synth.freq.mult = function () {
-        mapParam(arguments, params.freq, 'mult');
         setFinal('freq');
 
         return synth;
@@ -9814,43 +10556,38 @@ dtm.synth = function () {
      * @returns {dtm.synth}
      */
     synth.notenum = function () {
+        var seqValue = params.sequence ? params.sequence[mod(params.iteration, params.sequence.length)] : params.iteration;
+
+        if (arguments.length === 0) {
+            return params.notenum.base(seqValue);
+        } else if (isDtmSynth(arguments[0])) {
+            return synth.notenum(arguments[0].notenum());
+        }
         mapParam(arguments, params.notenum);
         setFinal('notenum');
 
-        return synth;
-    };
-
-    synth.nn = synth.notenum;
-
-    synth.notenum.add = function () {
-        mapParam(arguments, params.notenum, 'add');
-        setFinal('notenum');
-
-        return synth;
-    };
-
-    synth.notenum.mult = function () {
-        mapParam(arguments, params.notenum, 'mult');
-        setFinal('notenum');
+        if (params.playing) {
+            var pitch = processParam(params.notenum, seqValue).map(function (v) {
+                return freqToPitch(mtof(v));
+            });
+            var dur = processParam(params.dur, seqValue)[0];
+            setParamCurve(params.startTime, dur, [{param: nodes.src.playbackRate, value: pitch}]);
+        }
 
         return synth;
     };
 
     // for longer sample playback
     synth.pitch = function () {
+        var seqValue = params.sequence ? params.sequence[mod(params.iteration, params.sequence.length)] : params.iteration;
+
+        if (arguments.length === 0) {
+            return params.pitch.base(seqValue);
+        } else if (isDtmSynth(arguments[0])) {
+            return synth.pitch(arguments[0].pitch());
+        }
+
         mapParam(arguments, params.pitch);
-        setFinal('pitch');
-        return synth;
-    };
-
-    synth.pitch.add = function () {
-        mapParam(arguments, params.pitch, 'add');
-        setFinal('pitch');
-        return synth;
-    };
-
-    synth.pitch.mult = function () {
-        mapParam(arguments, params.pitch, 'mult');
         setFinal('pitch');
         return synth;
     };
@@ -9859,18 +10596,18 @@ dtm.synth = function () {
      * @function module:synth#amp
      * @returns {dtm.synth}
      */
-    synth.amp = function () {
+    synth.amplitude = function () {
+        var seqValue = params.sequence ? params.sequence[mod(params.iteration, params.sequence.length)] : params.iteration;
+
+        if (arguments.length === 0) {
+            return params.amp.base(seqValue);
+        } else if (isDtmSynth(arguments[0])) {
+            // TODO: will be muted when the parent is triggering / running
+            // should fix and use gain intead
+            return synth.amplitude(arguments[0].amp());
+        }
+
         mapParam(arguments, params.amp);
-        return synth;
-    };
-
-    synth.amp.add = function () {
-        mapParam(arguments, params.amp, 'add');
-        return synth;
-    };
-
-    synth.amp.mult = function () {
-        mapParam(arguments, params.amp, 'mult');
         return synth;
     };
 
@@ -9879,17 +10616,15 @@ dtm.synth = function () {
      * @returns {dtm.synth}
      */
     synth.pan = function () {
+        var seqValue = params.sequence ? params.sequence[mod(params.iteration, params.sequence.length)] : params.iteration;
+
+        if (arguments.length === 0) {
+            return params.pan.base(seqValue);
+        } else if (isDtmSynth(arguments[0])) {
+            return synth.pan(arguments[0].pan());
+        }
+
         mapParam(arguments, params.pan);
-        return synth;
-    };
-
-    synth.pan.add = function () {
-        mapParam(arguments, params.pan, 'add');
-        return synth;
-    };
-
-    synth.pan.mult = function () {
-        mapParam(arguments, params.pan, 'mult');
         return synth;
     };
 
@@ -9902,10 +10637,20 @@ dtm.synth = function () {
     };
 
     synth.wavetable = function (src) {
+        if (arguments.length === 0) {
+            return dtm.array(params.wavetable);
+        } else if (isDtmSynth(arguments[0])) {
+            return synth.wavetable(arguments[0].wavetable());
+        }
+
         src = typeCheck(src);
         if (isFloat32Array(src)) {
-            params.wavetable = src;
-            params.tabLen = src.length;
+            // params.tabLen = src.length; // for the morphing / in-note modulation
+            if (params.tabLen !== src.length) {
+                params.wavetable = dtm.array(src).step(params.tabLen).get();
+            } else {
+                params.wavetable = src;
+            }
             //params.pitch = freqToPitch(params.freq); // ?
         } else if (isFunction(src)) {
             if (params.promise) {
@@ -9923,10 +10668,26 @@ dtm.synth = function () {
                 params.wavetable[i] = Math.sin(2 * Math.PI * i / params.tabLen);
             });
         }
+
+        if (params.playing) {
+            if (params.wavetable.length !== params.tabLen) {
+                params.wavetable = dtm.array(params.wavetable).step(params.tabLen).get();
+            }
+            if (nodes.src.buffer.copyToChannel) {
+                // for Safari
+                nodes.src.buffer.copyToChannel(params.wavetable, 0);
+            } else {
+                var tempBuff = nodes.src.buffer.getChannelData(0);
+                tempBuff.forEach(function (v, i) {
+                    tempBuff[i] = params.wavetable[i];
+                });
+            }
+        }
+
         return synth;
     };
 
-    synth.w = synth.wt = synth.wavetable;
+    synth.w = synth.wt = synth.wave = synth.wavetable;
 
     synth.source = function (src) {
         if (isString(src)) {
@@ -10278,7 +11039,7 @@ dtm.synth = function () {
     }
 
     function convert(src) {
-        if (src.length === 1) {
+        if (isArray(src) && src.length === 1) {
             return convert(src[0]);
         } else {
             if (isNestedNumDtmArray(src)) {
@@ -10298,7 +11059,7 @@ dtm.synth = function () {
     }
 
     function convertShallow(src) {
-        if (src.length === 1) {
+        if (isArray(src) && src.length === 1) {
             return convertShallow(src[0]);
         } else {
             if (isNestedNumDtmArray(src)) {
@@ -10320,7 +11081,7 @@ dtm.synth = function () {
     function mapParam(args, param, mod) {
         var res, argList;
 
-        if (mod === 'base' || mod === undefined) {
+        if (mod === 'base' || typeof(mod) === 'undefined') {
             if (isFunction(args[0])) {
                 res = args[0](param['base'], synth, params.clock);
                 param['base'] = check(res) ? convert(res) : param;
@@ -10328,25 +11089,28 @@ dtm.synth = function () {
                 argList = argsToArray(args);
                 param['base'] = check(argList) ? convert(argList) : param;
             }
-        } else {
-            if (isEmpty(param[mod])) {
-                if (isFunction(args[0])) {
-                    res = args[0](param['base'], synth, params.clock);
-                    param[mod] = check(res) ? convert(res) : param;
-                } else {
-                    argList = argsToArray(args);
-                    param[mod] = check(argList) ? convert(argList) : param;
-                }
-            } else {
-                if (isFunction(args[0])) {
-                    res = args[0](param[mod], synth, params.clock);
-                    param[mod] = check(res) ? convert(res) : param;
-                } else {
-                    argList = argsToArray(args);
-                    param[mod][mod](check(argList) ? convert(argList) : param);
-                }
-            }
         }
+
+        // disabled synth.param.add / .mult interfaces
+        // else {
+        //     if (isEmpty(param[mod])) {
+        //         if (isFunction(args[0])) {
+        //             res = args[0](param['base'], synth, params.clock);
+        //             param[mod] = check(res) ? convert(res) : param;
+        //         } else {
+        //             argList = argsToArray(args);
+        //             param[mod] = check(argList) ? convert(argList) : param;
+        //         }
+        //     } else {
+        //         if (isFunction(args[0])) {
+        //             res = args[0](param[mod], synth, params.clock);
+        //             param[mod] = check(res) ? convert(res) : param;
+        //         } else {
+        //             argList = argsToArray(args);
+        //             param[mod][mod](check(argList) ? convert(argList) : param);
+        //         }
+        //     }
+        // }
     }
 
     function mapParamShallow() {
@@ -10414,12 +11178,30 @@ dtm.synth = function () {
         newParams.voiceId = Math.random();
         return dtm.synth().meta.setParams(newParams);
     };
+    
+    ['play', 'stop', 'run', 'interval', 'duration', 'repeat', 'amplitude', 'frequency', 'notenum', 'pitch'].forEach(function (name) {
+        if (name in alias) {
+            alias[name].forEach(function (v) {
+                synth[v] = synth[name];
+            });
+        }
+    });
+
+    // ['interval', 'duration'].forEach(function (param) {
+    //     ['frequency'].forEach(function (name) {
+    //         if (param in alias) {
+    //             alias[param].forEach(function (v) {
+    //                 synth[param][name][v] = ;
+    //             });
+    //         }
+    //     });
+    // });
 
     synth.load.apply(this, arguments);
     return synth;
 };
 
-dtm.s = dtm.syn = dtm.synth;
+dtm.m = dtm.music = dtm.s = dtm.syn = dtm.synth;
 
 dtm.startWebAudio();
 
@@ -10936,7 +11718,7 @@ dtm.inscore = function () {
     i.play = function () {
         setTimeout(function () {
             new Promise(function (resolve, reject) {
-                var mu = data().each.mean().flatten().r(0,70,0,1).save();
+                var mu = data().each.mean().flatten().range(0,70,0,1).save();
                 var sc = dtm.scale()
                     .filter(function (s) {
                         return s.get('name') !== 'chromatic';
@@ -10949,13 +11731,18 @@ dtm.inscore = function () {
                 data.r(0,70,0,1).pq(scale);
 
                 data.forEach(function(a,i){
-                    if (i % Math.ceil(data.len/numVoices) === 0) {
+                    if (i % Math.ceil(data.length/numVoices) === 0) {
                         dtm.syn().play().dur(dur)
-                            .amp(3/numVoices).nn(30)
-                            .nn.add(a)
-                            .nn.add(dtm.rand(-0.2,0.2))
-                            .pan(i/data.len * 2 - 1)
-                            .amp.mult(dtm.rise())
+                            .amp(
+                                dtm.array(3/numVoices)
+                                    .mult(dtm.rise())
+                            )
+                            .nn(
+                                dtm.array(30)
+                                    .add(a)
+                                    .add(dtm.rand(1,-0.2,0.2))
+                            )
+                            .pan(i/data.length * 2 - 1)
                             .delay();
                     }
                 });

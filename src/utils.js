@@ -48,6 +48,14 @@ function isString(value) {
     return typeof(value) === 'string';
 }
 
+function toString(value) {
+    if (isNumber(value)) {
+        return value.toString();
+    } else {
+        return value;
+    }
+}
+
 /**
  * Checks if the value is a boolean value
  * @param value
@@ -287,6 +295,18 @@ function isDtmObj(val) {
     }
 }
 
+function isDtmSynth(val) {
+    if (isObject(val) || typeof(val) === 'function') {
+        if (val.hasOwnProperty('meta')) {
+            return val.meta.type === 'dtm.synth';
+        } else {
+            return false;
+        }
+    } else {
+        return false;
+    }
+}
+
 /**
  * Checks if the value is an instance of dtm.array
  * @param val
@@ -498,19 +518,22 @@ function concat(first, second) {
     }
 }
 
-function Float32Splice(array, len) {
-    var res = new Float32Array(array.length - len);
+function Float32Splice(array, start, deleteCount) {
+    console.log(array.length - deleteCount);
+    var res = new Float32Array(array.length - deleteCount);
     var temp = Array.prototype.slice.call(array);
-    res.set(temp.splice(len));
+    temp.splice(start, deleteCount);
+    res.set(temp);
 
     return res;
 }
 
-function splice(array, len) {
-    if (isArray(array)) {
-        return array.splice(len);
-    } else if (isFloat32Array(array)) {
-        return Float32Splice(array, len);
+function splice(array, start, deleteCount) {
+    if (isFloat32Array(array)) {
+        return Float32Splice(array, start, deleteCount);
+    } else {
+        array.splice(start, deleteCount);
+        return array;
     }
 }
 
@@ -552,6 +575,7 @@ function cloneArray(input) {
 }
 
 function print(input) {
+    var formatted = null;
     if (isNestedDtmArray(input) || isNestedWithDtmArray(input)) {
         input.forEach(function (a) {
             console.log(a.get('name'), a.get());
@@ -706,6 +730,16 @@ function sum(arr) {
         return arr.reduce(function (num, sum) {
             return num + sum;
         });
+
+        // var data = new Float32Array(arr);
+        // var ptr = Module._malloc(data.byteLength);
+        // var view = new Float32Array(Module.HEAPF32.buffer, ptr, data.length);
+        // view.set(data);
+        //
+        // var res = Module.ccall('sum', null, ['number', 'number'], [ptr, data.length]);
+        //
+        // Module._free(ptr);
+        // return res;
     }
 }
 
@@ -1012,6 +1046,17 @@ function levenshteinDistance(a, b) {
     );
 }
 
+function alloc(arr) {
+    var data = new Float32Array(arr);
+    var ptr = Module._malloc(data.byteLength);
+    var view = new Float32Array(Module.HEAPF32.buffer, ptr, data.length);
+    view.set(data);
+}
+
+function free(ptr) {
+    Module._free(ptr);
+}
+
 //function clone(obj) {
 //    var copy;
 //
@@ -1151,6 +1196,7 @@ dtm.util.isBoolArray = isBoolArray;
 dtm.util.isNestedArray = isNestedArray;
 dtm.util.isNestedWithDtmArray = isNestedWithDtmArray;
 dtm.util.isDtmObj = isDtmObj;
+dtm.util.isDtmSynth = isDtmSynth;
 dtm.util.isDtmArray = isDtmArray;
 dtm.util.isNestedDtmArray = isNestedDtmArray;
 dtm.util.isNumDtmArray = isNumDtmArray;

@@ -424,7 +424,7 @@ describe('toFloat32Array', function () {
 
 describe('Float32Splice', function () {
     it('should work', function () {
-        expect(Float32Splice(new Float32Array([1,2,3]), 2)).toEqual(toFloat32Array(3));
+        expect(Float32Splice(new Float32Array([1,2,3]), 0, 2)).toEqual(toFloat32Array(3));
     });
 });
 

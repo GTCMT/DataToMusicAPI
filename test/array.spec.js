@@ -54,7 +54,7 @@ describe('get', function () {
     });
 
     describe('original', function () {
-        var a = dtm.array([1, 2, 3]).scale(0, 100);
+        var a = dtm.array([1, 2, 3]).range(0, 100);
         it('should return the original after transformation', function () {
             expect(a.get('original').toString()).toBe([1, 2, 3].toString());
         });
@@ -353,19 +353,19 @@ describe('scalers', function () {
             });
 
             it('should work the same with dtm.gen', function () {
-                expect(dtm.a(7).normalize(dtm.gen('line').sc(0, 10)).get()).toEqual(toFloat32Array(0.7));
+                expect(dtm.a(7).normalize(dtm.line().range(0, 10)).get()).toEqual(toFloat32Array(0.7));
             });
         });
     });
 
     describe('scale', function () {
         it('should work', function () {
-            var a = dtm.a(0.5).scale(0, 100);
+            var a = dtm.a(0.5).range(0, 100);
             expect(a.get(0)).toBe(50);
         });
 
         describe('rescale w/ domain range specified', function () {
-            var a = dtm.a(0.3).scale(0, 10, 0, 1);
+            var a = dtm.a(0.3).range(0, 10, 0, 1);
             it('should have the value of 3', function () {
                 expect(a.get(0)).toBe(3);
             })
@@ -373,7 +373,7 @@ describe('scalers', function () {
 
         describe('input types', function () {
             it('should accept dtm.array', function () {
-                expect(dtm.a([1,2,3]).scale(dtm.a([0, 10])).get()).toEqual(toFloat32Array([0,5,10]));
+                expect(dtm.a([1,2,3]).range(dtm.a([0, 10])).get()).toEqual(toFloat32Array([0,5,10]));
             });
         });
     });
@@ -568,7 +568,7 @@ describe('entropy', function () {
 describe('mapdist', function () {
     var res = [0.4, 0.4, 0.2];
     it('should work', function () {
-        expect(dtm.a([1,2,3,2,1]).mapdist().get()).toEqual(toFloat32Array([0.4, 0.4, 0.2, 0.4, 0.4]));
+        expect(dtm.a([1,2,3,2,1]).map.dist().get()).toEqual(toFloat32Array([0.4, 0.4, 0.2, 0.4, 0.4]));
     });
 });
 

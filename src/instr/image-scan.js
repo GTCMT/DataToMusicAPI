@@ -14,7 +14,7 @@
     i.play = function () {
         setTimeout(function () {
             new Promise(function (resolve, reject) {
-                var mu = data().each.mean().flatten().r(0,70,0,1).save();
+                var mu = data().each.mean().flatten().range(0,70,0,1).save();
                 var sc = dtm.scale()
                     .filter(function (s) {
                         return s.get('name') !== 'chromatic';
@@ -27,13 +27,18 @@
                 data.r(0,70,0,1).pq(scale);
 
                 data.forEach(function(a,i){
-                    if (i % Math.ceil(data.len/numVoices) === 0) {
+                    if (i % Math.ceil(data.length/numVoices) === 0) {
                         dtm.syn().play().dur(dur)
-                            .amp(3/numVoices).nn(30)
-                            .nn.add(a)
-                            .nn.add(dtm.rand(-0.2,0.2))
-                            .pan(i/data.len * 2 - 1)
-                            .amp.mult(dtm.rise())
+                            .amp(
+                                dtm.array(3/numVoices)
+                                    .mult(dtm.rise())
+                            )
+                            .nn(
+                                dtm.array(30)
+                                    .add(a)
+                                    .add(dtm.rand(1,-0.2,0.2))
+                            )
+                            .pan(i/data.length * 2 - 1)
                             .delay();
                     }
                 });

@@ -4,14 +4,14 @@
  */
 
 /**
- * Creates a new dtm.data object, if the argument is empty, or a promise object, if the argument is a URL.
+ * Creates a new dtm.data (array) object, if the argument is empty, or a promise object, if the argument is a URL.
  * @function module:data.data
  * @param [input] {string} URL to load or query the data
  * @param fn {function}
  * @param type
  * @returns {dtm.data | promise}
  */
-dtm.data = function (input, fn) {
+dtm.load = function (input, fn) {
     if (isString(input)) {
         var url = input;
 
@@ -223,11 +223,9 @@ dtm.data = function (input, fn) {
     }
 };
 
-dtm.load = dtm.data;
-
 dtm.csv = function (input, fn) {
     if (isString(input)) {
-        return new Promise(function (resolve) {
+        var p = new Promise(function (resolve) {
             var xhr = new XMLHttpRequest();
             xhr.open('GET', input, true);
 
@@ -244,12 +242,20 @@ dtm.csv = function (input, fn) {
                         fn(data.set(arrays));
                     }
 
-                    resolve(data.set(arrays));
+                    // resolve(data.set(arrays));
+                    resolve(arrays);
                 }
             };
 
             xhr.send();
         });
+
+        var data = dtm.array();
+        p.then(function (d) {
+            data.set(d);
+        });
+
+        return data;
     } else {
         var elem_files = input;
         var reader = new FileReader();
@@ -281,7 +287,7 @@ dtm.json = function (input, fn) {
 
 dtm.text = function (input, fn) {
     if (isString(input)) {
-        return new Promise(function (resolve) {
+        var p = new Promise(function (resolve) {
             var xhr = new XMLHttpRequest();
             xhr.open('GET', input, true);
 
@@ -298,12 +304,20 @@ dtm.text = function (input, fn) {
                         fn(data);
                     }
 
-                    resolve(data);
+                    // resolve(data);
+                    resolve(xhr.response);
                 }
             };
 
             xhr.send();
         });
+
+        var data = dtm.array();
+        p.then(function (res) {
+            p = data.set(res);
+        });
+
+        return data;
     } else {
         var elem_files = input;
         var reader = new FileReader();
@@ -381,6 +395,13 @@ dtm.web = function (url, fn) {
                         res.push(resArray);
                     });
                 } else {
+                    // TODO: this only works for shodan
+                    var coll = JSON.parse(xhr.response)['matches'];
+
+
+                    // params.coll = JSON.parse(xhr.response)['matches'];
+                    // params.coll = second;
+
                     //var second = res[Object.keys(res)[0]];
                     //
                     //if (second.constructor === Array) {
@@ -399,7 +420,6 @@ dtm.web = function (url, fn) {
 
                 resolve(data.set(res));
             } else {
-
             }
         };
 

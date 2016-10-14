@@ -48,6 +48,25 @@ dtm.transform = {
             });
         }
     },
+    // normalize: function (arr, min, max) {
+    //     if (!isNumber(min)) {
+    //         min = getMin(arr);
+    //     }
+    //
+    //     if (!isNumber(max)) {
+    //         max = getMax(arr);
+    //     }
+    //
+    //     var data = new Float32Array(arr);
+    //     var ptr = Module._malloc(data.byteLength);
+    //     var view = new Float32Array(Module.HEAPF32.buffer, ptr, data.length);
+    //     view.set(data);
+    //
+    //     Module.ccall('normalize', null, ['number', 'number', 'number', 'number'], [ptr, data.length, min, max]);
+    //
+    //     Module._free(ptr);
+    //     return view;
+    // },
 
     /**
      * Modifies the range of an array.
@@ -1142,17 +1161,22 @@ dtm.transform = {
     /**
      * Converts an interval sequence into a beat sequence.
      * @function module:transform#intervalToBeats
-     * @param input
+     * @param intervals {array}
+     * @param ampseq {array}
      * @returns {Array}
      */
-    intervalsToBeats: function (input) {
+    intervalsToBeats: function (intervals, ampseq) {
         var res = [];
         var idx = 0;
 
-        input.forEach(function (note) {
+        intervals.forEach(function (note, noteIdx) {
             for (var i = 0; i < note; i++) {
                 if (i === 0) {
-                    res[idx] = 1;
+                    if (ampseq) {
+                        res[idx] = ampseq[mod(noteIdx, ampseq.length)];
+                    } else {
+                        res[idx] = 1;
+                    }
                 } else {
                     res[idx] = 0;
                 }

@@ -73,6 +73,7 @@ dtm.generator = function () {
             'gauss', 'gaussian', 'gaussCurve', 'normal',
             'sin', 'sine', 'cos', 'cosine',
             'tri', 'triangle',
+            'sig', 'sigmoid', 'logistic',
             'zeros', 'zeroes', 'ones',
             'constant', 'constants', 'const', 'consts',
             'repeat',
@@ -94,8 +95,6 @@ dtm.generator = function () {
     function isTypeCategOf(type) {
         return types[type].indexOf(params.type) > -1;
     }
-
-    // dtm.gen().get(): using dtm.array get instead
 
     function process() {
         function line(len, min, max, cycle) {
@@ -144,6 +143,12 @@ dtm.generator = function () {
         // TODO: implement
         function tri(len, min, max, amp, cycle, offset) {}
 
+        function sig(len, steepness) {
+            return dtm.line(len).range(-Math.E, Math.E).map(function (v) {
+                return 1/(1+Math.pow(Math.E,(-v*steepness)));
+            });
+        }
+
         function random(len, min, max, amp, floor) {
             var res = new Float32Array(len);
             for (var i = 0; i < len; i++) {
@@ -188,7 +193,7 @@ dtm.generator = function () {
             }
 
             var steps = Math.floor((end - start) / interval) + 1;
-            generator.len = steps;
+            generator.length = steps;
             //console.log(steps);
             var res = new Float32Array();
 
@@ -371,16 +376,16 @@ dtm.generator = function () {
         switch (params.type) {
             case 'line':
             case 'saw':
-                generator.val = line(generator.len, params.min, params.max);
+                generator.val = line(generator.length, params.min, params.max);
                 break;
 
             case 'rise':
-                generator.val = line(generator.len, sorted[0], sorted[1]);
+                generator.val = line(generator.length, sorted[0], sorted[1]);
                 break;
 
             case 'decay':
             case 'fall':
-                generator.val = line(generator.len, sorted[1], sorted[0]);
+                generator.val = line(generator.length, sorted[1], sorted[0]);
                 break;
 
             case 'adsr':
@@ -389,12 +394,12 @@ dtm.generator = function () {
 
             case 'sin':
             case 'sine':
-                generator.val = sin(generator.len, params.min, params.max, params.amp, params.cycle, paramsExt.phase);
+                generator.val = sin(generator.length, params.min, params.max, params.amp, params.cycle, paramsExt.phase);
                 break;
 
             case 'cos':
             case 'cosine':
-                generator.val = cos(generator.len, params.min, params.max, params.amp, params.cycle, 0.00);
+                generator.val = cos(generator.length, params.min, params.max, params.amp, params.cycle, 0.00);
                 break;
 
             case 'tri':
@@ -408,16 +413,16 @@ dtm.generator = function () {
             case 'rf':
             case 'rand':
             case 'random':
-                generator.val = random(generator.len, sorted[0], sorted[1], 1.0, false);
+                generator.val = random(generator.length, sorted[0], sorted[1], 1.0, false);
                 break;
 
             case 'noise':
-                generator.val = random(generator.len, sorted[0], sorted[1], params.amp, false);
+                generator.val = random(generator.length, sorted[0], sorted[1], params.amp, false);
                 break;
 
             case 'ri':
             case 'randi':
-                generator.val = random(generator.len, sorted[0], sorted[1], 1.0, true);
+                generator.val = random(generator.length, sorted[0], sorted[1], 1.0, true);
                 break;
 
             case 'r':
@@ -440,20 +445,20 @@ dtm.generator = function () {
                 break;
 
             case 'fibonacci':
-                generator.val = fibonacci(generator.len);
+                generator.val = fibonacci(generator.length);
                 break;
 
             case 'zeros':
             case 'zeroes':
-                generator.val = constant(generator.len, 0);
+                generator.val = constant(generator.length, 0);
                 break;
 
             case 'ones':
-                generator.val = constant(generator.len, 1);
+                generator.val = constant(generator.length, 1);
                 break;
 
             case 'const':
-                generator.val = constant(generator.len, params.const);
+                generator.val = constant(generator.length, params.const);
                 break;
 
             case 'string':
@@ -471,7 +476,7 @@ dtm.generator = function () {
                 break;
         }
 
-        generator.len = generator.val.length;
+        generator.length = generator.val.length;
         generator.meta.setOriginal(generator.val);
     }
 
@@ -505,7 +510,7 @@ dtm.generator = function () {
 
         var len = parseInt(length);
         if (!isNaN(len) && len > 0) {
-            generator.len = len;
+            generator.length = len;
         }
 
         process();
@@ -541,7 +546,7 @@ dtm.generator = function () {
      * @param amp
      * @returns {array}
      */
-    generator.amp = function (amp) {
+    generator.oscamp = function (amp) {
         var val = parseFloat(amp);
         if (!isNaN(val)) {
             params.amp = val;
@@ -602,7 +607,7 @@ dtm.generator = function () {
     };
 
     // TODO: do more readable type check
-    generator.len = 8;
+    generator.length = 8;
 
     if (arguments.length >= 1) {
         if (isObject(arguments[0])) {
@@ -642,11 +647,11 @@ dtm.generator = function () {
     }
 
     if (isTypeCategOf('envelope')) {
-        generator.len = 128;
+        generator.length = 128;
     }
 
     if (isTypeCategOf('random')) {
-        generator.len = 1;
+        generator.length = 1;
         params.min = 0.0;
 
         if (params.type === 'randi' || params.type === 'ri') {
@@ -656,7 +661,7 @@ dtm.generator = function () {
         }
 
         if (arguments.length >= 2 && isInteger(arguments[1])) {
-            generator.len = arguments[1] > 0 ? arguments[1] : 1;
+            generator.length = arguments[1] > 0 ? arguments[1] : 1;
         }
 
         if (arguments.length === 3) {
@@ -676,23 +681,23 @@ dtm.generator = function () {
             }
         }
     } else if (isTypeCategOf('oscil')) {
-        generator.len = 4096;
+        generator.length = 4096;
 
         // TODO: temporary
         if (arguments.length === 2 && isInteger(arguments[1])) {
-            generator.len = arguments[1] > 0 ? arguments[1] : 4096;
+            generator.length = arguments[1] > 0 ? arguments[1] : 4096;
         }
 
         if (arguments.length >= 3) {
             if (isArray(arguments[2])) {
                 if (arguments[2].length === 1) {
-                    generator.amp(arguments[2][0]);
+                    generator.oscamp(arguments[2][0]);
                 } else if (arguments[2].length === 2) {
                     params.min = arguments[2][0];
                     params.max = arguments[2][1];
                 }
             } else {
-                generator.amp(arguments[2]);
+                generator.oscamp(arguments[2]);
             }
         }
 
@@ -700,7 +705,7 @@ dtm.generator = function () {
             // set as amplitude
             params.min = -1.0;
             params.max = 1.0;
-            generator.amp(arguments[2]);
+            generator.oscamp(arguments[2]);
         }
 
         if (arguments.length === 4) {
@@ -771,7 +776,7 @@ dtm.generator = function () {
         } else if (isTypeCategOf('const')) {
             if (!isEmpty(arguments[1])) {
                 params.const = arguments[1];
-                generator.len = 1;
+                generator.length = 1;
             }
         } else {
             // set the length from arg 1
@@ -790,7 +795,7 @@ dtm.generator = function () {
                         // set as 0 - max
                         params.min = 0;
                         params.max = arguments[2];
-                        generator.amp(1.0);
+                        generator.oscamp(1.0);
                     }
 
                     if (arguments.length >= 4) {
@@ -808,7 +813,8 @@ dtm.generator = function () {
 
 dtm.g = dtm.gen = dtm.generator;
 
-var generators = ['line', 'rise', 'decay', 'fall', 'seq', 'sequence', 'series', 'range', 'r', 'noise', 'random', 'rand', 'rf', 'randi', 'ri', 'gaussian', 'gauss', 'normal', 'zeros', 'zeroes', 'ones', 'constant', 'constants', 'const', 'consts', 'repeat', 'string', 'str', 'sin', 'sine', 'cos', 'cosine', 'tri', 'triangle', 'saw', 'fibonacci', 'decay', 'scale', 'modal', 'modes', 'mode'];
+// creating shorthand modules
+var generators = ['line', 'rise', 'decay', 'fall', 'seq', 'sequence', 'series', 'range', 'r', 'noise', 'random', 'rand', 'rf', 'randi', 'ri', 'gaussian', 'gauss', 'normal', 'zeros', 'zeroes', 'ones', 'constant', 'constants', 'const', 'consts', 'repeat', 'string', 'str', 'sin', 'sine', 'cos', 'cosine', 'tri', 'triangle', 'saw', 'fibonacci', 'decay', 'scale', 'modal', 'modes', 'mode', 'sig', 'sigmoid', 'logistic'];
 
 generators.forEach(function (type) {
     dtm[type] = function () {

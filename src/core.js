@@ -31,7 +31,10 @@ var dtm = {
     modelCallers: {},
     clocks: [],
 
-    params: {},
+    params: {
+        plotter: null,
+        printer: null
+    },
 
     // TODO: a function to list currently loaded objects, such as data, arrays, models... - for console livecoding situation
 
@@ -121,6 +124,14 @@ var dtm = {
                 window[k] = v;
             }
         });
+    },
+
+    setPlotter: function (fn) {
+        dtm.params.plotter = fn;
+    },
+
+    setPrinter: function (fn) {
+        dtm.params.printer = fn;
     }
 };
 

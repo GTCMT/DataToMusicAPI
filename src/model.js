@@ -386,5 +386,3 @@ dtm.model = function (name, categ) {
     //model.load.apply(this, arguments);
     return model;
 };
-
-dtm.m = dtm.model;
