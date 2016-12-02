@@ -57,7 +57,7 @@ dtm.array = function () {
         'split', 'join',
         'pitchquantize', 'pq', 'mtof', 'ftom',
         'ntob', 'bton', 'itob', 'btoi', 'btot', 'ttob',
-        'size'
+        'size', 'interleave'
     ];
 
     var params = {
@@ -3205,6 +3205,21 @@ dtm.array = function () {
     };
 
 
+    /**
+     * Interleaves two arrays
+     * @param arrIn {dtm.array}
+     * @param depth1 {integer}
+     * @param depth2 {integer}
+     * @returns {dtm.array}
+     */
+    array.interleave = function (arrIn,depth1,depth2) {
+        var d1 = depth1 || 1
+        var d2 = depth2 || 1
+        return array.set(dtm.transform.interleave(array.get(), arrIn.get(), d1, d2));
+    };
+
+
+
     /* aliases */
 
     array.histo = array.histogram;
@@ -3259,6 +3274,7 @@ dtm.array = function () {
     // set the array content here
     array.set.apply(this, arguments);
     return array;
+
 };
 
 dtm.d = dtm.data = dtm.a = dtm.array;

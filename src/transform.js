@@ -1099,7 +1099,35 @@ dtm.transform = {
         return morphFixed(dtm.transform.fit(srcArr, resLen, interp), dtm.transform.fit(tgtArr, resLen), morphIdx);
     },
 
-    interleave: function (srcArr, tgtArr) {
+    /**
+        Interleave two arrays.
+        If input arrays are different lengths, the shorter will repeat.
+        @function module:transform#interleave
+        @param arr1 {array} 
+        @param arr2 {array}
+        @param [depth1=1] {integer}
+        @param [depth2=1] {integer}
+     */
+    interleave: function (arr1, arr2, depth1, depth2) {
+
+        var result = []
+        var newlength = Math.max(arr1.length,arr2.length) * (depth1 + depth2)
+        var index1 = 0
+        var index2 = 0
+        for (var i=0;i<newlength;i++) {
+            for (j=0;j<depth1;j++) {
+                var val = arr1[index1%arr1.length]
+                index1++
+                result.push( val )
+            }
+            for (j=0;j<depth2;j++) {
+                var val = arr2[index2%arr2.length]
+                index2++
+                result.push( val )
+            }
+        }
+        return result
+
     },
 
 
