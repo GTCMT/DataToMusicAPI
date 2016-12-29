@@ -1,5 +1,5 @@
 /**
- * @fileOverview A module for generating array object with certain shapes, extends the dtm.array module
+ * @fileOverview A module for generating array object with certain shapes, extends the dtm.data module
  * @module generator
  */
 
@@ -28,12 +28,12 @@ dtm.generator = function () {
         phase: 0.0,
         const: 0.0,
         string: '',
-        pack: false, // into dtm.array
+        pack: false, // into dtm.data
         typed: true // Float32Array
     };
 
-    // extend the dtm.array module
-    var generator = dtm.array();
+    // extend the dtm.data module
+    var generator = dtm.data();
 
     var params = generator.meta.getParams();
     objForEach(paramsExt, function (val, key) {
@@ -284,7 +284,7 @@ dtm.generator = function () {
                         res = new Float32Array(transposeScale(v.values, transpose));
                     }
                 } else {
-                    res.push(dtm.array(v.values).label(k));
+                    res.push(dtm.data(v.values).label(k));
                 }
             });
 
@@ -334,7 +334,7 @@ dtm.generator = function () {
             } else {
                 var res = [];
                 objForEach(modes, function (v, k) {
-                    res.push(dtm.array(v).label(k));
+                    res.push(dtm.data(v).label(k));
                 });
                 return res;
             }

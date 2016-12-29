@@ -16,14 +16,14 @@ dtm.synth = function () {
     var params = {
         sr: 44100,
         dur: {
-            base: dtm.array([[1]]),
+            base: dtm.data([[1]]),
             auto: true
         },
         interval: {
-            base: dtm.array([[1]]),
+            base: dtm.data([[1]]),
             auto: true
         },
-        play: { base: dtm.array([[true]]) },
+        play: { base: dtm.data([[true]]) },
         offset: 0.0,
         repeat: 1,
         autoRep: true,
@@ -43,28 +43,28 @@ dtm.synth = function () {
 
         wavetable: null,
         rendered: null,
-        tabLen: 8192,
+        tabLen: 1024,
         source: 'sine',
         type: 'synth',
         promise: null,
         pending: false,
 
-        amp: { base: dtm.array([[0.5]]) },
+        amp: { base: dtm.data([[0.5]]) },
 
         notenum: {
-            base: dtm.array([[69]]),
+            base: dtm.data([[69]]),
             isFinal: true
         },
         freq: {
-            base: dtm.array([[440]]),
+            base: dtm.data([[440]]),
             isFinal: false
         },
         pitch: {
-            base: dtm.array([[1]]),
+            base: dtm.data([[1]]),
             isFinal: false
         },
 
-        pan: { base: dtm.array([[0]]) },
+        pan: { base: dtm.data([[0]]) },
         curve: false,
         offline: false,
         clock: null,
@@ -152,7 +152,9 @@ dtm.synth = function () {
     // actx.createStereoPanner = null;
 
     var init = function () {
-        if (isInteger(arguments[0]) && arguments[0] > 0) {
+        if (isFunction(arguments[0])) {
+            params.onNoteCallback.push(arguments[0]);
+        } else if (isInteger(arguments[0]) && arguments[0] > 0) {
             params.tabLen = arguments[0];
         } else if (isObject(arguments[0])) {
             if (arguments[0].hasOwnProperty('type')) {
@@ -172,7 +174,7 @@ dtm.synth = function () {
         });
     };
 
-    init.apply(this, arguments);
+    init.apply(this, arguments); // TODO: there is also synth.load.apply at the bottom!
 
     function freqToPitch(freq) {
         if (isFloat32Array(freq)) {
@@ -220,11 +222,9 @@ dtm.synth = function () {
                     }
                 });
             }
+
+            // curve.param.setValueCurveAtTime(new Float32Array(curve.value), time, dur);
         });
-    }
-
-    function modParamCurve () {
-
     }
 
     var fx = {
@@ -888,7 +888,7 @@ dtm.synth = function () {
                 dummySrc.connect(silence);
                 silence.connect(out);
 
-                var tempBuff = actx.createBuffer(1, params.tabLen, params.sr); // FF needs this stupid procedure (Feb 18, 2016)
+                var tempBuff = actx.createBuffer(1, params.tabLen, params.sr); // FF needs this stupid procedure of storing to a variable (Feb 18, 2016)
                 if (tempBuff.copyToChannel) {
                     // for Safari
                     tempBuff.copyToChannel(params.wavetable, 0);
@@ -1175,6 +1175,7 @@ dtm.synth = function () {
         setFinal('notenum');
 
         if (params.playing) {
+            nodes.src.playbackRate.cancelScheduledValues(params.startTime);
             var pitch = processParam(params.notenum, seqValue).map(function (v) {
                 return freqToPitch(mtof(v));
             });
@@ -1241,12 +1242,12 @@ dtm.synth = function () {
     };
 
     synth.ps = function (src) {
-
+        return synth;
     };
 
     synth.wavetable = function (src) {
         if (arguments.length === 0) {
-            return dtm.array(params.wavetable);
+            return dtm.data(params.wavetable);
         } else if (isDtmSynth(arguments[0])) {
             return synth.wavetable(arguments[0].wavetable());
         }
@@ -1255,7 +1256,7 @@ dtm.synth = function () {
         if (isFloat32Array(src)) {
             // params.tabLen = src.length; // for the morphing / in-note modulation
             if (params.tabLen !== src.length) {
-                params.wavetable = dtm.array(src).step(params.tabLen).get();
+                params.wavetable = dtm.data(src).step(params.tabLen).get();
             } else {
                 params.wavetable = src;
             }
@@ -1263,10 +1264,10 @@ dtm.synth = function () {
         } else if (isFunction(src)) {
             if (params.promise) {
                 params.promise.then(function () {
-                    params.wavetable = toFloat32Array(src(dtm.array(params.wavetable)));
+                    params.wavetable = toFloat32Array(src(dtm.data(params.wavetable)));
                 });
             } else {
-                params.wavetable = toFloat32Array(src(dtm.array(params.wavetable)));
+                params.wavetable = toFloat32Array(src(dtm.data(params.wavetable)));
                 params.tabLen = params.wavetable.length;
                 //params.pitch = freqToPitch(params.freq); // ?
             }
@@ -1279,7 +1280,7 @@ dtm.synth = function () {
 
         if (params.playing) {
             if (params.wavetable.length !== params.tabLen) {
-                params.wavetable = dtm.array(params.wavetable).step(params.tabLen).get();
+                params.wavetable = dtm.data(params.wavetable).step(params.tabLen).get();
             }
             if (nodes.src.buffer.copyToChannel) {
                 // for Safari
@@ -1297,6 +1298,22 @@ dtm.synth = function () {
 
     synth.w = synth.wt = synth.wave = synth.wavetable;
 
+    synth.len = function (val) {
+        if (isInteger(val) && val > 0) {
+            params.tabLen = val;
+
+            // TODO: move this to global (master?)
+            // also check in init()
+            params.wavetable = new Float32Array(params.tabLen);
+            params.wavetable.forEach(function (v, i) {
+                params.wavetable[i] = Math.sin(2 * Math.PI * i / params.tabLen);
+            });
+        }
+        return synth;
+    };
+
+    synth.size = synth.len;
+
     synth.source = function (src) {
         if (isString(src)) {
             params.source = src;
@@ -1308,7 +1325,7 @@ dtm.synth = function () {
     synth.load = function (name) {
         if (name === 'noise') {
             params.wavetable = dtm.gen('noise').size(44100).get();
-            synth.pitch(1);
+            synth.freq(1);
 
         } else if (isString(name)) {
             params.pending = true;
@@ -1653,15 +1670,15 @@ dtm.synth = function () {
             if (isNestedNumDtmArray(src)) {
                 return src;
             } else if (isNestedWithDtmArray(src)) {
-                return dtm.array(src);
+                return dtm.data(src);
             } else if (isNumDtmArray(src)) {
-                return dtm.array([src]);
+                return dtm.data([src]);
             } else if (isNestedArray(src)) {
-                return dtm.array(src);
+                return dtm.data(src);
             } else if (isNumOrFloat32Array(src)) {
-                return dtm.array([src]);
+                return dtm.data([src]);
             } else {
-                return dtm.array([toFloat32Array(src)]);
+                return dtm.data([toFloat32Array(src)]);
             }
         }
     }
@@ -1673,15 +1690,15 @@ dtm.synth = function () {
             if (isNestedNumDtmArray(src)) {
                 return src;
             } else if (isNestedWithDtmArray(src)) {
-                return dtm.array.apply(this, src);
+                return dtm.data.apply(this, src);
             } else if (isNumDtmArray(src)) {
                 return src().block(1);
             } else if (isNestedArray(src)) {
-                return dtm.array(src);
+                return dtm.data(src);
             } else if (isNumOrFloat32Array(src)) {
-                return dtm.array(src).block(1);
+                return dtm.data(src).block(1);
             } else {
-                return dtm.array([toFloat32Array(src)]);
+                return dtm.data([toFloat32Array(src)]);
             }
         }
     }
@@ -1735,19 +1752,19 @@ dtm.synth = function () {
         switch (param) {
             case 'wt':
             case 'wavetable':
-                return dtm.array(params.wavetable);
+                return dtm.data(params.wavetable);
             case 'dur':
-                return dtm.array(params.dur);
+                return dtm.data(params.dur);
             case 'phase':
                 return getPhase();
             case 'nn':
             case 'notenum':
-                return dtm.array(params.notenum);
+                return dtm.data(params.notenum);
             case 'freq':
             case 'frequency':
-                return dtm.array(params.freq);
+                return dtm.data(params.freq);
             case 'pitch':
-                return dtm.array(params.pitch);
+                return dtm.data(params.pitch);
             case 'fx':
                 return nodes.fx;
 

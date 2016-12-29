@@ -307,6 +307,36 @@ function isDtmSynth(val) {
     }
 }
 
+function isDtmData(val) {
+    if (isObject(val) || typeof(val) === 'function') {
+        if (val.hasOwnProperty('meta')) {
+            return (val.meta.type === 'dtm.data' || val.meta.type === 'dtm.generator');
+        } else {
+            return false;
+        }
+    } else {
+        return false;
+    }
+}
+
+function isNestedDtmData(val) {
+    if (isDtmData(val)) {
+        return val.every(function (v) {
+            return isDtmData(v);
+        });
+    } else {
+        return false;
+    }
+}
+
+function isNumDtmData(obj) {
+    return isDtmData(obj) && isNumOrFloat32Array(obj.get());
+}
+
+function isNestedNumDtmData(obj) {
+    return isNestedDtmData(obj) && obj.get().every(function (a) { return isNumDtmData(a)});
+}
+
 /**
  * Checks if the value is an instance of dtm.array
  * @param val
@@ -315,7 +345,7 @@ function isDtmSynth(val) {
 function isDtmArray(val) {
     if (isObject(val) || typeof(val) === 'function') {
         if (val.hasOwnProperty('meta')) {
-            return (val.meta.type === 'dtm.array' || val.meta.type === 'dtm.generator');
+            return (val.meta.type === 'dtm.array' || val.meta.type === 'dtm.data' || val.meta.type === 'dtm.generator');
         } else {
             return false;
         }
@@ -1236,7 +1266,9 @@ dtm.util.toFloat32Array = toFloat32Array;
 dtm.util.fromFloat32Array = fromFloat32Array;
 
 /* SINGLE-VALUE CALCULATION */
-
+dtm.util.mod = mod;
+dtm.util.mtof = mtof;
+dtm.util.ftom = ftom;
 
 /* LIST OPERATION */
 dtm.util.Float32Concat = Float32Concat;
