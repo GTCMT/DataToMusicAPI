@@ -25,6 +25,7 @@ module.exports = function (grunt) {
                     'src/instrument.js',
                     'src/model.js',
                     'src/synth.js',
+                    'src/music.js',
                     'src/master.js',
                     'src/guido.js',
                     'src/inscore.js',

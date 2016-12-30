@@ -298,7 +298,7 @@ function isDtmObj(val) {
 function isDtmSynth(val) {
     if (isObject(val) || typeof(val) === 'function') {
         if (val.hasOwnProperty('meta')) {
-            return val.meta.type === 'dtm.synth';
+            return val.meta.type === 'dtm.synth' || val.meta.type === 'dtm.music';
         } else {
             return false;
         }

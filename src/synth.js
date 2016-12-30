@@ -1826,6 +1826,6 @@ dtm.synth = function () {
     return synth;
 };
 
-dtm.m = dtm.music = dtm.s = dtm.syn = dtm.synth;
+dtm.s = dtm.syn = dtm.synth;
 
 dtm.startWebAudio();

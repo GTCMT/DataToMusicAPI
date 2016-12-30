@@ -8,18 +8,4 @@ var alias = {
     model: ['model', 'mdl', 'm'],
     synth: ['synth', 'syn', 's'],
     utils: ['utilities', 'utils', 'util', 'utl', 'u'],
-
-    // synth
-    amplitude: ['amplitude', 'amp', 'a'],
-    frequency: ['frequency', 'freq', 'frq', 'f'],
-    notenum: ['notenumber', 'notenum', 'note', 'nn', 'n'],
-
-    play: ['play', 'p'],
-    stop: ['stop', 's'],
-    run: ['run', 'r'],
-
-    interval: ['interval', 'int', 'i'],
-    duration: ['duration', 'dur', 'd'],
-    repeat: ['repeat', 'rep'],
-    trigger: ['trigger', 'trig', 'tr', 't']
 };

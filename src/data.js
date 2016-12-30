@@ -9,7 +9,7 @@
  * @function module:data.data
  * @returns array object {{value: null, normalized: null, length: null, min: null, max: null, mean: null}}
  */
-dtm.data = function () {
+dtm.d = dtm.data = function () {
     /* LIST OPERATIONS*/
 
     // array.map.dist = function () {
@@ -3334,5 +3334,3 @@ dtm.data.augment({
 dtm.data.augment({
 
 });
-
-dtm.d = dtm.data;
