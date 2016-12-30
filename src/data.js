@@ -10,49 +10,6 @@
  * @returns array object {{value: null, normalized: null, length: null, min: null, max: null, mean: null}}
  */
 dtm.data = function () {
-    // /**
-    //  * Sets the value type of the array content. Should be either 'number' or 'string'?
-    //  * @function mudule:array#valuetype
-    //  * @param arg
-    //  * @returns {dtm.data}
-    //  */
-    // array.valuetype = function (arg) {
-    //     if (isString(arg)) {
-    //         params.type = arg;
-    //     }
-    //     return array;
-    // };
-
-    // function checkType(arr) {
-    //     //var summed = sum(arr);
-    //     //var res;
-    //     //
-    //     //if (isNaN(summed)) {
-    //     //    res = 'string';
-    //     //} else {
-    //     //    if (summed.toString().indexOf('.') > -1) {
-    //     //        res = 'float';
-    //     //    } else {
-    //     //        res = 'int';
-    //     //    }
-    //     //}
-    //
-    //     // TODO: workaround for a missing value
-    //     if (!isNumber(arr[0])) {
-    //         if (isObject(arr[0])) {
-    //             params.type = 'collection';
-    //         } else {
-    //             params.type = typeof(arr[0]);
-    //         }
-    //     } else {
-    //         //params.type = 'number';
-    //         params.type = typeof(arr[0]);
-    //     }
-    //
-    //     //array.type = res;
-    // }
-
-
     /* LIST OPERATIONS*/
 
     // array.map.dist = function () {
@@ -126,37 +83,6 @@ dtm.data = function () {
     // };
 
 
-
-    // array.block.at = function () {
-    //     return array;
-    // };
-    //
-    // array.block.diff = function (val, abs) {
-    //     if (!isBoolean(abs)) {
-    //         abs = false;
-    //     }
-    //
-    //     return array;
-    // };
-    //
-    // array.block.into = function (val) {
-    //     if (isInteger(val)) {
-    //         var len = Math.floor(array.length / val);
-    //         return array.block(len);
-    //     } else {
-    //         return array;
-    //     }
-    // };
-    //
-    // array.block.peak = function (tolerance) {
-    //     return array;
-    // };
-    //
-    // array.block.minpeak = function (tolerance) {
-    //     return array;
-    // };
-
-
     // /**
     //  * Removes zeros from the sequence.
     //  * @function module:data#removezeros
@@ -173,7 +99,6 @@ dtm.data = function () {
     // array.iir = function () {
     //     return array;
     // };
-
 
     var data = new Data();
     return data.set.apply(data, arguments);
@@ -255,6 +180,21 @@ dtm.data.augment = function (fnList) {
     });
 };
 
+// function addNestedProperty(Class, fn) {
+//     Class.prototype[fn] = function () {
+//         var data = this.data;
+//         var args = arguments;
+//
+//         if (isNestedDtmArray(data)) {
+//             return data.map(function (a) {
+//                 return a[fn].apply(a, args);
+//             });
+//         } else {
+//             return data;
+//         }
+//     };
+// }
+
 function Data() {
     // callable object
     function data() {
@@ -304,10 +244,11 @@ function Data() {
         value: ''
     });
 
-    data.each = new Each(data);
-    data.forEach = data.foreach = data.each;
-
+    data.forEach = data.foreach = data.each = new Each(data);
     data.map = new Map(data);
+    data.g = data.group = data.b = data.block = new Block(data);
+    data.f = data.fit = new Fit(data);
+    data.s = data.str = data.stretch = new Stretch(data);
 
     return data;
 }
@@ -316,37 +257,262 @@ function Data() {
 Data.prototype = Object.create(Function.prototype);
 
 function Each(data) {
-    self.data = data;
-
     /**
      * Performs JS Array.map function to the array values.
      * @function module:data#map
      * @param fn
      * @returns {dtm.data}
      */
-    function self(fn) {
-        data.val.forEach(fn);
-        return data;
+    function each(fn) {
+        each.data.val.forEach(fn);
+        return each.data;
     }
 
-    self.__proto__ = Each.prototype;
-    return self;
+    each.data = data;
+    each.__proto__ = Each.prototype;
+
+    return each;
 }
 
 Each.prototype = Object.create(Function.prototype);
 
 function Map(data) {
-    self.data = data;
-
-    function self(fn) {
+    function map(fn) {
         return data.set(fromFloat32Array(data.val).map(fn));
     }
 
-    self.__proto__ = Map.prototype;
-    return self;
+    map.data = data;
+    map.__proto__ = Map.prototype;
+
+    return map;
 }
 
 Map.prototype = Object.create(Function.prototype);
+
+function Block(data) {
+    // TODO: accept option as arg? for numBlocks, pad, overlap ratio, etc.
+    function block(len, hop, window, pad) {
+        if (!isInteger(len) || len < 1) {
+            len = 1;
+        } else if (len > this.length) {
+            len = this.length;
+        }
+        if (!isInteger(hop) || hop < 1) {
+            hop = len;
+        }
+        if (isEmpty(window)) {
+            window = 'rectangular';
+        }
+
+        var newArr = [];
+        var numBlocks = Math.floor((data.length - len) / hop) + 1;
+
+        for (var i = 0; i < numBlocks; i++) {
+            // name: original starting index
+            newArr[i] = dtm.data(data.val.slice(i*hop, i*hop+len)).window(window).parent(data).label((i*hop).toString());
+        }
+
+        return data.set(newArr);
+    }
+
+    block.data = data;
+    block.__proto__ = Block.prototype;
+
+    ['g', 'group', 'b', 'block'].forEach(function (name) {
+        // Data.prototype[name] = block;
+
+        Each.prototype[name] = function () {
+            var data = this.data;
+            var args = arguments;
+
+            if (isNestedDtmArray(data)) {
+                data.each(function (a) {
+                    a[name].apply(a, args);
+                });
+                return data;
+            } else {
+                return data;
+            }
+        };
+
+        Map.prototype[name] = function () {
+            var data = this.data;
+            var args = arguments;
+
+            if (isNestedDtmArray(data)) {
+                return data.map(function (a) {
+                    return a[name].apply(a, args);
+                });
+            } else {
+                return data;
+            }
+        };
+    });
+
+    return block;
+}
+
+Block.prototype = Object.create(Function.prototype);
+
+Block.prototype.into = function (val) {
+    var data = this.data;
+
+    if (isInteger(val)) {
+        var len = Math.floor(data.length / val);
+        return data.block(len);
+    } else {
+        return data;
+    }
+};
+
+function Fit(data) {
+    /**
+     * Stretches or shrinks the length of the array into the specified length.
+     * @function module:data#fit
+     * @param len {number} Integer
+     * @param [interp='linear'] {string}
+     * @returns {dtm.data}
+     */
+    function fit(len, interp) {
+        if (isNestedDtmArray(data)) {
+            return data.map(function (a) {
+                return a.fit(len, interp);
+            });
+        }
+        return data.set(dtm.transform.fit(data.val, len, interp));
+    }
+
+    fit.data = data;
+    fit.__proto__ = Fit.prototype;
+
+    ['fit', 'f'].forEach(function (name) {
+        Each.prototype[name] = function () {
+            var data = this.data;
+            var args = arguments;
+
+            if (isNestedDtmArray(data)) {
+                data.each(function (a) {
+                    a[name].apply(a, args);
+                });
+                return data;
+            } else {
+                return data;
+            }
+        };
+
+        Map.prototype[name] = function () {
+            var data = this.data;
+            var args = arguments;
+
+            if (isNestedDtmArray(data)) {
+                return data.map(function (a) {
+                    return a[name].apply(a, args);
+                });
+            } else {
+                return data;
+            }
+        };
+    });
+
+    return fit;
+}
+
+Fit.prototype = Object.create(Function.prototype);
+
+Fit.prototype.linear = Fit.prototype.line = function (len) {
+    var data = this.data;
+    return data.fit(len, 'line');
+};
+
+Fit.prototype.step = function (len) {
+    var data = this.data;
+    return data.fit(len, 'step');
+};
+
+Fit.prototype.cos = Fit.prototype.cosine = function (len) {
+    var data = this.data;
+    return data.fit(len, 'cos');
+};
+
+Fit.prototype.cub = Fit.prototype.cubic = function (len) {
+    var data = this.data;
+    return data.fit(len, 'cubic');
+};
+
+function Stretch(data) {
+    /**
+     * Multiplies the length of the array by the given factor.
+     * @function module:data#stretch
+     * @param factor {number}
+     * @param [interp='linear'] {string}
+     * @returns {dtm.data}
+     */
+    function stretch (factor, interp) {
+        if (isNestedDtmArray(data)) {
+            return data.map(function (a) {
+                return a.stretch(factor, interp);
+            })
+        }
+
+        return data.set(dtm.transform.stretch(data.val, factor, interp));
+    }
+
+    stretch.data = data;
+    stretch.__proto__ = Stretch.prototype;
+
+    ['stretch', 'str', 's'].forEach(function (name) {
+        Each.prototype[name] = function () {
+            var data = this.data;
+            var args = arguments;
+
+            if (isNestedDtmArray(data)) {
+                data.each(function (a) {
+                    a[name].apply(a, args);
+                });
+                return data;
+            } else {
+                return data;
+            }
+        };
+
+        Map.prototype[name] = function () {
+            var data = this.data;
+            var args = arguments;
+
+            if (isNestedDtmArray(data)) {
+                return data.map(function (a) {
+                    return a[name].apply(a, args);
+                });
+            } else {
+                return data;
+            }
+        };
+    });
+
+    return stretch;
+}
+
+Stretch.prototype = Object.create(Function.prototype);
+
+Stretch.prototype.linear = Stretch.prototype.line = function (factor) {
+    var data = this.data;
+    return data.stretch(factor, 'line');
+};
+
+Stretch.prototype.step = function (factor) {
+    var data = this.data;
+    return data.stretch(factor, 'step');
+};
+
+Stretch.prototype.cos = Stretch.prototype.cosine = function (factor) {
+    var data = this.data;
+    return data.stretch(factor, 'cos');
+};
+
+Stretch.prototype.cub = Stretch.prototype.cubic = function (factor) {
+    var data = this.data;
+    return data.stretch(factor, 'cubic');
+};
 
 /* basic functions */
 dtm.data.augment({
@@ -1252,47 +1418,12 @@ dtm.data.augment({
 /* interpolation and resampling */
 dtm.data.augment({
     aliases: {
-        fit: ['f'],
-        stretch: ['str', 's', 'ts'],
         linear: ['line'],
-        cosine: ['cos']
-    },
-
-    /**
-     * Stretches or shrinks the length of the array into the specified length.
-     * @function module:data#fit
-     * @param len {number} Integer
-     * @param [interp='linear'] {string}
-     * @returns {dtm.data}
-     */
-    fit: function fit(len, interp) {
-        var that = this;
-        if (isNestedDtmArray(this)) {
-            return this.map(function (a) {
-                return a.fit(len, interp);
-            });
-        }
-        // fit.line = function (len) {
-        //     return that.fit(len, 'linear');
-        // };
-        return this.set(dtm.transform.fit(this.val, len, interp));
-    },
-
-    /**
-     * Multiplies the length of the array by the given factor.
-     * @function module:data#stretch
-     * @param factor {number}
-     * @param [interp='linear'] {string}
-     * @returns {dtm.data}
-     */
-    stretch: function (factor, interp) {
-        if (isNestedDtmArray(this)) {
-            return this.map(function (a) {
-                return a.stretch(factor, interp);
-            })
-        }
-
-        return this.set(dtm.transform.stretch(this.val, factor, interp));
+        cosine: ['cos'],
+        cubic: ['cub'],
+        slinear: ['sline'],
+        scosine: ['scos'],
+        scubic: ['scub']
     },
 
     linear: function (len) {
@@ -1309,6 +1440,22 @@ dtm.data.augment({
 
     cubic: function (len) {
         return this.fit(len, 'cubic');
+    },
+
+    slinear: function (factor) {
+        return this.stretch(factor, 'linear');
+    },
+
+    sstep: function (factor) {
+        return this.stretch(factor, 'step');
+    },
+
+    scosine: function (factor) {
+        return this.stretch(factor, 'cos');
+    },
+
+    scubic: function (factor) {
+        return this.stretch(factor, 'cubic');
     },
 
     /**
@@ -1359,35 +1506,9 @@ dtm.data.augment({
 /* blocking operations */
 dtm.data.augment({
     aliases: {
-        block: ['b', 'group', 'g'],
         unblock: ['ub', 'u', 'ungroup', 'ug', 'flatten'],
         window: ['win'],
         transp: ['t']
-    },
-
-    // TODO: accept option as arg? for numBlocks, pad, overlap ratio, etc.
-    block: function (len, hop, window, pad) {
-        if (!isInteger(len) || len < 1) {
-            len = 1;
-        } else if (len > this.length) {
-            len = this.length;
-        }
-        if (!isInteger(hop) || hop < 1) {
-            hop = len;
-        }
-        if (isEmpty(window)) {
-            window = 'rectangular';
-        }
-
-        var newArr = [];
-        var numBlocks = Math.floor((this.length - len) / hop) + 1;
-
-        for (var i = 0; i < numBlocks; i++) {
-            // name: original starting index
-            newArr[i] = dtm.data(this.val.slice(i*hop, i*hop+len)).window(window).parent(this).label((i*hop).toString());
-        }
-
-        return this.set(newArr);
     },
 
     unblock: function () {
@@ -1784,7 +1905,7 @@ dtm.data.augment({
     },
 
     /**
-     * Applys the array contents as the power to the argument as the base
+     * Applies the array contents as the power to the argument as the base
      * @function module:data#powof
      * @param factor {number|array|dtm.data}
      * @param [interp='linear'] {string}
@@ -2485,7 +2606,7 @@ dtm.data.augment({
 
 /* nominal */
 dtm.data.augment({
-    aliase: {
+    aliases: {
         histogram: ['histo'],
         distribution: ['dist', 'pmf'],
         unique: ['uniq'],

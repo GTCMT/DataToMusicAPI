@@ -1,6 +1,6 @@
 /**
- * @fileOverview Data object. Extends the dtm.array class, storing a multi-dimensional array.
- * @module data
+ * @fileOverview Data object. Extends the dtm.data class, storing a multi-dimensional array.
+ * @module loader
  */
 
 /**
@@ -8,7 +8,6 @@
  * @function module:data.data
  * @param [input] {string} URL to load or query the data
  * @param fn {function}
- * @param type
  * @returns {dtm.data | promise}
  */
 dtm.load = function (input, fn) {
@@ -85,11 +84,11 @@ dtm.load = function (input, fn) {
 
                             if (dtm.wa.isOn) {
                                 dtm.wa.actx.decodeAudioData(xhr.response, function (buf) {
-                                    var data = dtm.array();
+                                    var data = dtm.data();
                                     var arrays = [];
                                     for (var c = 0; c < buf.numberOfChannels; c++) {
                                         var floatArr = buf.getChannelData(c);
-                                        arrays.push(dtm.array(Array.prototype.slice.call(floatArr)).label('ch_' + c).parent(data));
+                                        arrays.push(dtm.data(Array.prototype.slice.call(floatArr)).label('ch_' + c).parent(data));
                                     }
 
                                     if (!isEmpty(fn)) {
@@ -125,10 +124,10 @@ dtm.load = function (input, fn) {
                             var keys = [];
 
                             if (ext === 'csv') {
-                                var data = dtm.array();
+                                var data = dtm.data();
                                 var arrays = [];
                                 objForEach(dtm.parser.csvToCols(xhr.response), function (v, k) {
-                                    var a = dtm.array(v).label(k).parent(data);
+                                    var a = dtm.data(v).label(k).parent(data);
                                     arrays.push(a);
                                 });
 
@@ -205,10 +204,10 @@ dtm.load = function (input, fn) {
                     resolve(JSON.parse(e.target.result));
                 } else if (fileType === 'csv') {
                     //resolve(dtm.parser.csvToCols(e.target.result));
-                    var data = dtm.array();
+                    var data = dtm.data();
                     var arrays = [];
                     objForEach(dtm.parser.csvToCols(e.target.result), function (v, k) {
-                        var a = dtm.array(v).label(k).parent(data);
+                        var a = dtm.data(v).label(k).parent(data);
                         arrays.push(a);
                     });
 
@@ -231,10 +230,10 @@ dtm.csv = function (input, fn) {
 
             xhr.onreadystatechange = function () {
                 if (xhr.readyState == 4 && xhr.status == 200) {
-                    var data = dtm.array();
+                    var data = dtm.data();
                     var arrays = [];
                     objForEach(dtm.parser.csvToCols(xhr.response), function (v, k) {
-                        var a = dtm.array(v).label(k).parent(data);
+                        var a = dtm.data(v).label(k).parent(data);
                         arrays.push(a);
                     });
 
@@ -250,7 +249,7 @@ dtm.csv = function (input, fn) {
             xhr.send();
         });
 
-        var data = dtm.array();
+        var data = dtm.data();
         p.then(function (d) {
             data.set(d);
         });
@@ -264,10 +263,10 @@ dtm.csv = function (input, fn) {
         return new Promise(function (resolve) {
             reader.onload = function (e) {
                 //resolve(dtm.parser.csvToCols(e.target.result));
-                var data = dtm.array();
+                var data = dtm.data();
                 var arrays = [];
                 objForEach(dtm.parser.csvToCols(e.target.result), function (v, k) {
-                    var a = dtm.array(v).label(k).parent(data);
+                    var a = dtm.data(v).label(k).parent(data);
                     arrays.push(a);
                 });
 
@@ -293,7 +292,7 @@ dtm.text = function (input, fn) {
 
             xhr.onreadystatechange = function () {
                 if (xhr.readyState == 4 && xhr.status == 200) {
-                    var data = dtm.array();
+                    var data = dtm.data();
                     if (isString(xhr.response)) {
                         data.set(xhr.response);
                     } else {
@@ -312,7 +311,7 @@ dtm.text = function (input, fn) {
             xhr.send();
         });
 
-        var data = dtm.array();
+        var data = dtm.data();
         p.then(function (res) {
             p = data.set(res);
         });
@@ -325,7 +324,7 @@ dtm.text = function (input, fn) {
         reader.readAsText(elem_files[0]);
         return new Promise(function (resolve) {
             reader.onload = function (e) {
-                var data = dtm.array();
+                var data = dtm.data();
                 if (isString(e.target.result)) {
                     data.set(e.target.result);
                 }
@@ -349,7 +348,7 @@ dtm.web = function (url, fn) {
 
         xhr.onreadystatechange = function () {
             if (xhr.readyState == 4 && xhr.status == 200) {
-                var data = dtm.array();
+                var data = dtm.data();
 
                 if (url.indexOf('wunderground') > -1) {
                     var obj = JSON.parse(xhr.response);
@@ -366,14 +365,14 @@ dtm.web = function (url, fn) {
                                 return doc[k];
                             });
 
-                            var resArray = dtm.array(temp).label(k);
+                            var resArray = dtm.data(temp).label(k);
 
                             if (isParsableNumArray(temp)) {
                                 resArray.tonum();
                             }
                             return resArray;
                         });
-                        return dtm.array(res);
+                        return dtm.data(res);
                     }
 
                     var res = [];
@@ -387,7 +386,7 @@ dtm.web = function (url, fn) {
                             temp = mapObjArray(temp);
                         }
 
-                        var resArray = dtm.array(temp).label(k).parent(data);
+                        var resArray = dtm.data(temp).label(k).parent(data);
                         if (isParsableNumArray(temp)) {
                             resArray.tonum();
                         }
@@ -438,7 +437,7 @@ dtm.image = function (input, fn, mode) {
 
             xhr.onreadystatechange = function () {
                 if (xhr.readyState == 4 && xhr.status == 200) {
-                    var data = dtm.array();
+                    var data = dtm.data();
 
                     var img = new Image();
                     img.onload = function () {
@@ -464,10 +463,10 @@ dtm.image = function (input, fn, mode) {
                         }
 
                         // data.set([
-                        //     dtm.array(red).block(img.width).label('red').parent(data),
-                        //     dtm.array(green).block(img.width).label('green').parent(data),
-                        //     dtm.array(blue).block(img.width).label('blue').parent(data),
-                        //     dtm.array(bri).block(img.width).label('brightness').parent(data)
+                        //     dtm.data(red).block(img.width).label('red').parent(data),
+                        //     dtm.data(green).block(img.width).label('green').parent(data),
+                        //     dtm.data(blue).block(img.width).label('blue').parent(data),
+                        //     dtm.data(bri).block(img.width).label('brightness').parent(data)
                         // ]);
                         data.set(bri).block(img.width).label('brightness');
 
@@ -499,10 +498,10 @@ dtm.image = function (input, fn, mode) {
                     resolve(JSON.parse(e.target.result));
                 } else if (fileType === 'csv') {
                     //resolve(dtm.parser.csvToCols(e.target.result));
-                    var data = dtm.array();
+                    var data = dtm.data();
                     var arrays = [];
                     objForEach(dtm.parser.csvToCols(e.target.result), function (v, k) {
-                        var a = dtm.array(v).label(k).parent(data);
+                        var a = dtm.data(v).label(k).parent(data);
                         arrays.push(a);
                     });
 
@@ -531,7 +530,7 @@ dtm.cam = function (input, interval) {
         fn = input;
     }
     if (isEmpty(data)) {
-        data = dtm.array(0);
+        data = dtm.data(0);
     }
 
     if (!isNumber(interval) || interval < 0) {
