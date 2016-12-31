@@ -3330,7 +3330,36 @@ dtm.data.augment({
     }
 });
 
-/* obsolete */
+/* contributions */
 dtm.data.augment({
+    /**
+     * Interleaves two arrays
+     * @param arrIn {dtm.array}
+     * @param [depth1=1] {number} Must be an integer
+     * @param [depth2=1] {number} Must be an integer
+     * @returns {dtm.array}
+     * @author Ben Taylor
+     */
+    interleave: function (arrIn, depth1, depth2) {
+        var d1 = depth1 || 1;
+        var d2 = depth2 || 1;
 
+        var result = [];
+        var newlength = Math.max(this.length, arrIn.length) * (d1 + d2);
+        var index1 = 0, index2 = 0;
+        var val = 0, j = 0;
+        for (var i = 0; i < newlength; i++) {
+            for (j = 0; j < d1; j++) {
+                val = this.get(index1 % this.length);
+                index1++;
+                result.push(val);
+            }
+            for (j = 0; j < d2; j++) {
+                val = arrIn.get(index2 % arrIn.length);
+                index2++;
+                result.push(val);
+            }
+        }
+        return this.set(result);
+    }
 });

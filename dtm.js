@@ -3754,7 +3754,6 @@ dtm.transform = {
         return res;
     },
 
-
     /**
      * Variable length array morphing!
      * @function module:transform#morph
@@ -3774,10 +3773,6 @@ dtm.transform = {
 
         return morphFixed(dtm.transform.fit(srcArr, resLen, interp), dtm.transform.fit(tgtArr, resLen), morphIdx);
     },
-
-    interleave: function (srcArr, tgtArr) {
-    },
-
 
     /* UNIT CONVERTIONS */
     // CHECK: maybe should say Note To Beats
@@ -10796,9 +10791,38 @@ dtm.data.augment({
     }
 });
 
-/* obsolete */
+/* contributions */
 dtm.data.augment({
+    /**
+     * Interleaves two arrays
+     * @param arrIn {dtm.array}
+     * @param [depth1=1] {number} Must be an integer
+     * @param [depth2=1] {number} Must be an integer
+     * @returns {dtm.array}
+     * @author Ben Taylor
+     */
+    interleave: function (arrIn, depth1, depth2) {
+        var d1 = depth1 || 1;
+        var d2 = depth2 || 1;
 
+        var result = [];
+        var newlength = Math.max(this.length, arrIn.length) * (d1 + d2);
+        var index1 = 0, index2 = 0;
+        var val = 0, j = 0;
+        for (var i = 0; i < newlength; i++) {
+            for (j = 0; j < d1; j++) {
+                val = this.get(index1 % this.length);
+                index1++;
+                result.push(val);
+            }
+            for (j = 0; j < d2; j++) {
+                val = arrIn.get(index2 % arrIn.length);
+                index2++;
+                result.push(val);
+            }
+        }
+        return this.set(result);
+    }
 });
 /**
  * @fileOverview Parses random stuff. Singleton.
@@ -14593,7 +14617,7 @@ dtm.startWebAudio();
 
 /**
  * @fileOverview Some building blocks for model creation. It can be used as one-shot as well.
- * @module synth
+ * @module music
  */
 
 ///**
@@ -15564,7 +15588,7 @@ Music.prototype.iter = Music.prototype.incr =function (val) {
 };
 
 Music.prototype.phase = function () {
-    this.params.phase = (Music.prototype.actx.currentTime - this.params.startTime) / this.params.dur.base(synth.seq()).get(0);
+    this.params.phase = (Music.prototype.actx.currentTime - this.params.startTime) / this.params.dur.base(this.seq()).get(0);
     if (this.params.phase < 0.0) {
         this.params.phase = 0.0;
     } else if (this.params.phase > 1.0) {
@@ -15594,7 +15618,7 @@ Music.prototype.interval = Music.prototype.int = Music.prototype.i = function ()
         res = arguments[0].interval();
         this.params.interval.base = check(res, depth) ? convertShallow(res) : this.params.interval.base;
     } else if (isFunction(arguments[0])) {
-        res = arguments[0](this.params.interval.base, synth);
+        res = arguments[0](this.params.interval.base, this);
         this.params.interval.base = check(res, depth) ? convertShallow(res) : this.params.interval.base;
     } else {
         var argList = argsToArray(arguments);
@@ -15617,7 +15641,7 @@ Music.prototype.bpm = function () {
     var depth = 2;
 
     if (isFunction(arguments[0])) {
-        var res = arguments[0](this.params.interval.base, synth);
+        var res = arguments[0](this.params.interval.base, this);
         this.params.interval.base = check(res, depth) ? convertShallow(res).reciprocal() : this.params.interval.base;
     } else {
         var argList = argsToArray(arguments);
@@ -15655,7 +15679,7 @@ Music.prototype.duration = Music.prototype.dur = Music.prototype.d = function ()
         res = arguments[0].duration();
         this.params.dur.base = check(res, depth) ? convertShallow(res) : this.params.dur.base;
     } else if (isFunction(arguments[0])) {
-        res = arguments[0](this.params.dur.base, synth);
+        res = arguments[0](this.params.dur.base, this);
         this.params.dur.base = check(res, depth) ? convertShallow(res) : this.params.dur.base;
     } else {
         var argList = argsToArray(arguments);
@@ -15716,7 +15740,7 @@ Music.prototype.notenum = Music.prototype.note = Music.prototype.nn = Music.prot
     if (arguments.length === 0) {
         return this.params.notenum.base(seqValue);
     } else if (isDtmSynth(arguments[0])) {
-        return synth.notenum(arguments[0].notenum());
+        return this.notenum(arguments[0].notenum());
     }
     this.mapParam(arguments, this.params.notenum);
     this.setFinal('notenum');

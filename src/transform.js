@@ -1078,7 +1078,6 @@ dtm.transform = {
         return res;
     },
 
-
     /**
      * Variable length array morphing!
      * @function module:transform#morph
@@ -1098,10 +1097,6 @@ dtm.transform = {
 
         return morphFixed(dtm.transform.fit(srcArr, resLen, interp), dtm.transform.fit(tgtArr, resLen), morphIdx);
     },
-
-    interleave: function (srcArr, tgtArr) {
-    },
-
 
     /* UNIT CONVERTIONS */
     // CHECK: maybe should say Note To Beats
