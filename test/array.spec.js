@@ -291,7 +291,7 @@ describe('list operations', function () {
         });
     });
 
-    describe('reorder', function () {
+    xdescribe('reorder', function () {
         it('should work with single array input', function () {
             expect(dtm.gen('range', 5).reorder([0,2,1,4,4]).get()).toEqual(toFloat32Array([0,2,1,4,4]));
             expect(dtm.a([1], [2], [3]).reorder([2, 1, 0]).get(0).get()).toEqual(toFloat32Array(3));

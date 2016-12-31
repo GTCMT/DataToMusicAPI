@@ -15,7 +15,7 @@ module.exports = function(config) {
 
         // list of files / patterns to load in the browser
         files: [
-            'bower_components/lodash/dist/lodash.min.js',
+            // 'bower_components/lodash/dist/lodash.min.js',
             'dtm.js',
             'src/utils.js',
             'test/**/*.js'

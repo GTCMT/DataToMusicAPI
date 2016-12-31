@@ -1,5 +1,5 @@
 describe('generator', function () {
-    describe('initialization', function () {
+    xdescribe('initialization', function () {
         var g = dtm.gen();
         it('should be empty', function () {
             expect(g.get('typed')).toBe(true);
