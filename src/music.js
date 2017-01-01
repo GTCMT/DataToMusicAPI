@@ -176,9 +176,9 @@ var fx = {
             this.dry.connect(this.out);
 
             // var size = self.params.sr * 2;
-            var size = dtm.wa.buffs.verbIr.length;
+            var size = Music.prototype.verbIr.length;
             var ir = ctx.createBuffer(1, size, self.params.sr);
-            ir.copyToChannel(dtm.wa.buffs.verbIr.get(), 0);
+            ir.copyToChannel(Music.prototype.verbIr.get(), 0);
             this.verb.buffer = ir;
 
             this.dryLevel = this.mix.map(function (v) {
@@ -442,6 +442,7 @@ Music.prototype.offline = false;
 Music.prototype.dummyBuffer = Music.prototype.actx.createBuffer(1, 1, 44100);
 Music.prototype.defaultSize = 512;
 Music.prototype.defaultWt = dtm.sine(Music.prototype.defaultSize);
+Music.prototype.verbIr = dtm.gen('noise').size(88200).mult(dtm.gen('decay').size(44100));
 
 Music.prototype.init = function () {
     var that = this;
@@ -888,7 +889,7 @@ Music.prototype.stop = Music.prototype.s = function (time) {
     return that;
 };
 
-Music.prototype.offset = function (src) {
+Music.prototype.after = Music.prototype.offset = function (src) {
     this.params.offset = toFloat32Array(src)[0];
     return this;
 };

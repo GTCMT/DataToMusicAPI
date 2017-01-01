@@ -124,7 +124,12 @@ dtm.data.augment = function (fnList) {
                             });
                             return data;
                         } else {
-                            return data;
+                            var res = [];
+                            data.each(function (w) {
+                                var d = dtm.data(w);
+                                res = concat(res, d[v].apply(d, args).get());
+                            });
+                            return data.set(res);
                         }
                     };
 
@@ -137,7 +142,12 @@ dtm.data.augment = function (fnList) {
                                 return a[v].apply(a, args);
                             });
                         } else {
-                            return data;
+                            var res = [];
+                            data.each(function (w) {
+                                var d = dtm.data(w);
+                                res = concat(res, d[v].apply(d, args).get());
+                            });
+                            return data.set(res);
                         }
                     };
                 });
@@ -159,7 +169,12 @@ dtm.data.augment = function (fnList) {
                         });
                         return data;
                     } else {
-                        return data;
+                        var res = [];
+                        data.each(function (v) {
+                            var d = dtm.data(v);
+                            res = concat(res, d[name].apply(d, args).get());
+                        });
+                        return data.set(res);
                     }
                 };
 
@@ -172,7 +187,12 @@ dtm.data.augment = function (fnList) {
                             return a[name].apply(a, args);
                         });
                     } else {
-                        return data;
+                        var res = [];
+                        data.each(function (v) {
+                            var d = dtm.data(v);
+                            res = concat(res, d[name].apply(d, args).get());
+                        });
+                        return data.set(res);
                     }
                 };
             }
@@ -200,6 +220,10 @@ function Data() {
     function data() {
         return data.clone.apply(data, arguments);
     }
+
+    // inherit callable Function.prototype
+    data.__proto__ = Data.prototype;
+
     data.val = [];
     data.length = 0;
 
@@ -226,9 +250,6 @@ function Data() {
         }
     };
 
-    // inherit callable Function.prototype
-    data.__proto__ = Data.prototype;
-
     Object.defineProperty(data, 'length', {
         enumerable: false,
         writable: true,
@@ -250,6 +271,7 @@ function Data() {
     data.f = data.fit = new Fit(data);
     data.s = data.str = data.stretch = new Stretch(data);
 
+    this.__proto__ = Data.prototype;
     return data;
 }
 
@@ -264,7 +286,9 @@ function Each(data) {
      * @returns {dtm.data}
      */
     function each(fn) {
-        each.data.val.forEach(fn);
+        for (var i = 0, l = each.data.length; i < l; i++) {
+            fn(each.data.val[i], i, each.data.val);
+        }
         return each.data;
     }
 
@@ -278,7 +302,12 @@ Each.prototype = Object.create(Function.prototype);
 
 function Map(data) {
     function map(fn) {
-        return data.set(fromFloat32Array(data.val).map(fn));
+        var l = data.length;
+        var res = new Array(l);
+        for (var i = 0; i < l; i++) {
+            res[i] = fn(data.val[i], i, data.val);
+        }
+        return data.set(res);
     }
 
     map.data = data;
@@ -331,7 +360,12 @@ function Block(data) {
                 });
                 return data;
             } else {
-                return data;
+                var res = [];
+                data.each(function (v) {
+                    var d = dtm.data(v);
+                    res = concat(res, d[name].apply(d, args).get());
+                });
+                return data.set(res);
             }
         };
 
@@ -344,7 +378,12 @@ function Block(data) {
                     return a[name].apply(a, args);
                 });
             } else {
-                return data;
+                var res = [];
+                data.each(function (v) {
+                    var d = dtm.data(v);
+                    res = concat(res, d[name].apply(d, args).get());
+                });
+                return data.set(res);
             }
         };
     });
@@ -396,7 +435,12 @@ function Fit(data) {
                 });
                 return data;
             } else {
-                return data;
+                var res = [];
+                data.each(function (v) {
+                    var d = dtm.data(v);
+                    res = concat(res, d[name].apply(d, args).get());
+                });
+                return data.set(res);
             }
         };
 
@@ -409,7 +453,12 @@ function Fit(data) {
                     return a[name].apply(a, args);
                 });
             } else {
-                return data;
+                var res = [];
+                data.each(function (v) {
+                    var d = dtm.data(v);
+                    res = concat(res, d[name].apply(d, args).get());
+                });
+                return data.set(res);
             }
         };
     });
@@ -1056,11 +1105,12 @@ dtm.data.augment({
         if (isNestedDtmArray(that)) {
             if (isString(which)) {
                 var res = null;
-                that.val.forEach(function (a) {
-                    if (a.get('name') === which) {
-                        res = a;
+
+                for (var i = 0, l = that.length; i < l; i++) {
+                    if (that.val[i].get('name') === which) {
+                        res = that.val[i];
                     }
-                });
+                }
                 if (isEmpty(res)) {
                     res = that;
                 }
@@ -1176,8 +1226,9 @@ dtm.data.augment({
         unipolar: ['uni', 'up'],
         bipolar: ['bi', 'bp'],
         limit: ['clip'],
-        expcurve: ['expc'],
-        logcurve: ['logc']
+        expcurve: ['expc', 'ec'],
+        logcurve: ['logc', 'lc'],
+        curve: ['c']
     },
 
     /**
@@ -1378,8 +1429,8 @@ dtm.data.augment({
      * Scales the array with an exponential curve.
      * @function module:data#expcurve
      * @param factor {number}
-     * @param [min=array.get('min')] {number}
-     * @param [max=array.get('max')] {number}
+     * @param [min=data.get('min')] {number}
+     * @param [max=data.get('max')] {number}
      * @returns {dtm.data}
      */
     expcurve: function (factor, min, max) {
@@ -1398,8 +1449,8 @@ dtm.data.augment({
      * Applies a logarithmic scaling to the array.
      * @function module:data#logc | logcurve
      * @param factor {number}
-     * @param [min=array.get('min')] {number}
-     * @param [max=array.get('max')] {number}
+     * @param [min=data.get('min')] {number}
+     * @param [max=data.get('max')] {number}
      * @returns {dtm.data}
      */
     logcurve: function (factor, min, max) {
@@ -1412,13 +1463,32 @@ dtm.data.augment({
 
         var arr = dtm.transform.logCurve(this.get('normalized'), factor);
         return this.set(dtm.transform.rescale(arr, min, max));
+    },
+
+    curve: function (factor, min, max) {
+        if (isEmpty(min)) {
+            min = this.get('min');
+        }
+        if (isEmpty(max)) {
+            max = this.get('max');
+        }
+
+        var arr;
+
+        if (factor > 0) {
+            arr = dtm.transform.logCurve(this.get('normalized'), factor+1);
+        } else {
+            arr = dtm.transform.expCurve(this.get('normalized'), -(factor)+1);
+        }
+
+        return this.set(dtm.transform.rescale(arr, min, max));
     }
 });
 
 /* interpolation and resampling */
 dtm.data.augment({
     aliases: {
-        linear: ['line'],
+        linear: ['line', 'l'],
         cosine: ['cos'],
         cubic: ['cub'],
         slinear: ['sline'],
@@ -1698,7 +1768,7 @@ dtm.data.augment({
         var currFreqVal = 1;
         var floor, ceil, frac;
 
-        dtm.line(len).forEach(function (p) {
+        dtm.line(len).each(function (p) {
             currFreqVal = freqArr[Math.floor(p * freqArr.length)];
             if (currFreqVal < 0) {
                 phase += 1/len * currFreqVal;

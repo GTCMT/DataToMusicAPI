@@ -229,11 +229,12 @@ function getMaxArrayDepth(val) {
     if (isArray(val)) {
         var depth = 1;
         var list = [];
-        val.forEach(function (v) {
-            if (isArray(v)) {
-                list.push(getMaxArrayDepth(v));
+
+        for (var i = 0, l = val.length; i < l; i++) {
+            if (isArray(val[i])) {
+                list.push(getMaxArrayDepth(val[i]));
             }
-        });
+        }
 
         if (list.length > 0) {
             depth += Math.max.apply(this, list);
@@ -503,13 +504,10 @@ function toFloat32Array(src) {
         if (isFloat32Array(src)) {
             return src;
         } else {
-            //return new Float32Array(src);
             var typedArray = new Float32Array(src.length);
-            src.forEach(function (v, i) {
-                typedArray[i] = v;
-                //typedArray[i] = v.toFixed(7);
-                //typedArray[i] = v.toPrecision();
-            });
+            for (var i = 0, l = src.length; i < l; i++) {
+                typedArray[i] = src[i];
+            }
             return typedArray;
         }
     } else {
@@ -575,9 +573,9 @@ function truncateDigits(value) {
 function Float32Map(array, cb) {
     var res = new Float32Array(array.length);
 
-    array.forEach(function (v, i) {
-        res[i] = cb(v);
-    });
+    for (var i = 0, l = array.length; i < l; i++) {
+        res[i] = cb(array[i]);
+    }
 
     return res;
 }
@@ -707,14 +705,14 @@ function mode(arr) {
 
     var histo = countOccurrences(arr);
 
-    uniqs.forEach(function (val) {
-        num = histo[val];
+    for (var i = 0, l = uniqs.length; i < l; i++) {
+        num = histo[uniqs[i]];
 
         if (num > max) {
-            res = val;
+            res = uniqs[i];
             max = num;
         }
-    });
+    }
 
     return res;
 }
@@ -782,9 +780,10 @@ function variance(arr) {
     var meanVal = mean(arr);
 
     var res = [];
-    arr.forEach(function (val, idx) {
-        res[idx] = Math.pow((meanVal - val), 2);
-    });
+
+    for (var i = 0, l = arr.length; i < l; i++) {
+        res[i] = Math.pow((meanVal - arr[i]), 2);
+    }
 
     // TODO: divide-by-zero error
     return sum(res) / (arr.length-1);
@@ -808,9 +807,10 @@ function pvar(arr) {
     var meanVal = mean(arr);
 
     var res = [];
-    arr.forEach(function (val, idx) {
-        res[idx] = Math.pow((meanVal - val), 2);
-    });
+
+    for (var i = 0, l = arr.length; i < l; i++) {
+        res[i] = Math.pow((meanVal - arr[i]), 2);
+    }
 
     return mean(res);
 }
@@ -826,9 +826,10 @@ function pstd(arr) {
 
 function meanSquare(arr) {
     var res = [];
-    arr.forEach(function (val, idx) {
-        res[idx] = Math.pow(val, 2);
-    });
+
+    for (var i = 0, l = arr.length; i < l; i++) {
+        res[i] = Math.pow(arr[i], 2);
+    }
 
     return mean(res);
 }
@@ -840,20 +841,22 @@ function meanSquare(arr) {
  */
 function rms(arr) {
     var res = [];
-    arr.forEach(function (val, idx) {
-        res[idx] = Math.pow(val, 2);
-    });
+
+    for (var i = 0, l = arr.length; i < l; i++) {
+        res[i] = Math.pow(arr[i], 2);
+    }
 
     return Math.sqrt(mean(res));
 }
 
 function unique(input) {
     var res = [];
-    input.forEach(function (v) {
-        if (res.indexOf(v) === -1) {
-            res.push(v);
+
+    for (var i = 0, l = input.length; i < l; l++) {
+        if (res.indexOf(input[i]) === -1) {
+            res.push(input[i]);
         }
-    });
+    }
 
     return res;
 }
@@ -877,13 +880,13 @@ function histo(input) {
 
 function countOccurrences(input) {
     var res = {};
-    input.forEach(function (v) {
-        if (!res.hasOwnProperty(v)) {
-            res[v] = 1;
+    for (var i = 0, l = input.length; i < l; i++) {
+        if (!res.hasOwnProperty(input[i])) {
+            res[input[i]] = 1;
         } else {
-            res[v]++;
+            res[input[i]]++;
         }
-    });
+    }
     return res;
 }
 

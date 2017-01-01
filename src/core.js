@@ -70,42 +70,6 @@ var dtm = {
         };
         dtm.wa.clMult = 0.01;
         dtm.wa.clockBuf = dtm.wa.actx.createBuffer(1, Math.round(dtm.wa.actx.sampleRate * dtm.wa.clMult), dtm.wa.actx.sampleRate);
-
-        dtm.wa.makeNoise = function makeNoise(bufLen) {
-            var actx = dtm.wa.actx;
-
-            bufLen = bufLen || 4192;
-
-            var buffer = actx.createBuffer(1, bufLen, dtm.wa.actx.sampleRate);
-            var contents = buffer.getChannelData(0);
-            dtm.gen('range', bufLen).get().forEach(function (idx) {
-                contents[idx] = random(-1, 1);
-            });
-
-            return buffer;
-        };
-
-        dtm.wa.makeIr = function makeIr(decay) {
-            var actx = dtm.wa.actx;
-
-            var bufLen = Math.round(decay * dtm.wa.actx.sampleRate) || dtm.wa.actx.sampleRate;
-
-            var buffer = actx.createBuffer(2, bufLen, dtm.wa.actx.sampleRate);
-            var left = buffer.getChannelData(0);
-            var right = buffer.getChannelData(1);
-
-            var exp = 10;
-            dtm.gen('range', bufLen).get().forEach(function (idx) {
-                left[idx] = rescale(expCurve(random(0, 1) * (bufLen - idx) / bufLen, exp), -1, 1);
-                right[idx] = rescale(expCurve(random(0, 1) * (bufLen - idx) / bufLen, exp), -1, 1);
-            });
-
-            return buffer;
-        };
-
-        dtm.wa.buffs = {
-            verbIr: dtm.gen('noise').size(88200).mult(dtm.gen('decay').size(44100))
-        };
     },
 
     oscParams: {
