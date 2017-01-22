@@ -3,6 +3,9 @@
  */
 
 /* TYPE CHECKING */
+function isNaN(value) {
+    return value !== value;
+}
 
 /**
  * Returns true for undefined, null, and NaN values
@@ -14,7 +17,7 @@ function isEmpty(value) {
         return true;
     } else if (value === null) {
         return true;
-    } else return !!(typeof(value) === 'number' && isNaN(value));
+    } else return (typeof(value) === 'number' && isNaN(value));
 }
 
 /**
@@ -23,7 +26,7 @@ function isEmpty(value) {
  * @returns {boolean}
  */
 function isNumber(value) {
-    return !!(typeof(value) === 'number' && !isNaN(value));
+    return (typeof(value) === 'number' && !isNaN(value));
 }
 
 /**
@@ -104,7 +107,7 @@ function isObject(val) {
  * @returns {boolean}
  */
 function isSingleVal(val) {
-    return !!(!isArray(val) && !isDtmObj(val) && !isFunction(val) && !isEmpty(val));
+    return (!isArray(val) && !isDtmObj(val) && !isFunction(val) && !isEmpty(val));
 }
 
 /**
@@ -115,6 +118,7 @@ function isSingleVal(val) {
  */
 function isArray(val) {
     return Array.isArray(val) || isFloat32Array(val);
+    // return !isEmpty(val) && val.constructor === Array || isFloat32Array(val);
 }
 
 /**
@@ -125,7 +129,8 @@ function isArray(val) {
 function isFloat32Array(val) {
     var res = false;
     if (!isEmpty(val)) {
-        if (val.constructor.name === 'Float32Array' && val.length > 0) {
+        // if (val.constructor.name === 'Float32Array' && val.length > 0) {
+        if (val.constructor === Float32Array && val.length > 0) {
             res = true;
         }
     }
@@ -183,7 +188,7 @@ function isObjArray(val) {
  * @returns {boolean}
  */
 function isNumOrFloat32Array(val) {
-    return isNumArray(val) || isFloat32Array(val);
+    return isFloat32Array(val) || isNumArray(val);
 }
 
 /**
@@ -203,9 +208,14 @@ function isMixedArray(val) {
 function isNestedArray(val) {
     var res = false;
     if (isArray(val)) {
-        res = val.some(function (v) {
-            return isArray(v);
-        });
+        // res = val.some(function (v) {
+        //     return isArray(v);
+        // });
+        for (var i = 0, l = val.length; i < l; i++) {
+            if (isArray(val[i])) {
+                return true;
+            }
+        }
     }
     return res;
 }
@@ -264,20 +274,39 @@ function getMaxDtmArrayDepth(val) {
     }
 }
 
-function getMaxDepth(val) {
-    if (isArray(val) || isDtmArray(val)) {
-        var depth = 1;
-        var list = [];
-        val.forEach(function (v) {
-            if (isArray(v) || isDtmArray(v)) {
-                list.push(getMaxDepth(v));
+function getMaxDepth(arr) {
+    var depth, list, i, l;
+    if (isArray(arr)) {
+        depth = 1;
+        list = [];
+
+        for (i = 0, l = arr.length; i < l; i++) {
+            if (isArray(arr[i]) || isDtmArray(arr[i])) {
+                list.push(getMaxDepth(arr[i]));
             }
-        });
+        }
 
         if (list.length > 0) {
             depth += Math.max.apply(this, list);
         }
+
         return depth;
+    } else if (isDtmArray(arr)) {
+        // depth = 1;
+        // list = [];
+        //
+        // for (i = 0, l = arr.val.length; i < l; i++) {
+        //     if (isArray(arr.val[i]) || isDtmArray(arr.val[i])) {
+        //         list.push(getMaxDepth(arr.val[i]));
+        //     }
+        // }
+        //
+        // if (list.length > 0) {
+        //     depth += Math.max.apply(this, list);
+        // }
+        //
+        // return depth;
+        return arr.params.depth;
     } else {
         return 0;
     }
@@ -346,7 +375,7 @@ function isNestedNumDtmData(obj) {
 function isDtmArray(val) {
     if (isObject(val) || typeof(val) === 'function') {
         if (val.hasOwnProperty('meta')) {
-            return (val.meta.type === 'dtm.array' || val.meta.type === 'dtm.data' || val.meta.type === 'dtm.generator');
+            return ['dtm.array', 'dtm.data', 'dtm.generator'].indexOf(val.meta.type) !== -1;
         } else {
             return false;
         }
@@ -362,9 +391,10 @@ function isDtmArray(val) {
  */
 function isNestedDtmArray(val) {
     if (isDtmArray(val)) {
-        return val.every(function (v) {
-            return isDtmArray(v);
-        });
+        return val.params.nested;
+        // return val.every(function (v) {
+        //     return isDtmArray(v);
+        // });
     } else {
         return false;
     }
@@ -455,9 +485,9 @@ function argsToArray(args) {
  * @param fn {function} A callback function with same arguments of Array.forEach
  */
 function argsForEach(args, fn) {
-    argsToArray(args).forEach(function () {
-        fn.apply(this, arguments);
-    });
+    for (var i = 0, l = args.length; i < l; i++) {
+        fn.apply(this, args[i]);
+    }
 }
 
 /**
@@ -466,7 +496,7 @@ function argsForEach(args, fn) {
  * @returns {boolean}
  */
 function argIsSingleArray(args) {
-    return !!(args.length === 1 && isArray(args[0]));
+    return (args.length === 1 && isArray(args[0]));
 }
 
 function argsAreSingleVals(args) {
@@ -504,11 +534,12 @@ function toFloat32Array(src) {
         if (isFloat32Array(src)) {
             return src;
         } else {
-            var typedArray = new Float32Array(src.length);
-            for (var i = 0, l = src.length; i < l; i++) {
-                typedArray[i] = src[i];
-            }
-            return typedArray;
+            // var typedArray = new Float32Array(src.length);
+            // for (var i = 0, l = src.length; i < l; i++) {
+            //     typedArray[i] = src[i];
+            // }
+            // return typedArray;
+            return new Float32Array(src);
         }
     } else {
         return null;
@@ -726,7 +757,7 @@ function median(arr) {
     var sorted = arr.sort();
     var len = arr.length;
 
-    if (len % 2 === 0) {
+    if (mod(len, 2) === 0) {
         return (sorted[len/2 - 1] + sorted[len/2]) / 2
     } else {
         return sorted[Math.floor(len/2)];
@@ -852,7 +883,7 @@ function rms(arr) {
 function unique(input) {
     var res = [];
 
-    for (var i = 0, l = input.length; i < l; l++) {
+    for (var i = 0, l = input.length; i < l; i++) {
         if (res.indexOf(input[i]) === -1) {
             res.push(input[i]);
         }
@@ -871,9 +902,9 @@ function histo(input) {
     var classes = cloneArray(input);
     var histogram = countOccurrences(input);
 
-    classes.forEach(function (val, idx) {
-        res[idx] = histogram[val];
-    });
+    for (var i = 0, l = classes.length; i < l; i++) {
+        res[i] = histogram[classes[i]];
+    }
 
     return res;
 }
@@ -1012,13 +1043,13 @@ function pq(nn, scale, round) {
         round = false;
     }
 
-    var pc = nn % 12;
+    var pc = mod(nn, 12);
     var oct = nn - pc;
     var idx = Math.floor(pc / 12. * sc.length);
     var frac = 0.0;
 
     if (!round) {
-        frac = nn % 1;
+        frac = mod(nn, 1);
     }
     return oct + sc[idx] + frac;
 }

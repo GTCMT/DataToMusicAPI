@@ -68,6 +68,18 @@ dtm.transform = {
     //     return view;
     // },
 
+    fft: function (arr) {
+        var data = new Float32Array(arr);
+        var ptr = Module._malloc(data.byteLength);
+        var view = new Float32Array(Module.HEAPF32.buffer, ptr, data.length);
+        view.set(data);
+
+        Module.ccall('fft', null, ['number', 'number'], [ptr, data.length]);
+
+        Module._free(ptr);
+        return view;
+    },
+
     /**
      * Modifies the range of an array.
      * @function module:transform#rescale
@@ -203,6 +215,18 @@ dtm.transform = {
                     res[k] = intermArr[k * inNumItv];
                 }
                 res[k] = intermArr[intermLen - 1];
+
+                // TODO: not working correctly with data.map
+                // var data = new Float32Array(len);
+                // data.set(arr);
+                // var ptr = Module._malloc(data.byteLength);
+                // var view = new Float32Array(Module.HEAPF32.buffer, ptr, data.length);
+                // view.set(data);
+                //
+                // Module.ccall('linearInterp', null, ['number', 'number', 'number'], [ptr, arr.length, len]);
+                //
+                // Module._free(ptr);
+                // res = view;
                 break;
 
             case 'step':
@@ -720,7 +744,7 @@ dtm.transform = {
     round: function (input, to) {
         var res = null;
         var i, l;
-        if (isArray(input)) {
+        if (isNumArray(input)) {
             res = new Array(input.length);
         } else if (isFloat32Array(input)) {
             res = new Float32Array(input.length);

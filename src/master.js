@@ -75,6 +75,10 @@ dtm.master = {
         dtm.master.voices = [];
 
         dtm.master.activeInstrs = [];
+
+        dtm.params.traced.forEach(function (d) {
+            d.params.trace = false;
+        });
     },
 
     /**

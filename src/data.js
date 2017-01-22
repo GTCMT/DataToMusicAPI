@@ -200,6 +200,23 @@ dtm.data.augment = function (fnList) {
     });
 };
 
+// TODO: this could be in the augment function without having to use the arguments.callee, and with special-case notation for nested data if desired.
+function mapNested(that, args, fn) {
+    if (isNestedDtmArray(that)) {
+        if (isEmpty(fn)) {
+            fn = args.callee;
+        }
+
+        that.each(function (v) {
+            fn.apply(v, args);
+        });
+
+        return that;
+    } else {
+        return null;
+    }
+}
+
 // function addNestedProperty(Class, fn) {
 //     Class.prototype[fn] = function () {
 //         var data = this.data;
@@ -230,7 +247,14 @@ function Data() {
     data.params = {
         name: '',
         parent: null,
-        original: null
+        original: null,
+        id: Math.random(),
+        trace: false,
+        interceptor: {},
+        targets: {},
+        processFn: null,
+        nested: false,
+        depth: 1
     };
 
     data.meta = {
@@ -246,6 +270,15 @@ function Data() {
         },
         setOriginal: function (obj) {
             data.params.original = obj;
+            return data;
+        },
+        // reassignSelf: function (newDataObj) {
+        //     // TODO: does not work
+        //     data = newDataObj;
+        //     return data;
+        // },
+        setInterceptor: function (fn) {
+            data.params.interceptor.get = fn;
             return data;
         }
     };
@@ -265,18 +298,29 @@ function Data() {
         value: ''
     });
 
+    // TODO: what's this for? I forgot...
+    this.__proto__ = Data.prototype;
+
+    if (Data.prototype.traceGlobal) {
+        var org = data;
+        data = new Proxy(data, data.params.interceptor);
+        data.toString = Function.prototype.toString.bind(org);
+    }
+
+    // TODO: the order here with the toString fix might cause problems
     data.forEach = data.foreach = data.each = new Each(data);
     data.map = new Map(data);
     data.g = data.group = data.b = data.block = new Block(data);
     data.f = data.fit = new Fit(data);
     data.s = data.str = data.stretch = new Stretch(data);
+    data.fft = new FFT(data);
 
-    this.__proto__ = Data.prototype;
     return data;
 }
 
 // make data instance callable
 Data.prototype = Object.create(Function.prototype);
+Data.prototype.traceGlobal = false;
 
 function Each(data) {
     /**
@@ -286,8 +330,15 @@ function Each(data) {
      * @returns {dtm.data}
      */
     function each(fn) {
-        for (var i = 0, l = each.data.length; i < l; i++) {
-            fn(each.data.val[i], i, each.data.val);
+        var i, l = data.length;
+        if (isNestedDtmArray(data)) {
+            for (i = 0; i < l; i++) {
+                fn(each.data.val[i], i, each.data);
+            }
+        } else {
+            for (i = 0; i < l; i++) {
+                fn(dtm.data(each.data.val[i]), i, each.data);
+            }
         }
         return each.data;
     }
@@ -302,12 +353,21 @@ Each.prototype = Object.create(Function.prototype);
 
 function Map(data) {
     function map(fn) {
-        var l = data.length;
+        var i, l = data.length;
         var res = new Array(l);
-        for (var i = 0; i < l; i++) {
-            res[i] = fn(data.val[i], i, data.val);
+
+        if (isNestedDtmArray(data)) {
+            for (i = 0; i < l; i++) {
+                res[i] = fn(data.val[i], i, data);
+            }
+            data.val = res;
+            return data;
+        } else {
+            for (i = 0; i < l; i++) {
+                res[i] = fn(dtm.data(data.val[i]), i, data);
+            }
+            return data.set(res).flatten();
         }
-        return data.set(res);
     }
 
     map.data = data;
@@ -355,14 +415,13 @@ function Block(data) {
             var args = arguments;
 
             if (isNestedDtmArray(data)) {
-                data.each(function (a) {
-                    a[name].apply(a, args);
+                data.each(function (d) {
+                    d[name].apply(d, args);
                 });
                 return data;
             } else {
                 var res = [];
-                data.each(function (v) {
-                    var d = dtm.data(v);
+                data.each(function (d) {
                     res = concat(res, d[name].apply(d, args).get());
                 });
                 return data.set(res);
@@ -374,13 +433,12 @@ function Block(data) {
             var args = arguments;
 
             if (isNestedDtmArray(data)) {
-                return data.map(function (a) {
-                    return a[name].apply(a, args);
+                return data.map(function (d) {
+                    return d[name].apply(d, args);
                 });
             } else {
                 var res = [];
-                data.each(function (v) {
-                    var d = dtm.data(v);
+                data.each(function (d) {
                     res = concat(res, d[name].apply(d, args).get());
                 });
                 return data.set(res);
@@ -401,6 +459,19 @@ Block.prototype.into = function (val) {
         return data.block(len);
     } else {
         return data;
+    }
+};
+
+Block.prototype.change = function () {
+    var data = this.data;
+
+    var newArr = [], prev = null;
+    for (var i = 0, l = data.length; i < l; i++) {
+        if (data.val[i] !== null) {
+
+        } else {
+
+        }
     }
 };
 
@@ -430,14 +501,13 @@ function Fit(data) {
             var args = arguments;
 
             if (isNestedDtmArray(data)) {
-                data.each(function (a) {
-                    a[name].apply(a, args);
+                data.each(function (d) {
+                    d[name].apply(d, args);
                 });
                 return data;
             } else {
                 var res = [];
-                data.each(function (v) {
-                    var d = dtm.data(v);
+                data.each(function (d) {
                     res = concat(res, d[name].apply(d, args).get());
                 });
                 return data.set(res);
@@ -449,13 +519,12 @@ function Fit(data) {
             var args = arguments;
 
             if (isNestedDtmArray(data)) {
-                return data.map(function (a) {
-                    return a[name].apply(a, args);
+                return data.map(function (d) {
+                    return d[name].apply(d, args);
                 });
             } else {
                 var res = [];
-                data.each(function (v) {
-                    var d = dtm.data(v);
+                data.each(function (d) {
                     res = concat(res, d[name].apply(d, args).get());
                 });
                 return data.set(res);
@@ -563,6 +632,56 @@ Stretch.prototype.cub = Stretch.prototype.cubic = function (factor) {
     return data.stretch(factor, 'cubic');
 };
 
+function FFT(data) {
+    function fft() {
+        return data.set(dtm.transform.fft(data.val));
+    }
+
+    fft.__proto__ = FFT.prototype;
+    fft.data = data;
+
+    return fft;
+}
+
+FFT.prototype = Object.create(Function.prototype);
+
+FFT.prototype.filter = function (magSpec) {
+    var timeSigData = new Float32Array(this.data.val);
+    var timeSigPtr = Module._malloc(timeSigData.byteLength);
+    var timeSigView = new Float32Array(Module.HEAPF32.buffer, timeSigPtr, timeSigData.length);
+    timeSigView.set(timeSigData);
+
+    var magSpecData = new Float32Array(magSpec.val);
+    var magSpecPtr = Module._malloc(magSpecData.byteLength);
+    (new Float32Array(Module.HEAPF32.buffer, magSpecPtr, magSpecData.length)).set(magSpecData);
+
+    Module.ccall('fftFilter', null, ['number', 'number', 'number'], [timeSigPtr, magSpecPtr, timeSigData.length]);
+
+    Module._free(timeSigPtr);
+    Module._free(magSpecPtr);
+    return this.data.set(timeSigView);
+};
+
+FFT.prototype.vsc = function (fs) {
+    if (!isNumber(fs)) {
+        fs = 44100;
+    }
+    var timeSigData = new Float32Array(this.data.val);
+    var timeSigPtr = Module._malloc(timeSigData.byteLength);
+    var timeSigView = new Float32Array(Module.HEAPF32.buffer, timeSigPtr, timeSigData.length);
+    timeSigView.set(timeSigData);
+
+    var res = Module.ccall('spectralCentroid', 'number', ['number', 'number', 'number'], [timeSigPtr, timeSigData.length, fs]);
+
+    if (isNumber(res)) {
+        this.data.set(res);
+    } else {
+        this.data.set(0);
+    }
+
+    return this.data;
+};
+
 /* basic functions */
 dtm.data.augment({
     aliases: {
@@ -596,29 +715,40 @@ dtm.data.augment({
             if (arguments.length === 1) {
                 if (isNumber(arguments[0])) {
                     that.val = toFloat32Array(arguments[0]);
-                } else if (isNumArray(arguments[0])) {
-                    that.val = toFloat32Array(arguments[0]);
-                } else if (isNestedArray(arguments[0])) {
-                    that.val = new Array(arguments[0].length);
-                    arguments[0].forEach(function (v, i) {
-                        that.val[i] = dtm.data(v).parent(that);
-                    });
-                } else if (isNestedWithDtmArray(arguments[0])) {
-                    that.val = arguments[0];
-                    that.val.forEach(function (v) {
-                        if (isDtmArray(v)) {
-                            v.parent(that);
-                        }
-                    });
-                } else if (isDtmArray(arguments[0])) {
-                    // array.val = arguments[0].get(); // cloning
-                    that = arguments[0]; // retain the reference
-                    // set parent in the child
                 } else if (isNestedDtmArray(arguments[0])) {
                     that.val = arguments[0].get();
                     that.val.forEach(function (v) {
                         v.parent(that);
                     });
+                    that.params.nested = true;
+                    that.params.depth += arguments[0].params.depth;
+                } else if (isDtmArray(arguments[0])) {
+                    that = arguments[0]; // retain the reference
+                    // set parent in the child
+                } else if (isNumArray(arguments[0])) {
+                    that.val = toFloat32Array(arguments[0]);
+                } else if (isNestedArray(arguments[0])) {
+                    that.val = new Array(arguments[0].length);
+                    var childDepth = 1;
+                    for (var i = 0, l = arguments[0].length; i < l; i++) {
+                        that.val[i] = dtm.data(arguments[0][i]).parent(that);
+                        if (that.val[i].params.depth > childDepth) {
+                            childDepth = that.val[i].params.depth;
+                        }
+                    }
+                    that.params.nested = true;
+                    that.params.depth += childDepth;
+                } else if (isNestedWithDtmArray(arguments[0])) {
+                    that.val = new Array(arguments[0].length);
+                    var childDepth = 1;
+                    for (var i = 0, l = arguments[0].length; i < l; i++) {
+                        that.val[i] = arguments[0][i].parent(that);
+                        if (that.val[i].params.depth > childDepth) {
+                            childDepth = that.val[i].params.depth;
+                        }
+                    }
+                    that.params.nested = true;
+                    that.params.depth += childDepth;
                 } else if (isString(arguments[0])) {
                     that.val = [arguments[0]]; // no splitting
                     checkType(that.val);
@@ -628,6 +758,7 @@ dtm.data.augment({
             } else {
                 that.val = new Array(arguments.length);
 
+                var childDepth = 1;
                 argsForEach(arguments, function (v, i) {
                     if (isDtmArray(v)) {
                         that.val[i] = v;
@@ -635,14 +766,19 @@ dtm.data.augment({
                         that.val[i] = dtm.data(v);
                     }
                     that.val[i].parent(that);
+
+                    if (v.params.depth > childDepth) {
+                        childDepth = that.val[i].params.depth;
+                    }
                 });
+
+                that.params.nested = true;
+                that.params.depth += childDepth;
             }
         }
 
         if (isEmpty(that.params.original)) {
             that.params.original = that.val;
-        } else {
-            that.params.processed++;
         }
 
         that.length = that.val.length;
@@ -1006,20 +1142,20 @@ dtm.data.augment({
      */
     clone: function () {
         if (arguments.length === 0) {
-            var newValue = [];
-            if (isNestedWithDtmArray(this.val)) {
-                newValue = this.val.map(function (a) {
-                    return a.clone();
-                });
+            var newValue;
+
+            if (isNestedDtmArray(this)) {
+                newValue = new Array(this.length);
+                for (var i = 0, l = this.length; i < l; i++) {
+                    newValue[i] = this.val[i].clone();
+                }
             } else {
                 newValue = this.val;
             }
+
             var newArr = dtm.data(newValue).label(this.params.name);
             newArr.meta.setOriginal(this.params.original);
-
-            // // CHECK: this may cause troubles!
-            // newArr.index(params.index);
-            // newArr.stepsize(params.step);
+            newArr.params.id = Math.random();
 
             if (this.params.type === 'string') {
                 newArr.classes = this.params.classes;
@@ -1155,6 +1291,7 @@ dtm.data.augment({
             return that;
         }
 
+        // TODO: use for loop
         indices.forEach(function (i) {
             if (mode === 'step' || mode === 'round') {
                 res.push(that.val[mod(Math.round(i), that.length)]);
@@ -1191,7 +1328,52 @@ dtm.data.augment({
             return that;
         }
 
-        indices.forEach(function (i) {
+        var i;
+        for (var j = 0, l = indices.length; j < l; j++) {
+            i = indices[j];
+
+            // phase >= 1 wraps to 0
+            i = mod(i, 1) * (that.length-1);
+
+            if (mode === 'step' || mode === 'round') {
+                res.push(that.val[mod(Math.round(i), that.length)]);
+            } else {
+                var floor = mod(Math.floor(i), that.length);
+                var ceil = mod(floor + 1, that.length);
+                var frac = i - Math.floor(i);
+
+                res.push(that.val[floor] * (1-frac) + that.val[ceil] * frac);
+            }
+        }
+
+        return that.set(res);
+    },
+
+    // mirrored phase function
+    mphase: function (at, mode) {
+        var that = this;
+
+        if (!isString(mode)) {
+            mode = 'linear';
+        }
+
+        var res = [];
+        var indices = [];
+
+        if (isNumber(at)) {
+            indices[0] = at;
+        } else if (isNumOrFloat32Array(at)) {
+            indices = at;
+        } else if (isNumDtmArray(at)) {
+            indices = at.get();
+        } else {
+            return that;
+        }
+
+        var i;
+        for (var j = 0, l = indices.length; j < l; j++) {
+            i = indices[j];
+
             // even number floor value gives positive direction
             // e.g., 0~1, 2~3, -1~-2
             // odd gives inverse direction
@@ -1212,7 +1394,7 @@ dtm.data.augment({
 
                 res.push(that.val[floor] * (1-frac) + that.val[ceil] * frac);
             }
-        });
+        }
 
         return that.set(res);
     }
@@ -1441,7 +1623,7 @@ dtm.data.augment({
             max = this.get('max');
         }
 
-        var arr = dtm.transform.expCurve(this.get('normalized'), factor);
+        var arr = dtm.transform.expCurve(dtm.transform.normalize(this.val), factor);
         return this.set(dtm.transform.rescale(arr, min, max));
     },
 
@@ -1461,7 +1643,7 @@ dtm.data.augment({
             max = this.get('max');
         }
 
-        var arr = dtm.transform.logCurve(this.get('normalized'), factor);
+        var arr = dtm.transform.logCurve(dtm.transform.normalize(this.val), factor);
         return this.set(dtm.transform.rescale(arr, min, max));
     },
 
@@ -1476,9 +1658,9 @@ dtm.data.augment({
         var arr;
 
         if (factor > 0) {
-            arr = dtm.transform.logCurve(this.get('normalized'), factor+1);
+            arr = dtm.transform.logCurve(dtm.transform.normalize(this.val), factor+1);
         } else {
-            arr = dtm.transform.expCurve(this.get('normalized'), -(factor)+1);
+            arr = dtm.transform.expCurve(dtm.transform.normalize(this.val), -(factor)+1);
         }
 
         return this.set(dtm.transform.rescale(arr, min, max));
@@ -1491,7 +1673,7 @@ dtm.data.augment({
         linear: ['line', 'l'],
         cosine: ['cos'],
         cubic: ['cub'],
-        slinear: ['sline'],
+        slinear: ['sline', 'sl'],
         scosine: ['scos'],
         scubic: ['scub']
     },
@@ -1584,15 +1766,21 @@ dtm.data.augment({
     unblock: function () {
         if (isNestedDtmArray(this)) {
             var flattened = [];
-            this.val.forEach(function (v) {
-                if (isDtmArray(v)) {
-                    flattened = concat(flattened, v.get());
+            for (var i = 0, l = this.val.length; i < l; i++) {
+                if (isDtmArray(this.val[i])) {
+                    flattened = concat(flattened, this.val[i].val);
                 }
-            });
+            }
 
             if (isNumArray(flattened)) {
                 flattened = toFloat32Array(flattened);
             }
+
+            this.params.depth--;
+            if (this.params.depth === 1) {
+                this.params.nested = false;
+            }
+
             return this.set(flattened);
         } else {
             return this;
@@ -1635,7 +1823,7 @@ dtm.data.augment({
             newArr.fill(0);
             this.val.forEach(function (a, i) {
                 a.foreach(function (v, j) {
-                    newArr[i*hop+j] += v;
+                    newArr[i*hop+j] += v.get();
                 });
             });
 
@@ -1768,7 +1956,12 @@ dtm.data.augment({
         var currFreqVal = 1;
         var floor, ceil, frac;
 
-        dtm.line(len).each(function (p) {
+        var line = dtm.line(len).get();
+        var p;
+
+        for (var i = 0; i < len; i++) {
+            p = line[i];
+
             currFreqVal = freqArr[Math.floor(p * freqArr.length)];
             if (currFreqVal < 0) {
                 phase += 1/len * currFreqVal;
@@ -1787,7 +1980,7 @@ dtm.data.augment({
                 phase += 1/len * currFreqVal;
                 phase = mod(phase, 1);
             }
-        });
+        }
 
         return this.set(res);
     }
@@ -1946,15 +2139,18 @@ dtm.data.augment({
         }
     },
 
-    reciprocal: function () {
+    reciprocal: function (numerator) {
+        if (isEmpty(numerator)) {
+            numerator = 1;
+        }
         var that = this;
         if (isNestedNumDtmArray(that)) {
             return that.map(function (a) {
                 return a.reciprocal();
             });
         } else if (isNumDtmArray(that)) {
-            return that.map(function (v) {
-                return 1/v;
+            return that.map(function (d) {
+                return numerator/d.get(0);
             });
         } else {
             return that;
@@ -2002,7 +2198,7 @@ dtm.data.augment({
      * @returns {dtm.data}
      */
     round: function (to) {
-        return this.set(dtm.transform.round(this.val, to));
+        return mapNested(this, arguments) || this.set(dtm.transform.round(this.val, to));
     },
 
     /**
@@ -2011,7 +2207,7 @@ dtm.data.augment({
      * @returns {dtm.data}
      */
     floor: function () {
-        return this.set(dtm.transform.floor(this.val));
+        return mapNested(this, arguments) || this.set(dtm.transform.floor(this.val));
     },
 
     /**
@@ -2020,7 +2216,7 @@ dtm.data.augment({
      * @returns {dtm.data}
      */
     ceil: function () {
-        return this.set(dtm.transform.ceil(this.val));
+        return mapNested(this, arguments) || this.set(dtm.transform.ceil(this.val));
     },
 
     /**
@@ -2029,7 +2225,7 @@ dtm.data.augment({
      * @returns {dtm.data}
      */
     abs: function () {
-        return this.set(dtm.transform.fwr(this.val));
+        return mapNested(this, arguments) || this.set(dtm.transform.fwr(this.val));
     },
 
     /**
@@ -2038,26 +2234,24 @@ dtm.data.augment({
      * @returns {dtm.data}
      */
     hwr: function () {
-        return this.set(dtm.transform.hwr(this.val));
+        return mapNested(this, arguments) || this.set(dtm.transform.hwr(this.val));
     },
 
     modulo: function (divisor) {
-        return this.set(dtm.transform.mod(this.val, divisor));
+        return mapNested(this, arguments) || this.set(dtm.transform.mod(this.val, divisor));
     },
 
-    // CHECK: occurrence or value??
-    // TODO: remove empty columns
     morethan: function (val) {
         if (isNestedDtmArray(this)) {
             this.forEach(function (a) {
                 a.morethan(val);
             });
         } else {
-            this.filter(function (v) {
-                return v > val;
+            this.map(function (v) {
+                return v.get(0) > val ? 1 : 0;
             });
         }
-        return this.removeempty();
+        return this;
     },
 
     mtet: function (val) {
@@ -2097,6 +2291,17 @@ dtm.data.augment({
             });
         }
         return this;
+    },
+
+    is: function (target) {
+
+        if (this.length === 1 && target.length === 1) {
+
+        }
+    },
+
+    isnt: function () {
+
     }
 });
 
@@ -2407,18 +2612,18 @@ dtm.data.augment({
     sum: function () {
         if (isNestedWithDtmArray(this.val)) {
             var maxLen = 0;
-            this.val.forEach(function (a) {
-                if (a.get('len') > maxLen) {
-                    maxLen = a.get('len');
+            this.each(function (d) {
+                if (d.length > maxLen) {
+                    maxLen = d.length;
                 }
             });
 
             var res = new Float32Array(maxLen);
 
             for (var i = 0; i < maxLen; i++) {
-                this.val.forEach(function (a) {
-                    if (i < a.get('len') && isNumber(a.get(i))) {
-                        res[i] += a.get(i);
+                this.each(function (d) {
+                    if (i < d.length && isNumber(d.get(i))) {
+                        res[i] += d.get(i);
                     }
                 });
             }
@@ -2795,8 +3000,10 @@ dtm.data.augment({
         beatsToNotes: ['bton'],
         intervalsToBeats: ['itob'],
         beatsToIntervals: ['btoi'],
-        beatsToIndices: ['btot'],
-        indicesToBeats: ['ttob'],
+        intervalsToOffsets: ['itoo'],
+        offsetsToIntervals: ['otoi'],
+        beatsToTime: ['btot'],
+        timeToBeats: ['ttob'],
         tonumber: ['tonum', 'num'],
         stringify: ['tostring'],
         toFloat32: ['tofloat32', 'tf32']
@@ -2848,7 +3055,6 @@ dtm.data.augment({
         return this.set(dtm.transform.intervalsToBeats(this.val, ampseq));
     },
 
-
     /**
      * Converts beat sequence into intervalic values.
      * @function module:data#beatsToIntervals | btoi
@@ -2856,6 +3062,48 @@ dtm.data.augment({
      */
     beatsToIntervals: function () {
         return this.set(dtm.transform.beatsToIntervals(this.val));
+    },
+
+    intervalsToOffsets: function () {
+        if (isNumDtmArray(this)) {
+            var that = this;
+            var currentOffset = 0;
+            var res = [];
+            res.push(currentOffset);
+
+            that.val.forEach(function (v, i) {
+                // ignore the last interval value
+                if (i !== that.length-2) {
+                    currentOffset += v;
+                    res.push(currentOffset);
+                }
+            });
+
+            return that.set(res);
+        } else {
+            return this;
+        }
+    },
+
+    /**
+     * Converts time offset sequence (e.g., [0, 0.5, 1, etc.], usually in seconds) to intervallic sequence that may signify note durations. Since we don't have the information about the duration of the very last note, it is copied from the one before that.
+     * @returns {offsetsToIntervals}
+     */
+    offsetsToIntervals: function () {
+        if (isNumDtmArray(this)) {
+            var that = this;
+            var res = [];
+
+            for (var i = that.length-1; i > 0; i--) {
+                res.unshift(that.get(i) - that.get(i-1));
+            }
+
+            res.push(res[res.length-1]);
+
+            return that.set(res);
+        } else {
+            return this;
+        }
     },
 
     /**
@@ -2930,7 +3178,7 @@ dtm.data.augment({
     },
 
     every: function (fn) {
-        return this.val.every(fn);
+        return !isEmpty(this.val.every) ? this.val.every(fn) : false;
     },
 
     filter: function (fn) {
@@ -3245,6 +3493,7 @@ dtm.data.augment({
 
     // TODO: support typed array
     select: function () {
+        var that = this;
         var indices, res = [];
         if (argsAreSingleVals(arguments)) {
             indices = argsToArray(arguments);
@@ -3255,12 +3504,12 @@ dtm.data.augment({
         }
 
         if (!isNumOrFloat32Array(indices)) {
-            return array;
+            return that;
         } else {
             indices.forEach(function (i) {
-                res.push(array.val[mod(i, array.length)]);
+                res.push(that.val[mod(i, that.length)]);
             });
-            return array.set(res);
+            return that.set(res);
         }
     },
 
@@ -3310,8 +3559,8 @@ dtm.data.augment({
             delimiter = '';
         }
         var res = '';
-        that.forEach(function (v, i) {
-            res += toString(v);
+        that.each(function (v, i) {
+            res += toString(v.get(0));
             if (i < that.length-1) {
                 res += delimiter;
             }
@@ -3350,6 +3599,11 @@ dtm.data.augment({
         return this;
     },
 
+    process: function (fn) {
+        this.params.processFn = fn;
+        return this;
+    },
+
     // TODO: these are broken...
     print: function () {
         if (isFunction(dtm.params.printer)) {
@@ -3383,13 +3637,15 @@ dtm.data.augment({
      */
     pitchquantize: function (scale) {
         if (isNestedDtmArray(this)) {
-            return this.map(function (a) {
-                return a.pitchquantize(scale);
+            return this.map(function (d) {
+                return d.pitchquantize(scale);
             });
         }
 
         if (isEmpty(scale)) {
             scale = dtm.gen('range', 12).get();
+        } else if (argsAreSingleVals(arguments)) {
+            scale = argsToArray(arguments);
         } else if (isDtmArray(scale) && isNumOrFloat32Array(scale.get())) {
             scale = scale.get();
         } else if (isNumOrFloat32Array(scale)) {
@@ -3397,6 +3653,13 @@ dtm.data.augment({
         }
 
         return this.set(dtm.transform.pitchQuantize(this.val, scale));
+    }
+});
+
+dtm.data.augment({
+    note: function () {
+        var args = argsToArray(arguments);
+        return this.freq(dtm.data(args).flatten().mtof());
     }
 });
 

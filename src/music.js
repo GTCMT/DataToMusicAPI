@@ -16,7 +16,7 @@ dtm.m = dtm.music = function () {
 dtm.music.offline = function (bool) {
     if (isBoolean(bool)) {
         Music.prototype.offline = bool;
-    } else if (isEmpy(bool)) {
+    } else if (isEmpty(bool)) {
         Music.prototype.offline = true;
     }
 };
@@ -358,9 +358,8 @@ function Music() {
             auto: true
         },
         play: { base: dtm.data([[true]]) },
-        offset: 0.0,
-        repeat: 1,
-        autoRep: true,
+        offset: dtm.data([[0]]),
+        repeat: { max: 0, current: 0, resetNext: true },
         iteration: 0,
         sequence: null,
 
@@ -378,6 +377,7 @@ function Music() {
         wavetable: null,
         rendered: null,
         tabLen: 1024,
+        lengthFixed: false,
         source: 'sine',
         type: 'synth',
         promise: null,
@@ -403,7 +403,13 @@ function Music() {
         offline: false,
 
         rtFxOnly: true,
-        named: []
+        named: [],
+
+        monitor: {
+            state: false,
+            grab: null,
+            block: 1024
+        }
     };
 
     music.nodes = {
@@ -414,7 +420,9 @@ function Music() {
         fx: [{}],
         pFx: [{}],
         rtSrc: null,
-        phasor: null
+        phasor: null,
+        dummySrc: null,
+        monitor: null
     };
 
     music.meta = {
@@ -461,10 +469,11 @@ Music.prototype.init = function () {
 
     // TODO: move that to global (master?)
     if (that.params.tabLen !== Music.prototype.defaultSize) {
-        that.params.wavetable = new Float32Array(that.params.tabLen);
-        that.params.wavetable.forEach(function (v, i) {
-            that.params.wavetable[i] = Math.sin(2 * Math.PI * i / that.params.tabLen);
-        });
+        // that.params.wavetable = new Float32Array(that.params.tabLen);
+        // that.params.wavetable.forEach(function (v, i) {
+        //     that.params.wavetable[i] = Math.sin(2 * Math.PI * i / that.params.tabLen);
+        // });
+        that.params.wavetable = dtm.sine(that.params.tabLen).get();
     } else {
         that.params.wavetable = Music.prototype.defaultWt.get();
     }
@@ -477,10 +486,10 @@ Music.prototype.size = Music.prototype.len = function (val) {
 
     if (isInteger(val) && val > 0) {
         that.params.tabLen = val;
-        that.params.wavetable = new Float32Array(that.params.tabLen);
-        that.params.wavetable.forEach(function (v, i) {
-            that.params.wavetable[i] = Math.sin(2 * Math.PI * i / that.params.tabLen);
-        });
+        // that.params.wavetable = new Float32Array(that.params.tabLen);
+        // that.params.wavetable.forEach(function (v, i) {
+        //     that.params.wavetable[i] = Math.sin(2 * Math.PI * i / that.params.tabLen);
+        // });
     }
     return that;
 };
@@ -490,26 +499,30 @@ Music.prototype.mode = function (mode) {
 };
 
 Music.prototype.clone = function () {
-    var newParams = {};
+    var newParams = {}, newNodes = {};
 
     try {
         objForEach(this.params, function (v, k) {
             if (['amp', 'notenum', 'freq', 'pitch', 'pan'].indexOf(k) > -1) {
                 newParams[k] = {};
                 newParams[k].base = v.base.clone();
-                newParams[k].add = isDtmArray(v.add) ? v.add.clone() : undefined;
-                newParams[k].mult = isDtmArray(v.mult) ? v.mult.clone() : undefined;
+                // newParams[k].add = isDtmArray(v.add) ? v.add.clone() : undefined;
+                // newParams[k].mult = isDtmArray(v.mult) ? v.mult.clone() : undefined;
                 newParams[k].isFinal = v.isFinal;
             } else {
                 newParams[k] = v;
             }
+        });
+
+        objForEach(this.nodes, function (v, i) {
+            newNodes[i] = v;
         });
     } catch (e) {
         console.log(e);
     }
 
     newParams.voiceId = Math.random();
-    return dtm.music().meta.setParams(newParams);
+    return dtm.music().meta.setParams(newParams).meta.setNodes(newNodes);
 };
 
 /**
@@ -537,23 +550,23 @@ Music.prototype.get = function (param) {
 };
 
 /**
- * Plays
+ * Plays a note
  * @function module:music#play
  * @returns {dtm.music}
  */
-Music.prototype.play = Music.prototype.p = function (fn) {
+Music.prototype.play = Music.prototype.p = function (time) {
     var that = this;
     var actx = Music.prototype.actx;
-
-    if (isFunction(fn)) {
-        that.params.onNoteCallback.push(fn);
-    }
-
     var defer = 0.01;
 
-    // if playSwitch is a function
+    // TODO: not right
+    if (!isEmpty(time) && !isNumber(time)) {
+        that.offset.apply(that, arguments);
+    }
 
+    // if playSwitch is a function
     if (that.params.pending) {
+        console.log('what is this');
         that.params.pending = false;
         that.params.promise.then(function () {
             that.play();
@@ -565,7 +578,25 @@ Music.prototype.play = Music.prototype.p = function (fn) {
     // TODO: use promise-all rather than deferring
     // deferred
     setTimeout(function () {
+        if (!that.params.lengthFixed) {
+            that.params.lengthFixed = true;
+        }
+
         var seqValue = that.params.sequence ? that.params.sequence[mod(that.params.iteration, that.params.sequence.length)] : that.params.iteration;
+
+        // TODO: allow fractional index?
+        // TODO: this is in many ways not right
+        if (isEmpty(time) || !isNumber(time)) {
+            that.params.offset(seqValue).each(function (v, i, d) {
+                var voiceIter = that.params.sequence ? that.params.sequence[mod(that.params.iteration + i, that.params.sequence.length)] : that.params.iteration + i;
+
+                if (i === 0) {
+                    time = d.get(voiceIter);
+                } else {
+                    that.clone().iter(voiceIter).play(d.get(voiceIter));
+                }
+            });
+        }
 
         // TODO: use promise
         that.params.onNoteCallback.forEach(function (fn) {
@@ -614,16 +645,20 @@ Music.prototype.play = Music.prototype.p = function (fn) {
             dur = 0.001;
         }
 
-        var offset = that.params.offset;
-        var curves;
+        // could be in initialize-note sequence
+        if (that.params.repeat.resetNext) {
+            that.params.repeat.current = that.params.repeat.max;
+            that.params.repeat.resetNext = false;
+        }
 
+        var curves;
         dtm.master.addVoice(that);
 
         //===============================
         if (Music.prototype.offline) {
-            var octx = new OfflineAudioContext(1, (offset + dur*4) * that.params.sr, that.params.sr);
+            var octx = new OfflineAudioContext(1, (time + dur*4) * that.params.sr, that.params.sr);
 
-            offset += octx.currentTime;
+            time += octx.currentTime;
 
             that.nodes.src = octx.createBufferSource();
             that.nodes.amp = octx.createGain();
@@ -634,7 +669,7 @@ Music.prototype.play = Music.prototype.p = function (fn) {
             that.nodes.out.connect(octx.destination);
 
             for (var n = 1; n < that.nodes.fx.length; n++) {
-                that.nodes.fx[n].run(offset, dur);
+                that.nodes.fx[n].run(time, dur);
                 that.nodes.fx[n-1].out.connect(that.nodes.fx[n].in);
             }
             that.nodes.fx[n-1].out.connect(that.nodes.out);
@@ -655,19 +690,19 @@ Music.prototype.play = Music.prototype.p = function (fn) {
             curves = [];
             curves.push({param: that.nodes.src.playbackRate, value: pitch});
             curves.push({param: that.nodes.amp.gain, value: amp});
-            that.setParamCurve(offset, dur, curves);
+            that.setParamCurve(time, dur, curves);
 
             that.nodes.fx[0].out.gain.value = 1.0;
             that.nodes.out.gain.value = 0.3;
 
-            that.nodes.src.start(offset);
-            that.nodes.src.stop(offset + dur);
+            that.nodes.src.start(time);
+            that.nodes.src.stop(time + dur);
 
             octx.startRendering();
             octx.oncomplete = function (e) {
                 that.params.rendered = e.renderedBuffer.getChannelData(0);
 
-                offset += that.params.baseTime;
+                time += that.params.baseTime;
 
                 that.nodes.rtSrc = actx.createBufferSource();
                 that.nodes.pFx[0].out = actx.createGain();
@@ -675,36 +710,47 @@ Music.prototype.play = Music.prototype.p = function (fn) {
                 var out = actx.createGain();
                 that.nodes.rtSrc.connect(that.nodes.pFx[0].out);
                 for (var n = 1; n < that.nodes.pFx.length; n++) {
-                    that.nodes.pFx[n].run(offset, dur);
+                    that.nodes.pFx[n].run(time, dur);
                     that.nodes.pFx[n-1].out.connect(that.nodes.pFx[n].in);
                 }
                 that.nodes.pFx[n-1].out.connect(that.nodes.pan);
                 that.nodes.pan.connect(out);
                 out.connect(actx.destination);
 
-                that.nodes.rtSrc.buffer = actx.createBuffer(1, that.params.rendered.length, that.params.sr);
-                that.nodes.rtSrc.buffer.copyToChannel(that.params.rendered, 0);
+                var stupidBuffer = actx.createBuffer(1, that.params.rendered.length, that.params.sr);
+                stupidBuffer.copyToChannel(that.params.rendered, 0);
+                that.nodes.rtSrc.buffer = stupidBuffer;
                 that.nodes.rtSrc.loop = false;
-                that.nodes.rtSrc.start(offset);
-                that.nodes.rtSrc.stop(offset + that.nodes.rtSrc.buffer.length);
+                that.nodes.rtSrc.start(time);
+                that.nodes.rtSrc.stop(time + that.nodes.rtSrc.buffer.length);
 
-                that.setParamCurve(offset, dur, [{param: that.nodes.pan.pan, value: pan}]);
+                that.setParamCurve(time, dur, [{param: that.nodes.pan.pan, value: pan}]);
 
                 out.gain.value = 1.0;
 
                 that.nodes.rtSrc.onended = function () {
+                    stupidBuffer = undefined;
+                    try {
+                        that.nodes.rtSrc.buffer = Music.prototype.dummyBuffer;
+                    } catch (e) {}
+                    that.nodes.rtSrc.disconnect(0);
+                    that.nodes.rtSrc.onended = undefined;
+                    that.nodes.rtSrc = undefined;
+
                     dtm.master.removeVoice(that);
 
-                    if (that.params.repeat > 1) {
+                    if (that.params.repeat.current > 1) {
                         that.play(); // TODO: pass any argument?
-                        that.params.repeat--;
+                        that.params.repeat.current--;
+                    } else {
+                        that.params.repeat.resetNext = true;
                     }
                 };
             };
         } else {
-            offset += actx.currentTime;
+            time += actx.currentTime;
 
-            that.params.startTime = offset;
+            that.params.startTime = time;
 
             that.nodes.src = actx.createBufferSource();
             that.nodes.amp = actx.createGain();
@@ -724,7 +770,7 @@ Music.prototype.play = Music.prototype.p = function (fn) {
             that.nodes.amp.connect(declipper);
             declipper.connect(that.nodes.pFx[0].out);
             for (var n = 1; n < that.nodes.pFx.length; n++) {
-                that.nodes.pFx[n].run(offset, dur);
+                that.nodes.pFx[n].run(time, dur);
                 that.nodes.pFx[n-1].out.connect(that.nodes.pFx[n].in);
             }
 
@@ -740,12 +786,12 @@ Music.prototype.play = Music.prototype.p = function (fn) {
             }
             out.connect(actx.destination);
 
-            var dummySrc = actx.createBufferSource();
-            dummySrc.buffer = Music.prototype.dummyBuffer;
-            dummySrc.loop = true;
+            that.nodes.dummySrc = actx.createBufferSource();
+            that.nodes.dummySrc.buffer = Music.prototype.dummyBuffer;
+            that.nodes.dummySrc.loop = true;
             var silence = actx.createGain();
             silence.gain.value = 1;
-            dummySrc.connect(silence);
+            that.nodes.dummySrc.connect(silence);
             silence.connect(out);
 
             var tempBuff = actx.createBuffer(1, that.params.tabLen, that.params.sr); // FF needs this stupid procedure of storing to a variable (Feb 18, 2016)
@@ -761,17 +807,45 @@ Music.prototype.play = Music.prototype.p = function (fn) {
             that.nodes.src.buffer = tempBuff;
             that.nodes.src.loop = (that.params.type !== 'sample');
 
+            //========= monitoring ==========
+            if (that.params.monitor.state) {
+                that.nodes.monitor = actx.createScriptProcessor(that.params.monitor.block, 1, 1);
+                var monitorData = dtm.data();
+
+                // TODO: not cleared
+                that.nodes.monitor.onaudioprocess = function (event) {
+                    var samps = event.inputBuffer.getChannelData(0);
+                    if (isFunction(that.params.monitor.grab)) {
+                        that.params.monitor.grab(monitorData.set(samps));
+                    } else {
+                        that.params.monitor.grab.set(samps);
+                    }
+                };
+
+                var mntGain = actx.createGain();
+                mntGain.gain.value = 0;
+
+                out.connect(that.nodes.monitor).connect(mntGain).connect(actx.destination);
+            }
+            //===============================
+
             // onended was sometimes not getting registered before src.start for some reason
             var p = new Promise(function (resolve) {
-                dummySrc.onended = function () {
+                that.nodes.dummySrc.onended = function () {
                     if (interval >= dur) {
                         dtm.master.removeVoice(that);
                     }
 
                     // rep(1) would only play once
-                    if (that.params.repeat > 1) {
+                    if (that.params.repeat.current > 1) {
                         that.play(); // TODO: pass any argument?
-                        that.params.repeat--;
+                        that.params.repeat.current--;
+                    } else {
+                        that.params.repeat.resetNext = true;
+
+                        if (that.params.monitor.state) {
+                            // that.params.monitor.state = false;
+                        }
                     }
                 };
 
@@ -779,6 +853,14 @@ Music.prototype.play = Music.prototype.p = function (fn) {
                     if (dur > interval) {
                         dtm.master.removeVoice(that);
                     }
+
+                    if (that.params.monitor.state) {
+                        // that.params.monitor.state = false;
+                        that.nodes.monitor.onaudioprocess = null;
+                        that.nodes.monitor.disconnect();
+                        that.nodes.monitor = null;
+                    }
+
                     that.params.playing = false;
                 };
 
@@ -786,10 +868,10 @@ Music.prototype.play = Music.prototype.p = function (fn) {
             });
 
             p.then(function () {
-                dummySrc.start(offset);
-                dummySrc.stop(offset + interval);
-                that.nodes.src.start(offset + 0.00001);
-                that.nodes.src.stop(offset + dur + 0.00001);
+                that.nodes.dummySrc.start(time);
+                that.nodes.dummySrc.stop(time + interval);
+                that.nodes.src.start(time + 0.00001);
+                that.nodes.src.stop(time + dur + 0.00001);
 
                 // ignoring start offset for now
                 // need a timer
@@ -799,10 +881,10 @@ Music.prototype.play = Music.prototype.p = function (fn) {
             curves = [];
             curves.push({param: that.nodes.src.playbackRate, value: pitch});
             curves.push({param: that.nodes.amp.gain, value: amp});
-            that.setParamCurve(offset, dur, curves);
+            that.setParamCurve(time, dur, curves);
 
             if (actx.createStereoPanner) {
-                that.setParamCurve(offset, dur, [{param: that.nodes.pan.pan, value: pan}]);
+                that.setParamCurve(time, dur, [{param: that.nodes.pan.pan, value: pan}]);
             } else {
                 var left = pan.map(function (v) {
                     if (v < 0) {
@@ -819,17 +901,17 @@ Music.prototype.play = Music.prototype.p = function (fn) {
                         return 0.5;
                     }
                 });
-                that.setParamCurve(offset, dur, [{param: that.nodes.left.gain, value: left}]);
-                that.setParamCurve(offset, dur, [{param: that.nodes.right.gain, value: right}]);
+                that.setParamCurve(time, dur, [{param: that.nodes.left.gain, value: left}]);
+                that.setParamCurve(time, dur, [{param: that.nodes.right.gain, value: right}]);
             }
 
             that.nodes.pFx[0].out.gain.value = 1.0; // ?
             out.gain.value = 1.0;
 
             var ramp = 0.005;
-            declipper.gain.setValueAtTime(0.0, offset);
-            declipper.gain.linearRampToValueAtTime(1.0, offset + ramp);
-            declipper.gain.setTargetAtTime(0.0, offset + dur - ramp, ramp * 0.3);
+            declipper.gain.setValueAtTime(0.0, time);
+            declipper.gain.linearRampToValueAtTime(1.0, time + ramp);
+            declipper.gain.setTargetAtTime(0.0, time + dur - ramp, ramp * 0.3);
         }
 
         that.params.iteration++;
@@ -840,20 +922,24 @@ Music.prototype.play = Music.prototype.p = function (fn) {
 };
 
 Music.prototype.start = function () {
-    this.rep();
-    this.play.apply(this, arguments);
+    this.interval.apply(this, arguments);
+    this.rep().play();
     return this;
 };
 
+/**
+ * Triggers itself (including the registered callback functions) after a certain time delay.
+ * @type {Music.t}
+ */
 Music.prototype.trigger = Music.prototype.trig = Music.prototype.t = function () {
-    this.mute();
-    this.play.apply(this, arguments);
+    this.offset.apply(this, arguments);
+    this.mute().play();
     return this;
 };
 
 Music.prototype.run = Music.prototype.r = function () {
-    this.mute().rep();
-    this.play.apply(this, arguments);
+    this.interval.apply(this, arguments);
+    this.mute().rep().play();
     return this;
 };
 
@@ -872,15 +958,26 @@ Music.prototype.stop = Music.prototype.s = function (time) {
         time = 0.0; // TODO: time not same as rt rendering time
     }
 
-    that.params.repeat = 0;
+    that.params.repeat.current = 0;
+    that.params.repeat.resetNext = true;
 
     setTimeout(function () {
         if (that.nodes.src) {
             that.nodes.src.stop(time);
         }
 
+        if (that.nodes.dummySrc) {
+            that.nodes.dummySrc.stop(time);
+        }
+
         if (that.nodes.rtSrc) {
             that.nodes.rtSrc.stop(time);
+        }
+
+        that.params.monitor.state = false;
+        if (that.nodes.monitor) {
+            that.nodes.monitor.onaudioprocess = null;
+            that.nodes.monitor.disconnect();
         }
 
         dtm.master.removeVoice(that);
@@ -889,8 +986,11 @@ Music.prototype.stop = Music.prototype.s = function (time) {
     return that;
 };
 
-Music.prototype.after = Music.prototype.offset = function (src) {
-    this.params.offset = toFloat32Array(src)[0];
+Music.prototype.aft = Music.prototype.after = Music.prototype.offset = function () {
+    var argList = argsToArray(arguments);
+    if (check(argList)) {
+        this.params.offset = convert(argList);
+    }
     return this;
 };
 
@@ -981,16 +1081,22 @@ Music.prototype.phase = function () {
     return this.params.phase;
 };
 
-Music.prototype.repeat = Music.prototype.rep = function (times, interval) {
+Music.prototype.repeat = Music.prototype.rep = function (times) {
     if (isInteger(times) && times > 0) {
-        this.params.repeat = times;
+        this.params.repeat.max = times;
     } else if (isEmpty(times) || times === Infinity || times === true) {
-        this.params.repeat = Infinity;
+        this.params.repeat.max = Infinity;
     }
+
+    this.params.repeat.resetNext = true;
     return this;
 };
 
-Music.prototype.interval = Music.prototype.int = Music.prototype.i = function () {
+/**
+ * Sets the interval in seconds between repeated or iterated events.
+ * @type {Music.i}
+ */
+Music.prototype.at = Music.prototype.interval = Music.prototype.int = Music.prototype.i = function () {
     var depth = 2;
 
     if (arguments.length === 0) {
@@ -1046,7 +1152,7 @@ Music.prototype.bpm = function () {
  * @function module:music#dur
  * @returns {dtm.music}
  */
-Music.prototype.duration = Music.prototype.dur = Music.prototype.d = function () {
+Music.prototype.for = Music.prototype.duration = Music.prototype.dur = Music.prototype.d = function () {
     var seqValue = this.params.sequence ? this.params.sequence[mod(this.params.iteration, this.params.sequence.length)] : this.params.iteration;
 
     if (arguments.length === 0) {
@@ -1080,6 +1186,7 @@ Music.prototype.duration = Music.prototype.dur = Music.prototype.d = function ()
  * @returns {dtm.music}
  */
 Music.prototype.amplitude = Music.prototype.amp = Music.prototype.a = function () {
+    var that = this;
     var seqValue = this.params.sequence ? this.params.sequence[mod(this.params.iteration, this.params.sequence.length)] : this.params.iteration;
 
     if (arguments.length === 0) {
@@ -1091,6 +1198,37 @@ Music.prototype.amplitude = Music.prototype.amp = Music.prototype.a = function (
     }
 
     this.mapParam(arguments, this.params.amp);
+
+    // TODO: experimental
+    if (that.params.playing) {
+        that.nodes.amp.gain.cancelScheduledValues(that.params.startTime);
+        var amp = processParam(that.params.amp, seqValue);
+
+        //==================== copied from play()
+        var interval, dur;
+        interval = processParam(that.params.interval, seqValue)[0];
+
+        if (interval <= 0) {
+            interval = 0;
+        }
+
+        if (that.params.dur.auto && interval !== 0) {
+            if (that.params.dur.auto === 'sample') {
+                dur = interval; // TODO: pitch-curve dependent
+            } else {
+                dur = interval;
+            }
+        } else {
+            dur = processParam(that.params.dur, seqValue)[0];
+        }
+
+        if (dur <= 0) {
+            dur = 0.001;
+        }
+        //====================
+
+        that.setParamCurve(that.params.startTime, dur, [{param: that.nodes.amp.gain, value: amp}]);
+    }
     return this;
 };
 
@@ -1119,26 +1257,57 @@ Music.prototype.frequency = Music.prototype.freq = Music.prototype.f = function 
  * @returns {dtm.music}
  */
 Music.prototype.notenum = Music.prototype.note = Music.prototype.nn = Music.prototype.n = function () {
-    var seqValue = this.params.sequence ? this.params.sequence[mod(this.params.iteration, this.params.sequence.length)] : this.params.iteration;
+    var that = this;
+    var seqValue = that.params.sequence ? that.params.sequence[mod(that.params.iteration, that.params.sequence.length)] : that.params.iteration;
 
     if (arguments.length === 0) {
-        return this.params.notenum.base(seqValue);
+        return that.params.notenum.base(seqValue);
     } else if (isDtmSynth(arguments[0])) {
-        return this.notenum(arguments[0].notenum());
+        return that.notenum(arguments[0].notenum());
     }
-    this.mapParam(arguments, this.params.notenum);
-    this.setFinal('notenum');
+    that.mapParam(arguments, that.params.notenum);
+    that.setFinal('notenum');
 
-    if (this.params.playing) {
-        this.nodes.src.playbackRate.cancelScheduledValues(this.params.startTime);
-        var pitch = processParam(this.params.notenum, seqValue).map(function (v) {
-            return freqToPitch(mtof(v));
+
+    // TODO: experimental
+    if (that.params.playing) {
+        that.nodes.src.playbackRate.cancelScheduledValues(that.params.startTime);
+        var pitch = processParam(that.params.notenum, seqValue).map(function (v) {
+            return that.freqToPitch(mtof(v));
         });
-        var dur = processParam(this.params.dur, seqValue)[0];
-        this.setParamCurve(this.params.startTime, dur, [{param: this.nodes.src.playbackRate, value: pitch}]);
+
+        //==================== copied from play()
+        var interval, dur;
+        interval = processParam(that.params.interval, seqValue)[0];
+
+        if (interval <= 0) {
+            interval = 0;
+        }
+
+        if (that.params.dur.auto && interval !== 0) {
+            if (that.params.dur.auto === 'sample') {
+                that.params.tabLen = that.params.wavetable.length;
+
+                dur = 0;
+                pitch.forEach(function (v) {
+                    dur += that.params.tabLen / that.params.sr / v / pitch.length;
+                });
+            } else {
+                dur = interval;
+            }
+        } else {
+            dur = processParam(that.params.dur, seqValue)[0];
+        }
+
+        if (dur <= 0) {
+            dur = 0.001;
+        }
+        //====================
+
+        that.setParamCurve(that.params.startTime, dur, [{param: that.nodes.src.playbackRate, value: pitch}]);
     }
 
-    return this;
+    return that;
 };
 
 // for longer sample playback
@@ -1156,8 +1325,21 @@ Music.prototype.pitch = function () {
     return this;
 };
 
+Music.prototype.pan = function () {
+    var seqValue = this.params.sequence ? this.params.sequence[mod(this.params.iteration, this.params.sequence.length)] : this.params.iteration;
+
+    if (arguments.length === 0) {
+        return this.params.pan.base(seqValue);
+    } else if (isDtmSynth(arguments[0])) {
+        return this.pan(arguments[0].pan());
+    }
+
+    this.mapParam(arguments, this.params.pan);
+    return this;
+};
+
 // TODO: wavetable param should be a dtm.data object
-Music.prototype.w = Music.prototype.wt = Music.prototype.wavetable = function (src) {
+Music.prototype.w = Music.prototype.wf = Music.prototype.waveform = Music.prototype.wt = Music.prototype.wavetable = function (src) {
     var that = this;
 
     if (arguments.length === 0) {
@@ -1168,13 +1350,18 @@ Music.prototype.w = Music.prototype.wt = Music.prototype.wavetable = function (s
 
     src = typeCheck(src);
     if (isFloat32Array(src)) {
-        // that.params.tabLen = src.length; // for the morphing / in-note modulation
-        if (that.params.tabLen !== src.length) {
-            that.params.wavetable = dtm.data(src).step(that.params.tabLen).get();
+        // for the morphing / in-note modulation
+        if (that.params.lengthFixed) {
+            if (that.params.tabLen !== src.length) {
+                that.params.wavetable = dtm.data(src).step(that.params.tabLen).get();
+            } else {
+                that.params.wavetable = src;
+            }
         } else {
             that.params.wavetable = src;
+            that.params.tabLen = src.length;
+            // that.params.pitch = freqToPitch(that.params.freq); // ?
         }
-        //that.params.pitch = freqToPitch(that.params.freq); // ?
     } else if (isFunction(src)) {
         if (that.params.promise) {
             that.params.promise.then(function () {
@@ -1371,10 +1558,13 @@ Music.prototype.freqToPitch = function (freq) {
 Music.prototype.setParamCurve = function (time, dur, curves) {
     var that = this;
     curves.forEach(function (curve) {
-        // if the curve length exceeds the set duration * this
-        var maxDurRatioForSVAT = 0.25;
-        if (that.params.curve || (curve.value.length / that.params.sr) > (dur * maxDurRatioForSVAT)) {
-            curve.param.setValueCurveAtTime(curve.value, time, dur);
+        var ksmps = 100;
+        // if the curve length exceeds the "control rate"
+        if (that.params.curve || (that.params.sr * dur / curve.value.length) < ksmps) {
+            if (curve.value.length === 1) {
+                curve.value.push(curve.value[0]);
+            }
+            curve.param.setValueCurveAtTime(toFloat32Array(curve.value), time, dur);
         } else {
             curve.value.forEach(function (v, i) {
                 curve.param.setValueAtTime(v, time + i / curve.value.length * dur);
@@ -1384,7 +1574,6 @@ Music.prototype.setParamCurve = function (time, dur, curves) {
                 }
             });
         }
-        // curve.param.setValueCurveAtTime(curve.value, time, dur);
     });
 };
 
@@ -1637,6 +1826,20 @@ Music.prototype.samphold = Music.prototype.sh = function (samps) {
         sh.samps = samps;
     }
     this.nodes.pFx.push(sh);
+    return this;
+};
+
+Music.prototype.monitor = function (input, block) {
+    if (!isNumber(block)) {
+        block = 1024;
+    }
+
+    if (isDtmArray(input) || isFunction(input)) {
+        this.params.monitor.state = true;
+        this.params.monitor.grab = input;
+        this.params.monitor.block = block;
+    }
+
     return this;
 };
 

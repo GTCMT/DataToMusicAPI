@@ -10,7 +10,7 @@
         },
         "systemName"      : "DTM API",
         "footer"          : "",
-        "copyright"       : "DTM API | Copyright © 2016 Takahiko Tsuchiya",
+        "copyright"       : "DTM API | Copyright © 2017 Takahiko Tsuchiya",
         "navType"         : "vertical",
         "theme"           : "cerulean",
         "linenums"        : true,

@@ -604,3 +604,66 @@ dtm.cam = function (input, interval) {
         console.log('getUserMedia not supported');
     }
 };
+
+dtm.audio = function (grab, block) {
+    if (isNumber(grab)) {
+        block = grab;
+    } else if (!isNumber(block)) {
+        block = 1024;
+    }
+
+    var data = dtm.data(0);
+    dtm.params.stream = true;
+
+    navigator.getUserMedia = (navigator.getUserMedia ||
+    navigator.webkitGetUserMedia ||
+    navigator.mozGetUserMedia ||
+    navigator.msGetUserMedia);
+
+    if (navigator.getUserMedia) {
+        navigator.getUserMedia({
+                audio: {
+                    mandatory: {
+                        googEchoCancellation: 'false',
+                        googAutoGainControl: 'false',
+                        googNoiseSuppression: 'false',
+                        googHighpassFilter: 'false'
+                    },
+                    optional: []
+                },
+                video: false
+            },
+            function (stream) {
+                // data = dtm.data();
+
+                var actx = dtm.wa.actx;
+                var input = actx.createMediaStreamSource(stream);
+                var sp = actx.createScriptProcessor(block,1,1);
+
+                // TODO: not getting destoryed properly
+                sp.onaudioprocess = function (event) {
+                    if (dtm.params.stream) {
+                        var samps = event.inputBuffer.getChannelData(0);
+
+                        if (isDtmArray(grab)) {
+                            grab.set(samps);
+                        } else if (isFunction(grab)) {
+                            grab(data.set(samps));
+                        } else {
+                            data.set(samps); // not working
+                        }
+                    }
+                };
+
+                var gain = actx.createGain();
+                gain.gain.value = 0;
+
+                input.connect(sp).connect(gain).connect(actx.destination);
+            },
+            function (e) {
+                console.error(e);
+            });
+    }
+
+    return data;
+};

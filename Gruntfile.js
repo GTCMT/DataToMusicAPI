@@ -7,23 +7,23 @@ module.exports = function (grunt) {
         concat: {
             target: {
                 src: [
-                    'misc/start.js',
-                    // 'src/emscripten/out/worker.js',
+                    'src/emscripten/out/worker.js',
                     'src/alias.js',
                     'src/core.js',
                     'src/polyfills.js',
                     'src/utils.js',
                     'src/osc.js',
                     'src/analyzer.js',
-                    'src/generator.js',
                     'src/transform.js',
                     'src/array.js',
                     'src/data.js',
+                    'src/generator_old.js',
                     'src/parser.js',
                     'src/loader.js',
                     'src/clock.js',
                     'src/instrument.js',
                     'src/model.js',
+                    'src/mapper.js',
                     'src/synth.js',
                     'src/music.js',
                     'src/master.js',
@@ -33,10 +33,13 @@ module.exports = function (grunt) {
                     'src/models/bipolar.js',
                     'src/models/huffman.js',
                     'src/models/movetofront.js',
-                    'src/instr/image-scan.js',
-                    'misc/end.js'
+                    'src/instr/image-scan.js'
                 ],
                 dest: 'dtm.js'
+            },
+            options: {
+                banner: '(function () {\n',
+                footer: '\n})();'
             }
         },
 

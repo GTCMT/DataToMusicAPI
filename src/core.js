@@ -33,7 +33,9 @@ var dtm = {
 
     params: {
         plotter: null,
-        printer: null
+        printer: null,
+        stream: false,
+        traced: []
     },
 
     // TODO: a function to list currently loaded objects, such as data, arrays, models... - for console livecoding situation

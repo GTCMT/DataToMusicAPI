@@ -33,11 +33,14 @@ Client-side JavaScript utility tools for data musification (sonification).
 </head>
 <body>
 <script>
-    dtm.synth().play();
+    var a = dtm.data(1,2,3,4,5);
+    dtm.music().note(a.range(60,90)).play();
 </script>
 </body>
 </html>
 ```
+
+<button onclick="playPrev(this)">Listen</button>
 
 ## Loading data
 
@@ -74,3 +77,7 @@ Bower (browser dependency management)
 Grunt (task automation)
 Karma and Jasmine (for unit test)
 JSDoc (documentation builder)
+
+## Credits ##
+Open-source libraries used in DTM API: 
+<a href="https://sourceforge.net/projects/kissfft">Kiss FFT</a>

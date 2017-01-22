@@ -10,7 +10,7 @@
  * @param [categ] {string}
  * @returns a new model instance
  */
-dtm.to = dtm.model = function (name, categ) {
+dtm.model = function (name, categ) {
     var params = {
         name: null,
         categ: 'none',
