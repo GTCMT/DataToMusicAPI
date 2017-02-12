@@ -69,7 +69,7 @@ dtm.g = dtm.gen = dtm.generator = function () {
             'scale', 'chord',
             'modal', 'modes', 'mode',
             'fibonacci',
-            'noise', 'random', 'rand', 'rf', 'randi', 'ri',
+            'noise', 'random', 'rand', 'randf', 'rf', 'randi', 'ri',
             'gauss', 'gaussian', 'gaussCurve', 'normal',
             'sin', 'sine', 'cos', 'cosine',
             'tri', 'triangle',
@@ -88,7 +88,7 @@ dtm.g = dtm.gen = dtm.generator = function () {
         noRange: [],
         noMinMax: [],
         noMinMaxDir: ['rise', 'decay', 'fall', 'noise'],
-        random: ['random', 'rand', 'rf', 'randi', 'ri'],
+        random: ['random', 'rand', 'randf', 'rf', 'randi', 'ri'],
         string: ['string', 'split', 'str', 's', 'character', 'characters', 'chars', 'char', 'c', 'text']
     };
 
@@ -412,6 +412,7 @@ dtm.g = dtm.gen = dtm.generator = function () {
 
             case 'rf':
             case 'rand':
+            case 'randf':
             case 'random':
                 generator.val = random(generator.length, sorted[0], sorted[1], 1.0, false);
                 break;
@@ -827,7 +828,7 @@ Generator.prototype.constructor = Generator;
 // };
 
 // creating shorthand modules
-var generators = ['line', 'rise', 'decay', 'fall', 'seq', 'sequence', 'series', 'range', 'r', 'noise', 'random', 'rand', 'rf', 'randi', 'ri', 'gaussian', 'gauss', 'normal', 'zeros', 'zeroes', 'ones', 'constant', 'constants', 'const', 'consts', 'repeat', 'string', 'str', 'sin', 'sine', 'cos', 'cosine', 'tri', 'triangle', 'saw', 'fibonacci', 'decay', 'scale', 'modal', 'modes', 'mode', 'sig', 'sigmoid', 'logistic'];
+var generators = ['line', 'rise', 'decay', 'fall', 'seq', 'sequence', 'series', 'range', 'r', 'noise', 'random', 'rand', 'randf', 'rf', 'randi', 'ri', 'gaussian', 'gauss', 'normal', 'zeros', 'zeroes', 'ones', 'constant', 'constants', 'const', 'consts', 'repeat', 'string', 'str', 'sin', 'sine', 'cos', 'cosine', 'tri', 'triangle', 'saw', 'fibonacci', 'decay', 'scale', 'modal', 'modes', 'mode', 'sig', 'sigmoid', 'logistic'];
 
 generators.forEach(function (type) {
     dtm[type] = function () {

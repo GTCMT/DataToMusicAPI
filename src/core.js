@@ -74,6 +74,26 @@ var dtm = {
         dtm.wa.clockBuf = dtm.wa.actx.createBuffer(1, Math.round(dtm.wa.actx.sampleRate * dtm.wa.clMult), dtm.wa.actx.sampleRate);
     },
 
+    startWebMidi: function () {
+        if (isEmpty(MIDI.prototype.out)) {
+            if (navigator.requestMIDIAccess) {
+                navigator.requestMIDIAccess({
+                    sysex: false
+                }).then(function (webMidi) {
+                    var devices = [];
+                    var iter = webMidi.outputs.values();
+                    for (var i = iter.next(); i && !i.done; i = iter.next()) {
+                        devices.push(i.value);
+                    }
+                    MIDI.prototype.devices = devices;
+                    MIDI.prototype.out = devices[0];
+                }, null);
+            } else {
+                console.log("No MIDI support in your browser.");
+            }
+        }
+    },
+
     oscParams: {
         isOpen: false,
         port: null

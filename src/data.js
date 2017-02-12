@@ -253,6 +253,8 @@ function Data() {
         interceptor: {},
         targets: {},
         processFn: null,
+        isTarget: false,
+        attachedFn: null,
         nested: false,
         depth: 1
     };
@@ -311,6 +313,7 @@ function Data() {
     data.forEach = data.foreach = data.each = new Each(data);
     data.map = new Map(data);
     data.g = data.group = data.b = data.block = new Block(data);
+    data.flatten = data.ug = data.ungroup = data.ub = data.unblock = new UnBlock(data);
     data.f = data.fit = new Fit(data);
     data.s = data.str = data.stretch = new Stretch(data);
     data.fft = new FFT(data);
@@ -380,7 +383,7 @@ Map.prototype = Object.create(Function.prototype);
 
 function Block(data) {
     // TODO: accept option as arg? for numBlocks, pad, overlap ratio, etc.
-    function block(len, hop, window, pad) {
+    function block(len, hop, window, tail) {
         if (!isInteger(len) || len < 1) {
             len = 1;
         } else if (len > this.length) {
@@ -392,13 +395,20 @@ function Block(data) {
         if (isEmpty(window)) {
             window = 'rectangular';
         }
+        if (!isString(tail)) {
+            tail = 'wrap';
+        }
 
         var newArr = [];
         var numBlocks = Math.floor((data.length - len) / hop) + 1;
 
         for (var i = 0; i < numBlocks; i++) {
             // name: original starting index
-            newArr[i] = dtm.data(data.val.slice(i*hop, i*hop+len)).window(window).parent(data).label((i*hop).toString());
+            newArr[i] = dtm.data(data.val.slice(i*hop, i*hop+len)).parent(data).label((i*hop).toString());
+
+            if (window !== 'rectangular') {
+                newArr[i].window(window);
+            }
         }
 
         return data.set(newArr);
@@ -407,44 +417,44 @@ function Block(data) {
     block.data = data;
     block.__proto__ = Block.prototype;
 
-    ['g', 'group', 'b', 'block'].forEach(function (name) {
-        // Data.prototype[name] = block;
-
-        Each.prototype[name] = function () {
-            var data = this.data;
-            var args = arguments;
-
-            if (isNestedDtmArray(data)) {
-                data.each(function (d) {
-                    d[name].apply(d, args);
-                });
-                return data;
-            } else {
-                var res = [];
-                data.each(function (d) {
-                    res = concat(res, d[name].apply(d, args).get());
-                });
-                return data.set(res);
-            }
-        };
-
-        Map.prototype[name] = function () {
-            var data = this.data;
-            var args = arguments;
-
-            if (isNestedDtmArray(data)) {
-                return data.map(function (d) {
-                    return d[name].apply(d, args);
-                });
-            } else {
-                var res = [];
-                data.each(function (d) {
-                    res = concat(res, d[name].apply(d, args).get());
-                });
-                return data.set(res);
-            }
-        };
-    });
+    // ['g', 'group', 'b', 'block'].forEach(function (name) {
+    //     // Data.prototype[name] = block;
+    //
+    //     Each.prototype[name] = function () {
+    //         var data = this.data;
+    //         var args = arguments;
+    //
+    //         if (isNestedDtmArray(data)) {
+    //             data.each(function (d) {
+    //                 d[name].apply(d, args);
+    //             });
+    //             return data;
+    //         } else {
+    //             var res = [];
+    //             data.each(function (d) {
+    //                 res = concat(res, d[name].apply(d, args).get());
+    //             });
+    //             return data.set(res);
+    //         }
+    //     };
+    //
+    //     Map.prototype[name] = function () {
+    //         var data = this.data;
+    //         var args = arguments;
+    //
+    //         if (isNestedDtmArray(data)) {
+    //             return data.map(function (d) {
+    //                 return d[name].apply(d, args);
+    //             });
+    //         } else {
+    //             var res = [];
+    //             data.each(function (d) {
+    //                 res = concat(res, d[name].apply(d, args).get());
+    //             });
+    //             return data.set(res);
+    //         }
+    //     };
+    // });
 
     return block;
 }
@@ -462,17 +472,85 @@ Block.prototype.into = function (val) {
     }
 };
 
-Block.prototype.change = function () {
+Block.prototype.if = Block.prototype.when = function (fn) {
     var data = this.data;
+    var newArr = [dtm.data()];
 
-    var newArr = [], prev = null;
-    for (var i = 0, l = data.length; i < l; i++) {
-        if (data.val[i] !== null) {
-
+    data.each(function (d, i) {
+        if (i > 0 && fn(d, i, data)) {
+            newArr.push(dtm.data(d.get(0)));
         } else {
+            newArr[newArr.length-1].concat(d.get(0));
+        }
+    });
 
+    return data.set(newArr);
+};
+
+// Block.prototype.at = function (index) {};
+
+Block.prototype.by = function () {
+    var data = this.data;
+    return data;
+};
+
+Block.prototype.peak = Block.prototype.peaks = function (shift) {
+    var data = this.data;
+    var diff = data().diff(1);
+    var pair = shift ? 1 : 0;
+
+    return data.block.if(function (d, i) {
+        return diff(i).mult(diff(i+1)).get(0) < 0;
+    }).unblock.if(function (d, i) {
+        return i % 2 === pair;
+    });
+};
+
+function UnBlock(data) {
+    function unblock() {
+        if (isNestedDtmArray(data)) {
+            var flattened = [];
+            for (var i = 0, l = data.val.length; i < l; i++) {
+                if (isDtmArray(data.val[i])) {
+                    flattened = concat(flattened, data.val[i].val);
+                }
+            }
+
+            if (isNumArray(flattened)) {
+                flattened = toFloat32Array(flattened);
+            }
+
+            data.params.depth--;
+            if (data.params.depth === 1) {
+                data.params.nested = false;
+            }
+
+            return data.set(flattened);
+        } else {
+            return data;
         }
     }
+
+    unblock.data = data;
+    unblock.__proto__ = UnBlock.prototype;
+    return unblock;
+}
+
+UnBlock.prototype = Object.create(Function.prototype);
+
+UnBlock.prototype.if = UnBlock.prototype.when = function (fn) {
+    var data = this.data;
+    var newArr = [dtm.data().label('0')];
+
+    data.each(function (d, i) {
+        if (i === 0 || fn(d, i, data)) {
+            newArr[newArr.length-1].concat(d.get());
+        } else {
+            newArr.push(d.label(i.toString()));
+        }
+    });
+
+    return data.set(newArr);
 };
 
 function Fit(data) {
@@ -495,42 +573,42 @@ function Fit(data) {
     fit.data = data;
     fit.__proto__ = Fit.prototype;
 
-    ['fit', 'f'].forEach(function (name) {
-        Each.prototype[name] = function () {
-            var data = this.data;
-            var args = arguments;
-
-            if (isNestedDtmArray(data)) {
-                data.each(function (d) {
-                    d[name].apply(d, args);
-                });
-                return data;
-            } else {
-                var res = [];
-                data.each(function (d) {
-                    res = concat(res, d[name].apply(d, args).get());
-                });
-                return data.set(res);
-            }
-        };
-
-        Map.prototype[name] = function () {
-            var data = this.data;
-            var args = arguments;
-
-            if (isNestedDtmArray(data)) {
-                return data.map(function (d) {
-                    return d[name].apply(d, args);
-                });
-            } else {
-                var res = [];
-                data.each(function (d) {
-                    res = concat(res, d[name].apply(d, args).get());
-                });
-                return data.set(res);
-            }
-        };
-    });
+    // ['fit', 'f'].forEach(function (name) {
+    //     Each.prototype[name] = function () {
+    //         var data = this.data;
+    //         var args = arguments;
+    //
+    //         if (isNestedDtmArray(data)) {
+    //             data.each(function (d) {
+    //                 d[name].apply(d, args);
+    //             });
+    //             return data;
+    //         } else {
+    //             var res = [];
+    //             data.each(function (d) {
+    //                 res = concat(res, d[name].apply(d, args).get());
+    //             });
+    //             return data.set(res);
+    //         }
+    //     };
+    //
+    //     Map.prototype[name] = function () {
+    //         var data = this.data;
+    //         var args = arguments;
+    //
+    //         if (isNestedDtmArray(data)) {
+    //             return data.map(function (d) {
+    //                 return d[name].apply(d, args);
+    //             });
+    //         } else {
+    //             var res = [];
+    //             data.each(function (d) {
+    //                 res = concat(res, d[name].apply(d, args).get());
+    //             });
+    //             return data.set(res);
+    //         }
+    //     };
+    // });
 
     return fit;
 }
@@ -578,34 +656,34 @@ function Stretch(data) {
     stretch.data = data;
     stretch.__proto__ = Stretch.prototype;
 
-    ['stretch', 'str', 's'].forEach(function (name) {
-        Each.prototype[name] = function () {
-            var data = this.data;
-            var args = arguments;
-
-            if (isNestedDtmArray(data)) {
-                data.each(function (a) {
-                    a[name].apply(a, args);
-                });
-                return data;
-            } else {
-                return data;
-            }
-        };
-
-        Map.prototype[name] = function () {
-            var data = this.data;
-            var args = arguments;
-
-            if (isNestedDtmArray(data)) {
-                return data.map(function (a) {
-                    return a[name].apply(a, args);
-                });
-            } else {
-                return data;
-            }
-        };
-    });
+    // ['stretch', 'str', 's'].forEach(function (name) {
+    //     Each.prototype[name] = function () {
+    //         var data = this.data;
+    //         var args = arguments;
+    //
+    //         if (isNestedDtmArray(data)) {
+    //             data.each(function (a) {
+    //                 a[name].apply(a, args);
+    //             });
+    //             return data;
+    //         } else {
+    //             return data;
+    //         }
+    //     };
+    //
+    //     Map.prototype[name] = function () {
+    //         var data = this.data;
+    //         var args = arguments;
+    //
+    //         if (isNestedDtmArray(data)) {
+    //             return data.map(function (a) {
+    //                 return a[name].apply(a, args);
+    //             });
+    //         } else {
+    //             return data;
+    //         }
+    //     };
+    // });
 
     return stretch;
 }
@@ -740,15 +818,16 @@ dtm.data.augment({
                     that.params.depth += childDepth;
                 } else if (isNestedWithDtmArray(arguments[0])) {
                     that.val = new Array(arguments[0].length);
-                    var childDepth = 1;
+                    // var childDepth = getMaxArrayDepth(that.val);
                     for (var i = 0, l = arguments[0].length; i < l; i++) {
                         that.val[i] = arguments[0][i].parent(that);
-                        if (that.val[i].params.depth > childDepth) {
-                            childDepth = that.val[i].params.depth;
-                        }
+                        // if (that.val[i].params.depth > childDepth) {
+                        //     childDepth = that.val[i].params.depth;
+                        // }
                     }
                     that.params.nested = true;
-                    that.params.depth += childDepth;
+                    // that.params.depth += childDepth;
+                    that.params.depth = getMaxArrayDepth(that.val);
                 } else if (isString(arguments[0])) {
                     that.val = [arguments[0]]; // no splitting
                     checkType(that.val);
@@ -810,20 +889,21 @@ dtm.data.augment({
 
             // TODO: only accept integers
 
-            indices.forEach(function (i) {
+            for (var n = 0, l = indices.length; n < l; n++) {
+                var i = indices[n];
                 if (isNumber(i)) {
                     if (!isInteger(i)) {
                         i = Math.round(i);
                     }
                     res.push(that.val[mod(i, that.length)]);
                 } else if (isString(i) && isNestedDtmArray(that)) {
-                    that.forEach(function (a) {
+                    that.each(function (a) {
                         if (a.get('name') === i) {
                             res.push(a);
                         }
                     });
                 }
-            });
+            }
 
             if (isNestedDtmArray(that)) {
                 res = dtm.data(res);
@@ -852,7 +932,7 @@ dtm.data.augment({
                 case 'names':
                 case 'keys':
                 case 'labels':
-                    if (isNestedWithDtmArray(that.val)) {
+                    if (isNestedDtmArray(that)) {
                         return that.val.map(function (a) {
                             return a.get('name');
                         });
@@ -867,7 +947,7 @@ dtm.data.augment({
                         return 'Float32Array'
                     } else if (isStringArray(that.val)) {
                         return 'string';
-                    } else if (isNestedWithDtmArray(that.val)) {
+                    } else if (isNestedDtmArray(that)) {
                         return 'nested';
                     } else {
                         return 'mixed';
@@ -906,11 +986,11 @@ dtm.data.augment({
                     });
 
                 case 'row':
-                    if (isInteger(arguments[1]) && isNestedWithDtmArray(that.val)) {
+                    if (isInteger(arguments[1]) && isNestedDtmArray(that)) {
                         var idx = arguments[1];
                         res = [];
-                        that.val.forEach(function (a) {
-                            res.push(a.get(idx));
+                        that.each(function (d) {
+                            res.push(d.get(idx));
                         });
                         if (isNumArray(res)) {
                             res = toFloat32Array(res);
@@ -1183,7 +1263,16 @@ dtm.data.augment({
     // TODO: not consistent with "name()"
     names: function () {
         if (isNestedDtmArray(this)) {
-            return this.set(this.get('keys'));
+            var val = this.get('keys');
+            this.params.depth--;
+            if (this.params.depth === 1) {
+                this.params.nested = false;
+            }
+
+            if (arguments.length > 0) {
+                val = dtm.data(val).column(argsToArray(arguments)).ub();
+            }
+            return this.set(val);
         } else {
             return this;
         }
@@ -1232,30 +1321,77 @@ dtm.data.augment({
 dtm.data.augment({
     aliases: {
         column: ['col'],
-        interpolate: ['interp', 'itp']
+        interpolate: ['interp', 'itp'],
+        phase: ['p']
     },
 
-    column: function (which) {
+    column: function () {
+        var args = flatten(argsToArray(arguments));
+        var res = [];
         var that = this;
 
-        if (isNestedDtmArray(that)) {
-            if (isString(which)) {
-                var res = null;
+        // TODO: query by dtm.array not working as same as by regular array
 
-                for (var i = 0, l = that.length; i < l; i++) {
-                    if (that.val[i].get('name') === which) {
-                        res = that.val[i];
+        if (isNestedDtmArray(this)) {
+            var lastKey = '';
+
+            for (var i = 0, l = args.length; i < l; i++) {
+                var query = args[i];
+
+                if (isDtmArray(query)) {
+                    if (isNumArray(query.val)) {
+                        res.push(this.get(query).val);
+                    } else {
+                        var queryList = [];
+                        query.each(function (d) {
+                            var v = d.get(0);
+                            if (isString(v)) {
+                                var idx = that.get('keys').indexOf(v);
+                                if (idx > -1) {
+                                    queryList.push(idx);
+                                }
+                            } else if (isInteger(v)) {
+                                queryList.push(v);
+                            }
+                        });
+
+                        // why
+                        if (queryList.length === 1) {
+                            res.push(this.get(queryList[0]).val);
+                        } else {
+                            res.push(this.get(queryList).val);
+                        }
                     }
+                } else if (isString(query)) {
+                    for (var ii = 0, ll = this.length; ii < ll; ii++) {
+                        if (this.val[ii].get('name') === query) {
+                            res.push(this.val[ii].clone());
+                        }
+                    }
+                } else {
+                    res.push(this.get(query));
                 }
-                if (isEmpty(res)) {
-                    res = that;
+            }
+
+            if (args.length === 1) {
+                if (isDtmArray(res[res.length-1])) {
+                    lastKey = res[res.length-1].get('key');
                 }
-                return res.clone();
+
+                return dtm.data(res).ub().label(lastKey);
             } else {
-                return that.get(which).clone();
+                return dtm.data(res);
             }
         } else {
-            return dtm.data(that.get(which)).label(that.get('name'));
+            for (var i = 0, l = args.length; i < l; i++) {
+                var query = args[i];
+                res.push(this.get(query));
+            }
+            if (args.length === 1) {
+                return dtm.data(res).ub();
+            } else {
+                return dtm.data(res);
+            }
         }
     },
 
@@ -1265,7 +1401,12 @@ dtm.data.augment({
      * @returns {dtm.data}
      */
     row: function (num) {
-        return this.set(this.get('row', num));
+        var res = this.get('row', num);
+        this.params.depth--;
+        if (this.params.depth === 1) {
+            this.params.nested = false;
+        }
+        return this.set(res).label(num.toString());
     },
 
     // memo: only for single-dimensional numerical interpolation
@@ -1326,6 +1467,10 @@ dtm.data.augment({
             indices = at.get();
         } else {
             return that;
+        }
+
+        if (isNestedDtmArray(this)) {
+            return this.col(dtm.data(indices).mult(this.length).get());
         }
 
         var i;
@@ -1675,7 +1820,8 @@ dtm.data.augment({
         cubic: ['cub'],
         slinear: ['sline', 'sl'],
         scosine: ['scos'],
-        scubic: ['scub']
+        scubic: ['scub'],
+        fitsum: ['fs', 'total']
     },
 
     linear: function (len) {
@@ -1758,34 +1904,34 @@ dtm.data.augment({
 /* blocking operations */
 dtm.data.augment({
     aliases: {
-        unblock: ['ub', 'u', 'ungroup', 'ug', 'flatten'],
+        // unblock: ['ub', 'u', 'ungroup', 'ug', 'flatten'],
         window: ['win'],
         transp: ['t']
     },
 
-    unblock: function () {
-        if (isNestedDtmArray(this)) {
-            var flattened = [];
-            for (var i = 0, l = this.val.length; i < l; i++) {
-                if (isDtmArray(this.val[i])) {
-                    flattened = concat(flattened, this.val[i].val);
-                }
-            }
-
-            if (isNumArray(flattened)) {
-                flattened = toFloat32Array(flattened);
-            }
-
-            this.params.depth--;
-            if (this.params.depth === 1) {
-                this.params.nested = false;
-            }
-
-            return this.set(flattened);
-        } else {
-            return this;
-        }
-    },
+    // unblock: function () {
+    //     if (isNestedDtmArray(this)) {
+    //         var flattened = [];
+    //         for (var i = 0, l = this.val.length; i < l; i++) {
+    //             if (isDtmArray(this.val[i])) {
+    //                 flattened = concat(flattened, this.val[i].val);
+    //             }
+    //         }
+    //
+    //         if (isNumArray(flattened)) {
+    //             flattened = toFloat32Array(flattened);
+    //         }
+    //
+    //         this.params.depth--;
+    //         if (this.params.depth === 1) {
+    //             this.params.nested = false;
+    //         }
+    //
+    //         return this.set(flattened);
+    //     } else {
+    //         return this;
+    //     }
+    // },
 
     // TODO: array.block (and window) should transform the parent array into nested child array
     nest: function () {
@@ -1817,7 +1963,7 @@ dtm.data.augment({
             hop = 1;
         }
 
-        if (isNestedWithDtmArray(this.val)) {
+        if (isNestedDtmArray(this)) {
             var len = hop * (this.length-1) + this.val[0].get('len');
             var newArr = new Array(len);
             newArr.fill(0);
@@ -1993,6 +2139,7 @@ dtm.data.augment({
         reciprocal: ['recip'],
         power: ['pow', 'exp'],
         abs: ['fwr'],
+        round: ['q'],
         modulo: ['mod'],
         morethan: ['mt'],
         lessthan: ['lt']
@@ -2280,7 +2427,7 @@ dtm.data.augment({
         return this;
     },
 
-    ltet: function () {
+    ltet: function (val) {
         if (isNestedDtmArray(this)) {
             this.forEach(function (a) {
                 a.ltet(val);
@@ -2294,7 +2441,6 @@ dtm.data.augment({
     },
 
     is: function (target) {
-
         if (this.length === 1 && target.length === 1) {
 
         }
@@ -2302,6 +2448,20 @@ dtm.data.augment({
 
     isnt: function () {
 
+    },
+
+    has: function () {
+        var that = this;
+        var args = argsToArray(arguments);
+        var target = dtm.data(args).flatten();
+        var res = false;
+        target.each(function (d) {
+            res = that.some(function (v) {
+                return v === d.get(0);
+            }) ? true : res;
+        });
+
+        return res;
     }
 });
 
@@ -2309,7 +2469,8 @@ dtm.data.augment({
 dtm.data.augment({
     aliases: {
         mean: ['avg'],
-        midrange: ['mid']
+        midrange: ['mid'],
+        accumulate: ['accum', 'cuml', 'cum']
     },
 
     min: function (fn) {
@@ -2478,6 +2639,32 @@ dtm.data.augment({
         }
     },
 
+    centroid: function (fn) {
+        if (isFunction(fn)) {
+            var res = centroid(this.val.map(function (v) {
+                return fn(v);
+            }));
+
+            if (isNestedDtmArray(this)) {
+                return this.filter(function (v) {
+                    return fn(v) === res;
+                });
+            } else {
+                return this.filter(function (v) {
+                    return fn(v) === res;
+                });
+            }
+        } else {
+            if (isNestedDtmArray(this)) {
+                return this.map(function (a) {
+                    return a.centroid();
+                });
+            } else {
+                return this.set(centroid(this.val));
+            }
+        }
+    },
+
     std: function (fn) {
         if (isFunction(fn)) {
             var res = std(this.val.map(function (v) {
@@ -2610,7 +2797,7 @@ dtm.data.augment({
 
     // TODO: not consistent with other stats-based conversions
     sum: function () {
-        if (isNestedWithDtmArray(this.val)) {
+        if (isNestedDtmArray(this)) {
             var maxLen = 0;
             this.each(function (d) {
                 if (d.length > maxLen) {
@@ -2635,6 +2822,16 @@ dtm.data.augment({
             });
             return this.set(sum);
         }
+    },
+
+    accumulate: function () {
+        var a = 0;
+        this.map(function (d) {
+            a += d.get(0);
+            return a;
+        });
+
+        return this;
     }
 });
 
@@ -2883,7 +3080,8 @@ dtm.data.augment({
 dtm.data.augment({
     aliases: {
         histogram: ['histo'],
-        distribution: ['dist', 'pmf'],
+        distribution: ['dist'],
+        invert: ['inv'],
         unique: ['uniq'],
         classify: ['class']
     },
@@ -2909,16 +3107,81 @@ dtm.data.augment({
         return that.set(res);
     },
 
+    mapcount: function () {
+        var count = this().count();
+        return this.map(function (d) {
+            return count(d);
+        });
+    },
+
     /**
-     * Probability mass function
+     * Distribution of each symbol (unique value)
      * @returns {dtm.data}
      */
-    distribution: function () {
+    distribution: function (qdelta) {
         if (!isNestedDtmArray(this)) {
-            return this.count().mult(1/this.get('sum'));
+            var hist = qdelta ? this().round(qdelta).count() : this().count();
+            var res = hist().mult(hist().flatten().sum().recip()).sortby(function (d) {
+                return d.get('key');
+            });
+            return this.set(res.val);
         } else {
             return this;
         }
+    },
+
+    mapdist: function (qdelta) {
+        var dist = this().distribution(qdelta);
+        return this.map(function (d) {
+            return dist(d);
+        });
+    },
+
+    pmf: function (range, qdelta) {
+        var min, max;
+
+        if (isEmpty(range)) {
+            min = 0;
+            max = 1;
+        }
+
+        if (isEmpty(qdelta)) {
+            qdelta = (max - min) / (this.length - 1);
+        }
+
+        var dist = this().round(qdelta).dist();
+        dtm.line();
+
+        return this;
+    },
+
+    /**
+     * Cumulative distribution function
+     * @returns {cdf}
+     */
+    cdf: function () {
+        var dist = this().dist();
+        var res = [];
+
+        dtm.range(dist.length).each(function (d, i) {
+            res.push(dist(dtm.range(i+1)).flatten().sum().key(dist(i).get('key')))
+        });
+
+        return this.set(res);
+    },
+
+    invert: function () {
+        // assuming "this" is a normalized CDF
+        var that = this;
+        var res = that().map(function (d, i) {
+            return that().ltet(i/(that.length)).length / that.length;
+        });
+
+        return this.set(res.val);
+    },
+
+    icdf: function () {
+        return this.accum().range(0, 1).invert();
     },
 
     entropy: function () {
@@ -2927,7 +3190,7 @@ dtm.data.augment({
                 return a.entropy();
             })
         } else {
-            var dist = this.pmf().unnest();
+            var dist = this.dist().unnest();
             return dist.map(function (v) {
                 return v * Math.log2(v);
             }).sum().mult(-1);
@@ -3162,7 +3425,6 @@ dtm.data.augment({
         fitrepeat: ['fitrep', 'frep'],
         mirror: ['mirr', 'mir'],
         reverse: ['rev'],
-        invert: ['inv'],
         queue: ['fifo'],
         select: ['sel'],
         order: ['reorder']
@@ -3351,11 +3613,11 @@ dtm.data.augment({
 
     /**
      * Flips the numerical values vertically at the given center point.
-     * @function module:data#invert | inv | flip
+     * @function module:data#flip
      * @param [center=meanVal] {number}
      * @returns {dtm.data}
      */
-    invert: function (center) {
+    flip: function (center) {
         return this.set(dtm.transform.invert(this.val, center));
     },
 
@@ -3392,14 +3654,14 @@ dtm.data.augment({
             var res = [];
 
             if (isFunction(tgt)) {
-                this.forEach(function (v, i) {
-                    if (tgt(v)) {
+                this.each(function (d, i) {
+                    if (tgt(d)) {
                         res.push(i);
                     }
                 });
             } else if (isSingleVal(tgt)) {
-                this.forEach(function (v, i) {
-                    if (v === tgt) {
+                this.each(function (d, i) {
+                    if (d.get(0) === tgt) {
                         res.push(i);
                     }
                 });
@@ -3607,7 +3869,6 @@ dtm.data.augment({
     // TODO: these are broken...
     print: function () {
         if (isFunction(dtm.params.printer)) {
-            console.log([this].concat(argsToArray(arguments)));
             dtm.params.printer.apply(this, [this].concat(argsToArray(arguments)));
         } else {
             dtm.util.print(this);

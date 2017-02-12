@@ -53,24 +53,71 @@ dtm.parser = {
         var linebreak = csvText.indexOf('\n') > -1 ? '\n' : '\r';
         var lines = csvText.split(linebreak);
         var headers = lines[0].split(",");
-        var obj = {};
+
+        var obj = {}, empty = 0;
+
+        function dealWithCommas(lineArr) {
+            for (var i = lineArr.length-1; i > 0; i--) {
+                if (isString(lineArr[i-1]) && isString(lineArr[i])) {
+                    if (lineArr[i].endsWith('"') || lineArr[i].endsWith('"')) {
+                        lineArr[i-1] = lineArr[i-1].concat(', ' + lineArr[i]);
+                        lineArr.splice(i, 1);
+                    }
+                }
+            }
+            return lineArr;
+        }
+
         headers.forEach(function (v, i) {
-            headers[i] = v.trim(); // removes the spaces at the both ends
-            obj[headers[i]] = [];
+            // remove new-line, etc.
+            headers[i] = v.trim();
+
+            // remove redundant double quotes
+            if (v[0] === '"' && v[v.length-1] === '"') {
+                v = v.slice(1, -1);
+            }
+            headers[i] = v.trim(); // removes redundant spaces at the both ends
+
+            if (v === '') {
+                headers[i] = '(empty_' + (empty++) + ')';
+            }
+        });
+
+        headers = dealWithCommas(headers);
+
+        headers.forEach(function (v) {
+            obj[v] = [];
         });
 
         for (var i = 1; i < lines.length; i++) {
             var currentline = lines[i].split(",");
 
             if (currentline.length > 1) {
-                for (var j = 0; j < headers.length; j++) {
+                for (var j = 0; j < currentline.length; j++) {
                     var val = currentline[j];
+
+                    // remove redundant double quotes
+                    if (val[0] === '"' && val[val.length-1] === '"') {
+                        val = val.slice(1, -1);
+                    }
+
+                    val = val.trim();
+
                     if (!isNaN(val)) {
                         val = parseFloat(val);
-                    } else {
-                        val = val.trim();
                     }
-                    obj[headers[j]].push(val);
+
+                    if (isNaNfast(val)) {
+                        val = null;
+                    }
+
+                    currentline[j] = val;
+                }
+
+                currentline = dealWithCommas(currentline);
+
+                for (var j = 0; j < headers.length; j++) {
+                    obj[headers[j]].push(currentline[j]);
                 }
             }
         }

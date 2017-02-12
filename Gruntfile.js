@@ -26,6 +26,7 @@ module.exports = function (grunt) {
                     'src/mapper.js',
                     'src/synth.js',
                     'src/music.js',
+                    'src/midi.js',
                     'src/master.js',
                     'src/guido.js',
                     'src/inscore.js',

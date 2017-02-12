@@ -3,7 +3,7 @@
  */
 
 /* TYPE CHECKING */
-function isNaN(value) {
+function isNaNfast(value) {
     return value !== value;
 }
 
@@ -17,7 +17,7 @@ function isEmpty(value) {
         return true;
     } else if (value === null) {
         return true;
-    } else return (typeof(value) === 'number' && isNaN(value));
+    } else return (typeof(value) === 'number' && isNaNfast(value));
 }
 
 /**
@@ -26,7 +26,7 @@ function isEmpty(value) {
  * @returns {boolean}
  */
 function isNumber(value) {
-    return (typeof(value) === 'number' && !isNaN(value));
+    return (typeof(value) === 'number' && !isNaNfast(value));
 }
 
 /**
@@ -161,7 +161,7 @@ function isParsableNumArray(val) {
     var res = false;
     if (isStringArray(val)) {
         res = val.every(function (val) {
-            return !isNaN(parseFloat(val));
+            return !isNaNfast(parseFloat(val));
         })
     }
     return res;
@@ -243,6 +243,8 @@ function getMaxArrayDepth(val) {
         for (var i = 0, l = val.length; i < l; i++) {
             if (isArray(val[i])) {
                 list.push(getMaxArrayDepth(val[i]));
+            } else if (isDtmArray(val[i])) {
+                list.push(getMaxDtmArrayDepth(val[i]));
             }
         }
 
@@ -259,11 +261,14 @@ function getMaxDtmArrayDepth(val) {
     if (isDtmArray(val)) {
         var depth = 1;
         var list = [];
-        val.forEach(function (v) {
-            if (isDtmArray(v)) {
-                list.push(getMaxDtmArrayDepth(v));
-            }
-        });
+
+        if (isNestedDtmArray(val)) {
+            val.each(function (v) {
+                if (isDtmArray(v)) {
+                    list.push(getMaxDtmArrayDepth(v));
+                }
+            });
+        }
 
         if (list.length > 0) {
             depth += Math.max.apply(this, list);
@@ -577,6 +582,18 @@ function concat(first, second) {
     }
 }
 
+function flatten(nestedArray) {
+    var res = [];
+    for (var i = 0, l = nestedArray.length; i < l; i++) {
+        if (isArray(nestedArray[i])) {
+            res = concat(res, flatten(nestedArray[i]));
+        } else {
+            res = concat(res, nestedArray[i]);
+        }
+    }
+    return res;
+}
+
 function Float32Splice(array, start, deleteCount) {
     console.log(array.length - deleteCount);
     var res = new Float32Array(array.length - deleteCount);
@@ -721,6 +738,19 @@ function mean(arr) {
     if (isNumOrFloat32Array(arr)) {
         return sum(arr) / arr.length;
     }
+}
+
+function centroid(arr) {
+    if (arr.length === 1) {
+        return 0.5;
+    }
+
+    var weightedSum = 0;
+    for (var i = 0, l = arr.length; i < l; i++) {
+        weightedSum += arr[i] * i;
+    }
+
+    return weightedSum / sum(arr) / (arr.length-1);
 }
 
 /**
@@ -1239,6 +1269,7 @@ function ajaxGet(url, cb) {
 dtm.util = {};
 
 /* TYPE CHECKING */
+dtm.util.isNaNfast = isNaNfast;
 dtm.util.isEmpty = isEmpty;
 dtm.util.isNumber = isNumber;
 dtm.util.isInteger = isInteger;

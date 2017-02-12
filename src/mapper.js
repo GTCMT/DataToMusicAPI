@@ -6,10 +6,16 @@ dtm.to = dtm.map = function (src, fn) {
     var tgt = src.clone();
     fn(tgt);
     tgt.params.processFn = fn;
+    tgt.params.isTarget = true;
+    tgt.attach = function (scope, afn) {
+        tgt.params.attachedFn = afn.bind(scope);
+    };
 
     src.params.targets[tgt.params.id] = tgt;
 
     src.params.trace = true;
+
+    // for master to halt tracing processes
     dtm.params.traced.push(src); // TODO: hacky!
 
     // reset the handler's method interceptor
@@ -21,7 +27,17 @@ dtm.to = dtm.map = function (src, fn) {
                 if (src.params.trace) {
                     objForEach(src.params.targets, function (t) {
                         tracedFn.apply(t, args);
-                        t.params.processFn(t);
+
+                        var out = t.params.processFn(t);
+                        if (isDtmArray(out)) {
+                            t.set(out.val);
+                        } else if (!isEmpty(out)) {
+                            t.set(out);
+                        }
+
+                        if (t.params.attachedFn) {
+                            t.params.attachedFn(tgt.val);
+                        }
                     });
                 }
                 return tracedFn.apply(this, args);

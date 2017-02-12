@@ -430,6 +430,10 @@ dtm.image = function (input, fn, mode) {
     if (isString(input)) {
         var url = input;
 
+        if (!isString(mode)) {
+            mode = 'brightness';
+        }
+
         return new Promise(function (resolve) {
             var xhr = new XMLHttpRequest();
             xhr.responseType = 'blob';
@@ -449,26 +453,105 @@ dtm.image = function (input, fn, mode) {
                         context.drawImage(img, 0, 0);
 
                         var imageData = context.getImageData(0, 0, img.width, img.height).data;
-                        // var red = new Float32Array(imageData.length/4);
-                        // var green = new Float32Array(imageData.length/4);
-                        // var blue = new Float32Array(imageData.length/4);
-                        var bri = new Float32Array(imageData.length/4);
 
-                        for (var i = 0; i < imageData.length; i += 4) {
-                            var brightness = 0.34 * imageData[i] + 0.5 * imageData[i+1] + 0.16 * imageData[i+2];
-                            // red[i/4] = imageData[i]/255;
-                            // green[i/4] = imageData[i+1]/255;
-                            // blue[i/4] = imageData[i+2]/255;
-                            bri[i/4] = brightness/255;
+                        if (mode === 'brightness') {
+                            var bri = new Float32Array(imageData.length/4);
+
+                            for (var i = 0; i < imageData.length; i += 4) {
+                                var brightness = 0.34 * imageData[i] + 0.5 * imageData[i+1] + 0.16 * imageData[i+2];
+                                bri[i/4] = brightness/255;
+                            }
+                            data.set(bri).block(img.width).label('brightness');
+                        } else if (mode === 'hue') {
+                            var hue = new Float32Array(imageData.length/4);
+                            var r, g, b, h;
+                            var max, min;
+
+                            for (var i = 0; i < imageData.length; i += 4) {
+                                r = imageData[i]/255;
+                                g = imageData[i+1]/255;
+                                b = imageData[i+2]/255;
+
+                                max = Math.max(r, g, b);
+                                min = Math.min(r, g, b);
+
+                                if (max === r) {
+                                    h = (g - b) / (max - min);
+                                } else if (max === g) {
+                                    h = 2 + (b - r) / (max - min);
+                                } else {
+                                    h = 4 + (r - g) / (max - min);
+                                }
+
+                                h *= 60;
+
+                                if (h < 0) {
+                                    h += 360;
+                                }
+
+                                hue[i/4] = h;
+                            }
+
+                            data.set(hue).block(img.width).label('hue');
+                        } else if (mode === 'heatmap') {
+                            var hue = new Float32Array(imageData.length/4);
+                            var r, g, b, h;
+                            var max, min;
+
+                            for (var i = 0; i < imageData.length; i += 4) {
+                                r = imageData[i]/255;
+                                g = imageData[i+1]/255;
+                                b = imageData[i+2]/255;
+
+                                max = Math.max(r, g, b);
+                                min = Math.min(r, g, b);
+
+                                if (max === r) {
+                                    h = (g - b) / (max - min);
+                                } else if (max === g) {
+                                    h = 2 + (b - r) / (max - min);
+                                } else {
+                                    h = 4 + (r - g) / (max - min);
+                                }
+
+                                h *= 60;
+
+                                if (h < -30) {
+                                    h += 360;
+                                }
+
+                                if (h < 0) {
+                                    h = 0;
+                                }
+
+                                if (h > 300) {
+                                    h = 300;
+                                }
+
+                                if (r+g+b < 0.15) {
+                                    h = 300;
+                                }
+
+                                if (isNaN(h)) {
+                                    h = 0;
+                                }
+
+                                hue[i/4] = 1 - (h / 300);
+                            }
+
+                            data.set(hue).block(img.width).label('hue');
+                        } else if (mode === 'rgb') {
+                            var red = new Float32Array(imageData.length/4);
+                            var green = new Float32Array(imageData.length/4);
+                            var blue = new Float32Array(imageData.length/4);
+
+                            for (var i = 0; i < imageData.length; i += 4) {
+                                red[i/4] = imageData[i]/255;
+                                green[i/4] = imageData[i+1]/255;
+                                blue[i/4] = imageData[i+2]/255;
+                            }
+                            data.set(red).block(img.width).label('red');
                         }
-
-                        // data.set([
-                        //     dtm.data(red).block(img.width).label('red').parent(data),
-                        //     dtm.data(green).block(img.width).label('green').parent(data),
-                        //     dtm.data(blue).block(img.width).label('blue').parent(data),
-                        //     dtm.data(bri).block(img.width).label('brightness').parent(data)
-                        // ]);
-                        data.set(bri).block(img.width).label('brightness');
 
                         if (!isEmpty(fn)) {
                             fn(data);
