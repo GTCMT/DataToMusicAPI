@@ -16,42 +16,80 @@ app.controller('MainController', function ($scope) {
 
 	$scope.examples = [
 		{
-			name: 'Simple signal: no analysis, amplitue',
+			name: 'Mapping: simple signal to amplitude',
 			code: 'D%20%3D%20dtm.data%0AT%20%3D%20dtm.to%0AM%20%3D%20dtm.music%0A%0Alen%20%3D%201000%0A%0Arnd%20%3D%20dtm.rf(len%2C-1%2C1)%0A%20%20.amp(0.2)%0A%20%20.amp(dtm.rf(300).l(len))%0A%0Asig%20%3D%20D(-1%2C1).l(len)%0A%20%20.map(d%20%3D%3E%20d.mult(-5).powof(Math.E).add(1).recip())%0A%20%20.add(rnd)%0A%20%20.plot()%0A%0AM().play().for(10)%0A%20%20.amp(sig.r().l(len*10))'
 		},
 		{
-			name: 'Simple signal: no analysis, frequency',
+			name: 'Mapping: simple signal to frequency',
 			code: 'D%20%3D%20dtm.data%0AT%20%3D%20dtm.to%0AM%20%3D%20dtm.music%0A%0Alen%20%3D%201000%0A%0Arnd%20%3D%20dtm.rf(len%2C-1%2C1)%0A%20%20.amp(0.2)%0A%20%20.amp(dtm.rf(300).l(len))%0A%0Asig%20%3D%20D(-1%2C1).l(len)%0A%20%20.map(d%20%3D%3E%20d.mult(-5).powof(Math.E).add(1).recip())%0A%20%20.add(rnd)%0A%20%20.plot()%0A%0AM().play().for(10)%0A%20%20.note(sig.r(60%2C90))%0A'
 		},
 		{
-			name: 'Simple signal: with analysis and mapping',
+			name: 'Mapping: simple signal with structural analysis',
 			code: 'D%20%3D%20dtm.data%0AT%20%3D%20dtm.to%0AM%20%3D%20dtm.music%0A%0Alen%20%3D%201000%0A%0Arnd%20%3D%20dtm.rf(len%2C-1%2C1)%0A%20%20.amp(0.2)%0A%20%20.amp(dtm.rf(300).l(len))%0A%0Asig%20%3D%20D(-1%2C1).l(len)%0A%20%20.map(d%20%3D%3E%20d.mult(-5).powof(Math.E).add(1).recip())%0A%20%20.add(rnd)%0A%0Aest%20%3D%20sig()%0A%20%20.fir(D(1).rep(50).fs(1))%0A%0Aerr%20%3D%20sig().subtract(est)%0A%0AD(%5Bsig%2Cest%2Cerr%5D).plot()%0AD(%5B%27Left%3A%20signal%27%2C%20%27Center%3A%20estimate%27%2C%20%27Right%3A%20residue%27%5D).print()%0A%0AM().play().for(10)%0A%20%20.note(est.r(60%2C90))%0A%20%20.amp(err.r().l(len*10))'
 		},
 		{
-			name: 'Distribution to inharmonic oscillators',
+			name: 'Mapping: distribution to inharmonic oscillators',
 			code: 'D%20%3D%20dtm.data%0AT%20%3D%20dtm.to%0AM%20%3D%20dtm.music%0A%0Alen%20%3D%2050%0A%0Adist%20%3D%20dtm.rf(10)%0A%20%20.prepend(0).append(0)%0A%20%20.curve(-500).cos(200).r()%0A%20%20.plot()%0A%0Anotes%20%3D%20dist().icdf()%0A%20%20.phase(dtm.rf(len)%2C%27step%27)%0A%20%20.r(50%2C100%2C0%2C1)%0A%0Aampenv%20%3D%20D(2%2Flen%2C0).l(1000).c(-20)%0Arndpan%20%3D%20dtm.rf(len%2C-1%2C1)%0A%0Anotes.each((d%2Ci)%20%3D%3E%20%7B%0A%20%20M().play().for(3)%0A%20%20%20%20.amp(ampenv).note(d)%0A%20%20%20%20.pan(rndpan(i))%0A%7D)'
 		},
 		{
-			name: 'Distribution: minimum-error pitch quantization',
+			name: 'Mapping: distribution to least-error pitch quantization',
 			code: 'D%20%3D%20dtm.data%0AT%20%3D%20dtm.to%0AM%20%3D%20dtm.music%0A%0Asig%20%3D%20dtm.rf(30).l(200)%0A%20%20.add(dtm.rf(200).amp(0.3))%0A%20%20.r(50%2C100)%0A%0Aest%20%3D%20sig().b(5).each.rms().ub().l(200).save()%0Aerr%20%3D%20sig().subtract(est)%0A%0Akeys%20%3D%20D(%27C%27%2C%27C%23%27%2C%27D%27%2C%27D%23%27%2C%27E%27%2C%27F%27%2C%27F%23%27%2C%27G%27%2C%27G%23%27%2C%27A%27%2C%27A%23%27%2C%27B%27)%0Ascales%20%3D%20keys.map((d%2Ci)%20%3D%3E%20%7B%0A%20%20return%20dtm.scale().col(dtm.r(1%2C10))%0A%20%20%20%20.map(s%20%3D%3E%20%7B%0A%20%20%20%20%20%20return%20s.add(i).mod(12).sort()%0A%20%20%20%20%20%20%20%20.key(d.get(0)%20%2B%20%27%20%27%20%2B%20s.get(%27key%27))%0A%20%20%20%20%7D)%0A%7D)%0A%0Arank%20%3D%20scales()%20%2F%2F%20clone%0A%20%20.map(d%20%3D%3E%20est().q().pq(d).snr().key(d.get(%27key%27)))%20%2F%2F%20get%20SNR%0A%20%20.sortby(d%20%3D%3E%20d.get(0)%2C%20true)%20%2F%2F%20sort%20scales%20by%20least-distorted%0A%20%20.filter((d%2C%20i)%20%3D%3E%20i%257%3D%3D%3D0)%20%2F%2F%20remove%20duplicate%20scales%0A%0Arank()%20%2F%2F%20print%20result%0A%20%20.prep(%5BD(%27signal%2C%20estimate%2C%20error%2C%20pitch-quantized%20estimate%2C%20pitch-quantization%20error%27).key(%27From%20left%20to%20right%27)%2CD()%5D)%0A%20%20.print()%0A%0Aest_pq%20%3D%20est().q().pq(scales(rank(0).get(%27key%27)))%0Aest_pqerr%20%3D%20est().subtract(est_pq)%0A%0AD(%5Bsig%2Cest%2Cerr%2Cest_pq%2Cest_pqerr%5D).plot()%0A%0AM().play().for(23)%0A%20%20.note(est_pq)%0A%20%20.amp(est_pqerr().r(0.7%2C0.1).c(-5).map(d%20%3D%3E%20d.cat(0).l(100)))%0A%20%20.pan(err().r(-0.5%2C0.5))%0A%20%20.delay()'
 		},
 		{
 			name: 'Structural analysis: entropy check',
-			code: 'a'
+			code: 'D%20%3D%20dtm.data%0AT%20%3D%20dtm.to%0AM%20%3D%20dtm.music%0A%0Alen%20%3D%201000%0A%0Astr%20%3D%20dtm.rf(10).cos(len)%0Arnd%20%3D%20dtm.rf(len%2C-1%2C1)%0Asig%20%3D%20str().add(rnd)%0A%0Aest%20%3D%20sig()%0Adtm.range(20).each(d%20%3D%3E%20est.fir(D(1).rep(10).fs(1)).shift(5))%0AD(%5Bstr%2Cest%5D).plot()%0A%0Aerr%20%3D%20sig().subtract(est)%0A%0Aerr().q(0.01).entropy(true)%0A%20%20.print()'
 		},
 		{
 			name: 'Structural analysis: spectral filtering (DCT)',
-			code: 'b'
+			code: 'D%20%3D%20dtm.data%0AT%20%3D%20dtm.to%0AM%20%3D%20dtm.music%0A%0Asig%20%3D%20dtm.rf(10).prepend(0).append(0)%0A%20%20.cos(1000)%0A%20%20.add(dtm.sin(1000).r().freq(100).amp(0.2))%0A%20%20.add(dtm.rf(1000%2C-1%2C1).amp(0.1))%0A%0Aco%20%3D%201%20%2F%2F%20cutoff%3A%20try%20values%20between%200-2%0Aest%20%3D%20sig().dct()%0A%20%20.mapv((v%2Ci)%20%3D%3E%20v%3Cco%20%26%26%20i%3E15%20%3F%200%20%3A%20v)%0A%20%20.idct()%0A%20%20.plot()%0A%0Aerr%20%3D%20sig().subtract(est)%0A%0AD(%5Bsig%2Cest%2Cerr%5D)%0A%20%20.plot()%0A%0Aerr().q(0.01).entropy(true).key(%27entropy%27).print()%0A%0AM().play()%0A%20%20.note(est().r(60%2C90))%0A%20%20.amp(err().r().l(10000))%0A%20%20.for(10)%0A'
+		},
+		{
+			name: 'Encoding: spectral filtering',
+			code: 'D%20%3D%20dtm.data%0AT%20%3D%20dtm.to%0AM%20%3D%20dtm.music%0A%0Aspc%20%3D%20D(0).rep(512)%0AM().play().wave(dtm.rf(44100%2C-1%2C1)).freq(1).for(1000)%0A%20%20.process(d%20%3D%3E%20d.fft.filter(spc)%2C%20512)%0A%0A%2F%2F%20image%20source%3A%20https%3A%2F%2Farchive.org%2Fdetails%2FPLAN-PIA02548%0Aurl%20%3D%20%27PIA02143.jpg%27%0A%0Adtm.image(url%2C%20d%20%3D%3E%20%7B%0A%20%20M().scan((p%2C%20i)%20%3D%3E%20%7B%0A%20%20%20%20spc%20%3D%20d.phase(p).line(128).plot(0%2C1).cat(D(0).rep(384))%0A%20%20%7D).run(20)%0A%7D%2C%20%27heatmap%27)%0A'
+		},
+		{
+			name: 'Encoding: random-sample granular',
+			code: 'D%20%3D%20dtm.data%0AT%20%3D%20dtm.to%0AM%20%3D%20dtm.music%0A%0A%2F%2F%20image%20source%3A%20https%3A%2F%2Farchive.org%2Fdetails%2FPLAN-PIA02548%0Aurl%20%3D%20%27PIA02143.jpg%27%0A%0Adtm.image(url%2C%20d%20%3D%3E%20%7B%0A%20%20M().scan((p%2Ci)%20%3D%3E%20%7B%0A%20%20%20%20dist%20%3D%20d.phase(p).line(100).plot(0%2C1)%0A%0A%20%20%20%20dist().icdf().phase(dtm.rf(20))%0A%20%20%20%20%20%20.r(50%2C100%2C0%2C1)%0A%20%20%20%20%20%20.each(n%20%3D%3E%20M().play().for(0.1)%0A%20%20%20%20%20%20%20%20%20%20%20%20.after(dtm.rf(1%2C0.1))%0A%20%20%20%20%20%20%20%20%20%20%20%20.amp(D(0.05%2C0).l(100))%0A%20%20%20%20%20%20%20%20%20%20%20%20.note(n))%0A%20%20%7D%2C%204096).run(20)%0A%7D%2C%20%27heatmap%27)'
+		},
+		{
+			name: 'Encoding: random-sample inharmonic oscillator bank',
+			code: 'D%20%3D%20dtm.data%0AT%20%3D%20dtm.to%0AM%20%3D%20dtm.music%0A%0Amu%20%3D%20D(80)%20%2F%2F%20center%20frequency%20in%20MIDI%20notes%0Astd%20%3D%20D(4)%20%2F%2F%20standard%20deviation%20in%20MIDI%20notes%0AN%20%3D%20100%20%2F%2F%20number%20of%20random%20sinusoidal%20oscillators%0A%0A%2F%2F%20generate%20a%20normal%20distribution%0Adist%20%3D%20dtm.r(128).map(d%20%3D%3E%20%0A%20%20std().pow(2).mult(2*Math.PI).pow(1%2F2).recip()%0A%20%20%20%20.mult(D(Math.E).pow(%0A%20%20%20%20%20%20d().subtract(mu).pow(2).mult(-1).div(std().pow(2).mult(2))%0A%20%20%20%20))%0A%20%20)%0A%20%20.plot()%0A%0A%2F%2F%20generate%20frequencies%20using%20random%20sampling%20of%20the%20distribtuion%0Agen%20%3D%20dist().icdf().phase(dtm.rf(N))%0A%20%20.r(0%2C128%2C0%2C1)%0A%0Aampenv%20%3D%20D(0%2C3%2FN%2C0).l(100)%0Agen.each(d%20%3D%3E%20M().play().for(3).amp(ampenv).note(d))%0A'
+		},
+		{
+			name: 'Encoding: single-tone additive synthesis (centroid)',
+			code: 'D%20%3D%20dtm.data%0AT%20%3D%20dtm.to%0AM%20%3D%20dtm.music%0A%0A%2F%2F%20parameters%0Asc%20%3D%20D(72)%20%2F%2F%20spectral%20centroid%20in%20MIDI%20note%20number%0AN%20%3D%203%20%2F%2F%20number%20of%20harmonics%0An%20%3D%20dtm.r(1%2CN%2B1)%20%2F%2F%20%5B1%2C2%2C3%2C...%2CN%5D%0A%0A%2F%2F%20harmonics%20expanded%20from%20the%20sc%20in%20MIDI%20note%20number%0Av%20%3D%20n().map(d%20%3D%3E%20d.mult(N).mult(sc().mtof()).div(n().sum()))%0A%20%20.ftom()%0A%20%20.print()%0A%0Av.each(d%20%3D%3E%20%7B%0A%20%20M().play().amp(1%2FN).note(d)%0A%7D)'
+		},
+		{
+			name: 'Encoding: single-tone additive (centroid & variance)',
+			code: 'D%20%3D%20dtm.data%0AT%20%3D%20dtm.to%0AM%20%3D%20dtm.music%0A%0A%2F%2F%20parameters%0Asc%20%3D%20D(1000)%20%2F%2F%20spectral%20centroid%0Ass%20%3D%20D(200)%20%2F%2F%20spectral%20spread%20(standard%20deviation)%0AN%20%3D%205%20%2F%2F%20%7B1%2C3%2C5%2C...%7D%0A%0An%20%3D%20dtm.r(1%2CN%2B1)%20%2F%2F%20%5B1%2C2%2C3%2C...%2CN%5D%0A%0A%2F%2F%20frequency%20values%20expanded%20from%20the%20sc%0Af%20%3D%20n().mult(N).div(n().sum()).mult(sc)%0A%20%20.print()%0A%0Anum%20%3D%20f().pvar().mult(N).sum()%0A%20%20.add(ss().pow(2).mult(1-N))%0A%0A%2F%2F%20gain%20coeff%0Ag%20%3D%20ss().pow(2).div(num)%0A%0A%2F%2F%20%5B...%2Cg%2Cg%2C1%2Cg%2Cg%2C...%5D%0Aa%20%3D%20D(1)%0A%20%20.app(g().rep((N-1)%2F2))%0A%20%20.prep(g().rep((N-1)%2F2))%0A%0Af.each((d%2Ci)%20%3D%3E%20%7B%0A%20%20M().play()%0A%20%20%20%20.freq(d)%0A%20%20%20%20.amp(D(a.val%5Bi%5D%2C0).l(1000))%20%20%0A%7D)%0A%0A%2F%2F%20check%20spectral%20spread%0Af().subtract(sc())%0A%20%20.pow(2).mult(a).sum()%0A%20%20.div(a().sum()).pow(1%2F2)%0A%2F%2F%20%20%20.print()'
+		},
+		{
+			name: 'Encoding: chord with sinusoidal voices',
+			code: 'D%20%3D%20dtm.data%0AT%20%3D%20dtm.to%0AM%20%3D%20dtm.music%0A%0Ac%20%3D%20D(0%2C4%2C7)%20%2F%2F%20chord%0Anotes%20%3D%20dtm.ri(30%2C60%2C90).b()%0A%20%20.map(d%20%3D%3E%20c().mtof().mult(d().mtof())%0A%20%20%20%20%20%20%20.div(c().mtof().mean()).ftom())%0A%0AM((m%2Ci)%20%3D%3E%20%7B%0A%20%20notes(i).each(d%20%3D%3E%20%7B%0A%20%20%20%20M().sync(m).nn(d).amp(0.2).play()%0A%20%20%7D)%0A%7D).run(0.1)%0A'
+		},
+		{
+			name: 'Encoding: chord with additive synthesis',
+			code: ''
+		},
+		{
+			name: 'Encoding: chord + percussion mixture',
+			code: 'D%20%3D%20dtm.data%0AT%20%3D%20dtm.to%0AM%20%3D%20dtm.music%0A%0Asig%20%3D%20dtm.rf(10)%0A%20%20.cos(200)%0A%20%20.add(dtm.rf(100))%0A%20%20.r()%0A%20%20.plot()%0A%0Ac%20%3D%20D(0%2C7%2C14)%20%2F%2F%20chord%0Anotes%20%3D%20sig().r(40%2C100%2C0%2C1).b()%0A%20%20.map(d%20%3D%3E%20c().mtof().mult(d().mtof())%0A%20%20%20%20%20%20%20.div(c().mtof().mean()).ftom())%0A%0Anoise%20%3D%20dtm.rf(44100%2C-1%2C1)%0Aampenv%20%3D%20D(0.7%2C0).l(100)%0A%0Afunction%20f(x%2Cmu%2Cstd)%20%7B%0A%20%20return%20(1%2F(Math.sqrt(2*Math.pow(std%2C2)*Math.PI))*Math.pow(Math.E%2C(-Math.pow(x-mu%2C2)%2F(2*Math.pow(std%2C2)))))%0A%7D%0A%0AM((m%2Ci)%20%3D%3E%20%7B%20%20%0A%20%20mu%20%3D%20sig(i).r(40%2C100%2C0%2C1)%0A%20%20spc%20%3D%20dtm.r(200)%0A%20%20%20%20.mapv(v%20%3D%3E%20f(v%2Cmu.get(0)%2C30))%0A%20%20%20%20.app(D(0).rep(312))%0A%20%20%20%20.r()%0A%20%20%20%20%0A%20%20M().sync(m).play()%0A%20%20%20%20.wave(noise).freq(1)%0A%20%20%20%20.amp(ampenv)%0A%20%20%20%20.gain(dtm.rf(1))%0A%20%20%20%20.process(d%20%3D%3E%20d.fft.filter(spc)%2C%20512)%0A%20%20%0A%20%20notes(i).each(d%20%3D%3E%20%7B%0A%20%20%20%20M().sync(m).play()%0A%20%20%20%20%20%20.nn(d).amp(0.2)%0A%20%20%7D)%0A%7D).run(0.3)%0A'
+		},
+		{
+			name: 'Extra: further musical treatments (quantization)',
+			code: 'D%20%3D%20dtm.data%0AT%20%3D%20dtm.to%0AM%20%3D%20dtm.music%0A%0Asig%20%3D%20dtm.rf(10)%0A%20%20.cos(200)%0A%20%20.add(dtm.rf(100))%0A%20%20.r()%0A%20%20.plot()%0A%0Ac%20%3D%20D(0%2C7%2C14%2C17%2C22)%20%2F%2F%20chord%0Anotes%20%3D%20sig().r(40%2C100%2C0%2C1).q().b()%0A%20%20.map(d%20%3D%3E%20c().mtof().mult(d().mtof())%0A%20%20%20%20%20%20%20.div(c().mtof().mean()).ftom())%0A%20%20.map(d%20%3D%3E%20d.pq(%5B0%2C2%2C4%2C5%2C7%5D))%0A%0Anoise%20%3D%20dtm.rf(44100%2C-1%2C1)%0Aampenv%20%3D%20D(0.7%2C0).l(100).c(-10)%0A%0Afunction%20f(x%2Cmu%2Cstd)%20%7B%0A%20%20return%20(1%2F(Math.sqrt(2*Math.pow(std%2C2)*Math.PI))*Math.pow(Math.E%2C(-Math.pow(x-mu%2C2)%2F(2*Math.pow(std%2C2)))))%0A%7D%0A%0AM((m%2Ci)%20%3D%3E%20%7B%20%20%0A%20%20mu%20%3D%20sig(i).r(40%2C100%2C0%2C1)%0A%20%20spc%20%3D%20dtm.r(200)%0A%20%20%20%20.mapv(v%20%3D%3E%20f(v%2Cmu.get(0)%2C30))%0A%20%20%20%20.app(D(0).rep(312))%0A%20%20%20%20.r()%0A%20%20%20%20%0A%20%20M().sync(m).play()%0A%20%20%20%20.wave(noise).freq(1)%0A%20%20%20%20.amp(ampenv)%0A%20%20%20%20.gain(dtm.rf(1))%0A%20%20%20%20.process(d%20%3D%3E%20d.fft.filter(spc)%2C%20512)%0A%20%20%0A%20%20notes(i).each(d%20%3D%3E%20%7B%0A%20%20%20%20M().sync(m).play()%0A%20%20%20%20%20%20.nn(d).amp(D(0.2%2C0).l(100)).delay()%0A%20%20%7D)%0A%7D).run(0.2)%0A'
 		}
-
 	];
 });
 </script>
 
 <p>
-	(ICAD 2017) Spectral Parameter Encoding: Towards a Framework for Functional-Aesthetic Sonification <br><hr>
+	(ICAD 2017) Spectral Parameter Encoding: Towards a Framework for Functional-Aesthetic Sonification <br><br>
 	Online Code Examples <br><br>
-	To listen to an example, hit "EVAL" on the right-top corner of the example page. It might take a few seconds to load for the first time you open the link. Works on Chrome or Safari, but not FireFox. 
+	Takahiko Tsuchiya and Jason Freeman <br>
+	Contact: takahiko@gatech.edu <br>
+	<hr>
+	To listen to an example, hit "EVAL" on the right-top corner of the example page. It might take a few seconds to load the page for the first time you open a link. The audio should work on Chrome or Safari, but not FireFox. 
 </p>
 
 <div ng-repeat="example in examples">
