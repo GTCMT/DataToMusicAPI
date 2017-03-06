@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html ng-app="app">
+<head lang="en">
+    <meta charset="UTF-8">
+    <title>ICAD 2017 Code Examples</title>
+    <script src="javascripts/dtm.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.6.1/angular.js"</script>
+    <script src="javascripts/icad2017.js"></script>
+</head>
+<body ng-controller="MainController">
+<script>
+var app = angular.module('app', []);
+
+app.controller('MainController', function ($scope) {
+	$scope.url = 'http://dtmdemo.herokuapp.com/main.html?code=';
+
+	$scope.examples = [
+		{
+			name: 'Simple signal: no analysis, amplitue',
+			code: 'D%20%3D%20dtm.data%0AT%20%3D%20dtm.to%0AM%20%3D%20dtm.music%0A%0Alen%20%3D%201000%0A%0Arnd%20%3D%20dtm.rf(len%2C-1%2C1)%0A%20%20.amp(0.2)%0A%20%20.amp(dtm.rf(300).l(len))%0A%0Asig%20%3D%20D(-1%2C1).l(len)%0A%20%20.map(d%20%3D%3E%20d.mult(-5).powof(Math.E).add(1).recip())%0A%20%20.add(rnd)%0A%20%20.plot()%0A%0AM().play().for(10)%0A%20%20.amp(sig.r().l(len*10))'
+		},
+		{
+			name: 'Simple signal: no analysis, frequency',
+			code: 'D%20%3D%20dtm.data%0AT%20%3D%20dtm.to%0AM%20%3D%20dtm.music%0A%0Alen%20%3D%201000%0A%0Arnd%20%3D%20dtm.rf(len%2C-1%2C1)%0A%20%20.amp(0.2)%0A%20%20.amp(dtm.rf(300).l(len))%0A%0Asig%20%3D%20D(-1%2C1).l(len)%0A%20%20.map(d%20%3D%3E%20d.mult(-5).powof(Math.E).add(1).recip())%0A%20%20.add(rnd)%0A%20%20.plot()%0A%0AM().play().for(10)%0A%20%20.note(sig.r(60%2C90))%0A'
+		},
+		{
+			name: 'Simple signal: with analysis and mapping',
+			code: 'D%20%3D%20dtm.data%0AT%20%3D%20dtm.to%0AM%20%3D%20dtm.music%0A%0Alen%20%3D%201000%0A%0Arnd%20%3D%20dtm.rf(len%2C-1%2C1)%0A%20%20.amp(0.2)%0A%20%20.amp(dtm.rf(300).l(len))%0A%0Asig%20%3D%20D(-1%2C1).l(len)%0A%20%20.map(d%20%3D%3E%20d.mult(-5).powof(Math.E).add(1).recip())%0A%20%20.add(rnd)%0A%0Aest%20%3D%20sig()%0A%20%20.fir(D(1).rep(50).fs(1))%0A%0Aerr%20%3D%20sig().subtract(est)%0A%0AD(%5Bsig%2Cest%2Cerr%5D).plot()%0AD(%5B%27Left%3A%20signal%27%2C%20%27Center%3A%20estimate%27%2C%20%27Right%3A%20residue%27%5D).print()%0A%0AM().play().for(10)%0A%20%20.note(est.r(60%2C90))%0A%20%20.amp(err.r().l(len*10))'
+		},
+		{
+			name: 'Distribution to inharmonic oscillators',
+			code: 'D%20%3D%20dtm.data%0AT%20%3D%20dtm.to%0AM%20%3D%20dtm.music%0A%0Alen%20%3D%2050%0A%0Adist%20%3D%20dtm.rf(10)%0A%20%20.prepend(0).append(0)%0A%20%20.curve(-500).cos(200).r()%0A%20%20.plot()%0A%0Anotes%20%3D%20dist().icdf()%0A%20%20.phase(dtm.rf(len)%2C%27step%27)%0A%20%20.r(50%2C100%2C0%2C1)%0A%0Aampenv%20%3D%20D(2%2Flen%2C0).l(1000).c(-20)%0Arndpan%20%3D%20dtm.rf(len%2C-1%2C1)%0A%0Anotes.each((d%2Ci)%20%3D%3E%20%7B%0A%20%20M().play().for(3)%0A%20%20%20%20.amp(ampenv).note(d)%0A%20%20%20%20.pan(rndpan(i))%0A%7D)'
+		},
+		{
+			name: 'Distribution: minimum-error pitch quantization',
+			code: 'D%20%3D%20dtm.data%0AT%20%3D%20dtm.to%0AM%20%3D%20dtm.music%0A%0Asig%20%3D%20dtm.rf(30).l(200)%0A%20%20.add(dtm.rf(200).amp(0.3))%0A%20%20.r(50%2C100)%0A%0Aest%20%3D%20sig().b(5).each.rms().ub().l(200).save()%0Aerr%20%3D%20sig().subtract(est)%0A%0Akeys%20%3D%20D(%27C%27%2C%27C%23%27%2C%27D%27%2C%27D%23%27%2C%27E%27%2C%27F%27%2C%27F%23%27%2C%27G%27%2C%27G%23%27%2C%27A%27%2C%27A%23%27%2C%27B%27)%0Ascales%20%3D%20keys.map((d%2Ci)%20%3D%3E%20%7B%0A%20%20return%20dtm.scale().col(dtm.r(1%2C10))%0A%20%20%20%20.map(s%20%3D%3E%20%7B%0A%20%20%20%20%20%20return%20s.add(i).mod(12).sort()%0A%20%20%20%20%20%20%20%20.key(d.get(0)%20%2B%20%27%20%27%20%2B%20s.get(%27key%27))%0A%20%20%20%20%7D)%0A%7D)%0A%0Arank%20%3D%20scales()%20%2F%2F%20clone%0A%20%20.map(d%20%3D%3E%20est().q().pq(d).snr().key(d.get(%27key%27)))%20%2F%2F%20get%20SNR%0A%20%20.sortby(d%20%3D%3E%20d.get(0)%2C%20true)%20%2F%2F%20sort%20scales%20by%20least-distorted%0A%20%20.filter((d%2C%20i)%20%3D%3E%20i%257%3D%3D%3D0)%20%2F%2F%20remove%20duplicate%20scales%0A%0Arank()%20%2F%2F%20print%20result%0A%20%20.prep(%5BD(%27signal%2C%20estimate%2C%20error%2C%20pitch-quantized%20estimate%2C%20pitch-quantization%20error%27).key(%27From%20left%20to%20right%27)%2CD()%5D)%0A%20%20.print()%0A%0Aest_pq%20%3D%20est().q().pq(scales(rank(0).get(%27key%27)))%0Aest_pqerr%20%3D%20est().subtract(est_pq)%0A%0AD(%5Bsig%2Cest%2Cerr%2Cest_pq%2Cest_pqerr%5D).plot()%0A%0AM().play().for(23)%0A%20%20.note(est_pq)%0A%20%20.amp(est_pqerr().r(0.7%2C0.1).c(-5).map(d%20%3D%3E%20d.cat(0).l(100)))%0A%20%20.pan(err().r(-0.5%2C0.5))%0A%20%20.delay()'
+		},
+		{
+			name: 'Structural analysis: entropy check',
+			code: 'a'
+		},
+		{
+			name: 'Structural analysis: spectral filtering (DCT)',
+			code: 'b'
+		}
+
+	];
+});
+</script>
+
+<p>
+	(ICAD 2017) Spectral Parameter Encoding: Towards a Framework for Functional-Aesthetic Sonification <br><hr>
+	Online Code Examples <br><br>
+	To listen to an example, hit "EVAL" on the right-top corner of the example page. It might take a few seconds to load for the first time you open the link. Works on Chrome or Safari, but not FireFox. 
+</p>
+
+<div ng-repeat="example in examples">
+	<a target="_blank" ng-href="{{url + example.code}}">
+	{{$index+1}}: {{example.name}}
+	</a>
+</div>
+</body>
+</html>
