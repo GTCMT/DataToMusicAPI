@@ -189,36 +189,36 @@ describe('generator', function () {
         });
 
         it('should accept a dtm.array', function () {
-            expect(dtm.gen('line', 3).range(dtm.a([10, 20])).get()).toEqual(toFloat32Array([10, 15, 20]));
+            expect(dtm.gen('line', 3).range(dtm.data([10, 20])).get()).toEqual(toFloat32Array([10, 15, 20]));
         });
     });
 
 
-    describe('constant', function () {
-        it('should work with single values', function () {
-            var a = dtm.gen('const', 3).size(4);
-            expect(a.get('len')).toBe(4);
-            a.forEach(function (v) {
-                expect(v).toBe(3);
-            });
-
-            expect(dtm.gen('const', 'foo').get('len')).toBe(1);
-        });
-
-        it('should work with array-ish values', function () {
-            dtm.gen('const', [1,2]).size(2).forEach(function (v) {
-                expect(v).toEqual(toFloat32Array([1,2]));
-            });
-        });
-    });
+    // describe('constant', function () {
+    //     it('should work with single values', function () {
+    //         var a = dtm.gen('const', 3).size(4);
+    //         expect(a.get('len')).toBe(4);
+    //         a.forEach(function (v) {
+    //             expect(v).toBe(3);
+    //         });
+    //
+    //         expect(dtm.gen('const', 'foo').get('len')).toBe(1);
+    //     });
+    //
+    //     it('should work with array-ish values', function () {
+    //         dtm.gen('const', [1,2]).size(2).forEach(function (v) {
+    //             expect(v).toEqual(toFloat32Array([1,2]));
+    //         });
+    //     });
+    // });
 
     describe('using dtm.gen functions with regular dtm.array', function () {
         it('should not set the length', function () {
-            expect(dtm.a([1, 2, 3]).size(5).get('len')).toBe(3);
+            expect(dtm.data([1, 2, 3]).size(5).get('len')).toBe(3);
         });
 
         it('should ignore the type', function () {
-            expect(dtm.a([1, 2, 3]).type('sine').get()).toEqual(toFloat32Array([1, 2, 3]));
+            expect(dtm.data([1, 2, 3]).type('sine').get()).toEqual(toFloat32Array([1, 2, 3]));
         });
     });
 });

@@ -49,23 +49,23 @@ describe('dtm.data', function () {
         });
     });
 
-    describe('interleave', function () {
-        var a, b;
-        beforeEach(function () {
-            a = dtm.data(1,2,3,4);
-            b = dtm.data(5);
-        });
-
-        it('example 1', function () {
-            expect(a.interleave(b).get()).toEqual(tf32([1,5,2,5,3,5,4,5]));
-        });
-
-        it('example 2', function () {
-            expect(a.interleave(b,2).get()).toEqual(tf32([1,2,5,3,4,5]));
-        });
-
-        it('example 3', function () {
-            expect(a.interleave(b,1,3).get()).toEqual(tf32([1,5,5,5,2,5,5,5,3,5,5,5,4,5,5,5]));
-        });
-    });
+    // describe('interleave', function () {
+    //     var a, b;
+    //     beforeEach(function () {
+    //         a = dtm.data(1,2,3,4);
+    //         b = dtm.data(5);
+    //     });
+    //
+    //     it('example 1', function () {
+    //         expect(a.interleave(b).get()).toEqual(tf32([1,5,2,5,3,5,4,5]));
+    //     });
+    //
+    //     it('example 2', function () {
+    //         expect(a.interleave(b,2).get()).toEqual(tf32([1,2,5,3,4,5]));
+    //     });
+    //
+    //     it('example 3', function () {
+    //         expect(a.interleave(b,1,3).get()).toEqual(tf32([1,5,5,5,2,5,5,5,3,5,5,5,4,5,5,5]));
+    //     });
+    // });
 });

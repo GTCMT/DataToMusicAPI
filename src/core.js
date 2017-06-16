@@ -14,7 +14,7 @@ var params = {
  * @type {object}
  */
 var dtm = {
-    version: '0.0.5',
+    version: '0.8',
 
     log: function (arg) {
         if (params.isLogging) {
@@ -87,9 +87,14 @@ var dtm = {
                     }
                     MIDI.prototype.devices = devices;
                     MIDI.prototype.out = devices[0];
+
+                    var inputs = Array.from(webMidi.inputs.values());
+                    inputs.forEach(function (device) {
+                        device.onmidimessage = MIDI.prototype.oninput;
+                    });
                 }, null);
             } else {
-                console.log("No MIDI support in your browser.");
+                console.log("Web MIDI is not supported in this browser!");
             }
         }
     },
@@ -122,72 +127,4 @@ var dtm = {
 };
 
 this.dtm = dtm;
-
-dtm.loadData = function (url, cb) {
-    return new Promise(function (resolve, reject) {
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', url, true);
-
-        var ext = url.split('.').pop();
-
-        switch (ext) {
-            case 'txt':
-            case 'csv':
-//            req.responseType = 'blob';
-                break;
-            case 'json':
-                xhr.responseType = 'json';
-                break;
-            case 'wav':
-            case 'aif':
-            case 'aiff':
-            case 'ogg':
-            case 'mp3':
-                xhr.responseType = 'arraybuffer';
-                break;
-            default:
-                xhr.responseType = 'blob';
-                break;
-        }
-
-        xhr.onreadystatechange = function () {
-            if (xhr.readyState == 4 && xhr.status == 200) {
-                if (typeof(cb) !== 'undefined') {
-                    cb(xhr.response);
-                }
-
-                resolve(xhr.response);
-            } else {
-                reject(xhr.status);
-            }
-        };
-
-        xhr.send();
-    });
-};
-
-dtm.loadAudio = function (url, cb) {
-    return new Promise(function (resolve) {
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', url, true);
-        xhr.responseType = 'arraybuffer';
-
-        xhr.onreadystatechange = function () {
-
-            if (xhr.readyState == 4 && xhr.status == 200) {
-                //var buf = xhr.response;
-                //console.log(String.fromCharCode.apply(null, new Float32Array(buf)));
-
-                actx.decodeAudioData(xhr.response, function (buf) {
-                    resolve(buf);
-
-                    if (typeof(cb) !== 'undefined') {
-                        cb(buf);
-                    }
-                });
-            }
-        };
-
-        xhr.send();
-    });
-};
+console.log('Loading DTM version ' + dtm.version);

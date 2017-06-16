@@ -1,46 +1,25 @@
 /**
- * @fileOverview Single dimensional array with built-in transformation functions.
+ * @fileOverview dtm.data provides analysis, transformation, and some unusual modulation methods. It can be passed to most of the parameters of dtm.music object as well as other instances of dtm.data.
  * @module data
  */
 
 /**
- * Creates a new single dimensional array object with various transformation functions. The same helper functions from dtm.data can be used - but make sure to skip the first argument (the input array) and start from the second argument.
+ * Returns a new single-dimensional array-like object with various transformation functions.
  *
  * @function module:data.data
  * @returns array object {{value: null, normalized: null, length: null, min: null, max: null, mean: null}}
+ *
+ * @example
+ * // Create a new data object with initial values.
+ * var a = dtm.data(1, 2, 3);
+ *
+ * @example
+ * // Create an empty data object.
+ * var a = dtm.data();
+ * a.set(1, 2, 3);
+ *
  */
 dtm.d = dtm.data = function () {
-    /* LIST OPERATIONS*/
-
-    // array.map.dist = function () {
-    //     if (!isNestedDtmArray(array)) {
-    //         var dist = array().pmf();
-    //         return array.map(function (v) {
-    //             return dist().col(v.toString()).get(0);
-    //         });
-    //     } else {
-    //         return array;
-    //     }
-    // };
-    //
-    // array.map.entropy = function () {
-    //     if (isNestedDtmArray(array)) {
-    //         return array.map(function (a) {
-    //             return a.entropy();
-    //         });
-    //     } else {
-    //         return array.entropy();
-    //     }
-    // };
-    //
-    // array.map.histo = function () {
-    //     // CHECK: this is hacky
-    //     params.type = 'string'; // re-set the type to string from number
-    //     return array.set(toFloat32Array(histo(array.val)));
-    // };
-    //
-
-
     // array.sort.by = array.sortby;
 
     // array.subarray = function () {
@@ -104,13 +83,39 @@ dtm.d = dtm.data = function () {
     return data.set.apply(data, arguments);
 };
 
+/**
+ * Adds new function(s) to the dtm.data prototype. Using existing function name overwrites the old one.
+ * @param fnList {Object} An object with one or more custom functions and optional alias definitions.
+ * @function module:data.augment
+ *
+ * @example
+ * dtm.data.augment({
+ *   // (Optional) Sets alternate function names.
+ *   aliases: {
+ *     magtodb: ['mag2db', 'm2db']
+ *   },
+ *
+ *   // A custom function to convert magnitude values (in the range of [0, 1]) to dB full scale.
+ *   magtodb: function () {
+ *     // "this" is the data object itself. You should return it to enable the method chaining.
+ *     return this.map(function (d) {
+ *        // The map function takes each value in the array and sets an altered value that is returned. Note that each value is also encapsulated in a dtm.data object, allowing you to use the existing dtm.data methods. If you want to work with raw values, use the mapvalue function instead.
+ *        return d.log(10).mult(20);
+ *     });
+ *   }
+ * });
+ *
+ * // Use the custom function.
+ * dtm.data(0, 0.5, 1).magtodb().print()
+ * -> [-Infinity, -6, 0]
+ */
 dtm.data.augment = function (fnList) {
     objForEach(fnList, function (obj, name) {
         if (name === 'aliases') {
             objForEach(obj, function (arr, key) {
                 arr.forEach(function (v) {
-                    if (!isEmpty(Data.prototype[v])) {
-                        console.log('The function name ' + key + ' already exists! Overwriting...');
+                    if (!isEmpty(Data.prototype[v]) && ['name', 'call'].indexOf(key) === -1) {
+                        console.log('The function name "' + key + '" already exists! Overwriting...');
                     }
                     Data.prototype[v] = fnList[key];
 
@@ -154,8 +159,8 @@ dtm.data.augment = function (fnList) {
             });
         } else {
             if (isFunction(obj)) {
-                if (!isEmpty(Data.prototype[name])) {
-                    console.log('The function name ' + name + ' already exists! Overwriting...');
+                if (!isEmpty(Data.prototype[name]) && ['name', 'call'].indexOf(name) === -1) {
+                    console.log('The function name "' + name + '" already exists! Overwriting...');
                 }
                 Data.prototype[name] = obj;
 
@@ -327,8 +332,8 @@ Data.prototype.traceGlobal = false;
 
 function Each(data) {
     /**
-     * Performs JS Array.map function to the array values.
-     * @function module:data#map
+     * Performs JS Array.forEach function to the array values.
+     * @function module:data#each
      * @param fn
      * @returns {dtm.data}
      */
@@ -355,6 +360,17 @@ function Each(data) {
 Each.prototype = Object.create(Function.prototype);
 
 function Map(data) {
+    /**
+     * Iteratively processes each item in the data object. Similar to JS Array.prototype.map, though the first callback argument is wrapped in a dtm.data object. To work on raw values, you can use `mapvalue` function instead.
+     * @function module:data#map
+     * @param fn {Function} A callback function. The arguments are `datum` (`dtm.data` object), `index` (integer), `self` (`dtm.data` object).
+     * @returns {dtm.data}
+     * @example
+     * dtm.data(1,2,3).map(function (datum, index, self) {
+     *   return datum.mult(2); // You must return each result to update the values in the array.
+     * }).print();
+     * -> [2, 4, 6]
+     */
     function map(fn) {
         var i, l = data.length;
         var res = new Array(l);
@@ -383,6 +399,14 @@ Map.prototype = Object.create(Function.prototype);
 
 function Block(data) {
     // TODO: accept option as arg? for numBlocks, pad, overlap ratio, etc.
+    /**
+     * @function module:data#block
+     * @param len
+     * @param hop
+     * @param window
+     * @param tail
+     * @returns {dtm.data}
+     */
     function block(len, hop, window, tail) {
         if (!isInteger(len) || len < 1) {
             len = 1;
@@ -507,6 +531,10 @@ Block.prototype.peak = Block.prototype.peaks = function (shift) {
 };
 
 function UnBlock(data) {
+    /**
+     * @function module:data#unblock
+     * @returns {dtm.data}
+     */
     function unblock() {
         if (isNestedDtmArray(data)) {
             var flattened = [];
@@ -567,7 +595,25 @@ function Fit(data) {
                 return a.fit(len, interp);
             });
         }
-        return data.set(dtm.transform.fit(data.val, len, interp));
+        if (isDtmArray(len)) {
+            len = len.val;
+        }
+
+        // TODO: not clean
+        if (isArray(len) && len.length > 1) {
+            var adjust = 1000 / (data.length * len.length);
+            adjust = Math.round(adjust);
+            if (adjust < 1) {
+                adjust = 1;
+            }
+            return data.fit(data.length * len.length * adjust, interp)
+                .block.into(len.length)
+                .map(function (d,i) {
+                    return d.fit(len[i], interp)
+                }).unblock();
+        } else {
+            return data.set(dtm.transform.fit(data.val, len, interp));
+        }
     }
 
     fit.data = data;
@@ -615,24 +661,44 @@ function Fit(data) {
 
 Fit.prototype = Object.create(Function.prototype);
 
-Fit.prototype.linear = Fit.prototype.line = function (len) {
+Fit.prototype.linear = Fit.prototype.line = function () {
     var data = this.data;
-    return data.fit(len, 'line');
+    var args = argsToArray(arguments);
+    if (argsAreSingleVals(arguments)) {
+        args = [args];
+    }
+    args.push('linear');
+    return data.fit.apply(data, args);
 };
 
-Fit.prototype.step = function (len) {
+Fit.prototype.step = function () {
     var data = this.data;
-    return data.fit(len, 'step');
+    var args = argsToArray(arguments);
+    if (argsAreSingleVals(arguments)) {
+        args = [args];
+    }
+    args.push('step');
+    return data.fit.apply(data, args);
 };
 
-Fit.prototype.cos = Fit.prototype.cosine = function (len) {
+Fit.prototype.cos = Fit.prototype.cosine = function () {
     var data = this.data;
-    return data.fit(len, 'cos');
+    var args = argsToArray(arguments);
+    if (argsAreSingleVals(arguments)) {
+        args = [args];
+    }
+    args.push('cos');
+    return data.fit.apply(data, args);
 };
 
 Fit.prototype.cub = Fit.prototype.cubic = function (len) {
     var data = this.data;
-    return data.fit(len, 'cubic');
+    var args = argsToArray(arguments);
+    if (argsAreSingleVals(arguments)) {
+        args = [args];
+    }
+    args.push('cubic');
+    return data.fit.apply(data, args);
 };
 
 function Stretch(data) {
@@ -650,7 +716,18 @@ function Stretch(data) {
             })
         }
 
-        return data.set(dtm.transform.stretch(data.val, factor, interp));
+        if (isDtmArray(factor)) {
+            factor = factor.val;
+        }
+        if (isArray(factor) && factor.length > 1) {
+            return data.fit(data.length * factor.length, interp)
+                .block.into(factor.length)
+                .map(function (d,i) {
+                    return d.stretch(factor[i]/factor.length, interp)
+                }).unblock();
+        } else {
+            return data.set(dtm.transform.stretch(data.val, factor, interp));
+        }
     }
 
     stretch.data = data;
@@ -690,24 +767,44 @@ function Stretch(data) {
 
 Stretch.prototype = Object.create(Function.prototype);
 
-Stretch.prototype.linear = Stretch.prototype.line = function (factor) {
+Stretch.prototype.linear = Stretch.prototype.line = function () {
     var data = this.data;
-    return data.stretch(factor, 'line');
+    var args = argsToArray(arguments);
+    if (argsAreSingleVals(arguments)) {
+        args = [args];
+    }
+    args.push('linear');
+    return data.stretch.apply(data, args);
 };
 
-Stretch.prototype.step = function (factor) {
+Stretch.prototype.step = function () {
     var data = this.data;
-    return data.stretch(factor, 'step');
+    var args = argsToArray(arguments);
+    if (argsAreSingleVals(arguments)) {
+        args = [args];
+    }
+    args.push('step');
+    return data.stretch.apply(data, args);
 };
 
-Stretch.prototype.cos = Stretch.prototype.cosine = function (factor) {
+Stretch.prototype.cos = Stretch.prototype.cosine = function () {
     var data = this.data;
-    return data.stretch(factor, 'cos');
+    var args = argsToArray(arguments);
+    if (argsAreSingleVals(arguments)) {
+        args = [args];
+    }
+    args.push('cos');
+    return data.stretch.apply(data, args);
 };
 
-Stretch.prototype.cub = Stretch.prototype.cubic = function (factor) {
+Stretch.prototype.cub = Stretch.prototype.cubic = function () {
     var data = this.data;
-    return data.stretch(factor, 'cubic');
+    var args = argsToArray(arguments);
+    if (argsAreSingleVals(arguments)) {
+        args = [args];
+    }
+    args.push('cubic');
+    return data.stretch.apply(data, args);
 };
 
 function FFT(data) {
@@ -1288,7 +1385,12 @@ dtm.data.augment({
 
     /**
      * Overwrites the "original" state with the current state.
+     * @function module:data#save
      * @returns {dtm.data}
+     * @example
+     * var a = dtm.data(1, 2, 3);
+     * a.line(10).save();
+     *
      */
     save: function () {
         return this.meta.setOriginal(this.val);
@@ -1317,20 +1419,75 @@ dtm.data.augment({
     }
 });
 
+
+dtm.data.augment({
+    aliases: {
+        mapvalue: ['mapval', 'mapv', 'mv'],
+        eachvalue: ['eachval', 'eachv', 'ev']
+    },
+
+    /**
+     * @function module:data#mapvalue
+     * @param fn
+     * @returns {dtm.data}
+     */
+    mapvalue: function (fn) {
+        var i, l = this.length;
+        var res = new Array(l);
+
+        if (isNestedDtmArray(this)) {
+            for (i = 0; i < l; i++) {
+                res[i] = fn(this.val[i].val, i, this);
+            }
+            this.val = res;
+            return this;
+        } else {
+            for (i = 0; i < l; i++) {
+                res[i] = fn(this.val[i], i, this);
+            }
+            return this.set(res);
+        }
+    },
+
+    /**
+     * @function module:data#eachvalue
+     * @param fn
+     * @returns {dtm.data}
+     */
+    eachvalue: function (fn) {
+        var i, l = this.length;
+        if (isNestedDtmArray(this)) {
+            for (i = 0; i < l; i++) {
+                fn(this.val[i].val, i, this);
+            }
+        } else {
+            for (i = 0; i < l; i++) {
+                fn(this.val[i], i, this);
+            }
+        }
+        return this;
+    }
+});
+
 /* elaborated accessors */
 dtm.data.augment({
     aliases: {
         column: ['col'],
+        select: ['sel', 'at'],
         interpolate: ['interp', 'itp'],
-        phase: ['p']
+        phase: ['p', 'scan'],
+        mphase: ['mp']
     },
 
+    /**
+     * Returns a dtm.data containing a copy / copies of the source at specified index. The copies may be a single value or a n-dimensional array, depending on the dimensionality of the source dtm.data. Aliases: `col()`, `varaible()` (call the dtm.data object itself).
+     * @function module:data#column
+     * @returns {dtm.data}
+     */
     column: function () {
         var args = flatten(argsToArray(arguments));
         var res = [];
         var that = this;
-
-        // TODO: query by dtm.array not working as same as by regular array
 
         if (isNestedDtmArray(this)) {
             var lastKey = '';
@@ -1395,6 +1552,29 @@ dtm.data.augment({
         }
     },
 
+    // TODO: support typed array
+    // TODO: does not work with 1-D array; need to wrap values in data object??¡
+    select: function () {
+        var that = this;
+        var indices, res = [];
+        if (argsAreSingleVals(arguments)) {
+            indices = argsToArray(arguments);
+        } else if (isNumOrFloat32Array(arguments[0])) {
+            indices = arguments[0];
+        } else if (isDtmArray(arguments[0]) && isNumOrFloat32Array(arguments[0].get())) {
+            indices = arguments[0].get();
+        }
+
+        if (!isNumOrFloat32Array(indices)) {
+            return that;
+        } else {
+            indices.forEach(function (i) {
+                res.push(that.val[mod(i, that.length)]);
+            });
+            return dtm.data(res);
+        }
+    },
+
     /**
      * Returns a row of a nested array by the index.
      * @param num
@@ -1412,6 +1592,13 @@ dtm.data.augment({
     // memo: only for single-dimensional numerical interpolation
     // mode: linear, step (round), ...
     // aliases: interp, itp
+    /**
+     * Estimates a value / values using fractional indices.
+     * @function module:data#interpolate
+     * @param at
+     * @param mode
+     * @returns {dtm.data}
+     */
     interpolate: function (at, mode) {
         var that = this;
 
@@ -1559,7 +1746,7 @@ dtm.data.augment({
     },
 
     /**
-     * Modifies the range of the array. Shorthand: data.r
+     * Modifies the range of the array. Alias: `r()`
      * @function module:data#range
      * @param arg1 {number|array|dtm.data} The target minimum value of the scaled range.
      * @param arg2 {number|array|dtm.data} The target maximum value of the scaled range.
@@ -1657,7 +1844,7 @@ dtm.data.augment({
     },
 
     /**
-     * Rescales the range of the numerical values to 0-1.
+     * Rescales the range of the numerical values to 0-1. Alias: `n`
      * @function module:data#normalize
      * @param [arg1] {number} Prefered domain minimum value. If not present, the minimum of the input array is used.
      * @param [arg2] {number} Prefered domain maximum value. If not present, the maximum of the input array is used.
@@ -1768,7 +1955,7 @@ dtm.data.augment({
             max = this.get('max');
         }
 
-        var arr = dtm.transform.expCurve(dtm.transform.normalize(this.val), factor);
+        var arr = dtm.transform.expCurve(dtm.transform.normalize(this.val,min,max), factor);
         return this.set(dtm.transform.rescale(arr, min, max));
     },
 
@@ -1788,7 +1975,7 @@ dtm.data.augment({
             max = this.get('max');
         }
 
-        var arr = dtm.transform.logCurve(dtm.transform.normalize(this.val), factor);
+        var arr = dtm.transform.logCurve(dtm.transform.normalize(this.val,min,max), factor);
         return this.set(dtm.transform.rescale(arr, min, max));
     },
 
@@ -1802,10 +1989,22 @@ dtm.data.augment({
 
         var arr;
 
+        // TODO: support multi-segment curves
+        if (isDtmArray(factor)) {
+            if (factor.length === 1) {
+                factor = factor.get(0);
+            } else {
+                return this.block.into(factor.length)
+                    .map(function (d, i) {
+                        return d.curve(factor(i))
+                    }).unblock();
+            }
+        }
+
         if (factor > 0) {
-            arr = dtm.transform.logCurve(dtm.transform.normalize(this.val), factor+1);
+            arr = dtm.transform.logCurve(dtm.transform.normalize(this.val,min,max), factor+1);
         } else {
-            arr = dtm.transform.expCurve(dtm.transform.normalize(this.val), -(factor)+1);
+            arr = dtm.transform.expCurve(dtm.transform.normalize(this.val,min,max), -(factor)+1);
         }
 
         return this.set(dtm.transform.rescale(arr, min, max));
@@ -1824,36 +2023,113 @@ dtm.data.augment({
         fitsum: ['fs', 'total']
     },
 
-    linear: function (len) {
-        return this.fit(len, 'linear');
+    /**
+     * @function module:data#linear
+     * @param len
+     * @returns {dtm.data}
+     */
+    linear: function () {
+        var args = argsToArray(arguments);
+        if (argsAreSingleVals(arguments)) {
+            args = [args];
+        }
+        args.push('linear');
+        return this.fit.apply(this, args);
     },
 
-    step: function (len) {
-        return this.fit(len, 'step');
+    /**
+     * @function module:data#step
+     * @param len
+     * @returns {dtm.data}
+     */
+    step: function () {
+        var args = argsToArray(arguments);
+        if (argsAreSingleVals(arguments)) {
+            args = [args];
+        }        args.push('step');
+        return this.fit.apply(this, args);
     },
 
-    cosine: function (len) {
-        return this.fit(len, 'cos');
+    /**
+     * @function module:data#cosine
+     * @param len
+     * @returns {dtm.data}
+     */
+    cosine: function () {
+        var args = argsToArray(arguments);
+        if (argsAreSingleVals(arguments)) {
+            args = [args];
+        }        args.push('cos');
+        return this.fit.apply(this, args);
     },
 
-    cubic: function (len) {
-        return this.fit(len, 'cubic');
+    /**
+     * @function module:data#cubic
+     * @param len
+     * @returns {dtm.data}
+     */
+    cubic: function () {
+        var args = argsToArray(arguments);
+        if (argsAreSingleVals(arguments)) {
+            args = [args];
+        }        args.push('cubic');
+        return this.fit.apply(this, args);
     },
 
-    slinear: function (factor) {
-        return this.stretch(factor, 'linear');
+    /**
+     * @function module:data#slinear
+     * @param factor
+     * @returns {dtm.data}
+     */
+    slinear: function () {
+        var args = argsToArray(arguments);
+        if (argsAreSingleVals(arguments)) {
+            args = [args];
+        }
+        args.push('linear');
+        return this.stretch.apply(this, args);
     },
 
-    sstep: function (factor) {
-        return this.stretch(factor, 'step');
+    /**
+     * @function module:data#sstep
+     * @param factor
+     * @returns {dtm.data}
+     */
+    sstep: function () {
+        var args = argsToArray(arguments);
+        if (argsAreSingleVals(arguments)) {
+            args = [args];
+        }
+        args.push('step');
+        return this.stretch.apply(this, args);
     },
 
-    scosine: function (factor) {
-        return this.stretch(factor, 'cos');
+    /**
+     * @function module:data#scosine
+     * @param factor
+     * @returns {dtm.data}
+     */
+    scosine: function () {
+        var args = argsToArray(arguments);
+        if (argsAreSingleVals(arguments)) {
+            args = [args];
+        }
+        args.push('cos');
+        return this.stretch.apply(this, args);
     },
 
-    scubic: function (factor) {
-        return this.stretch(factor, 'cubic');
+    /**
+     * @function module:data#scubic
+     * @param factor
+     * @returns {dtm.data}
+     */
+    scubic: function () {
+        var args = argsToArray(arguments);
+        if (argsAreSingleVals(arguments)) {
+            args = [args];
+        }
+        args.push('cubic');
+        return this.stretch.apply(this, args);
     },
 
     /**
@@ -1904,34 +2180,9 @@ dtm.data.augment({
 /* blocking operations */
 dtm.data.augment({
     aliases: {
-        // unblock: ['ub', 'u', 'ungroup', 'ug', 'flatten'],
         window: ['win'],
         transp: ['t']
     },
-
-    // unblock: function () {
-    //     if (isNestedDtmArray(this)) {
-    //         var flattened = [];
-    //         for (var i = 0, l = this.val.length; i < l; i++) {
-    //             if (isDtmArray(this.val[i])) {
-    //                 flattened = concat(flattened, this.val[i].val);
-    //             }
-    //         }
-    //
-    //         if (isNumArray(flattened)) {
-    //             flattened = toFloat32Array(flattened);
-    //         }
-    //
-    //         this.params.depth--;
-    //         if (this.params.depth === 1) {
-    //             this.params.nested = false;
-    //         }
-    //
-    //         return this.set(flattened);
-    //     } else {
-    //         return this;
-    //     }
-    // },
 
     // TODO: array.block (and window) should transform the parent array into nested child array
     nest: function () {
@@ -1958,6 +2209,12 @@ dtm.data.augment({
         }
     },
 
+    /**
+     * Flattens a 2-dimensional dtm.data using the overlap-and-add method.
+     * @function module:data#ola
+     * @param hop {Integer}
+     * @returns {dtm.data}
+     */
     ola: function (hop) {
         if (!isInteger(hop) || hop < 1) {
             hop = 1;
@@ -2060,6 +2317,11 @@ dtm.data.augment({
         freq: ['fm']
     },
 
+    /**
+     * @function module:data#amp
+     * @param input {Number|Array|dtm.data}
+     * @returns {dtm.data} self
+     */
     amp: function (input) {
         var ampArr;
 
@@ -2075,6 +2337,11 @@ dtm.data.augment({
     },
 
     // with support for fractional freq array with table lookup and angular velocity
+    /**
+     * @function module:data#freq
+     * @param input {Number|Array|dtm.data}
+     * @returns {dtm.data} self
+     */
     freq: function (input) {
         var freqArr;
 
@@ -2135,11 +2402,13 @@ dtm.data.augment({
 /* arithmetic */
 dtm.data.augment({
     aliases: {
+        add: ['plus'],
+        subtract: ['minus'],
         divide: ['div'],
         reciprocal: ['recip'],
         power: ['pow', 'exp'],
         abs: ['fwr'],
-        round: ['q'],
+        round: ['q', 'quantize'],
         modulo: ['mod'],
         morethan: ['mt'],
         lessthan: ['lt']
@@ -2152,7 +2421,8 @@ dtm.data.augment({
      * @param [interp='step'] {string}
      * @returns {dtm.data}
      * @example
-     * <div> hey </div>
+     * dtm.data(1, 2, 3).add(10).print();
+     * -> [11, 12, 13]
      */
     add: function (factor, interp) {
         var that = this;
@@ -2185,6 +2455,12 @@ dtm.data.augment({
         }
     },
 
+    /**
+     * @function module:data#subtract
+     * @param factor
+     * @param interp
+     * @returns {dtm.data} self
+     */
     subtract: function (factor, interp) {
         var that = this;
         if (!isString(interp)) {
@@ -2254,6 +2530,12 @@ dtm.data.augment({
         }
     },
 
+    /**
+     * @function module:data#divide
+     * @param factor
+     * @param interp
+     * @returns {dtm.data} self
+     */
     divide: function (factor, interp) {
         var that = this;
 
@@ -2286,6 +2568,11 @@ dtm.data.augment({
         }
     },
 
+    /**
+     * @function module:data#reciprocal
+     * @param numerator
+     * @returns {dtm.data} self
+     */
     reciprocal: function (numerator) {
         if (isEmpty(numerator)) {
             numerator = 1;
@@ -2331,6 +2618,12 @@ dtm.data.augment({
         return this.set(dtm.transform.powof(this.val, factor, interp));
     },
 
+    /**
+     * @function module:data#log
+     * @param base
+     * @param interp
+     * @returns {dtm.data} self
+     */
     log: function (base, interp) {
         if (isNumDtmArray(base)) {
             base = base.get();
@@ -2473,6 +2766,11 @@ dtm.data.augment({
         accumulate: ['accum', 'cuml', 'cum']
     },
 
+    /**
+     * @function module:data#min
+     * @param fn
+     * @returns {dtm.data} self
+     */
     min: function (fn) {
         if (isFunction(fn)) {
             var res = getMin(this.val.map(function (v) {
@@ -2499,6 +2797,11 @@ dtm.data.augment({
         }
     },
 
+    /**
+     * @function module:data#max
+     * @param fn
+     * @returns {dtm.data} self
+     */
     max: function (fn) {
         if (isFunction(fn)) {
             var res = getMax(this.val.map(function (v) {
@@ -2525,6 +2828,10 @@ dtm.data.augment({
         }
     },
 
+    /**
+     * @function module:data#extent
+     * @returns {dtm.data} self
+     */
     extent: function () {
         if (isNestedDtmArray(this)) {
             return this.map(function (a) {
@@ -2535,6 +2842,11 @@ dtm.data.augment({
         }
     },
 
+    /**
+     * @function module:data#mean
+     * @param fn
+     * @returns {dtm.data} self
+     */
     mean: function (fn) {
         if (isFunction(fn)) {
             var res = mean(this.val.map(function (v) {
@@ -2561,6 +2873,11 @@ dtm.data.augment({
         }
     },
 
+    /**
+     * @function module:data#mode
+     * @param fn
+     * @returns {dtm.data} self
+     */
     mode: function (fn) {
         if (isFunction(fn)) {
             var res = mode(this.val.map(function (v) {
@@ -2587,6 +2904,11 @@ dtm.data.augment({
         }
     },
 
+    /**
+     * @function module:data#median
+     * @param fn
+     * @returns {dtm.data} self
+     */
     median: function (fn) {
         if (isFunction(fn)) {
             var res = median(this.val.map(function (v) {
@@ -2613,6 +2935,11 @@ dtm.data.augment({
         }
     },
 
+    /**
+     * @function module:data#midrange
+     * @param fn
+     * @returns {dtm.data} self
+     */
     midrange: function (fn) {
         if (isFunction(fn)) {
             var res = midrange(this.val.map(function (v) {
@@ -2639,6 +2966,11 @@ dtm.data.augment({
         }
     },
 
+    /**
+     * @function module:data#centroid
+     * @param fn
+     * @returns {dtm.data} self
+     */
     centroid: function (fn) {
         if (isFunction(fn)) {
             var res = centroid(this.val.map(function (v) {
@@ -2665,6 +2997,11 @@ dtm.data.augment({
         }
     },
 
+    /**
+     * @function module:data#std
+     * @param fn
+     * @returns {dtm.data} self
+     */
     std: function (fn) {
         if (isFunction(fn)) {
             var res = std(this.val.map(function (v) {
@@ -2691,6 +3028,11 @@ dtm.data.augment({
         }
     },
 
+    /**
+     * @function module:data#pstd
+     * @param fn
+     * @returns {dtm.data} self
+     */
     pstd: function (fn) {
         if (isFunction(fn)) {
             var res = pstd(this.val.map(function (v) {
@@ -2717,6 +3059,11 @@ dtm.data.augment({
         }
     },
 
+    /**
+     * @function module:data#var
+     * @param fn
+     * @returns {dtm.data} self
+     */
     'var': function (fn) {
         if (isFunction(fn)) {
             var res = variance(this.val.map(function (v) {
@@ -2743,6 +3090,11 @@ dtm.data.augment({
         }
     },
 
+    /**
+     * @function module:data#pvar
+     * @param fn
+     * @returns {dtm.data} self
+     */
     pvar: function (fn) {
         if (isFunction(fn)) {
             var res = pvar(this.val.map(function (v) {
@@ -2769,6 +3121,11 @@ dtm.data.augment({
         }
     },
 
+    /**
+     * @function module:data#rms
+     * @param fn
+     * @returns {dtm.data} self
+     */
     rms: function (fn) {
         if (isFunction(fn)) {
             var res = rms(this.val.map(function (v) {
@@ -2796,6 +3153,10 @@ dtm.data.augment({
     },
 
     // TODO: not consistent with other stats-based conversions
+    /**
+     * @function module:data#sum
+     * @returns {dtm.data} self
+     */
     sum: function () {
         if (isNestedDtmArray(this)) {
             var maxLen = 0;
@@ -2815,6 +3176,11 @@ dtm.data.augment({
                 });
             }
 
+            this.params.depth--;
+            if (this.params.depth === 1) {
+                this.params.nested = false;
+            }
+
             return this.set(res);
         } else {
             var sum = this.val.reduce(function (a, b) {
@@ -2824,6 +3190,10 @@ dtm.data.augment({
         }
     },
 
+    /**
+     * @function module:data#accumulate
+     * @returns {dtm.data} self
+     */
     accumulate: function () {
         var a = 0;
         this.map(function (d) {
@@ -2868,7 +3238,7 @@ dtm.data.augment({
      */
     mse: function () {
         if (arguments.length === 0) {
-            if (!isNestedDtmArray(array)) {
+            if (!isNestedDtmArray(this)) {
                 var source = this.clone().reset();
 
                 // respect the original length
@@ -2883,6 +3253,10 @@ dtm.data.augment({
         }
     },
 
+    /**
+     * @function module:data#snr
+     * @returns {dtm.data} self
+     */
     snr: function () {
         if (arguments.length === 0) {
             if (!isNestedDtmArray(this)) {
@@ -2893,6 +3267,10 @@ dtm.data.augment({
         return this;
     },
 
+    /**
+     * @function module:data#dbsnr
+     * @returns {dtm.data} self
+     */
     dbsnr: function () {
         if (arguments.length === 0) {
             if (!isNestedDtmArray(this)) {
@@ -2903,6 +3281,10 @@ dtm.data.augment({
         return this;
     },
 
+    /**
+     * @function module:data#dct
+     * @returns {dtm.data} self
+     */
     dct: function () {
         var that = this;
         if (isNumDtmArray(that)) {
@@ -2927,6 +3309,10 @@ dtm.data.augment({
         return that;
     },
 
+    /**
+     * @function module:data#idct
+     * @returns {dtm.data} self
+     */
     idct: function () {
         var that = this;
         if (isNumDtmArray(that)) {
@@ -2949,6 +3335,10 @@ dtm.data.augment({
         return that;
     },
 
+    /**
+     * @function module:data#fir
+     * @returns {dtm.data} self
+     */
     fir: function (coef) {
         var that = this;
         var coef_ = [];
@@ -2971,6 +3361,10 @@ dtm.data.augment({
         return that.set(res);
     },
 
+    /**
+     * @function module:data#amdf
+     * @returns {dtm.data} self
+     */
     amdf: function (max) {
         if (!isNumber(max)) {
             max = Math.round(this.length / 2);
@@ -2985,11 +3379,22 @@ dtm.data.augment({
         return this.set(res);
     },
 
-    correlation: function (tgt) {
+    /**
+     * @function module:data#correlation
+     * @returns {dtm.data} self
+     */
+    correlation: function (tgt, normalize) {
         if (isNumDtmArray(this)) {
             var res = dtm.data();
             var zeros = dtm.data(0).rep(this.get('len'));
             var src = this.clone();
+            var denom = 1;
+
+            if (normalize === true) {
+                denom = src.get('std') * tgt.get('std') * (src.length-1);
+            } else if (tgt === true && isEmpty(normalize)) {
+                denom = Math.pow(src.get('std'), 2) * (src.length-1);
+            }
 
             if (isNumDtmArray(tgt) || isNumOrFloat32Array(tgt)) {
                 var tgtLen = isNumOrFloat32Array(tgt) ? tgt.length : tgt.get('len');
@@ -3001,7 +3406,7 @@ dtm.data.augment({
             }
 
             for (var i = 0; i < src.get('len') - (this.get('len')-1); i++) {
-                res.append(src().mult(tgt).get('sum'));
+                res.append(src().mult(tgt).div(denom).get('sum'));
                 src.shift(-1);
             }
 
@@ -3011,7 +3416,11 @@ dtm.data.augment({
         }
     },
 
-    covariance: function (tgt) {
+    /**
+     * @function module:data#covariance
+     * @returns {dtm.data} self
+     */
+    covariance: function (tgt, normalize) {
         if (isNumDtmArray(this)) {
             if (isNumDtmArray(tgt)) {
                 tgt = tgt.clone();
@@ -3028,7 +3437,7 @@ dtm.data.augment({
             }
 
             var xEst = this.get('mean');
-            var yEst = this.get('mean');
+            var yEst = tgt.get('mean');
 
             var res = 0;
 
@@ -3038,12 +3447,20 @@ dtm.data.augment({
 
             res /= len;
 
-            return dtm.data(res);
+            if (normalize === true || (tgt === true && isEmpty(normalize))) {
+                res /= (this.get('std') * tgt.get('std'));
+            }
+
+            return this.set(res);
         } else {
             return this;
         }
     },
 
+    /**
+     * @function module:data#linreg
+     * @returns {dtm.data} self
+     */
     linreg: function () {
         if (isNumDtmArray(this)) {
             var xEst = dtm.range(this.get('len')).get('mean');
@@ -3098,6 +3515,10 @@ dtm.data.augment({
         return this.set(toFloat32Array(histo(this.val)));
     },
 
+    /**
+     * @function module:data#count
+     * @returns {dtm.data} self
+     */
     count: function () {
         var that = this;
         var res = [];
@@ -3107,6 +3528,10 @@ dtm.data.augment({
         return that.set(res);
     },
 
+    /**
+     * @function module:data#mapcount
+     * @returns {dtm.data} self
+     */
     mapcount: function () {
         var count = this().count();
         return this.map(function (d) {
@@ -3130,6 +3555,10 @@ dtm.data.augment({
         }
     },
 
+    /**
+     * @function module:data#mapdist
+     * @returns {dtm.data} self
+     */
     mapdist: function (qdelta) {
         var dist = this().distribution(qdelta);
         return this.map(function (d) {
@@ -3137,6 +3566,10 @@ dtm.data.augment({
         });
     },
 
+    /**
+     * @function module:data#pmf
+     * @returns {dtm.data} self
+     */
     pmf: function (range, qdelta) {
         var min, max;
 
@@ -3157,7 +3590,7 @@ dtm.data.augment({
 
     /**
      * Cumulative distribution function
-     * @returns {cdf}
+     * @returns {dtm.data}
      */
     cdf: function () {
         var dist = this().dist();
@@ -3170,6 +3603,10 @@ dtm.data.augment({
         return this.set(res);
     },
 
+    /**
+     * @function module:data#invert
+     * @returns {dtm.data} self
+     */
     invert: function () {
         // assuming "this" is a normalized CDF
         var that = this;
@@ -3180,20 +3617,39 @@ dtm.data.augment({
         return this.set(res.val);
     },
 
+    /**
+     * @function module:data#icdf
+     * @returns {dtm.data} self
+     */
     icdf: function () {
         return this.accum().range(0, 1).invert();
     },
 
-    entropy: function () {
+    /**
+     * @function module:data#entropy
+     * @returns {dtm.data} self
+     */
+    entropy: function (normalize) {
+        var base = 2;
+
         if (isNestedDtmArray(this)) {
             return this.map(function (a) {
                 return a.entropy();
             })
         } else {
-            var dist = this.dist().unnest();
-            return dist.map(function (v) {
-                return v * Math.log2(v);
-            }).sum().mult(-1);
+            var dist = this.dist().unblock();
+
+            if (normalize === true) {
+                base = dist.length;
+            }
+
+            if (dist.length === 1) {
+                return this.set(0);
+            } else {
+                return dist.map(function (d) {
+                    return d.mult(d().log(base));
+                }).sum().mult(-1);
+            }
         }
     },
 
@@ -3272,12 +3728,36 @@ dtm.data.augment({
         toFloat32: ['tofloat32', 'tf32']
     },
 
+    /**
+     * @function module:data#mtof
+     * @returns {dtm.data} self
+     */
     mtof: function () {
         return this.set(dtm.transform.mtof(this.val));
     },
 
+    /**
+     * @function module:data#ftom
+     * @returns {dtm.data} self
+     */
     ftom: function () {
         return this.set(dtm.transform.ftom(this.val));
+    },
+
+    /**
+     * @function module:data#freqtomel
+     * @returns {dtm.data} self
+     */
+    freqtomel: function () {
+        return this.div(700).add(1).log(10).mult(2595);
+    },
+
+    /**
+     * @function module:data#meltofreq
+     * @returns {dtm.data} self
+     */
+    meltofreq: function () {
+        return this.div(2595).powof(10).add(-1).mult(700);
     },
 
     /**
@@ -3327,6 +3807,10 @@ dtm.data.augment({
         return this.set(dtm.transform.beatsToIntervals(this.val));
     },
 
+    /**
+     * @function module:data#intervalsToOffsets
+     * @returns {dtm.data} self
+     */
     intervalsToOffsets: function () {
         if (isNumDtmArray(this)) {
             var that = this;
@@ -3409,6 +3893,10 @@ dtm.data.augment({
         return this.set(dtm.transform.stringify(this.val));
     },
 
+    /**
+     * @function module:data#toFloat32
+     * @returns {dtm.data} self
+     */
     toFloat32: function () {
         if (isNumArray(this.val)) {
             this.set(toFloat32Array(this.val));
@@ -3420,13 +3908,13 @@ dtm.data.augment({
 /* JS list operation wrappers and variations */
 dtm.data.augment({
     aliases: {
+        prepend: ['prep'],
         concat: ['cat', 'append', 'app'],
         repeat: ['rep'],
         fitrepeat: ['fitrep', 'frep'],
         mirror: ['mirr', 'mir'],
         reverse: ['rev'],
         queue: ['fifo'],
-        select: ['sel'],
         order: ['reorder']
     },
 
@@ -3750,28 +4238,6 @@ dtm.data.augment({
             }
         } else {
             return this;
-        }
-    },
-
-    // TODO: support typed array
-    select: function () {
-        var that = this;
-        var indices, res = [];
-        if (argsAreSingleVals(arguments)) {
-            indices = argsToArray(arguments);
-        } else if (isNumOrFloat32Array(arguments[0])) {
-            indices = arguments[0];
-        } else if (isDtmArray(arguments[0]) && isNumOrFloat32Array(arguments[0].get())) {
-            indices = arguments[0].get();
-        }
-
-        if (!isNumOrFloat32Array(indices)) {
-            return that;
-        } else {
-            indices.forEach(function (i) {
-                res.push(that.val[mod(i, that.length)]);
-            });
-            return that.set(res);
         }
     },
 

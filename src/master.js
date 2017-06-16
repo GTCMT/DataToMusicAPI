@@ -1,7 +1,7 @@
-/**
- * @fileOverview Singleton master (conductor) module. Wants to oversee and control everything, but not quite there yet.
- * @module master
- */
+// /**
+//  * @fileOverview Singleton master (conductor) module. Wants to oversee and control everything, but not quite there yet.
+//  * @module master
+//  */
 
 dtm.master = {
     type: 'dtm.master',
@@ -51,7 +51,8 @@ dtm.master = {
      * @function module:master#clock
      * @returns clock {object}
      */
-    clock: dtm.clock(120, 480).sync(false),
+    // clock: dtm.clock(120, 480).sync(false),
+    clock: null,
 
     start: function () {
         return dtm.master;
@@ -196,5 +197,7 @@ dtm.master = {
     reset: null
 };
 
-dtm.master.clock.setMaster(true);
-dtm.master.clock.start();
+dtm.stop = function () {
+    dtm.master.stop();
+    dtm.master.panic();
+};

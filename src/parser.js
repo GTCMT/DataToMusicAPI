@@ -1,28 +1,6 @@
-/**
- * @fileOverview Parses random stuff. Singleton.
- * @module parser
- */
-
 dtm.parser = {
     type: 'dtm.parser',
 
-    /**
-     * @function module:parser#csvToJson
-     * @category Parser
-     * @param csv {string}
-     * @returns {array} Array of JSON objects
-     * @example
-     *
-     * var dummyCsv =
-     *     'foo, bar, buz\r' +
-     *     '123, 456.78, hey\r' +
-     *     '789, 444.44, hoo';
-     *
-     * var dummyJson = p.csvToJson(dummyCsv);
-     *
-     * console.log(dummyJson);
-     * -> [{foo: 123, bar: 456.78, buz:'hey'}, {foo: 789, bar: 444.44, buz:'hoo'}]
-     */
     csvToJson: function (csv) {
         var lines = csv.split("\n"); // \r for Macs
         var result = [];
@@ -125,12 +103,6 @@ dtm.parser = {
         return obj; //JavaScript object
     },
 
-    /**
-     * Parses the value types from a given row of a collection.
-     * @function module:parser#valueTypes
-     * @param row {array}
-     * @returns {array}
-     */
     valueTypes: function (row) {
         var types = [];
 
@@ -152,12 +124,6 @@ dtm.parser = {
     },
 
     // CHECK: this only works w/ json...
-    /**
-     * Returns the column & row size of the collection
-     * @function module:parser#getSize
-     * @param json
-     * @returns {array}
-     */
     getSize: function (json) {
         var col = numProperties(json[0]); // header
         var row = numProperties(json);

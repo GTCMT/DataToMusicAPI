@@ -53,7 +53,7 @@ describe('isSingleVal', function () {
         expect(isSingleVal(undefined)).toBe(false);
         expect(isSingleVal(null)).toBe(false);
         expect(isSingleVal([1, 2, 3])).toBe(false);
-        expect(isSingleVal(dtm.array([1, 2, 3]))).toBe(false);
+        expect(isSingleVal(dtm.data([1, 2, 3]))).toBe(false);
         expect(isSingleVal(function(){})).toBe(false);
     });
 });
@@ -104,10 +104,10 @@ describe('isArray', function () {
         expect(isArray([1, 2, 3])).toBe(true);
         expect(isArray(['foo', 'bar'])).toBe(true);
         expect(isArray(toFloat32Array([1, 2, 3]))).toBe(true);
-        expect(isArray([dtm.a([1,2,3])])).toBe(true);
+        expect(isArray([dtm.data([1,2,3])])).toBe(true);
         expect(isArray([[1], [2], [3]])).toBe(true);
 
-        expect(isArray(dtm.a([1,2,3]))).toBe(false);
+        expect(isArray(dtm.data([1,2,3]))).toBe(false);
         expect(isArray(1)).toBe(false);
         expect(isArray(undefined)).toBe(false);
         expect(isArray({})).toBe(false);
@@ -135,8 +135,8 @@ describe('isNumOrFloat32Array', function () {
     it('should work', function () {
         expect(isNumOrFloat32Array([1, 2, 3])).toBe(true);
         expect(isNumOrFloat32Array(toFloat32Array([1, 2, 3]))).toBe(true);
-        expect(isNumOrFloat32Array(dtm.a([1,2,3]))).toBe(false);
-        expect(isNumOrFloat32Array([dtm.a([1,2,3])])).toBe(false);
+        expect(isNumOrFloat32Array(dtm.data([1,2,3]))).toBe(false);
+        expect(isNumOrFloat32Array([dtm.data([1,2,3])])).toBe(false);
     });
 });
 
@@ -153,14 +153,14 @@ describe('isStringArray', function () {
     it('should work', function () {
         expect(isStringArray(['hey', 'ho'])).toBe(true);
         expect(isStringArray(['hey', 1])).toBe(false);
-        expect(isStringArray([dtm.a('hey')])).toBe(false);
+        expect(isStringArray([dtm.data('hey')])).toBe(false);
     });
 });
 
 describe('isObjArray', function () {
     it('should work', function () {
         expect(isObjArray([{}, {}])).toBe(true);
-        expect(isObjArray([dtm.array()])).toBe(false);
+        expect(isObjArray([dtm.data()])).toBe(false);
         expect(isObjArray(['hey', 'ho'])).toBe(false);
         expect(isObjArray([1, 2])).toBe(false);
         expect(isObjArray(toFloat32Array([1, 2]))).toBe(false);
@@ -174,7 +174,7 @@ describe('isObjArray', function () {
 describe('isMixedArray', function () {
     it('should work', function () {
         expect(isMixedArray([1, '2'])).toBe(true);
-        expect(isMixedArray([dtm.a([1,2,3])])).toBe(false);
+        expect(isMixedArray([dtm.data([1,2,3])])).toBe(false);
     });
 });
 
@@ -188,13 +188,13 @@ describe('isNestedArray', function () {
     });
 
     it('should treat dtm.array as an object, not array', function () {
-        expect(isNestedArray([dtm.array([1,2,3])])).toBe(false);
+        expect(isNestedArray([dtm.data([1,2,3])])).toBe(false);
     });
 });
 
 describe('isNestedWithDtmArray', function () {
     it('should work', function () {
-        expect(isNestedWithDtmArray([dtm.array([1,2,3])])).toBe(true);
+        expect(isNestedWithDtmArray([dtm.data([1,2,3])])).toBe(true);
         //expect(isNestedWithDtmArray([[dtm.array([1,2,3])]])).toBe(true);
         expect(isNestedWithDtmArray([[1,2,3]])).toBe(false);
     });
@@ -216,14 +216,14 @@ describe('getMaxArrayDepth', function () {
 describe('getMaxDepth', function () {
     it('should work with mixed Array and dtm.array', function () {
         expect(getMaxDepth(0)).toBe(0);
-        expect(getMaxDepth(dtm.a(0))).toBe(1);
+        expect(getMaxDepth(dtm.data(0))).toBe(1);
         expect(getMaxDepth([0])).toBe(1);
-        expect(getMaxDepth([dtm.a(0)])).toBe(2);
-        expect(getMaxDepth(dtm.a([0], [1]))).toBe(2);
-        expect(getMaxDepth(dtm.a(dtm.a(0), [1]))).toBe(2);
-        expect(getMaxDepth([dtm.a([0], [1])])).toBe(3);
-        expect(getMaxDepth(dtm.a(dtm.a([0], [1]), [1]))).toBe(3);
-        expect(getMaxDepth(dtm.a(dtm.a(dtm.a([0], [1]), [1]), [1]))).toBe(4);
+        expect(getMaxDepth([dtm.data(0)])).toBe(2);
+        expect(getMaxDepth(dtm.data([0], [1]))).toBe(2);
+        expect(getMaxDepth(dtm.data(dtm.data(0), [1]))).toBe(2);
+        expect(getMaxDepth([dtm.data([0], [1])])).toBe(3);
+        expect(getMaxDepth(dtm.data(dtm.data([0], [1]), [1]))).toBe(3);
+        expect(getMaxDepth(dtm.data(dtm.data(dtm.data([0], [1]), [1]), [1]))).toBe(4);
     });
 });
 
@@ -246,45 +246,45 @@ describe('objCompare', function () {
 
 describe('isDtmArray', function () {
     it('should work', function () {
-        expect(isDtmArray(dtm.a())).toBe(true);
-        expect(isDtmArray(dtm.a([1,2,3]))).toBe(true);
+        expect(isDtmArray(dtm.data())).toBe(true);
+        expect(isDtmArray(dtm.data([1,2,3]))).toBe(true);
         expect(isDtmArray(dtm.gen('sine'))).toBe(true);
         expect(isDtmArray([1,2,3])).toBe(false);
-        expect(isDtmArray([dtm.a([1,2,3])])).toBe(false);
+        expect(isDtmArray([dtm.data([1,2,3])])).toBe(false);
     });
 });
 
 describe('isNestedDtmArray', function () {
     it('should work', function () {
         expect(isNestedDtmArray([])).toBe(false);
-        expect(isNestedDtmArray(dtm.a([1,2,3]))).toBe(false);
-        expect(isNestedDtmArray(dtm.a([1,2,3], [4,5,6]))).toBe(true);
-        expect(isNestedDtmArray(dtm.a([[1,2,3], [4,5,6]]))).toBe(true);
-        expect(isNestedDtmArray(dtm.a([dtm.a([1,2,3])]))).toBe(true);
-        expect(isNestedDtmArray(dtm.a([dtm.a([1,2,3]), dtm.a([4,5,6])]))).toBe(true);
-        expect(isNestedDtmArray(dtm.a(dtm.a([1,2,3]), dtm.a([4,5,6])))).toBe(true);
+        expect(isNestedDtmArray(dtm.data([1,2,3]))).toBe(false);
+        expect(isNestedDtmArray(dtm.data([1,2,3], [4,5,6]))).toBe(true);
+        expect(isNestedDtmArray(dtm.data([[1,2,3], [4,5,6]]))).toBe(true);
+        expect(isNestedDtmArray(dtm.data([dtm.data([1,2,3])]))).toBe(true);
+        expect(isNestedDtmArray(dtm.data([dtm.data([1,2,3]), dtm.data([4,5,6])]))).toBe(true);
+        expect(isNestedDtmArray(dtm.data(dtm.a([1,2,3]), dtm.a([4,5,6])))).toBe(true);
     });
 });
 
 describe('isNumDtmArray', function () {
     it('should work', function () {
-        expect(isNumDtmArray(dtm.a())).toBe(false);
-        expect(isNumDtmArray(dtm.a([1,2,3]))).toBe(true);
-        expect(isNumDtmArray(dtm.a([1,2,3], [4,5,6]))).toBe(false);
+        expect(isNumDtmArray(dtm.data())).toBe(false);
+        expect(isNumDtmArray(dtm.data([1,2,3]))).toBe(true);
+        expect(isNumDtmArray(dtm.data([1,2,3], [4,5,6]))).toBe(false);
     });
 });
 
 describe('isNestedDtmArray', function () {
     it('should work', function () {
-        expect(isNestedNumDtmArray(dtm.a([1,2,3]))).toBe(false);
-        expect(isNestedNumDtmArray(dtm.a([1,2,3], [4,5,6]))).toBe(true);
+        expect(isNestedNumDtmArray(dtm.data([1,2,3]))).toBe(false);
+        expect(isNestedNumDtmArray(dtm.data([1,2,3], [4,5,6]))).toBe(true);
     });
 });
 
 describe('isDtmObj', function () {
     it('should work', function () {
-        expect(isDtmObj(dtm.array())).toBe(true);
-        expect(isDtmObj(dtm.synth())).toBe(true);
+        expect(isDtmObj(dtm.data())).toBe(true);
+        expect(isDtmObj(dtm.music())).toBe(true);
         //expect(isDtmObj(dtm.clock())).toBe(true);
         expect(isDtmObj({})).toBe(false);
     });
@@ -340,7 +340,7 @@ describe('argIsSingleArray', function () {
 
         expect((function () {
             return argIsSingleArray(arguments);
-        })(dtm.a(1), 2, 3)).toBe(false);
+        })(dtm.data(1), 2, 3)).toBe(false);
 
         expect((function () {
             return argIsSingleArray(arguments);
@@ -376,11 +376,11 @@ describe('argsAreSingleVals', function () {
 
         expect((function () {
             return argsAreSingleVals(arguments);
-        })(dtm.a(1), 2, 3)).toBe(false);
+        })(dtm.data(1), 2, 3)).toBe(false);
 
         expect((function () {
             return argsAreSingleVals(arguments);
-        })(dtm.a(1))).toBe(false);
+        })(dtm.data(1))).toBe(false);
 
         expect((function () {
             return argsAreSingleVals(arguments);
@@ -416,7 +416,7 @@ describe('toFloat32Array', function () {
     it('should work', function () {
         expect(toFloat32Array(1)).toEqual(new Float32Array([1]));
         expect(toFloat32Array([1, 2, 3])).toEqual(new Float32Array([1, 2, 3]));
-        expect(toFloat32Array(dtm.a([1, 2, 3]))).toEqual(new Float32Array([1, 2, 3]));
+        expect(toFloat32Array(dtm.data([1, 2, 3]))).toEqual(new Float32Array([1, 2, 3]));
         expect(toFloat32Array(dtm.gen('range', 1, 4))).toEqual(new Float32Array([1, 2, 3]));
         expect(toFloat32Array(undefined)).toBe(null);
     });

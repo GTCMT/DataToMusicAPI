@@ -21,7 +21,7 @@ dtm.model = function (name, categ) {
         loading: true,
 
         process: [],
-        data: dtm.array(),
+        data: dtm.data(),
         clock: null,
 
         //output: null // dtm.array

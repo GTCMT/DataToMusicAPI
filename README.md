@@ -1,33 +1,12 @@
-<script src="../dtm.js"></script>
-<script>
-function playNext(elem) {
-    try {
-        var code = elem.nextElementSibling.getElementsByClassName('sunlight-highlight-javascript')[0].textContent;
-        eval(code);
-    } catch (e) {}
-}
+# Data-to-Music API
+A browser-based JavaScript API for real-time data sonification. Try the [interactive editor](http://dtmdemo.herokuapp.com/) with [documentations](http://dtmdemo.herokuapp.com/doc).
 
-function playPrev(elem) {
-    try {
-        var code = elem.previousElementSibling.getElementsByClassName('sunlight-highlight-javascript')[0].textContent;
-        eval(code);
-    } catch (e) {
-        alert(e);
-    }
-}
-</script>
-
-
-# DataToMusic
-Client-side JavaScript utility tools for data musification (sonification). 
-
-## Getting Started
+## How to use
+Load the library into your web application as a global variable ```dtm``` by including ```dtm.js``` or ```dtm.min.js``` in the HTML file.
 
 ```html
-<!DOCTYPE html>
 <html>
-<head lang="en">
-    <meta charset="UTF-8">
+<head>
     <title>Hello DTM</title>
     <script src="dtm.js"></script>
 </head>
@@ -40,44 +19,16 @@ Client-side JavaScript utility tools for data musification (sonification).
 </html>
 ```
 
-<button onclick="playPrev(this)">Listen</button>
-
-## Loading data
-
-    dtm.data('sample.csv', sonify);
-    
-    function sonify(data) {
-        var src = data.get(0);
-        dtm.instr().pitch(src).play();
-    }
-
-See the Data tutorial for more details.
-
-## Mapping data to an instrument model
-
-    data = 'hello';
-    dtm.instr().pitch(data).speed(data).play();
-
-<button onclick="playPrev(this)">Listen</button>
-
-    var a = dtm.array('hello world!').split();
-    a.class().range(60, 90).round().block(1);
-    
-    dtm.syn().play()
-        .interval(0.1)
-        .rep(a.len)
-        .nn(a);
-    
-<button onclick="playPrev(this)">Listen</button>
+See the tutorials in documentation as well as the modules `dtm.data` and `dtm.music` for more details.
 
 ## Building ##
 Dependencies:
 Node.js and NPM
 Bower (browser dependency management)
 Grunt (task automation)
-Karma and Jasmine (for unit test)
+Karma and Jasmine (unit testing)
 JSDoc (documentation builder)
 
 ## Credits ##
-Open-source libraries used in DTM API: 
+Open-source libraries used in the DTM API: 
 <a href="https://sourceforge.net/projects/kissfft">Kiss FFT</a>

@@ -5,7 +5,7 @@
 
 /**
  * Creates a new dtm.data (array) object, if the argument is empty, or a promise object, if the argument is a URL.
- * @function module:data.data
+ * @function module:loader.load
  * @param [input] {string} URL to load or query the data
  * @param fn {function}
  * @returns {dtm.data | promise}
@@ -77,7 +77,7 @@ dtm.load = function (input, fn) {
                 }
 
                 xhr.onreadystatechange = function () {
-                    if (xhr.readyState == 4 && xhr.status == 200) {
+                    if (xhr.readyState === 4 && xhr.status === 200) {
 
                         // for audio sample
                         if (xhr.responseType === 'arraybuffer') {
@@ -189,15 +189,15 @@ dtm.load = function (input, fn) {
             }
         });
     } else {
-        var elem_files = input;
+        var elem_file = input;
         var fileType = null;
         var reader = new FileReader();
-        if (elem_files[0].name.match(/.+\.json/gi)) {
+        if (elem_file[0].name.match(/.+\.json/gi)) {
             fileType = 'json';
-        } else if (elem_files[0].name.match(/.+\.csv/gi)) {
+        } else if (elem_file.name.match(/.+\.csv/gi)) {
             fileType = 'csv';
         }
-        reader.readAsText(elem_files[0]);
+        reader.readAsText(elem_file);
         return new Promise(function (resolve) {
             reader.onload = function (e) {
                 if (fileType === 'json') {
@@ -222,46 +222,21 @@ dtm.load = function (input, fn) {
     }
 };
 
-dtm.csv = function (input, fn) {
-    if (isString(input)) {
-        var p = new Promise(function (resolve) {
-            var xhr = new XMLHttpRequest();
-            xhr.open('GET', input, true);
-
-            xhr.onreadystatechange = function () {
-                if (xhr.readyState == 4 && xhr.status == 200) {
-                    var data = dtm.data();
-                    var arrays = [];
-                    objForEach(dtm.parser.csvToCols(xhr.response), function (v, k) {
-                        var a = dtm.data(v).label(k).parent(data);
-                        arrays.push(a);
-                    });
-
-                    if (!isEmpty(fn)) {
-                        fn(data.set(arrays));
-                    }
-
-                    // resolve(data.set(arrays));
-                    resolve(arrays);
-                }
-            };
-
-            xhr.send();
-        });
-
-        var data = dtm.data();
-        p.then(function (d) {
-            data.set(d);
-        });
-
-        return data;
-    } else {
-        var elem_files = input;
-        var reader = new FileReader();
-
-        reader.readAsText(elem_files[0]);
-        return new Promise(function (resolve) {
-            reader.onload = function (e) {
+// does not support multiple files in the input element
+dtm.file = function (file, fn) {
+    var fileType = null;
+    var reader = new FileReader();
+    if (file.name.match(/.+\.json/gi)) {
+        fileType = 'json';
+    } else if (file.name.match(/.+\.csv/gi)) {
+        fileType = 'csv';
+    }
+    reader.readAsText(file);
+    return new Promise(function (resolve) {
+        reader.onload = function (e) {
+            if (fileType === 'json') {
+                resolve(JSON.parse(e.target.result));
+            } else if (fileType === 'csv') {
                 //resolve(dtm.parser.csvToCols(e.target.result));
                 var data = dtm.data();
                 var arrays = [];
@@ -275,66 +250,128 @@ dtm.csv = function (input, fn) {
                 }
 
                 resolve(data.set(arrays));
-            };
+            }
+        };
+    });
+};
+
+dtm.csv = function (input, fn) {
+    if (isString(input)) {
+        if (isURL(input, '.csv')) {
+            // is URL
+            var p = new Promise(function (resolve) {
+                var xhr = new XMLHttpRequest();
+                xhr.open('GET', input, true);
+
+                xhr.onreadystatechange = function () {
+                    if (xhr.readyState === 4 && xhr.status === 200) {
+                        var data = dtm.data();
+                        var arrays = [];
+                        objForEach(dtm.parser.csvToCols(xhr.response), function (v, k) {
+                            var a = dtm.data(v).label(k).parent(data);
+                            arrays.push(a);
+                        });
+
+                        if (!isEmpty(fn)) {
+                            fn(data.set(arrays));
+                        }
+
+                        // resolve(data.set(arrays));
+                        resolve(arrays);
+                    }
+                };
+
+                xhr.send();
+            });
+
+            var data = dtm.data();
+            p.then(function (d) {
+                data.set(d);
+            });
+
+            return data;
+        } else {
+            // is CSV as text
+
+        }
+    } else if (isFile(input)) {
+        loadFileObject(input, function (str) {
+            var data = dtm.data();
+            var arrays = [];
+            objForEach(dtm.parser.csvToCols(str), function (v, k) {
+                var a = dtm.data(v).label(k).parent(data);
+                arrays.push(a);
+            });
+
+            if (!isEmpty(fn)) {
+                fn(data.set(arrays));
+            }
+
+            // resolve(data.set(arrays));
+            // resolve(arrays);
         });
     }
 };
 
 dtm.json = function (input, fn) {
+    if (isString(input)) {
+        if (isURL(input, '.json')) {
 
+        } else {
+
+        }
+    } else if (isFile(input)) {
+
+    }
 };
 
 dtm.text = function (input, fn) {
     if (isString(input)) {
-        var p = new Promise(function (resolve) {
-            var xhr = new XMLHttpRequest();
-            xhr.open('GET', input, true);
+        if (isURL(input, '.txt')) {
+            var p = new Promise(function (resolve) {
+                var xhr = new XMLHttpRequest();
+                xhr.open('GET', input, true);
 
-            xhr.onreadystatechange = function () {
-                if (xhr.readyState == 4 && xhr.status == 200) {
-                    var data = dtm.data();
-                    if (isString(xhr.response)) {
-                        data.set(xhr.response);
-                    } else {
-                        throw(new TypeError('the file content is not text'));
+                xhr.onreadystatechange = function () {
+                    if (xhr.readyState === 4 && xhr.status === 200) {
+                        var data = dtm.data();
+                        if (isString(xhr.response)) {
+                            data.set(xhr.response);
+                        } else {
+                            throw(new TypeError('the file content is not text'));
+                        }
+
+                        if (!isEmpty(fn)) {
+                            fn(data);
+                        }
+
+                        // resolve(data);
+                        resolve(xhr.response);
                     }
+                };
 
-                    if (!isEmpty(fn)) {
-                        fn(data);
-                    }
+                xhr.send();
+            });
 
-                    // resolve(data);
-                    resolve(xhr.response);
-                }
-            };
+            var data = dtm.data();
+            p.then(function (res) {
+                p = data.set(res);
+            });
+            return data;
 
-            xhr.send();
-        });
+        } else {
 
-        var data = dtm.data();
-        p.then(function (res) {
-            p = data.set(res);
-        });
+        }
+    } else if (isFile(input)) {
+        loadFileObject(input, function (str) {
+            var data = dtm.data();
+            if (isString(str)) {
+                data.set(str);
+            }
 
-        return data;
-    } else {
-        var elem_files = input;
-        var reader = new FileReader();
-
-        reader.readAsText(elem_files[0]);
-        return new Promise(function (resolve) {
-            reader.onload = function (e) {
-                var data = dtm.data();
-                if (isString(e.target.result)) {
-                    data.set(e.target.result);
-                }
-
-                if (!isEmpty(fn)) {
-                    fn(data);
-                }
-
-                resolve(data);
-            };
+            if (!isEmpty(fn)) {
+                fn(data);
+            }
         });
     }
 };
@@ -347,7 +384,7 @@ dtm.web = function (url, fn) {
         xhr.open('GET', url, true);
 
         xhr.onreadystatechange = function () {
-            if (xhr.readyState == 4 && xhr.status == 200) {
+            if (xhr.readyState === 4 && xhr.status === 200) {
                 var data = dtm.data();
 
                 if (url.indexOf('wunderground') > -1) {
@@ -435,166 +472,146 @@ dtm.image = function (input, fn, mode) {
         }
 
         return new Promise(function (resolve) {
-            var xhr = new XMLHttpRequest();
-            xhr.responseType = 'blob';
-            xhr.open('GET', url, true);
+            var img = new Image();
+            var data = dtm.data();
 
-            xhr.onreadystatechange = function () {
-                if (xhr.readyState == 4 && xhr.status == 200) {
-                    var data = dtm.data();
+            // set image to data
+            img.onload = function () {
+                var canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
 
-                    var img = new Image();
-                    img.onload = function () {
-                        var canvas = document.createElement('canvas');
-                        canvas.width = img.width;
-                        canvas.height = img.height;
+                var context = canvas.getContext('2d');
+                context.drawImage(img, 0, 0);
 
-                        var context = canvas.getContext('2d');
-                        context.drawImage(img, 0, 0);
+                var imageData = context.getImageData(0, 0, img.width, img.height).data;
 
-                        var imageData = context.getImageData(0, 0, img.width, img.height).data;
+                if (mode === 'brightness') {
+                    var bri = new Float32Array(imageData.length/4);
 
-                        if (mode === 'brightness') {
-                            var bri = new Float32Array(imageData.length/4);
+                    for (var i = 0; i < imageData.length; i += 4) {
+                        var brightness = 0.34 * imageData[i] + 0.5 * imageData[i+1] + 0.16 * imageData[i+2];
+                        bri[i/4] = brightness/255;
+                    }
+                    data.set(bri).block(img.width).label('brightness');
+                } else if (mode === 'hue') {
+                    var hue = new Float32Array(imageData.length/4);
+                    var r, g, b, h;
+                    var max, min;
 
-                            for (var i = 0; i < imageData.length; i += 4) {
-                                var brightness = 0.34 * imageData[i] + 0.5 * imageData[i+1] + 0.16 * imageData[i+2];
-                                bri[i/4] = brightness/255;
-                            }
-                            data.set(bri).block(img.width).label('brightness');
-                        } else if (mode === 'hue') {
-                            var hue = new Float32Array(imageData.length/4);
-                            var r, g, b, h;
-                            var max, min;
+                    for (var i = 0; i < imageData.length; i += 4) {
+                        r = imageData[i]/255;
+                        g = imageData[i+1]/255;
+                        b = imageData[i+2]/255;
 
-                            for (var i = 0; i < imageData.length; i += 4) {
-                                r = imageData[i]/255;
-                                g = imageData[i+1]/255;
-                                b = imageData[i+2]/255;
+                        max = Math.max(r, g, b);
+                        min = Math.min(r, g, b);
 
-                                max = Math.max(r, g, b);
-                                min = Math.min(r, g, b);
-
-                                if (max === r) {
-                                    h = (g - b) / (max - min);
-                                } else if (max === g) {
-                                    h = 2 + (b - r) / (max - min);
-                                } else {
-                                    h = 4 + (r - g) / (max - min);
-                                }
-
-                                h *= 60;
-
-                                if (h < 0) {
-                                    h += 360;
-                                }
-
-                                hue[i/4] = h;
-                            }
-
-                            data.set(hue).block(img.width).label('hue');
-                        } else if (mode === 'heatmap') {
-                            var hue = new Float32Array(imageData.length/4);
-                            var r, g, b, h;
-                            var max, min;
-
-                            for (var i = 0; i < imageData.length; i += 4) {
-                                r = imageData[i]/255;
-                                g = imageData[i+1]/255;
-                                b = imageData[i+2]/255;
-
-                                max = Math.max(r, g, b);
-                                min = Math.min(r, g, b);
-
-                                if (max === r) {
-                                    h = (g - b) / (max - min);
-                                } else if (max === g) {
-                                    h = 2 + (b - r) / (max - min);
-                                } else {
-                                    h = 4 + (r - g) / (max - min);
-                                }
-
-                                h *= 60;
-
-                                if (h < -30) {
-                                    h += 360;
-                                }
-
-                                if (h < 0) {
-                                    h = 0;
-                                }
-
-                                if (h > 300) {
-                                    h = 300;
-                                }
-
-                                if (r+g+b < 0.15) {
-                                    h = 300;
-                                }
-
-                                if (isNaN(h)) {
-                                    h = 0;
-                                }
-
-                                hue[i/4] = 1 - (h / 300);
-                            }
-
-                            data.set(hue).block(img.width).label('hue');
-                        } else if (mode === 'rgb') {
-                            var red = new Float32Array(imageData.length/4);
-                            var green = new Float32Array(imageData.length/4);
-                            var blue = new Float32Array(imageData.length/4);
-
-                            for (var i = 0; i < imageData.length; i += 4) {
-                                red[i/4] = imageData[i]/255;
-                                green[i/4] = imageData[i+1]/255;
-                                blue[i/4] = imageData[i+2]/255;
-                            }
-                            data.set(red).block(img.width).label('red');
+                        if (max === r) {
+                            h = (g - b) / (max - min);
+                        } else if (max === g) {
+                            h = 2 + (b - r) / (max - min);
+                        } else {
+                            h = 4 + (r - g) / (max - min);
                         }
 
-                        if (!isEmpty(fn)) {
-                            fn(data);
+                        h *= 60;
+
+                        if (h < 0) {
+                            h += 360;
                         }
 
-                        resolve(data);
-                    };
-                    img.src = window.URL.createObjectURL(xhr.response);
-                }
-            };
-
-            xhr.send();
-        });
-    } else {
-        var elem_files = input;
-        var fileType = null;
-        var reader = new FileReader();
-        if (elem_files[0].name.match(/.+\.json/gi)) {
-            fileType = 'json';
-        } else if (elem_files[0].name.match(/.+\.csv/gi)) {
-            fileType = 'csv';
-        }
-        reader.readAsText(elem_files[0]);
-        return new Promise(function (resolve) {
-            reader.onload = function (e) {
-                if (fileType === 'json') {
-                    resolve(JSON.parse(e.target.result));
-                } else if (fileType === 'csv') {
-                    //resolve(dtm.parser.csvToCols(e.target.result));
-                    var data = dtm.data();
-                    var arrays = [];
-                    objForEach(dtm.parser.csvToCols(e.target.result), function (v, k) {
-                        var a = dtm.data(v).label(k).parent(data);
-                        arrays.push(a);
-                    });
-
-                    if (!isEmpty(fn)) {
-                        fn(data.set(arrays));
+                        hue[i/4] = h;
                     }
 
-                    resolve(data.set(arrays));
+                    data.set(hue).block(img.width).label('hue');
+                } else if (mode === 'heatmap') {
+                    var hue = new Float32Array(imageData.length/4);
+                    var r, g, b, h;
+                    var max, min;
+
+                    for (var i = 0; i < imageData.length; i += 4) {
+                        r = imageData[i]/255;
+                        g = imageData[i+1]/255;
+                        b = imageData[i+2]/255;
+
+                        max = Math.max(r, g, b);
+                        min = Math.min(r, g, b);
+
+                        if (max === r) {
+                            h = (g - b) / (max - min);
+                        } else if (max === g) {
+                            h = 2 + (b - r) / (max - min);
+                        } else {
+                            h = 4 + (r - g) / (max - min);
+                        }
+
+                        h *= 60;
+
+                        if (h < -30) {
+                            h += 360;
+                        }
+
+                        if (h < 0) {
+                            h = 0;
+                        }
+
+                        if (h > 300) {
+                            h = 300;
+                        }
+
+                        if (r+g+b < 0.15) {
+                            h = 300;
+                        }
+
+                        if (isNaN(h)) {
+                            h = 0;
+                        }
+
+                        hue[i/4] = 1 - (h / 300);
+                    }
+
+                    data.set(hue).block(img.width).label('hue');
+                } else if (mode === 'rgb') {
+                    var red = new Float32Array(imageData.length/4);
+                    var green = new Float32Array(imageData.length/4);
+                    var blue = new Float32Array(imageData.length/4);
+
+                    for (var i = 0; i < imageData.length; i += 4) {
+                        red[i/4] = imageData[i]/255;
+                        green[i/4] = imageData[i+1]/255;
+                        blue[i/4] = imageData[i+2]/255;
+                    }
+                    data.set(red).block(img.width).label('red');
                 }
+
+                if (!isEmpty(fn)) {
+                    fn(data);
+                }
+
+                resolve(data);
             };
+
+            if (isURL(input)) {
+                var xhr = new XMLHttpRequest();
+                xhr.responseType = 'blob';
+                xhr.open('GET', url, true);
+
+                xhr.onreadystatechange = function () {
+                    if (xhr.readyState === 4 && xhr.status === 200) {
+
+                        img.src = window.URL.createObjectURL(xhr.response);
+                    }
+                };
+
+                xhr.send();
+            } else if (isDataURL(input)) {
+                img.src = input;
+            }
+        });
+    } else if (isFile(input)) {
+        loadFileObject(input, function (dataURL) {
+            dtm.image(dataURL, fn, mode);
         });
     }
 };
@@ -654,7 +671,7 @@ dtm.cam = function (input, interval) {
                     video.muted = 'true';
                 };
 
-                dtm.clock(function () {
+                dtm.music(function () {
                     context.drawImage(video, 0, 0, w, h);
                     var imageData = context.getImageData(0, 0, w, h).data;
 
@@ -677,7 +694,7 @@ dtm.cam = function (input, interval) {
                         fn(data);
                     }
 
-                }).interval(interval);
+                }).interval(interval).run();
             },
             function (err) {
                 console.log(err);
@@ -749,4 +766,55 @@ dtm.audio = function (grab, block) {
     }
 
     return data;
+};
+
+dtm.wav = function (input, fn) {
+    if (isString(input)) {
+        if (isURL(input)) {
+            return new Promise(function (resolve) {
+                var xhr = new XMLHttpRequest();
+                xhr.open('GET', input, true);
+
+                xhr.onreadystatechange = function () {
+                    if (xhr.readyState === 4 && xhr.status === 200) {
+                        if (dtm.wa.isOn) {
+                            dtm.wa.actx.decodeAudioData(xhr.response, function (buf) {
+                                var data = dtm.data();
+                                var arrays = [];
+                                for (var c = 0; c < buf.numberOfChannels; c++) {
+                                    var floatArr = buf.getChannelData(c);
+                                    arrays.push(dtm.data(Array.prototype.slice.call(floatArr)).label('ch_' + c).parent(data));
+                                }
+
+                                if (!isEmpty(fn)) {
+                                    fn(data.set(arrays));
+                                }
+
+                                resolve(data.set(arrays));
+                            });
+                        }
+                    }
+                }
+            });
+        }
+    } else if (isFile(input)) {
+        loadFileObject(input, function (arrayBuffer) {
+            if (dtm.wa.isOn) {
+                dtm.wa.actx.decodeAudioData(arrayBuffer, function (buf) {
+                    var data = dtm.data();
+                    var arrays = [];
+                    for (var c = 0; c < buf.numberOfChannels; c++) {
+                        var floatArr = buf.getChannelData(c);
+                        arrays.push(dtm.data(Array.prototype.slice.call(floatArr)).label('ch_' + c).parent(data));
+                    }
+
+                    if (!isEmpty(fn)) {
+                        fn(data.set(arrays));
+                    }
+
+                    // resolve(data.set(arrays));
+                });
+            }
+        });
+    }
 };

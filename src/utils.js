@@ -1,4 +1,5 @@
 /**
+ * @fileOverview These utility functions are mainly used within DTM API for development. You can call them like: `dtm.util.name()`.
  * @module utils
  */
 
@@ -99,6 +100,22 @@ function isPromise(obj) {
  */
 function isObject(val) {
     return (typeof(val) === 'object' && val !== null);
+}
+
+function isFile(obj) {
+    return (obj.constructor.name === 'File');
+}
+
+function isURL(val, extension) {
+    if (isString(extension)) {
+        return val.endsWith(extension);
+    } else {
+        return val.startsWith('http');
+    }
+}
+
+function isDataURL(val) {
+    return val.startsWith('data:');
 }
 
 /**
@@ -701,6 +718,23 @@ function loadBuffer(arrayBuf) {
     });
 
     return buffer;
+}
+
+function loadFileObject(file, fn) {
+    var reader = new FileReader();
+    var type = file.type.split('/');
+
+    if (type[0] === 'text') {
+        reader.readAsText(file);
+    } else if (type[0] === 'image') {
+        reader.readAsDataURL(file);
+    } else if (type[0] === 'audio') {
+        reader.readAsArrayBuffer(file);
+    }
+
+    reader.onload = function (e) {
+        fn(e.target.result);
+    };
 }
 
 /**
@@ -1351,3 +1385,4 @@ dtm.util.truncateDigits = truncateDigits;
 dtm.util.deferCallback = deferCallback;
 dtm.util.cloneArray = cloneArray;
 dtm.util.print = print;
+dtm.util.loadFileObject = loadFileObject;

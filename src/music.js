@@ -3,16 +3,26 @@
  * @module music
  */
 
-///**
-// * Creates a new instance of synthesizer object.
-// * @function module:music.music
-// * @returns {dtm.music}
-// */
+/**
+ * Returns a new instance of music object.
+ * @function module:music.music
+ * @returns {dtm.music}
+ * @example
+ * var m = dtm.music();
+ * m.play();
+*/
 dtm.m = dtm.music = function () {
     var music = new Music();
     return music.init.apply(music, arguments);
 };
 
+/**
+ * Enable the offline-rendering mode. Most of the real-time behaviors should not changes. This mode may not be memory optimal in some browsers such as Chrome.
+ * @function module:music.offline
+ * @param bool
+ * @example
+ * dtm.music.offline(true); // Turn on the offline mode.
+ */
 dtm.music.offline = function (bool) {
     if (isBoolean(bool)) {
         Music.prototype.offline = bool;
@@ -361,7 +371,7 @@ function Music() {
         bpm: null,
         time: null,
         offset: null,
-        repeat: {max: 0, current: 0, resetNext: true},
+        repeat: {max: 0, current: 0, resetNext: true, nextTime: null},
         iteration: 0,
         sequence: null,
 
@@ -448,7 +458,8 @@ function Music() {
 
 Music.prototype = Object.create(Function.prototype);
 
-Music.prototype.actx = dtm.wa.actx;
+Music.prototype.actx = dtm.wa.actx || new (window.AudioContext || window.webkitAudioContext)();
+
 Music.prototype.octx = null;
 Music.prototype.offline = false;
 Music.prototype.dummyBuffer = Music.prototype.actx.createBuffer(1, 1, 44100);
@@ -508,6 +519,14 @@ Music.prototype.init = function () {
     return that;
 };
 
+/**
+ * Sets the size of the wavetable.
+ * @function module:music#size
+ * @param val {Integer} Size in integer. Should be bigger than 0.
+ * @returns {dtm.music} self
+ * @example
+ * dtm.music().size(8).play();
+ */
 Music.prototype.size = Music.prototype.len = function (val) {
     var that = this;
 
@@ -525,6 +544,15 @@ Music.prototype.mode = function (mode) {
     return this;
 };
 
+/**
+ * Creates and returns a clone of the music object at the current state.
+ * @function module:music#clone
+ * @returns {dtm.music}
+ * @example
+ * var a = dtm.music().note(72).amp(0.3);
+ * var b = a.clone().play();
+ * a.note(84).play(); // This will not affect the state of the object `b`.
+ */
 Music.prototype.clone = function () {
     var m = dtm.music();
     var newParams = {}, newNodes = {};
@@ -585,9 +613,11 @@ function getInterval(index) {
 }
 
 /**
- * Plays a note
+ * Plays a synthesized sound.
  * @function module:music#play
  * @returns {dtm.music}
+ * @example
+ * dtm.music().play();
  */
 Music.prototype.play = Music.prototype.p = function (time) {
     var that = this;
@@ -657,7 +687,9 @@ Music.prototype.play = Music.prototype.p = function (time) {
             interval = 0;
         }
 
-        if (that.params.dur.auto && interval !== 0) {
+        if (!that.params.dur.auto && that.params.interval.auto) {
+            interval = dur = that.params.dur.base.get(seqValue).val[0];
+        } else if (that.params.dur.auto && interval !== 0) {
             if (that.params.dur.auto === 'sample') {
                 that.params.tabLen = that.params.wavetable.length;
 
@@ -810,7 +842,9 @@ Music.prototype.play = Music.prototype.p = function (time) {
                 });
             }
 
-            time += actx.currentTime;
+            // time += actx.currentTime;
+            time += that.params.repeat.nextTime ? that.params.repeat.nextTime : actx.currentTime;
+            that.params.repeat.nextTime = time + interval;
 
             that.params.startTime = time;
 
@@ -1013,6 +1047,13 @@ Music.prototype.play = Music.prototype.p = function (time) {
     return that;
 };
 
+/**
+ * Repetitively plays sound.
+ * @function module:music#start
+ * @returns {dtm.music}
+ * @example
+ * dtm.music().start();
+ */
 Music.prototype.start = function () {
     this.interval.apply(this, arguments);
     this.rep().play();
@@ -1187,8 +1228,15 @@ Music.prototype.scan = Music.prototype.phase = function (input, block) {
         this.params.monitor.block = block;
         return this;
     } else {
-        // TODO: dur or interval?
-        this.params.phase = (Music.prototype.actx.currentTime - this.params.startTime) / this.params.interval.base(this.seq()).get(0);
+        var phasorDuration;
+        if (!this.params.dur.auto && this.params.interval.auto) {
+            phasorDuration = this.params.dur.base;
+        } else if (!this.params.dur.auto && !this.params.interval.auto) {
+            phasorDuration = this.params.interval.base;
+        } else {
+            phasorDuration = this.params.interval.base;
+        }
+        this.params.phase = (Music.prototype.actx.currentTime - this.params.startTime) / phasorDuration(this.seq()).get(0);
         if (this.params.phase < 0.0) {
             this.params.phase = 0.0;
         } else if (this.params.phase > 1.0) {
@@ -1382,17 +1430,55 @@ Music.prototype.amplitude = Music.prototype.amp = Music.prototype.a = function (
  * @returns {dtm.music}
  */
 Music.prototype.frequency = Music.prototype.freq = Music.prototype.f = function () {
-    var seqValue = this.params.sequence ? this.params.sequence[mod(this.params.iteration, this.params.sequence.length)] : this.params.iteration;
+    var that = this;
+    var seqValue = that.params.sequence ? that.params.sequence[mod(that.params.iteration, that.params.sequence.length)] : that.params.iteration;
 
     if (arguments.length === 0) {
-        return this.params.freq.base(seqValue);
+        return that.params.freq.base(seqValue);
     } else if (isDtmSynth(arguments[0])) {
-        return this.frequency(arguments[0].freq());
+        return that.frequency(arguments[0].freq());
     }
-    this.mapParam(arguments, this.params.freq);
-    this.setFinal('freq');
+    that.mapParam(arguments, that.params.freq);
+    that.setFinal('freq');
 
-    return this;
+    if (that.params.playing) {
+        that.nodes.src.playbackRate.cancelScheduledValues(that.params.startTime);
+        var pitch = that.params.freq.base.get(seqValue).val.map(function (v) {
+            return that.freqToPitch(v);
+        });
+
+        //==================== copied from play()
+        var interval, dur;
+        interval = getInterval.call(that, seqValue);
+
+        if (interval <= 0) {
+            interval = 0;
+        }
+
+        if (that.params.dur.auto && interval !== 0) {
+            if (that.params.dur.auto === 'sample') {
+                that.params.tabLen = that.params.wavetable.length;
+
+                dur = 0;
+                pitch.forEach(function (v) {
+                    dur += that.params.tabLen / that.params.sr / v / pitch.length;
+                });
+            } else {
+                dur = interval;
+            }
+        } else {
+            dur = that.params.dur.base.get(seqValue).val[0];
+        }
+
+        if (dur <= 0) {
+            dur = 0.001;
+        }
+        //====================
+
+        that.setParamCurve(that.params.startTime, dur, [{param: that.nodes.src.playbackRate, value: pitch}]);
+    }
+
+    return that;
 };
 
 /**
@@ -1549,7 +1635,7 @@ Music.prototype.osc = Music.prototype.w = Music.prototype.wave = Music.prototype
 };
 
 
-Music.prototype.load = function (name) {
+Music.prototype.sample = Music.prototype.load = function (name) {
     var that = this;
 
     if (name === 'noise') {

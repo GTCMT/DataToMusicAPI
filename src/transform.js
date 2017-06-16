@@ -1,7 +1,7 @@
-/**
- * @fileOverview Utility functions for single-dimensional arrays. Singleton.
- * @module transform
- */
+// /**
+//  * @fileOverview Utility functions for single-dimensional arrays. Singleton.
+//  * @module transform
+//  */
 
 // singleton helper functions
 dtm.transform = {

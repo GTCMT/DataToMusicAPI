@@ -61,7 +61,7 @@ describe('model abstract', function () {
         });
         it('should normalize to 0 - 1', function () {
             expect(uni([1, 2, 3]).get()).toEqual(toFloat32Array([0.0, 0.5, 1.0]));
-            expect(uni(dtm.array([1, 2, 3])).get()).toEqual(toFloat32Array([0.0, 0.5, 1.0]));
+            expect(uni(dtm.data([1, 2, 3])).get()).toEqual(toFloat32Array([0.0, 0.5, 1.0]));
             expect(uni(0.5).get()).toEqual(toFloat32Array([0.5]));
         });
 

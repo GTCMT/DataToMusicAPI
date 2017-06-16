@@ -25,6 +25,27 @@ MIDI.prototype.defaults = {
     channel: dtm.data([[1]])
 };
 
+// MIDI.prototype.in = null;
+MIDI.prototype.synth = function () {};
+MIDI.prototype.notes = {};
+MIDI.prototype.oninput = function (message) {
+    console.log(message);
+    if (message.data[0] === 144) {
+        MIDI.prototype.notes[message.data[1]] = MIDI.prototype.synth(dtm.data(message.data[1]));
+    } else if (message.data[0] === 128) {
+        try {
+            MIDI.prototype.notes[message.data[1]].stop();
+            delete MIDI.prototype.notes[message.data[1]];
+        } catch (error) {
+            console.log(error);
+        }
+    }
+};
+
+dtm.midi.input = function (fn) {
+    MIDI.prototype.synth = fn;
+};
+
 MIDI.prototype.init = function () {
     var that = this;
     if (isEmpty(MIDI.prototype.out)) {

@@ -1,6 +1,6 @@
 (function bipolarModel() {
     var m = dtm.model('bipolar').register();
-    var a = dtm.array();
+    var a = dtm.data();
 
     var min, max;
 

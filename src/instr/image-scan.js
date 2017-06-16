@@ -1,8 +1,8 @@
 (function () {
     var i = dtm.model('image-scan').register();
-    var data = dtm.a();
+    var data = dtm.data();
     var dur = 30;
-    var scale = dtm.a([0,4,5,7,10,14]);
+    var scale = dtm.data([0,4,5,7,10,14]);
     var numVoices = 100;
 
     i.data = function (d) {
@@ -28,7 +28,7 @@
 
                 data.forEach(function(a,i){
                     if (i % Math.ceil(data.length/numVoices) === 0) {
-                        dtm.syn().play().dur(dur)
+                        dtm.music().play().dur(dur)
                             .amp(
                                 dtm.array(3/numVoices)
                                     .mult(dtm.rise())

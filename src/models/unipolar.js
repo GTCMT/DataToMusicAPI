@@ -1,6 +1,6 @@
 (function () {
     var m = dtm.model('unipolar').register();
-    var a = dtm.array();
+    var a = dtm.data();
 
     var min, max;
 
