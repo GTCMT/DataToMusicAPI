@@ -188,7 +188,17 @@ var fx = {
             // var size = self.params.sr * 2;
             var size = Music.prototype.verbIr.length;
             var ir = ctx.createBuffer(1, size, self.params.sr);
-            ir.copyToChannel(Music.prototype.verbIr.get(), 0);
+
+            if (ir.copyToChannel) {
+                ir.copyToChannel(Music.prototype.verbIr.get(), 0);
+            } else {
+                // for Safari
+                var tempIrBuff = ir.getChannelData(0);
+                var verbIr = Music.prototype.verbIr.get();
+                tempIrBuff.forEach(function (v, i) {
+                    tempIrBuff[i] = verbIr[i];
+                });
+            }
             this.verb.buffer = ir;
 
             this.dryLevel = this.mix.map(function (v) {
@@ -479,6 +489,10 @@ Music.prototype.defaults = {
     pan: dtm.data([[0]])
 };
 
+/**
+ * @function module:music#init
+ * @returns {Music}
+ */
 Music.prototype.init = function () {
     var that = this;
     var actx = Music.prototype.actx;
@@ -521,7 +535,7 @@ Music.prototype.init = function () {
 
 /**
  * Sets the size of the wavetable.
- * @function module:music#size
+ * @function module:music#size | len
  * @param val {Integer} Size in integer. Should be bigger than 0.
  * @returns {dtm.music} self
  * @example
@@ -614,7 +628,7 @@ function getInterval(index) {
 
 /**
  * Plays a synthesized sound.
- * @function module:music#play
+ * @function module:music#play | p
  * @returns {dtm.music}
  * @example
  * dtm.music().play();
@@ -1062,6 +1076,7 @@ Music.prototype.start = function () {
 
 /**
  * Triggers itself (including the registered callback functions) after a certain time delay.
+ * @function module:music#trigger | trig | t
  * @type {Music.t}
  */
 Music.prototype.trigger = Music.prototype.trig = Music.prototype.t = function () {
@@ -1070,6 +1085,10 @@ Music.prototype.trigger = Music.prototype.trig = Music.prototype.t = function ()
     return this;
 };
 
+/**
+ * @function module:music#run | r
+ * @type {Music.r}
+ */
 Music.prototype.run = Music.prototype.r = function () {
     this.interval.apply(this, arguments);
     this.mute().rep().play();
@@ -1078,7 +1097,7 @@ Music.prototype.run = Music.prototype.r = function () {
 
 /**
  * Stops the currently playing sound.
- * @function module:music#stop
+ * @function module:music#stop | s
  * @param [time=0] {number} Delay in seconds for the stop action to be called.
  * @returns {dtm.music}
  */
@@ -1120,6 +1139,10 @@ Music.prototype.stop = Music.prototype.s = function (time) {
     return that;
 };
 
+/**
+ * @function module:music#after | aft | offset
+ * @type {Music.offset}
+ */
 Music.prototype.aft = Music.prototype.after = Music.prototype.offset = function () {
     var argList = argsToArray(arguments);
     if (check(argList)) {
@@ -1128,6 +1151,11 @@ Music.prototype.aft = Music.prototype.after = Music.prototype.offset = function 
     return this;
 };
 
+/**
+ * @function module:music#mute
+ * @param bool
+ * @returns {Music}
+ */
 Music.prototype.mute = function (bool) {
     if (isBoolean(bool)) {
         var val = bool ? 0 : 1;
@@ -1138,11 +1166,19 @@ Music.prototype.mute = function (bool) {
     return this;
 };
 
+/**
+ * @function module:music#unmute
+ * @returns {Music}
+ */
 Music.prototype.unmute = function () {
     this.gain(1);
     return this;
 };
 
+/**
+ * @function module:music#sync | follow
+ * @type {Music.follow}
+ */
 Music.prototype.sync = Music.prototype.follow = function (input) {
     if (isDtmSynth(input)) {
         this.interval(input);
@@ -1153,6 +1189,11 @@ Music.prototype.sync = Music.prototype.follow = function (input) {
     return this;
 };
 
+/**
+ * @function module:music#mimic
+ * @param input
+ * @returns {Music}
+ */
 Music.prototype.mimic = function (input) {
     if (isDtmSynth(input)) {
         this.interval(input);
@@ -1167,6 +1208,10 @@ Music.prototype.mimic = function (input) {
     return this;
 };
 
+/**
+ * @function module:music#each | do | on | onnote
+ * @type {Music.onnote}
+ */
 Music.prototype.each = Music.prototype.do = Music.prototype.on = Music.prototype.onnote = function (fn) {
     if (isFunction(fn)) {
         this.params.onNoteCallback.push(fn);
@@ -1174,6 +1219,10 @@ Music.prototype.each = Music.prototype.do = Music.prototype.on = Music.prototype
     return this;
 };
 
+/**
+ * @function module:music#offnote | off
+ * @type {Music.offnote}
+ */
 Music.prototype.off = Music.prototype.offnote = function (fn) {
     if (isFunction(fn)) {
         this.params.offNoteCallback.push(fn);
@@ -1182,6 +1231,10 @@ Music.prototype.off = Music.prototype.offnote = function (fn) {
 };
 
 // set order of the iteration
+/**
+ * @function module:music#sequence | seq
+ * @type {Music.seq}
+ */
 Music.prototype.sequence = Music.prototype.seq = function (input) {
     if (input === 'reset' || input === 'clear' || input === []) {
         this.params.sequence = null;
@@ -1207,6 +1260,10 @@ Music.prototype.sequence = Music.prototype.seq = function (input) {
 };
 
 // bad name, should be "reset"?
+/**
+ * @function module:music#iter | incr
+ * @type {Music.incr}
+ */
 Music.prototype.iter = Music.prototype.incr = function (val) {
     if (isInteger(val)) {
         this.params.iteration = val;
@@ -1215,6 +1272,10 @@ Music.prototype.iter = Music.prototype.incr = function (val) {
     return this.params.iteration;
 };
 
+/**
+ * @function module:music#phase | scan
+ * @type {Music.phase}
+ */
 Music.prototype.scan = Music.prototype.phase = function (input, block) {
     if (isDtmArray(input) || isFunction(input)) {
         this.params.mode = 'phasor';
@@ -1246,6 +1307,10 @@ Music.prototype.scan = Music.prototype.phase = function (input, block) {
     }
 };
 
+/**
+ * @function module:music#repeat | rep
+ * @type {Music.rep}
+ */
 Music.prototype.repeat = Music.prototype.rep = function (times) {
     if (isInteger(times) && times > 0) {
         this.params.repeat.max = times;
@@ -1259,6 +1324,7 @@ Music.prototype.repeat = Music.prototype.rep = function (times) {
 
 /**
  * Sets the interval in seconds between repeated or iterated events.
+ * @function module:music#every | at | interval | int | i
  * @type {Music.i}
  */
 Music.prototype.every = Music.prototype.at = Music.prototype.interval = Music.prototype.int = Music.prototype.i = function () {
@@ -1290,7 +1356,10 @@ Music.prototype.every = Music.prototype.at = Music.prototype.interval = Music.pr
 };
 
 // Music.prototype.rate
-
+/**
+ * @function module:music#bpm
+ * @returns {Music}
+ */
 Music.prototype.bpm = function () {
     if (arguments.length === 0) {
         return this.params.bpm()
@@ -1318,6 +1387,10 @@ Music.prototype.bpm = function () {
     return this;
 };
 
+/**
+ * @function module:music#time
+ * @returns {Music}
+ */
 Music.prototype.time = function () {
     if (arguments.length === 0) {
         return this.params.time()
@@ -1341,7 +1414,7 @@ Music.prototype.time = function () {
 
 /**
  * Takes array types with only up to the max depth of 1.
- * @function module:music#dur
+ * @function module:music#for | duration | dur | d
  * @returns {dtm.music}
  */
 Music.prototype.for = Music.prototype.duration = Music.prototype.dur = Music.prototype.d = function () {
@@ -1374,7 +1447,7 @@ Music.prototype.for = Music.prototype.duration = Music.prototype.dur = Music.pro
 };
 
 /**
- * @function module:music#amp
+ * @function module:music#amplitude | amp | a
  * @returns {dtm.music}
  */
 Music.prototype.amplitude = Music.prototype.amp = Music.prototype.a = function () {
@@ -1426,7 +1499,7 @@ Music.prototype.amplitude = Music.prototype.amp = Music.prototype.a = function (
 
 /**
  * Sets the frequency of the oscillator
- * @function module:music#freq
+ * @function module:music#frequency | freq | f
  * @returns {dtm.music}
  */
 Music.prototype.frequency = Music.prototype.freq = Music.prototype.f = function () {
@@ -1483,7 +1556,7 @@ Music.prototype.frequency = Music.prototype.freq = Music.prototype.f = function 
 
 /**
  * Sets the pitch of the oscillator by a MIDI note number.
- * @function module:music#note
+ * @function module:music#notenum | note | nn | n
  * @returns {dtm.music}
  */
 Music.prototype.notenum = Music.prototype.note = Music.prototype.nn = Music.prototype.n = function () {
@@ -1543,6 +1616,10 @@ Music.prototype.notenum = Music.prototype.note = Music.prototype.nn = Music.prot
 };
 
 // for longer sample playback
+/**
+ * @function module:music#pitch
+ * @returns {Music}
+ */
 Music.prototype.pitch = function () {
     var seqValue = this.params.sequence ? this.params.sequence[mod(this.params.iteration, this.params.sequence.length)] : this.params.iteration;
 
@@ -1557,6 +1634,10 @@ Music.prototype.pitch = function () {
     return this;
 };
 
+/**
+ * @function module:music#pan
+ * @returns {Music}
+ */
 Music.prototype.pan = function () {
     var seqValue = this.params.sequence ? this.params.sequence[mod(this.params.iteration, this.params.sequence.length)] : this.params.iteration;
 
@@ -1572,6 +1653,10 @@ Music.prototype.pan = function () {
 
 // TODO: wavetable param should be a dtm.data object
 // TODO: too many aliases
+/**
+ * @function module:music#waveform | wave | wf | wavetable | wt | w | osc
+ * @type {Music.wavetable}
+ */
 Music.prototype.osc = Music.prototype.w = Music.prototype.wave = Music.prototype.wf = Music.prototype.waveform = Music.prototype.wt = Music.prototype.wavetable = function (src) {
     var that = this;
 
@@ -1634,7 +1719,10 @@ Music.prototype.osc = Music.prototype.w = Music.prototype.wave = Music.prototype
     return that;
 };
 
-
+/**
+ * @function module:music#sample | load
+ * @type {Music.load}
+ */
 Music.prototype.sample = Music.prototype.load = function (name) {
     var that = this;
 
@@ -1990,6 +2078,10 @@ Music.prototype.delay = function (mix, time, feedback, post) {
     return this;
 };
 
+/**
+ * @function module:music#reverb | verb
+ * @type {Music.verb}
+ */
 Music.prototype.reverb = Music.prototype.verb = function (mix, post) {
     post = isBoolean(post) ? post : this.params.rtFxOnly;
     var verb = new fx.Reverb(this, post);
@@ -2007,6 +2099,10 @@ Music.prototype.reverb = Music.prototype.verb = function (mix, post) {
     return this;
 };
 
+/**
+ * @function module:music#convolve | conv
+ * @type {Music.conv}
+ */
 Music.prototype.convolve = Music.prototype.conv = function (tgt, mix, post) {
     post = isBoolean(post) ? post : this.params.rtFxOnly;
     var conv = new fx.Convolver(this, post);
@@ -2030,7 +2126,7 @@ Music.prototype.convolve = Music.prototype.conv = function (tgt, mix, post) {
 };
 
 /**
- * @function module:music#bq
+ * @function module:music#bitquantize | bq
  * @param bit
  * @returns {dtm.music}
  */
@@ -2046,7 +2142,7 @@ Music.prototype.bitquantize = Music.prototype.bq = function (bit) {
 };
 
 /**
- * @function module:music#sh | samphold | samplehold
+ * @function module:music#samphold | sh
  * @param samps
  * @returns {dtm.music}
  */
@@ -2061,6 +2157,12 @@ Music.prototype.samphold = Music.prototype.sh = function (samps) {
     return this;
 };
 
+/**
+ * @function module:music#monitor
+ * @param input
+ * @param block
+ * @returns {Music}
+ */
 Music.prototype.monitor = function (input, block) {
     if (!isNumber(block)) {
         block = 1024;
@@ -2075,6 +2177,12 @@ Music.prototype.monitor = function (input, block) {
     return this;
 };
 
+/**
+ * @function module:music#process
+ * @param input
+ * @param block
+ * @returns {Music}
+ */
 Music.prototype.process = function (input, block) {
     if (!isNumber(block)) {
         block = 1024;
@@ -2090,6 +2198,10 @@ Music.prototype.process = function (input, block) {
     return this;
 };
 
+/**
+ * @function module:music#phasor | curve
+ * @type {Music.phasor}
+ */
 Music.prototype.curve = Music.prototype.phasor = function () {
     var seqValue = this.params.sequence ? this.params.sequence[mod(this.params.iteration, this.params.sequence.length)] : this.params.iteration;
 

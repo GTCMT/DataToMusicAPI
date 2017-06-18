@@ -400,7 +400,7 @@ Map.prototype = Object.create(Function.prototype);
 function Block(data) {
     // TODO: accept option as arg? for numBlocks, pad, overlap ratio, etc.
     /**
-     * @function module:data#block
+     * @function module:data#block | b
      * @param len
      * @param hop
      * @param window
@@ -532,7 +532,7 @@ Block.prototype.peak = Block.prototype.peaks = function (shift) {
 
 function UnBlock(data) {
     /**
-     * @function module:data#unblock
+     * @function module:data#unblock | ub | flatten
      * @returns {dtm.data}
      */
     function unblock() {
@@ -808,6 +808,9 @@ Stretch.prototype.cub = Stretch.prototype.cubic = function () {
 };
 
 function FFT(data) {
+    /**
+     * @function module:data#fft
+     */
     function fft() {
         return data.set(dtm.transform.fft(data.val));
     }
@@ -1304,16 +1307,20 @@ dtm.data.augment({
         return that.val;
     },
 
+    /**
+     * @function module:data#len
+     * @returns {dtm.data}
+     */
     len: function () {
         if (isNestedDtmArray(this)) {
-            return this.map(function (v) { return v.length; });
+            return this.map(function (d) { return d.length; });
         } else {
             return this.set(this.length);
         }
     },
 
     /**
-     * Returns a copy of the array object. It can be used when you don't want to reference the same array object from different places. For convenience, you can also do arrObj() instead of arrObj.clone() to quickly return a copy.
+     * Returns a copy of the array object. It can be used when you don't want to reference the same array object from different places. For convenience, you can also do obj() instead of obj.clone() to quickly return a copy.
      * @function module:data#clone
      * @returns {dtm.data}
      */
@@ -1405,13 +1412,17 @@ dtm.data.augment({
         return this.set(this.params.original);
     },
 
+    /**
+     * @function module:data#residue | res
+     * @returns {*|dtm.data}
+     */
     residue: function () {
         return this.set(dtm.transform.subtract(this.params.original, this.val));
     },
 
     /**
      * Clears all the contents of the array object.
-     * @function module:data#flush | clear
+     * @function module:data#clear | flush
      * @returns {dtm.data}
      */
     clear: function () {
@@ -1427,7 +1438,7 @@ dtm.data.augment({
     },
 
     /**
-     * @function module:data#mapvalue
+     * @function module:data#mapvalue | mapv | mv
      * @param fn
      * @returns {dtm.data}
      */
@@ -1450,7 +1461,7 @@ dtm.data.augment({
     },
 
     /**
-     * @function module:data#eachvalue
+     * @function module:data#eachvalue | eachv | ev
      * @param fn
      * @returns {dtm.data}
      */
@@ -1481,7 +1492,7 @@ dtm.data.augment({
 
     /**
      * Returns a dtm.data containing a copy / copies of the source at specified index. The copies may be a single value or a n-dimensional array, depending on the dimensionality of the source dtm.data. Aliases: `col()`, `varaible()` (call the dtm.data object itself).
-     * @function module:data#column
+     * @function module:data#column | col
      * @returns {dtm.data}
      */
     column: function () {
@@ -1554,6 +1565,10 @@ dtm.data.augment({
 
     // TODO: support typed array
     // TODO: does not work with 1-D array; need to wrap values in data object??¡
+    /**
+     * @function module:data#select | sel | at
+     * @returns {select}
+     */
     select: function () {
         var that = this;
         var indices, res = [];
@@ -1577,6 +1592,7 @@ dtm.data.augment({
 
     /**
      * Returns a row of a nested array by the index.
+     * @function module:data#row
      * @param num
      * @returns {dtm.data}
      */
@@ -1594,7 +1610,7 @@ dtm.data.augment({
     // aliases: interp, itp
     /**
      * Estimates a value / values using fractional indices.
-     * @function module:data#interpolate
+     * @function module:data#interpolate | interp | itp
      * @param at
      * @param mode
      * @returns {dtm.data}
@@ -1636,6 +1652,12 @@ dtm.data.augment({
     },
 
     // interp with index scaled to the 0-1 range
+    /**
+     * @function module:data#phase | p | scan
+     * @param at
+     * @param mode
+     * @returns {phase}
+     */
     phase: function (at, mode) {
         var that = this;
 
@@ -1681,7 +1703,13 @@ dtm.data.augment({
         return that.set(res);
     },
 
-    // mirrored phase function
+    /**
+     * A mirrored-phase function.
+     * @function module:data#mphase | mp
+     * @param at
+     * @param mode
+     * @returns {mphase}
+     */
     mphase: function (at, mode) {
         var that = this;
 
@@ -1747,7 +1775,7 @@ dtm.data.augment({
 
     /**
      * Modifies the range of the array. Alias: `r()`
-     * @function module:data#range
+     * @function module:data#range | r
      * @param arg1 {number|array|dtm.data} The target minimum value of the scaled range.
      * @param arg2 {number|array|dtm.data} The target maximum value of the scaled range.
      * @param [arg3] {number} The minimum of the domain (original) value.
@@ -1845,7 +1873,7 @@ dtm.data.augment({
 
     /**
      * Rescales the range of the numerical values to 0-1. Alias: `n`
-     * @function module:data#normalize
+     * @function module:data#normalize | n
      * @param [arg1] {number} Prefered domain minimum value. If not present, the minimum of the input array is used.
      * @param [arg2] {number} Prefered domain maximum value. If not present, the maximum of the input array is used.
      * @returns {dtm.data}
@@ -1897,10 +1925,19 @@ dtm.data.augment({
         return that.set(dtm.transform.normalize(that.val, min, max));
     },
 
+    /**
+     * @function module:data#unipolar | uni | up
+     * @returns {*|dtm.data}
+     */
     unipolar: function () {
         return this.range(0, 1);
     },
 
+    /**
+     * @function module:data#bipolar | bi | bp
+     * @param dc
+     * @returns {*|dtm.data}
+     */
     bipolar: function (dc) {
         if (!isBoolean(dc)) {
             dc = false;
@@ -1941,7 +1978,7 @@ dtm.data.augment({
 
     /**
      * Scales the array with an exponential curve.
-     * @function module:data#expcurve
+     * @function module:data#expcurve | expc | ec
      * @param factor {number}
      * @param [min=data.get('min')] {number}
      * @param [max=data.get('max')] {number}
@@ -1961,7 +1998,7 @@ dtm.data.augment({
 
     /**
      * Applies a logarithmic scaling to the array.
-     * @function module:data#logc | logcurve
+     * @function module:data#logcurve | logc | lc
      * @param factor {number}
      * @param [min=data.get('min')] {number}
      * @param [max=data.get('max')] {number}
@@ -1979,6 +2016,13 @@ dtm.data.augment({
         return this.set(dtm.transform.rescale(arr, min, max));
     },
 
+    /**
+     * @function module:data#curve | c
+     * @param factor
+     * @param min
+     * @param max
+     * @returns {dtm.data|*}
+     */
     curve: function (factor, min, max) {
         if (isEmpty(min)) {
             min = this.get('min');
@@ -2024,7 +2068,7 @@ dtm.data.augment({
     },
 
     /**
-     * @function module:data#linear
+     * @function module:data#linear | line | l
      * @param len
      * @returns {dtm.data}
      */
@@ -2051,7 +2095,7 @@ dtm.data.augment({
     },
 
     /**
-     * @function module:data#cosine
+     * @function module:data#cosine | cos
      * @param len
      * @returns {dtm.data}
      */
@@ -2064,7 +2108,7 @@ dtm.data.augment({
     },
 
     /**
-     * @function module:data#cubic
+     * @function module:data#cubic | cub
      * @param len
      * @returns {dtm.data}
      */
@@ -2077,7 +2121,7 @@ dtm.data.augment({
     },
 
     /**
-     * @function module:data#slinear
+     * @function module:data#slinear | sline | sl
      * @param factor
      * @returns {dtm.data}
      */
@@ -2105,7 +2149,7 @@ dtm.data.augment({
     },
 
     /**
-     * @function module:data#scosine
+     * @function module:data#scosine | scos
      * @param factor
      * @returns {dtm.data}
      */
@@ -2119,7 +2163,7 @@ dtm.data.augment({
     },
 
     /**
-     * @function module:data#scubic
+     * @function module:data#scubic | scub
      * @param factor
      * @returns {dtm.data}
      */
@@ -2134,7 +2178,7 @@ dtm.data.augment({
 
     /**
      * Scales the values so that the sum fits the target value. Useful, for example, for fitting intervallic values to a specific measure length.
-     * @function module:data#fitsum
+     * @function module:data#fitsum | fs | total
      * @param tgt {number} If the round argument is true, the target value is also rounded.
      * @param [round=false] {boolean}
      * @returns {dtm.data}
@@ -2195,7 +2239,7 @@ dtm.data.augment({
 
     /**
      * Applies a window function to the array. May be combined with array.block() operation.
-     * @function module:data#window
+     * @function module:data#window | win
      * @param type
      * @returns {dtm.data}
      */
@@ -2236,6 +2280,11 @@ dtm.data.augment({
         }
     },
 
+    /**
+     * @function module:data#copy
+     * @param times
+     * @returns {copy}
+     */
     copy: function (times) {
         if (!isInteger(times)) {
             times = 1;
@@ -2253,6 +2302,9 @@ dtm.data.augment({
     },
 
     // TODO: conflicts with gen.transpose()
+    /**
+     * @function module:data#transp | t
+     */
     transp: function () {
         if (isNestedDtmArray(this)) {
             var newArray = [];
@@ -2318,7 +2370,7 @@ dtm.data.augment({
     },
 
     /**
-     * @function module:data#amp
+     * @function module:data#amp | am | gain
      * @param input {Number|Array|dtm.data}
      * @returns {dtm.data} self
      */
@@ -2338,7 +2390,7 @@ dtm.data.augment({
 
     // with support for fractional freq array with table lookup and angular velocity
     /**
-     * @function module:data#freq
+     * @function module:data#freq | fm
      * @param input {Number|Array|dtm.data}
      * @returns {dtm.data} self
      */
@@ -2404,9 +2456,11 @@ dtm.data.augment({
     aliases: {
         add: ['plus'],
         subtract: ['minus'],
+        multiply: ['mult'],
         divide: ['div'],
         reciprocal: ['recip'],
         power: ['pow', 'exp'],
+        powerof: ['powof'],
         abs: ['fwr'],
         round: ['q', 'quantize'],
         modulo: ['mod'],
@@ -2416,7 +2470,7 @@ dtm.data.augment({
 
     /**
      * Adds a value to all the array elements.
-     * @function module:data#add
+     * @function module:data#add | plus
      * @param factor {number|array|dtm.data}
      * @param [interp='step'] {string}
      * @returns {dtm.data}
@@ -2456,7 +2510,7 @@ dtm.data.augment({
     },
 
     /**
-     * @function module:data#subtract
+     * @function module:data#subtract | minus
      * @param factor
      * @param interp
      * @returns {dtm.data} self
@@ -2494,12 +2548,12 @@ dtm.data.augment({
 
     /**
      * Scales the numerical array contents.
-     * @function module:data#mult
+     * @function module:data#multiply | mult
      * @param factor {number|array|dtm.data}
      * @param [interp='step'] {string}
      * @returns {dtm.data}
      */
-    mult: function (factor, interp) {
+    multiply: function (factor, interp) {
         var that = this;
         if (!isString(interp)) {
             interp = 'step';
@@ -2531,7 +2585,7 @@ dtm.data.augment({
     },
 
     /**
-     * @function module:data#divide
+     * @function module:data#divide | div
      * @param factor
      * @param interp
      * @returns {dtm.data} self
@@ -2569,7 +2623,7 @@ dtm.data.augment({
     },
 
     /**
-     * @function module:data#reciprocal
+     * @function module:data#reciprocal | recip
      * @param numerator
      * @returns {dtm.data} self
      */
@@ -2592,7 +2646,7 @@ dtm.data.augment({
     },
 
     /**
-     * @function module:data#pow
+     * @function module:data#power | pow | exp
      * @param factor {number|array|dtm.data}
      * @param [interp='linear'] {string}
      * @returns {dtm.data}
@@ -2606,12 +2660,12 @@ dtm.data.augment({
 
     /**
      * Applies the array contents as the power to the argument as the base
-     * @function module:data#powof
+     * @function module:data#powerof | powof
      * @param factor {number|array|dtm.data}
      * @param [interp='linear'] {string}
      * @returns {dtm.data}
      */
-    powof: function (factor, interp) {
+    powerof: function (factor, interp) {
         if (isNumDtmArray(factor)) {
             factor = factor.get();
         }
@@ -2633,7 +2687,7 @@ dtm.data.augment({
 
     /**
      * Rounds float values of the array to integer values.
-     * @function module:data#round
+     * @function module:data#round | quantize | q
      * @param to {number}
      * @returns {dtm.data}
      */
@@ -2661,7 +2715,7 @@ dtm.data.augment({
 
     /**
      * Full-wave rectify the values, returning absolute values.
-     * @function module:data#fwr | abs
+     * @function module:data#abs | fwr
      * @returns {dtm.data}
      */
     abs: function () {
@@ -2677,10 +2731,20 @@ dtm.data.augment({
         return mapNested(this, arguments) || this.set(dtm.transform.hwr(this.val));
     },
 
+    /**
+     * @function module:data#modulo | mod
+     * @param divisor
+     * @returns {*}
+     */
     modulo: function (divisor) {
         return mapNested(this, arguments) || this.set(dtm.transform.mod(this.val, divisor));
     },
 
+    /**
+     * @function module:data#morethan | mt
+     * @param val
+     * @returns {morethan}
+     */
     morethan: function (val) {
         if (isNestedDtmArray(this)) {
             this.forEach(function (a) {
@@ -2694,6 +2758,11 @@ dtm.data.augment({
         return this;
     },
 
+    /**
+     * @function module:data#mtet
+     * @param val
+     * @returns {mtet}
+     */
     mtet: function (val) {
         if (isNestedDtmArray(this)) {
             this.forEach(function (a) {
@@ -2707,6 +2776,11 @@ dtm.data.augment({
         return this;
     },
 
+    /**
+     * @function module:data#lessthan | lt
+     * @param val
+     * @returns {lessthan}
+     */
     lessthan: function (val) {
         if (isNestedDtmArray(this)) {
             this.forEach(function (a) {
@@ -2720,6 +2794,11 @@ dtm.data.augment({
         return this;
     },
 
+    /**
+     * @function module:data#ltet
+     * @param val
+     * @returns {ltet}
+     */
     ltet: function (val) {
         if (isNestedDtmArray(this)) {
             this.forEach(function (a) {
@@ -2743,6 +2822,10 @@ dtm.data.augment({
 
     },
 
+    /**
+     * @function module:data#has
+     * @returns {boolean}
+     */
     has: function () {
         var that = this;
         var args = argsToArray(arguments);
@@ -2843,7 +2926,7 @@ dtm.data.augment({
     },
 
     /**
-     * @function module:data#mean
+     * @function module:data#mean | avg
      * @param fn
      * @returns {dtm.data} self
      */
@@ -2936,7 +3019,7 @@ dtm.data.augment({
     },
 
     /**
-     * @function module:data#midrange
+     * @function module:data#midrange | mid
      * @param fn
      * @returns {dtm.data} self
      */
@@ -3191,7 +3274,7 @@ dtm.data.augment({
     },
 
     /**
-     * @function module:data#accumulate
+     * @function module:data#accumulate | accum | cuml | cum
      * @returns {dtm.data} self
      */
     accumulate: function () {
@@ -3234,6 +3317,7 @@ dtm.data.augment({
 
     /**
      * Calculates the mean-square-error. If no argument is given, it will take the current array state as the modified value, and calculates the distortion from the original (initial state) value of itself. This would be useful for choosing quantization or transformation methods with less distortion to the data.
+     * @function module:data#mse
      * @returns {dtm.data}
      */
     mse: function () {
@@ -3380,7 +3464,7 @@ dtm.data.augment({
     },
 
     /**
-     * @function module:data#correlation
+     * @function module:data#correlation | corr
      * @returns {dtm.data} self
      */
     correlation: function (tgt, normalize) {
@@ -3417,7 +3501,7 @@ dtm.data.augment({
     },
 
     /**
-     * @function module:data#covariance
+     * @function module:data#covariance | covar | cov
      * @returns {dtm.data} self
      */
     covariance: function (tgt, normalize) {
@@ -3496,7 +3580,7 @@ dtm.data.augment({
 /* nominal */
 dtm.data.augment({
     aliases: {
-        histogram: ['histo'],
+        histogram: ['histo', 'hist'],
         distribution: ['dist'],
         invert: ['inv'],
         unique: ['uniq'],
@@ -3506,7 +3590,7 @@ dtm.data.augment({
     // TODO: copy-paste the count function
     /**
      * Generates a histogram from a nominal array, such as the string type.
-     * @function module:data#histogram
+     * @function module:data#histogram | histo | hist
      * @returns {dtm.data}
      */
     histogram: function () {
@@ -3541,6 +3625,7 @@ dtm.data.augment({
 
     /**
      * Distribution of each symbol (unique value)
+     * @function module:data#distribution | dist
      * @returns {dtm.data}
      */
     distribution: function (qdelta) {
@@ -3590,6 +3675,7 @@ dtm.data.augment({
 
     /**
      * Cumulative distribution function
+     * @function module:data#cdf
      * @returns {dtm.data}
      */
     cdf: function () {
@@ -3655,7 +3741,7 @@ dtm.data.augment({
 
     /**
      * Overwrites the contents with unsorted unique values of the array.
-     * @function module:data#uniq | unique
+     * @function module:data#unique | uniq
      * @returns {dtm.data}
      */
     unique: function () {
@@ -3664,7 +3750,7 @@ dtm.data.augment({
 
     // TODO: id by occurrence / rarity, etc.
     /**
-     * @function module:data#classify
+     * @function module:data#classify | class
      * @param by
      * @returns {dtm.data}
      */
@@ -3682,13 +3768,18 @@ dtm.data.augment({
 
     /**
      * Randomizes the order of the array.
-     * @function module:data#shuffle | random | randomize | rand
+     * @function module:data#shuffle | randomize
      * @returns {dtm.data}
      */
     shuffle: function () {
         return this.set(dtm.transform.shuffle(this.val));
     },
 
+    /**
+     * @function module:data#randomtrigger | randtrig
+     * @param dist
+     * @returns {randomtrigger}
+     */
     randomtrigger: function (dist) {
         if (!isString(dist)) {
             dist = 'uniform';
@@ -3808,7 +3899,7 @@ dtm.data.augment({
     },
 
     /**
-     * @function module:data#intervalsToOffsets
+     * @function module:data#intervalsToOffsets | itoo
      * @returns {dtm.data} self
      */
     intervalsToOffsets: function () {
@@ -3834,6 +3925,7 @@ dtm.data.augment({
 
     /**
      * Converts time offset sequence (e.g., [0, 0.5, 1, etc.], usually in seconds) to intervallic sequence that may signify note durations. Since we don't have the information about the duration of the very last note, it is copied from the one before that.
+     * @function module:data#offsetsToIntervals | otoi
      * @returns {offsetsToIntervals}
      */
     offsetsToIntervals: function () {
@@ -3855,7 +3947,7 @@ dtm.data.augment({
 
     /**
      * Converts beat sequence into an array of indices (or delays or onset-coordinate vectors.) Useful for creating time delay-based events.
-     * @function module:data#beatsToTime
+     * @function module:data#beatsToTime | btot
      * @returns {dtm.data}
      */
     beatsToTime: function () {
@@ -3863,7 +3955,7 @@ dtm.data.augment({
     },
 
     /**
-     * function module:data#timeToBeats
+     * @function module:data#timeToBeats | ttob
      * @param [len]
      * @returns {dtm.data}
      */
@@ -3873,7 +3965,7 @@ dtm.data.augment({
 
     /**
      * Converts string or boolean values to numerical values.
-     * @function module:data#tonumber | toNumber
+     * @function module:data#tonumber | tonum | num
      * @returns {dtm.data}
      */
     tonumber: function () {
@@ -3894,7 +3986,7 @@ dtm.data.augment({
     },
 
     /**
-     * @function module:data#toFloat32
+     * @function module:data#toFloat32 | tofloat32 | tf32
      * @returns {dtm.data} self
      */
     toFloat32: function () {
@@ -3915,22 +4007,39 @@ dtm.data.augment({
         mirror: ['mirr', 'mir'],
         reverse: ['rev'],
         queue: ['fifo'],
-        order: ['reorder']
+        reorder: ['order']
     },
 
+    /**
+     * @function module:data#reduce
+     * @param fn
+     */
     reduce: function (fn) {
         return this.set(this.val.reduce(fn));
     },
 
     // TODO: these should be in the get method
+    /**
+     * @function module:data#some
+     * @param fn
+     */
     some: function (fn) {
         return this.val.some(fn);
     },
 
+    /**
+     * @function module:data#every
+     * @param fn
+     * @returns {boolean}
+     */
     every: function (fn) {
         return !isEmpty(this.val.every) ? this.val.every(fn) : false;
     },
 
+    /**
+     * @function module:data#fileter
+     * @param fn
+     */
     filter: function (fn) {
         return this.set(this.val.filter(fn));
     },
@@ -3938,7 +4047,7 @@ dtm.data.augment({
     // TODO: nested array and concat?
     /**
      * Concatenates new values to the contents.
-     * @function module:data#concat | append
+     * @function module:data#concat | cat | append | app
      * @param arr {array | dtm.data} A regular array or a dtm.data object.
      * @returns {dtm.data}
      */
@@ -3955,6 +4064,10 @@ dtm.data.augment({
         return this.set(this.val);
     },
 
+    /**
+     * @function module:data#prepend | prep
+     * @param arr
+     */
     prepend: function (arr) {
         if (isEmpty(arr)) {
             arr = [];
@@ -3986,6 +4099,11 @@ dtm.data.augment({
         return this.set(dtm.transform.repeat(this.val, count));
     },
 
+    /**
+     * @function module:data#fitrepeat | fitrep | frep
+     * @param count
+     * @param interp
+     */
     fitrepeat: function (count, interp) {
         if (isDtmArray(count) && count.get('len') === 1) {
             count = count.get(0);
@@ -4028,6 +4146,10 @@ dtm.data.augment({
         return array.set(dtm.transform.truncate(array.val, arg1, arg2));
     },
 
+    /**
+     * @function module:data#remove
+     * @param input
+     */
     remove: function (input) {
         var at = [];
         var val = this.val;
@@ -4048,6 +4170,9 @@ dtm.data.augment({
         return this.set(val);
     },
 
+    /**
+     * @function module:data#removeempty
+     */
     removeempty: function () {
         var newArr = [];
         if (isNestedDtmArray(this)) {
@@ -4083,7 +4208,7 @@ dtm.data.augment({
 
     /**
      * Appends an reversed array at the tail.
-     * @function module:data#mirror
+     * @function module:data#mirror | mirr | mir
      * @returns {{type: string}}
      */
     mirror: function () {
@@ -4137,6 +4262,11 @@ dtm.data.augment({
         return this.set(this.val);
     },
 
+    /**
+     * @function module:data#find
+     * @param tgt
+     * @returns {dtm.data}
+     */
     find: function (tgt) {
         if (!isEmpty(tgt)) {
             var res = [];
@@ -4176,6 +4306,11 @@ dtm.data.augment({
         }
     },
 
+    /**
+     * @function module:data#sortby
+     * @param fn
+     * @param desc
+     */
     sortby: function (fn, desc) {
         if (!isBoolean(desc)) {
             desc = false;
@@ -4195,6 +4330,12 @@ dtm.data.augment({
         return this.set(res);
     },
 
+    /**
+     * @function module:data#replace
+     * @param tgt
+     * @param val
+     * @returns {dtm.data}
+     */
     replace: function (tgt, val) {
         // TODO: type and length check
         // TODO: if val is an array-ish, fill the tgt w/ the array elements
@@ -4242,6 +4383,9 @@ dtm.data.augment({
     },
 
     // TODO: may be obsolete
+    /**
+     * @function module:data#reorder | order
+     */
     reorder: function () {
         var indices;
 
@@ -4268,6 +4412,7 @@ dtm.data.augment({
     aliases: {},
     /**
      * Separates the array items into new array using the separator
+     * @function module:data#split
      * @param [separator=''] {string}
      * @returns dtm.data
      */
@@ -4275,6 +4420,10 @@ dtm.data.augment({
         return this.set(dtm.transform.split(this.val, separator));
     },
 
+    /**
+     * @function module:data#join
+     * @param delimiter
+     */
     join: function (delimiter) {
         var that = this;
         if (isNestedDtmArray(that)) {
@@ -4297,6 +4446,11 @@ dtm.data.augment({
         return that.set(res);
     },
 
+    /**
+     * @function module:data#editdit
+     * @param target
+     * @returns {editdist}
+     */
     editdist: function (target) {
         if (isString(target)) {
             return this.set(dtm.transform.editDistance(this.val, target));
@@ -4317,6 +4471,11 @@ dtm.data.augment({
     type: function () { return this; },
     size: function () { return this; },
 
+    /**
+     * @function module:data#call
+     * @param fn
+     * @returns {dtm.data}
+     */
     call: function (fn) {
         if (isFunction(fn)) {
             if (arguments.length > 1) {
@@ -4327,12 +4486,21 @@ dtm.data.augment({
         return this;
     },
 
+    /**
+     * @function module:data#process
+     * @param fn
+     * @returns {process}
+     */
     process: function (fn) {
         this.params.processFn = fn;
         return this;
     },
 
     // TODO: these are broken...
+    /**
+     * @function module:data#print
+     * @returns {print}
+     */
     print: function () {
         if (isFunction(dtm.params.printer)) {
             dtm.params.printer.apply(this, [this].concat(argsToArray(arguments)));
@@ -4342,6 +4510,10 @@ dtm.data.augment({
         return this;
     },
 
+    /**
+     * @function module:data#plot
+     * @returns {plot}
+     */
     plot: function () {
         if (isFunction(dtm.params.plotter)) {
             dtm.params.plotter.apply(this, [this].concat(argsToArray(arguments)));
@@ -4358,7 +4530,7 @@ dtm.data.augment({
 
     /**
      * Pitch quantize the array values. Shorthand: data.pq
-     * @function module:data#pitchquantize
+     * @function module:data#pitchquantize | pq
      * @param scale {array|dtm.data} A numerical or string (solfa -- e.g., 'do' or 'd' instead of 0) denoting the musical scale degrees.
      * @returns {dtm.data}
      */
@@ -4384,6 +4556,9 @@ dtm.data.augment({
 });
 
 dtm.data.augment({
+    /**
+     * @function module:data#note
+     */
     note: function () {
         var args = argsToArray(arguments);
         return this.freq(dtm.data(args).flatten().mtof());
@@ -4394,10 +4569,11 @@ dtm.data.augment({
 dtm.data.augment({
     /**
      * Interleaves two arrays
-     * @param arrIn {dtm.array}
+     * @function module:data#interleave
+     * @param arrIn {dtm.data}
      * @param [depth1=1] {number} Must be an integer
      * @param [depth2=1] {number} Must be an integer
-     * @returns {dtm.array}
+     * @returns {dtm.data}
      * @author Ben Taylor
      */
     interleave: function (arrIn, depth1, depth2) {

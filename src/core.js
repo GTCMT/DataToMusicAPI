@@ -9,7 +9,7 @@ var params = {
 };
 
 /**
- * Returns the singleton dtm object.
+ * A namespace / the singleton dtm object.
  * @name module:core#dtm
  * @type {object}
  */

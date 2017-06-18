@@ -1,5 +1,5 @@
 /**
- * @fileOverview These utility functions are mainly used within DTM API for development. You can call them like: `dtm.util.name()`.
+ * @fileOverview These utility functions are mainly used within DTM API for development. However, you can call them like: `dtm.util.name()`.
  * @module utils
  */
 

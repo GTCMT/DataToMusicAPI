@@ -255,6 +255,11 @@ dtm.file = function (file, fn) {
     });
 };
 
+/**
+ * @function module:loader.csv
+ * @param input
+ * @param fn
+ */
 dtm.csv = function (input, fn) {
     if (isString(input)) {
         if (isURL(input, '.csv')) {
@@ -325,6 +330,11 @@ dtm.json = function (input, fn) {
     }
 };
 
+/**
+ * @function module:loader.text | txt
+ * @param input
+ * @param fn
+ */
 dtm.text = function (input, fn) {
     if (isString(input)) {
         if (isURL(input, '.txt')) {
@@ -378,6 +388,11 @@ dtm.text = function (input, fn) {
 
 dtm.txt = dtm.text;
 
+/**
+ * @function module:loader.web
+ * @param url
+ * @param fn
+ */
 dtm.web = function (url, fn) {
     return new Promise(function (resolve) {
         var xhr = new XMLHttpRequest();
@@ -463,6 +478,12 @@ dtm.web = function (url, fn) {
     });
 };
 
+/**
+ * @function module:loader.image | img | pic
+ * @param input
+ * @param fn
+ * @param mode
+ */
 dtm.image = function (input, fn, mode) {
     if (isString(input)) {
         var url = input;
@@ -618,6 +639,11 @@ dtm.image = function (input, fn, mode) {
 
 dtm.pic = dtm.img = dtm.image;
 
+/**
+ * @function module:loader.cam
+ * @param input
+ * @param interval
+ */
 dtm.cam = function (input, interval) {
     var w = 400;
     var h = 300;
@@ -705,6 +731,11 @@ dtm.cam = function (input, interval) {
     }
 };
 
+/**
+ * @function module:loader.audio
+ * @param grab
+ * @param block
+ */
 dtm.audio = function (grab, block) {
     if (isNumber(grab)) {
         block = grab;
@@ -768,6 +799,11 @@ dtm.audio = function (grab, block) {
     return data;
 };
 
+/**
+ * @function module:loader.wav
+ * @param input
+ * @param fn
+ */
 dtm.wav = function (input, fn) {
     if (isString(input)) {
         if (isURL(input)) {
