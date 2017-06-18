@@ -1391,7 +1391,7 @@ dtm.data.augment({
     },
 
     /**
-     * Overwrites the "original" state with the current state.
+     * Overwrites the "original" state with the current state. Using `data.residue()`, `data.snr()`, etc. measures the distance between the current state and the saved state. 
      * @function module:data#save
      * @returns {dtm.data}
      * @example
