@@ -1491,7 +1491,7 @@ dtm.data.augment({
     },
 
     /**
-     * Returns a dtm.data containing a copy / copies of the source at specified index. The copies may be a single value or a n-dimensional array, depending on the dimensionality of the source dtm.data. Aliases: `col()`, `varaible()` (call the dtm.data object itself).
+     * Returns a dtm.data containing a copy / copies of the source at specified index. The copies may be a single value or a n-dimensional array, depending on the dimensionality of the source dtm.data. Aliases: `col()`, `varaible()` (i.e., calling the dtm.data object itself as a function).
      * @function module:data#column | col
      * @returns {dtm.data}
      */
@@ -1591,7 +1591,7 @@ dtm.data.augment({
     },
 
     /**
-     * Returns a row of a nested array by the index.
+     * Returns a row of a nested array by the index, as opposed to the default behavior of returning columns with `data(indices)`.
      * @function module:data#row
      * @param num
      * @returns {dtm.data}
@@ -1653,6 +1653,7 @@ dtm.data.augment({
 
     // interp with index scaled to the 0-1 range
     /**
+     * Return an interpolated value(s) at specified phase, a countinous value between 0 and 1. If the phase goes below or above this range, it wraps around.
      * @function module:data#phase | p | scan
      * @param at
      * @param mode
@@ -1704,7 +1705,7 @@ dtm.data.augment({
     },
 
     /**
-     * A mirrored-phase function.
+     * A mirrored-phase function. Going above the phase of 1, for example, will result in reading the data backwards.
      * @function module:data#mphase | mp
      * @param at
      * @param mode
@@ -1774,7 +1775,7 @@ dtm.data.augment({
     },
 
     /**
-     * Modifies the range of the array. Alias: `r()`
+     * Modifies the range of the values. If the domain values are unspecified, the input is normalized to produce the full range between the specified minimum and maximum values.
      * @function module:data#range | r
      * @param arg1 {number|array|dtm.data} The target minimum value of the scaled range.
      * @param arg2 {number|array|dtm.data} The target maximum value of the scaled range.
@@ -1872,7 +1873,7 @@ dtm.data.augment({
     },
 
     /**
-     * Rescales the range of the numerical values to 0-1. Alias: `n`
+     * Rescales the range of numerical values to 0-1.
      * @function module:data#normalize | n
      * @param [arg1] {number} Prefered domain minimum value. If not present, the minimum of the input array is used.
      * @param [arg2] {number} Prefered domain maximum value. If not present, the maximum of the input array is used.
@@ -1926,17 +1927,19 @@ dtm.data.augment({
     },
 
     /**
+     * Rescales the range to be between 0 and 1.
      * @function module:data#unipolar | uni | up
-     * @returns {*|dtm.data}
+     * @returns {dtm.data}
      */
     unipolar: function () {
         return this.range(0, 1);
     },
 
     /**
+     * Rescales the range to be between -1 and 1.
      * @function module:data#bipolar | bi | bp
      * @param dc
-     * @returns {*|dtm.data}
+     * @returns {dtm.data}
      */
     bipolar: function (dc) {
         if (!isBoolean(dc)) {
@@ -2017,11 +2020,12 @@ dtm.data.augment({
     },
 
     /**
+     * A combination of the expcurve and logcurve functions. At factor 0, there would be no change. A positive factor gives a logarithmic scaling, while a negative factor gives an exponential scaling.
      * @function module:data#curve | c
      * @param factor
      * @param min
      * @param max
-     * @returns {dtm.data|*}
+     * @returns {dtm.data}
      */
     curve: function (factor, min, max) {
         if (isEmpty(min)) {
@@ -2068,6 +2072,7 @@ dtm.data.augment({
     },
 
     /**
+     * A shorthand for `data.fit("line", params)`.
      * @function module:data#linear | line | l
      * @param len
      * @returns {dtm.data}
@@ -2121,6 +2126,7 @@ dtm.data.augment({
     },
 
     /**
+     * A shorthand for `data.stretch("linear", params)`
      * @function module:data#slinear | sline | sl
      * @param factor
      * @returns {dtm.data}
