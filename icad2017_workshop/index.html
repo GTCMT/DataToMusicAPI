@@ -422,17 +422,17 @@ dtm.music().play().for(2).amp(a); // The envelope is further time-scaled by the 
 <pre><code class="javascript">a = dtm.data(1, 2, 10);
 
 // Read the data at a fractional index value.
-a().interp(0.5); // Gives 1.5
-a().interp(1.5); // Gives 6
+a.interp(0.5); // Gives 1.5
+a.interp(1.5); // Gives 6
 
 // Read the data at a relative phase value (between 0-1, or beyond).
-a().phase(0.5); // Gives 2
-a().phase(0.25, 0.75); // Gives [1.5, 6]
+a.phase(0.5); // Gives 2
+a.phase(0.25, 0.75); // Gives [1.5, 6]
 
 // Read the data using a phasor function.
 p = dtm.line(100); // Creates a 100-points line between 0-1.
 p.curve(10); // Apply some logarithmic scaling.
-a().phase(p); // Interpolate through the data points.</code></pre>
+a.phase(p); // Interpolate through the data points.</code></pre>
 
 
 <h4 id="pseudo-musical-modulation">Pseudo-musical Modulation</h4>
@@ -689,13 +689,13 @@ mus.trigger().rep().at(0.5) // Trigger repeatedly and iterate.</code></pre>
 
 <h3 id="scanning-data-with-dtm.music">Scanning Data with dtm.music</h3>
 
-<p>Lastly, the music object is also capable of a very fast and continuous reading of data using its <code>phase</code> callback function. It provides an argument (a <code>dtm.data</code> object) containing the current phase (starting from 0 and ending at 1) of the musical event, which can be used in combination with the <code>data.phase()</code>. However, as <code>data.phase()</code> overwrites the content of the data with the value at the current phase, you may want to clone the data first before reading by the phasor.</p>
+<p>Lastly, the music object is also capable of a very fast and continuous reading of data using its <code>phase</code> callback function. It provides an argument (a <code>dtm.data</code> object) containing the current phase (starting from 0 and ending at 1) of the musical event, which can be used in combination with the <code>data.phase()</code>.</p>
 
 <pre><code class="javascript">dtm.music()
   .trigger() // Start the music object without sound.
   .for(3) // Set the duration to 3 seconds.
   .phase(p =&gt; {
-    data().phase(p).print();
+    data.phase(p).print();
   });</code></pre>
 
 
@@ -707,7 +707,7 @@ b = dtm.data(0, 1, 0.5, -0.5, 0); // Create a nonlinear phase function.
 mus.trigger().for(5)
   .phase(p =&gt; {
     // A sine wave with frequency modulation. 
-    dtm.sin().freq(a().mphase(p)) // A &quot;mirrored&quot; phase function.
+    dtm.sin().freq(a.mphase(p)) // A &quot;mirrored&quot; phase function.
       .plot();
   })
   .curve(b); // Set the nonlinear phase motion.</code></pre>
