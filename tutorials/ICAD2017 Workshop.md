@@ -10,12 +10,12 @@ This workshop will introduce Data-to-Music (DTM) API, a tool set for general-pur
 
 ### Resources
 [DTM API](https://raw.githubusercontent.com/GTCMT/DataToMusicAPI/master/dtm.js): The library file to include in our web applications. Please download this to your local drive.
-[Online Editor](http://dtmdemo.herokuapp.com/): An interactive live-coding [editor](http://dtmdemo.herokuapp.com/main.html) with [documentation](http://dtmdemo.herokuapp.com/doc) (opens them separately).
+[Online Editor](https://ttsuchiya.github.io/dtm/): An interactive live-coding [editor](https://ttsuchiya.github.io/dtm/editor) with [documentation](https://ttsuchiya.github.io/dtm/doc) (opens them separately).
 [Data Sets](https://vincentarelbundock.github.io/Rdatasets/datasets.html): The data sets distributed with R.
 
 ### Optional Resources
 [DTM Source Code](https://github.com/GTCMT/DataToMusicAPI): Post issues or questions here. Please don't look at the source code! 
-[Workshop Examples](http://bit.ly/icad2017_dtm): It's empty now. I will be adding examples during the workshop as we go.
+[Workshop Examples](http://bit.ly/icad2017_dtm_examples): It's empty now. I will be adding examples during the workshop as we go.
 
 ## 1. Getting Started
 There are multiple ways to run DTM in web browsers. As with anything, Google search is your friend... but this mini tutorial provides the first steps for the absolute beginners in web development to use DTM.
@@ -457,7 +457,7 @@ a = dtm.data(0.5, 1.0, 0.9, 0.01)
 Note that the `augment` function is called directly from the `dtm.data` module (i.e., `dtm.data.augment()`), without parenthesis. This would allow any newly created data objects to use the added function.
 
 
-## 7. Sonifying Data with dtm.music
+## 7. Sonifying Data with `dtm.music`
 With `dtm.data`, transformation processes happen almost immediately. (Though it can get slow if you are dealing with a huge data at once.) In contrast, `dtm.music` operates in real time and translates the values of a data object to an audio stream. Additionally, the music object can be used for such as sequencing musical events, reading data points in a non-linear order in real time, or even continuously scanning through data that can create a "morphing" effect.
 
 One important behavior of `dtm.music` is that it automatically time-scales the input data to fit into the specified duration (1 second if unspecified). You can play for a longer duration to hear the local fluctuations of data, or play for a fraction of second to hear the data as a small "grain".

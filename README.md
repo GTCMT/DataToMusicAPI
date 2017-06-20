@@ -1,5 +1,5 @@
 # Data-to-Music API
-A browser-based JavaScript API for real-time data sonification. Try the [interactive editor](http://dtmdemo.herokuapp.com/) with [documentations](http://dtmdemo.herokuapp.com/doc).
+A browser-based JavaScript API for real-time data sonification. Try the [interactive editor](https://ttsuchiya.github.io/dtm/) with [documentations](https://ttsuchiya.github.io/dtm/doc).
 
 ## How to use
 Load the library into your web application as a global variable ```dtm``` by including ```dtm.js``` or ```dtm.min.js``` in the HTML file.
