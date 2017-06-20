@@ -1,0 +1,17 @@
+{
+    "name": "slip.js",
+    "version": "1.0.1",
+    "main": "dist/slip.min.js",
+    "ignore": [
+        ".jshintrc",
+        "package.json",
+        "bower.json",
+        "Gruntfile.js",
+        "node_modules",
+        "tests"
+    ],
+    "dependencies": {},
+    "devDependencies": {
+        "qunit": "1.14.0"
+    }
+}

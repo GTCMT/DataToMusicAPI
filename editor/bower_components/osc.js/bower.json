@@ -1,0 +1,20 @@
+{
+    "name": "osc.js",
+    "version": "1.0.4",
+    "main": "dist/osc.min.js",
+    "ignore": [
+        ".jshintrc",
+        "package.json",
+        "bower.json",
+        "Gruntfile.js",
+        "node_modules",
+        "tests"
+    ],
+    "dependencies": {
+        "slip.js": ">=1.0.1",
+        "eventEmitter": ">=4.2.7"
+    },
+    "devDependencies": {
+        "qunit": "1.14.0"
+    }
+}

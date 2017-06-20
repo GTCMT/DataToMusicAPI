@@ -1,0 +1,23 @@
+{
+  "name": "public",
+  "version": "0.0.0",
+  "authors": [
+    "Takahiko Tsuchiya <ttsuchiya@loadmess.com>"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "angular": "~1.4.5",
+    "codemirror": "^5.19.0",
+    "cookies-js": "~1.2.2",
+    "lodash": "~2.4.1",
+    "osc.js": "~1.1.0",
+    "d3": "^4.2.6"
+  }
+}

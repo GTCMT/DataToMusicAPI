@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html ng-app="dtmDemo">
+<head lang="en">
+    <meta charset="UTF-8">
+    <title></title>
+
+    <!--<script src="bower_components/socket.io-client/socket.io.js"></script>-->
+    <!--<script src="//localhost:8081/socket.io/socket.io.js"></script>-->
+    <script src="bower_components/osc.js/dist/osc-browser.min.js"></script>
+    <script src="bower_components/cookies-js/dist/cookies.min.js"></script>
+
+    <script src="bower_components/codemirror/lib/codemirror.js"></script>
+    <script src="bower_components/codemirror/addon/comment/comment.js"></script>
+    <link rel="stylesheet" href="bower_components/codemirror/theme/monokai.css">
+    <link rel="stylesheet" href="bower_components/codemirror/lib/codemirror.css">
+
+    <script src="bower_components/codemirror/mode/javascript/javascript.js"></script>
+    <script src="bower_components/codemirror/addon/search/searchcursor.js"></script>
+    <script src="bower_components/codemirror/addon/search/search.js"></script>
+    <script src="bower_components/codemirror/addon/search/match-highlighter.js"></script>
+    <script src="bower_components/codemirror/addon/edit/closebrackets.js"></script>
+    <script src="bower_components/codemirror/addon/edit/matchbrackets.js"></script>
+    <script src="bower_components/codemirror/keymap/sublime.js"></script>
+
+    <link rel="stylesheet" href="index.css">
+
+    <script src="bower_components/lodash/dist/lodash.compat.js"></script>
+    <script src="bower_components/d3/d3.min.js"></script>
+    <script src="dtm.js"></script>
+
+    <script src="bower_components/angular/angular.min.js"></script>
+    <script src="main.js"></script>
+</head>
+<body ng-controller="MainController" ng-init="init()">
+
+<div>
+    <textarea id="code" cols="200" rows="150"></textarea>
+    <button class="misc-button" id="eval-button" onclick="angular.element(document.body).scope().evalAll()">EVAL</button>
+    <button class="misc-button" id="stop-button" onclick="angular.element(document.body).scope().stop()">STOP</button>
+    <button class="misc-button" id="auto-button" onclick="angular.element(document.body).scope().toggleAutoEval()">AUTO</button>
+    <button class="misc-button" id="file-button" onclick="angular.element(document.body).scope().openFile()">FILE</button>
+    <input type="file" id="file-input" style="display:none;" onchange="angular.element(document.body).scope().fileNameChanged(this)"/>
+    <div id="vis" style="margin-left: 1em;"></div>
+    <textarea id="console" cols="200" rows="150"></textarea>
+</div>
+
+<!--<div id="overlay" style="z-index:10; pointer-events:none; background-color:rgba(255,0,0,0.5); position:absolute; top:0; left:0; bottom:0; right:0; "></div>-->
+
+</body>
+</html>

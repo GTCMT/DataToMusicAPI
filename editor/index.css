@@ -1,0 +1,92 @@
+html {
+    height: 100%;
+}
+
+.CodeMirror {
+    font-size: 18px;
+    /*border: 1px solid #eee;*/
+    height: auto;
+}
+
+/*.CodeMirror-scroll {*/
+    /*height: auto;*/
+    /*overflow-y: hidden;*/
+    /*overflow-x: auto;*/
+/*}*/
+
+.CodeMirror, .CodeMirror-gutters {
+    background: transparent !important;
+}
+
+.breakpoints {width: .8em;}
+.breakpoint { color: #822; }
+
+textarea {
+    height: auto;
+    width: auto;
+}
+
+body {
+    font-size: 18px;
+    font-family: monospace;
+    height: 95%;
+    background-color: #272822;
+}
+
+@keyframes flash {
+    0% {
+        background-color: #444;
+    }
+
+    100% {
+        background-color: #272822;
+    }
+}
+
+.demo {
+    float: left;
+    width: 49%;
+    height: 100%;
+}
+
+.doc {
+    float: left;
+    width: 49%;
+    height: 100%;
+    margin-left: 1%;
+}
+
+.misc-button {
+    color: steelblue;
+    border: solid 2px steelblue;
+    display: inline-block;
+    position: absolute;
+    width: 50px;
+    right: 10px;
+    z-index: 100;
+    background-color: transparent;
+    cursor: pointer;
+
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+#eval-button {
+    top: 10px;
+}
+
+#stop-button {
+    top: 40px;
+}
+
+#auto-button {
+    top: 70px;
+}
+
+#file-button {
+    top: 100px;
+}
