@@ -2040,6 +2040,11 @@ dtm.transform = {
             len = Math.round(len);
         }
 
+        // for Chrome 59 bad behavior with Float32 access (Jun 17, 2017)
+        if (isFloat32Array(arr)) {
+            arr = fromFloat32Array(arr);
+        }
+
         var res = null;
         if (isNumArray(arr)) {
             res = new Array(len);
@@ -2069,7 +2074,9 @@ dtm.transform = {
                 if (isNumArray(arr)) {
                     intermArr = new Array(intermLen);
                 } else if (isFloat32Array(arr)) {
-                    intermArr = new Float32Array(intermLen);
+                    // for Chrome 59 bad behavior with Float32 access (Jun 17, 2017)
+                    intermArr = new Array(intermLen);
+                    // intermArr = new Float32Array(intermLen);
                 }
 
                 var c = 0;
@@ -10987,7 +10994,7 @@ Music.prototype.clone = function () {
                 newParams[k] = {};
 
                 if (v.base.params.id !== Music.prototype.defaults[k].params.id) {
-                    newParams[k].base = v.base.clone(k);
+                    newParams[k].base = v.base.clone();
                 } else {
                     newParams[k].base = Music.prototype.defaults[k];
                 }
@@ -11516,14 +11523,17 @@ Music.prototype.stop = Music.prototype.s = function (time) {
 
     var defer = 0.0;
 
-    if (!isNumber(time)) {
-        time = 0.0; // TODO: time not same as rt rendering time
-    }
-
     that.params.repeat.current = 0;
     that.params.repeat.resetNext = true;
 
     setTimeout(function () {
+        if (!isNumber(time)) {
+            // time = 0.0;
+            time = Music.prototype.actx.currentTime;
+        } else {
+            // time += Music.prototype.actx.currentTime;
+        }
+
         if (that.nodes.src) {
             that.nodes.src.stop(time);
         }

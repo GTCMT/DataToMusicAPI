@@ -170,6 +170,11 @@ dtm.transform = {
             len = Math.round(len);
         }
 
+        // for Chrome 59 bad behavior with Float32 access (Jun 17, 2017)
+        if (isFloat32Array(arr)) {
+            arr = fromFloat32Array(arr);
+        }
+
         var res = null;
         if (isNumArray(arr)) {
             res = new Array(len);
@@ -199,7 +204,9 @@ dtm.transform = {
                 if (isNumArray(arr)) {
                     intermArr = new Array(intermLen);
                 } else if (isFloat32Array(arr)) {
-                    intermArr = new Float32Array(intermLen);
+                    // for Chrome 59 bad behavior with Float32 access (Jun 17, 2017)
+                    intermArr = new Array(intermLen);
+                    // intermArr = new Float32Array(intermLen);
                 }
 
                 var c = 0;

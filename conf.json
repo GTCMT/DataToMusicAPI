@@ -18,7 +18,8 @@
         "collapseSymbols": false,
         "inverseNav": true,
         "protocol": "html://",
-        "methodHeadingReturns": false
+        "methodHeadingReturns": false,
+        "sort": false
     },
     "tags": {
         "allowUnknownTags": true
