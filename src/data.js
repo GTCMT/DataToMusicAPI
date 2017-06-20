@@ -1648,7 +1648,7 @@ dtm.data.augment({
             }
         });
 
-        return that.set(res);
+        return dtm.data(res);
     },
 
     // interp with index scaled to the 0-1 range
@@ -1701,7 +1701,7 @@ dtm.data.augment({
             }
         }
 
-        return that.set(res);
+        return dtm.data(res);
     },
 
     /**
@@ -1757,7 +1757,7 @@ dtm.data.augment({
             }
         }
 
-        return that.set(res);
+        return dtm.data(res);
     }
 });
 
