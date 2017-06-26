@@ -70,7 +70,7 @@ If you try to load a resource in JS with just a file name, for example `'mydata.
 Serving the resources by yourself is also important if you want to dynamically access them in JS. Otherwise, when you try to access a data source hosted on another website, you may encounter the **same-origin policy** (SOP) warning, a browser-enforced security feature. We can bypass this with, for example, browser [configuration](https://stackoverflow.com/questions/3102819/disable-same-origin-policy-in-chrome) or [plugins](https://chrome.google.com/webstore/detail/jetbrains-ide-support/hmhgeddbohgjknpmjagkdomcpobmllji?hl=en), though you should be careful not to disable it all the time.
 
 ## 3. Live Coding and Interactive Editor
-In this workshop, we will be mostly editing the JS code to build our sonification systems bit by bit. Using the HTML + JS, you might have to update the code and refresh the web page to see / hear a new result. (You could automate the page refreshing with a [file watcher](https://www.npmjs.com/package/watch).) JS is, however, an interpretive language, meaning you can execute new pieces of code to update the current program state in real time. You can do this by using the [developer console](http://debugbrowser.com/) in your browser. We can also use the [DTM interactive editor](http://dtmdemo.herokuapp.com/) for real-time editing and experiments. It offers some useful features such as local-file loading and real-time evaluation of code with the following shortcut keys:
+In this workshop, we will be mostly editing the JS code to build our sonification systems bit by bit. Using the HTML + JS, you might have to update the code and refresh the web page to see / hear a new result. (You could automate the page refreshing with a [file watcher](https://www.npmjs.com/package/watch).) JS is, however, an interpretive language, meaning you can execute new pieces of code to update the current program state in real time. You can do this by using the [developer console](http://debugbrowser.com/) in your browser. We can also use the [DTM interactive editor](https://ttsuchiya.github.io/dtm/) for real-time editing and experiments. It offers some useful features such as local-file loading and real-time evaluation of code with the following shortcut keys:
 
 Keys | Function
 |-------|-------|
@@ -113,7 +113,7 @@ baz.dothis() // Some objects can call functions like this.
   .andthat(p1, p2, p3); // ; is the end of a statement.
 ```
 
-Notice the `;` for terminating a statement only used in the third line. This indicates that the above three lines are a single statement. The use of `;` is optional in JS, but is recommended when writing a more complex code. In the [interactive editor](http://dtmdemo.herokuapp.com/), an explicit `;` separates the code into blocks for partial evaluation with `SHIFT + ENTER`. (It is an unconventional use of `;`, so please don't make it a habit!.)
+Notice the `;` for terminating a statement only used in the third line. This indicates that the above three lines are a single statement. The use of `;` is optional in JS, but is recommended when writing a more complex code. In the [interactive editor](https://ttsuchiya.github.io/dtm/), an explicit `;` separates the code into blocks for partial evaluation with `SHIFT + ENTER`. (It is an unconventional use of `;`, so please don't make it a habit!.)
 
 The example above was calling some specific functions provided by the object named `baz`. In other words, you *cannot* call a function that does not exist in `baz`. Sometimes, or actually quite often in JS, you have to write your own function from scratch. It is so frequent that we usually don't even give it a name, and just call it an "anonymous function".
 
@@ -189,13 +189,14 @@ The `dtm.gen` family returns a `dtm.data` object, so you can process them furthe
 
 
 ### Loading External Data File
-In data sonification, we are often more interested in using existing real-world data than generated data. The `dtm.loader` is equipped with various ways to load or stream data, including CSV, JSON, text, image, audio files, web services (REST calls), as well as the stream of data from camera and microphone on your computer. As explained before in [Section 2](#2.-hosting-data-and-publishing-a-website), in many cases, you need to host the data file in your server and access its URL like this:
+In data sonification, we are often more interested in using existing real-world data than generated data. The `dtm.loader` is equipped with various ways to load or stream data, including CSV, JSON, text, image, audio files, web services (REST calls), as well as the stream of data from camera and microphone on your computer. As explained before in [Section 2](#L2.-hosting-data-and-publishing-a-website), in many cases, you need to host the data file in your server and access its URL like this:
 
 ```javascript
 url = window.location.href + 'data.csv';
 dtm.csv(url, data => data.print());
 ```
-For convenience, the [online editor](http://dtmdemo.herokuapp.com/) provides the `FILE` button for loading local files. This will load the file into a data object, a global variable, named as `file`.
+
+For convenience, the [online editor](https://ttsuchiya.github.io/dtm/) provides the `FILE` button for loading local files. This will load the file into a data object, a global variable, named as `file`.
 
 ```javascript
 file.print(); // After loading a local file, such as a CSV file, check the content of the "file" object.
@@ -229,6 +230,7 @@ b = data(r);
 r.rev(); // Reverse the direction of the indices.
 c = data(r);
 ```
+
 As you see in the third example with `c`, we can have the index data in a descending order. What happens if we use a sine generator as indices? 
 
 ```javascript
@@ -237,11 +239,11 @@ r = dtm.sine(100).range(-30, 30);
 a = data(r);
 ```
 
-When the index value is fractional, it is automatically rounded to get the nearest data point. We can also estimate the values between data points using fractional indices, and we will be introducing how to this in a [later section](#accessing-data-advanced).
+When the index value is fractional, it is automatically rounded to get the nearest data point. We can also estimate the values between data points using fractional indices, and we will be introducing how to this in a [later section](#accessing-data--advanced-).
 
 
 ### Transforming and Analyzing Data
-A `dtm.data` object is equipped with tons of list-processing functions -- some are common and basic, but some are quite unusual and weird (but perhaps musically useful). We only list a limited potion here. For the complete list, please see the [API documentation](http://dtmdemo.herokuapp.com/doc). 
+A `dtm.data` object is equipped with tons of list-processing functions -- some are common and basic, but some are quite unusual and weird (but perhaps musically useful). We only list a limited potion here. For the complete list, please see the [API documentation](https://ttsuchiya.github.io/dtm/doc). 
 
 First, here are some scaling and arithmetic operations.
 
@@ -308,7 +310,7 @@ data.fft(); // FFT analysis (Currently only gives the magnitude spectrum of the 
 data.fir(coef); // Apply an FIR filter.
 ```
 
-Many of these analytical functions overwrites the existing content with a summarized data. If you want to keep the original data for later use, you would need to clone the source object. Please read the following section [Cloning](#cloning). 
+Many of these analytical functions overwrites the existing content with a summarized data. If you want to keep the original data for later use, you would need to clone the source object. Please read the following section [Cloning Data Object](#cloning-data-object). 
 
 
 ### Interpolation and Morphing
@@ -353,17 +355,17 @@ As explained before, when we access data with the basic method (e.g., `data(inde
 a = dtm.data(1, 2, 10);
 
 // Read the data at a fractional index value.
-a().interp(0.5); // Gives 1.5
-a().interp(1.5); // Gives 6
+a.interp(0.5); // Gives 1.5
+a.interp(1.5); // Gives 6
 
 // Read the data at a relative phase value (between 0-1, or beyond).
-a().phase(0.5); // Gives 2
-a().phase(0.25, 0.75); // Gives [1.5, 6]
+a.phase(0.5); // Gives 2
+a.phase(0.25, 0.75); // Gives [1.5, 6]
 
 // Read the data using a phasor function.
 p = dtm.line(100); // Creates a 100-points line between 0-1.
 p.curve(10); // Apply some logarithmic scaling.
-a().phase(p); // Interpolate through the data points.
+a.phase(p); // Interpolate through the data points.
 ```
 
 #### Pseudo-musical Modulation
@@ -376,7 +378,7 @@ a = dtm.data(0, -1, 1, 0)
 ```
 
 ### Cloning Data Object
-This is where it gets a little confusing and tricky. Section ... described that calling the data object itself as function (i.e., `data(index)`) was used to get some value(s) or column(s) of the data object at the index. Actually, this is creating a copy(s) of the data contents rather than returning the reference to the original data points. When we call the data object without passing any index values, like `data()`, it returns a copy of the entire data object. This is quite useful and essential for controlling the state of a complex sonification system, where you may have a data source mapped to multiple parameters with different transformations applied to them. By cloning a data object, any further changes in the original data would *not* reflect on the newly cloned object.
+This is where it gets a little confusing and tricky. Section [Accessing Data (Basic)](#accessing-data--basic-) described that calling the data object itself as function (i.e., `data(index)`) was used to get some value(s) or column(s) of the data object at the index. Actually, this is creating a copy(s) of the data contents rather than returning the reference to the original data points. When we call the data object without passing any index values, like `data()`, it returns a copy of the entire data object. This is quite useful and essential for controlling the state of a complex sonification system, where you may have a data source mapped to multiple parameters with different transformations applied to them. By cloning a data object, any further changes in the original data would *not* reflect on the newly cloned object.
 
 ```javascript
 a = dtm.data(1, 2, 3); // Create a new object, as usual.
@@ -631,14 +633,14 @@ mus.trigger().rep().at(0.5) // Trigger repeatedly and iterate.
 ```
 
 ### Scanning Data with dtm.music
-Lastly, the music object is also capable of a very fast and continuous reading of data using its `phase` callback function. It provides an argument (a `dtm.data` object) containing the current phase (starting from 0 and ending at 1) of the musical event, which can be used in combination with the `data.phase()`. However, as `data.phase()` overwrites the content of the data with the value at the current phase, you may want to clone the data first before reading by the phasor. 
+Lastly, the music object is also capable of a very fast and continuous reading of data using its `phase` callback function. It provides an argument (a `dtm.data` object) containing the current phase (starting from 0 and ending at 1) of the musical event, which can be used in combination with the `data.phase()`. 
 
 ```javascript
 dtm.music()
   .trigger() // Start the music object without sound.
   .for(3) // Set the duration to 3 seconds.
   .phase(p => {
-    data().phase(p).print();
+    data.phase(p).print();
   });
 ```
 
@@ -651,7 +653,7 @@ b = dtm.data(0, 1, 0.5, -0.5, 0); // Create a nonlinear phase function.
 mus.trigger().for(5)
   .phase(p => {
     // A sine wave with frequency modulation. 
-    dtm.sin().freq(a().mphase(p)) // A "mirrored" phase function.
+    dtm.sin().freq(a.mphase(p)) // A "mirrored" phase function.
       .plot();
   })
   .curve(b); // Set the nonlinear phase motion.
