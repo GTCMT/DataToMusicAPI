@@ -123,6 +123,10 @@ var dtm = {
 
     setPrinter: function (fn) {
         dtm.params.printer = fn;
+    },
+
+    cache: {
+        audioStream: []
     }
 };
 

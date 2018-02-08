@@ -380,6 +380,10 @@ var dtm = {
 
     setPrinter: function (fn) {
         dtm.params.printer = fn;
+    },
+
+    cache: {
+        audioStream: []
     }
 };
 
@@ -3816,6 +3820,7 @@ Map.prototype = Object.create(Function.prototype);
 function Block(data) {
     // TODO: accept option as arg? for numBlocks, pad, overlap ratio, etc.
     /**
+     * Creates a 2-D array from 1-D array by slicing at certain interval.
      * @function module:data#block | b
      * @param len
      * @param hop
@@ -6723,7 +6728,7 @@ dtm.data.augment({
      */
     diff: function (order, pad) {
         if (!isInteger(order) || order < 1) {
-            order = 1;
+            order = 0;
         }
         for (var i = 0; i < order; i++) {
             this.val = dtm.transform.diff(this.val);
@@ -9766,9 +9771,16 @@ dtm.audio = function (grab, block) {
                 };
 
                 var gain = actx.createGain();
-                gain.gain.value = 0;
+                gain.gain.setValueAtTime(0, 0);
 
                 input.connect(sp).connect(gain).connect(actx.destination);
+
+                dtm.cache.audioStream.push({
+                    audio: null,
+                    input: input,
+                    sp: sp,
+                    gain: gain
+                });
             },
             function (e) {
                 console.error(e);
@@ -9776,6 +9788,52 @@ dtm.audio = function (grab, block) {
     }
 
     return data;
+};
+
+dtm.stream = function (URL, grab, block) {
+    if (isNumber(grab)) {
+        block = grab;
+    } else if (!isNumber(block)) {
+        block = 1024;
+    }
+
+    var data = dtm.data(0);
+    dtm.params.stream = true;
+
+    var actx = dtm.wa.actx;
+    var audio = document.createElement('audio');
+    audio.src = URL;
+    audio.crossOrigin = 'anonymous';
+    audio.play();
+    var input = actx.createMediaElementSource(audio);
+    var sp = actx.createScriptProcessor(block,1,1);
+
+    // TODO: not getting destoryed properly
+    sp.onaudioprocess = function (event) {
+        if (dtm.params.stream) {
+            var samps = event.inputBuffer.getChannelData(0);
+
+            if (isDtmArray(grab)) {
+                grab.set(samps);
+            } else if (isFunction(grab)) {
+                grab(data.set(samps));
+            } else {
+                data.set(samps); // not working
+            }
+        }
+    };
+
+    var gain = actx.createGain();
+    gain.gain.setValueAtTime(1, 0);
+
+    input.connect(sp).connect(gain).connect(actx.destination);
+
+    dtm.cache.audioStream.push({
+        audio: audio,
+        input: input,
+        sp: sp,
+        gain: gain
+    });
 };
 
 /**
@@ -11197,8 +11255,8 @@ Music.prototype.play = Music.prototype.p = function (time) {
             curves.push({param: that.nodes.amp.gain, value: amp});
             that.setParamCurve(time, dur, curves);
 
-            that.nodes.fx[0].out.gain.value = 1.0;
-            that.nodes.out.gain.value = 0.3;
+            that.nodes.fx[0].out.gain.setValueAtTime(0.0, 0);
+            that.nodes.out.gain.setValueAtTime(0.3, 0);
 
             that.nodes.src.start(time);
             that.nodes.src.stop(time + dur);
@@ -11231,7 +11289,7 @@ Music.prototype.play = Music.prototype.p = function (time) {
 
                 that.setParamCurve(time, dur, [{param: that.nodes.pan.pan, value: pan}]);
 
-                out.gain.value = 1.0;
+                out.gain.setValueAtTime(1.0, 0);
 
                 that.nodes.rtSrc.onended = function () {
                     stupidBuffer = undefined;
@@ -11255,7 +11313,7 @@ Music.prototype.play = Music.prototype.p = function (time) {
             };
         } else {
             var silence = actx.createGain();
-            silence.gain.value = 1;
+            silence.gain.setValueAtTime(1.0, 0);
 
             // for calling back functions after delay
             if (time !== 0) {
@@ -11381,7 +11439,7 @@ Music.prototype.play = Music.prototype.p = function (time) {
                 }
 
                 var mntGain = actx.createGain();
-                mntGain.gain.value = that.params.monitor.process ? 1 : 0;
+                mntGain.gain.setValueAtTime(that.params.monitor.process ? 1 : 0, 0);
 
                 out.connect(that.nodes.monitor).connect(mntGain).connect(actx.destination);
             }
@@ -11467,8 +11525,8 @@ Music.prototype.play = Music.prototype.p = function (time) {
                 that.setParamCurve(time, dur, [{param: that.nodes.right.gain, value: right}]);
             }
 
-            that.nodes.pFx[0].out.gain.value = 1.0; // ?
-            out.gain.value = 1.0;
+            that.nodes.pFx[0].out.gain.setValueAtTime(1.0, 0); // ?
+            out.gain.setValueAtTime(1.0, 0);
 
             var ramp = 0.002;
             declipper.gain.setValueAtTime(0.0, time);
@@ -12902,6 +12960,21 @@ dtm.master = {
         dtm.params.traced.forEach(function (d) {
             d.params.trace = false;
         });
+
+        dtm.cache.audioStream.forEach(function (as) {
+            if (as.audio) {
+                as.audio.remove();
+            }
+            as.input.disconnect();
+            as.input = null;
+            as.sp.onaudioprocess = null;
+            as.sp.disconnect();
+            as.sp = null;
+            as.gain.disconnect();
+            as.gain = null;
+        });
+
+        dtm.cache.audioStream = [];
     },
 
     /**

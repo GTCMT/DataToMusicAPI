@@ -80,6 +80,21 @@ dtm.master = {
         dtm.params.traced.forEach(function (d) {
             d.params.trace = false;
         });
+
+        dtm.cache.audioStream.forEach(function (as) {
+            if (as.audio) {
+                as.audio.remove();
+            }
+            as.input.disconnect();
+            as.input = null;
+            as.sp.onaudioprocess = null;
+            as.sp.disconnect();
+            as.sp = null;
+            as.gain.disconnect();
+            as.gain = null;
+        });
+
+        dtm.cache.audioStream = [];
     },
 
     /**

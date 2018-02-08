@@ -774,8 +774,8 @@ Music.prototype.play = Music.prototype.p = function (time) {
             curves.push({param: that.nodes.amp.gain, value: amp});
             that.setParamCurve(time, dur, curves);
 
-            that.nodes.fx[0].out.gain.value = 1.0;
-            that.nodes.out.gain.value = 0.3;
+            that.nodes.fx[0].out.gain.setValueAtTime(0.0, 0);
+            that.nodes.out.gain.setValueAtTime(0.3, 0);
 
             that.nodes.src.start(time);
             that.nodes.src.stop(time + dur);
@@ -808,7 +808,7 @@ Music.prototype.play = Music.prototype.p = function (time) {
 
                 that.setParamCurve(time, dur, [{param: that.nodes.pan.pan, value: pan}]);
 
-                out.gain.value = 1.0;
+                out.gain.setValueAtTime(1.0, 0);
 
                 that.nodes.rtSrc.onended = function () {
                     stupidBuffer = undefined;
@@ -832,7 +832,7 @@ Music.prototype.play = Music.prototype.p = function (time) {
             };
         } else {
             var silence = actx.createGain();
-            silence.gain.value = 1;
+            silence.gain.setValueAtTime(1.0, 0);
 
             // for calling back functions after delay
             if (time !== 0) {
@@ -958,7 +958,7 @@ Music.prototype.play = Music.prototype.p = function (time) {
                 }
 
                 var mntGain = actx.createGain();
-                mntGain.gain.value = that.params.monitor.process ? 1 : 0;
+                mntGain.gain.setValueAtTime(that.params.monitor.process ? 1 : 0, 0);
 
                 out.connect(that.nodes.monitor).connect(mntGain).connect(actx.destination);
             }
@@ -1044,8 +1044,8 @@ Music.prototype.play = Music.prototype.p = function (time) {
                 that.setParamCurve(time, dur, [{param: that.nodes.right.gain, value: right}]);
             }
 
-            that.nodes.pFx[0].out.gain.value = 1.0; // ?
-            out.gain.value = 1.0;
+            that.nodes.pFx[0].out.gain.setValueAtTime(1.0, 0); // ?
+            out.gain.setValueAtTime(1.0, 0);
 
             var ramp = 0.002;
             declipper.gain.setValueAtTime(0.0, time);

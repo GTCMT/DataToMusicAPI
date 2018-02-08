@@ -400,6 +400,7 @@ Map.prototype = Object.create(Function.prototype);
 function Block(data) {
     // TODO: accept option as arg? for numBlocks, pad, overlap ratio, etc.
     /**
+     * Creates a 2-D array from 1-D array by slicing at certain interval.
      * @function module:data#block | b
      * @param len
      * @param hop
@@ -3307,7 +3308,7 @@ dtm.data.augment({
      */
     diff: function (order, pad) {
         if (!isInteger(order) || order < 1) {
-            order = 1;
+            order = 0;
         }
         for (var i = 0; i < order; i++) {
             this.val = dtm.transform.diff(this.val);

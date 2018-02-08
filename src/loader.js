@@ -787,9 +787,16 @@ dtm.audio = function (grab, block) {
                 };
 
                 var gain = actx.createGain();
-                gain.gain.value = 0;
+                gain.gain.setValueAtTime(0, 0);
 
                 input.connect(sp).connect(gain).connect(actx.destination);
+
+                dtm.cache.audioStream.push({
+                    audio: null,
+                    input: input,
+                    sp: sp,
+                    gain: gain
+                });
             },
             function (e) {
                 console.error(e);
@@ -797,6 +804,52 @@ dtm.audio = function (grab, block) {
     }
 
     return data;
+};
+
+dtm.stream = function (URL, grab, block) {
+    if (isNumber(grab)) {
+        block = grab;
+    } else if (!isNumber(block)) {
+        block = 1024;
+    }
+
+    var data = dtm.data(0);
+    dtm.params.stream = true;
+
+    var actx = dtm.wa.actx;
+    var audio = document.createElement('audio');
+    audio.src = URL;
+    audio.crossOrigin = 'anonymous';
+    audio.play();
+    var input = actx.createMediaElementSource(audio);
+    var sp = actx.createScriptProcessor(block,1,1);
+
+    // TODO: not getting destoryed properly
+    sp.onaudioprocess = function (event) {
+        if (dtm.params.stream) {
+            var samps = event.inputBuffer.getChannelData(0);
+
+            if (isDtmArray(grab)) {
+                grab.set(samps);
+            } else if (isFunction(grab)) {
+                grab(data.set(samps));
+            } else {
+                data.set(samps); // not working
+            }
+        }
+    };
+
+    var gain = actx.createGain();
+    gain.gain.setValueAtTime(1, 0);
+
+    input.connect(sp).connect(gain).connect(actx.destination);
+
+    dtm.cache.audioStream.push({
+        audio: audio,
+        input: input,
+        sp: sp,
+        gain: gain
+    });
 };
 
 /**
